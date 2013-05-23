@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Already has student files in temp directory $2
+
+cd $2
+
+CLASSPATH=`dirname $0`/codecheck.jar
+if [ "${CLASSPATH/#\//}" == "$CLASSPATH" ] ; then CLASSPATH=`pwd`/"$CLASSPATH" ; fi
+
+JAVA_HOME=/usr/lib/jvm/java-7-oracle
+
+DISPLAY=:3 LC_ALL=en_US.UTF-8 $JAVA_HOME/bin/java -classpath $CLASSPATH com.horstmann.codecheck.Main $1 $2 $3 >> codecheck.out 2>&1
+
+# TODO: Copy report.html to appropriate place

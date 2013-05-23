@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+
+    Copyright 2006-2012 Cay S. Horstmann
+
+    This file is part of Codecheck.
+
+    Codecheck is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Codecheck is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Codecheck.  If not, see <http://www.gnu.org/licenses/>.
+
+-->
+
+<project name="codecheck" basedir="." default="web">
+
+  <property name="src.dir" value="${basedir}/src" />
+  <property name="build.dir" value="${basedir}/antbuild" />
+  <property name="jarfile" value="${ant.project.name}.jar" />
+  <property name="runnerfile" value="run${ant.project.name}.jar" />
+  <property name="app.resources" 
+             value="${src.dir}/com/horstmann/codecheck/codecheck.properties" />
+  <property name="webfile" value="/data/cay/web/com/codecheck/codecheck.zip" />
+  <property name="runscript" value="codecheck" />
+
+  <target name="clean" description="Delete all generated files">
+    <delete dir="${build.dir}" />
+  </target>
+
+  <target name="init">
+    <mkdir dir="${build.dir}" />
+    <tstamp/>
+  </target>
+<!--
+  <target name="props" depends="init" description="Set version-specific properties.">
+    <replaceregexp file="${app.resources}" byline="true">
+       <regexp pattern="(version.date\s*=\s*).*"/>
+       <substitution expression="\1${DSTAMP}"/>
+    </replaceregexp>
+ </target>
+-->
+  <target name="compile" description="Compiles the Task" depends="init">
+    <javac srcdir="${src.dir}" debug="true" destdir="${build.dir}"/>
+    <copy todir="${build.dir}" preservelastmodified="true">
+      <fileset dir="${src.dir}">
+        <include name="**/*.xml" />
+        <include name="**/*.properties" />
+      </fileset>
+    </copy>
+  </target>
+  
+  <target name="jar" description="Makes the JAR file" depends="compile">
+    <jar destfile="${jarfile}" basedir="${build.dir}">
+      <manifest>
+        <attribute name="Main-Class" value="com.horstmann.codecheck.Runner" />
+      </manifest>
+    </jar>
+  </target>
+
+  <target name="web" depends="jar">
+    <zip basedir="${basedir}" destfile="${webfile}">
+       <include name="${jarfile}"/>
+       <include name="${runscript}"/>
+    </zip>
+  </target>
+
+  <target name="dist" description="Make the source distribution" depends="jar">
+    <zip basedir="${basedir}" destfile="codecheck-src-${DSTAMP}.zip" >
+      <include name="COPYING"/>
+      <include name="HISTORY"/>
+      <include name="build.xml"/>
+      <include name="src/**"/>
+      <include name="lib/**"/>
+      <include name="codecheck.jar"/>
+    </zip>
+  </target>
+
+</project>

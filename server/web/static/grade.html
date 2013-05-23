@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<title>Upload Submissions and Solutions</title>
+</head>
+<body>
+<form method="post" action="../grade" enctype="multipart/form-data">
+<p>Student submissions: <input name="submissions" id="submissions" type="file"></input></p>
+<p>
+<input type="radio" name="lmstype" value="canvas"/>Canvas
+<input type="radio" name="lmstype" value="d2l"/>Desire2Learn
+<input type="radio" name="lmstype" value="none"/>None
+</p>
+<p>Problem repo: <input name="repo" type="text" value="ext"/> </p>
+<p>Problem IDs: </p><p><textarea name="problems" rows="3" cols="40"></textarea></p>
+<p>
+<input type="radio" name="level" value="draft"/>Draft
+<input type="radio" name="level" value="final"/>Final
+</p>
+<p><input type="submit"/></p></form>
+</body>
+</html>

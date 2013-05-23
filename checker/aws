@@ -1,0 +1,13 @@
+cd `dirname $0`
+javac -sourcepath src -d bin src/com/horstmann/labrat/Main.java
+jar cvf labrat2.jar -C bin .
+
+rsync -e "ssh -i /home/cay/.ec2/aws1.pem" \
+    -avz \
+    labrat2.jar \
+    $EC2_HOST:/home/ubuntu/labrat/
+
+rsync -e "ssh -i /home/cay/.ec2/aws1.pem" \
+    -avz \
+    runLabrat.aws \
+    $EC2_HOST:/home/ubuntu/labrat/runLabrat

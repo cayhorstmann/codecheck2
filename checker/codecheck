@@ -1,0 +1,116 @@
+#!/bin/bash
+
+# Copyright 2006-2012 Cay S. Horstmann
+#
+# This file is part of Labrat.
+#
+# Labrat is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Labrat is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Labrat.  If not, see <http://www.gnu.org/licenses/>.
+
+# To test a solution, run
+# labrat grade problemdir/solution problemdir 
+
+# To grade student homework, run
+# labrat grade submissiondir problemdir
+
+# Here, problemdir is the directory containing the directories
+# named student and grader
+
+# This script does not modify the contents of submissiondir. 
+
+# detect Cygwin
+cygwin=false;
+case "`uname`" in
+  CYGWIN*) cygwin=true;
+esac
+
+linux=false
+if [[ `uname` == 'Linux' ]]; then
+   linux=true
+fi
+
+if [ -z "$BROWSER" ] ; then
+  if $cygwin; then
+    BROWSER=cygstart
+  elif $linux; then
+    BROWSER=xdg-open
+  else
+    BROWSER=open
+  fi
+fi
+
+CLASSPATH=`dirname $0`/labrat2.jar
+if [ "${CLASSPATH/#\//}" == "$CLASSPATH" ] ; then CLASSPATH=`pwd`/"$CLASSPATH" ; fi
+
+function usage() {
+    echo "Usage: `basename $0` [-q] level submissiondir problemdir"
+    exit
+}
+
+if [ "$1" == "-p" ] ; then BROWSER=cat ; shift ; fi
+
+if [ "$1" == "-q" ] ; then BROWSER=echo ; shift ; fi
+
+LEVEL=$1
+if [ -z $3 ] ; then
+  # Checking solution
+  SUBMISSIONDIR=`mktemp -d`
+  if [ -e $2/solution ] ; then cp -R $2/solution/* $SUBMISSIONDIR ; fi
+  case $LEVEL in 
+    [1-9])
+      for n in `seq 1 $LEVEL` ; do
+        if [ -e $2/solution$n ] ; then cp -R $2/solution$n/* $SUBMISSIONDIR ; fi
+      done
+    ;;
+    grade)
+      for n in `seq 1 9` ; do
+        if [ -e $2/solution$n ] ; then cp -R $2/solution$n/* $SUBMISSIONDIR ; fi
+      done
+      if [ -e $2/grader ] ; then cp -R $2/grader/* $SUBMISSIONDIR ; fi
+    ;;
+  esac  
+  PROBLEMDIR=$2
+else
+  SUBMISSIONDIR=$2
+  PROBLEMDIR=$3
+  TITLE=$4
+fi
+
+if [ -z "$LEVEL" ] || [ -z "$PROBLEMDIR" ] || [ ! -d "$SUBMISSIONDIR" ] || [ ! -d "$PROBLEMDIR" ]
+then
+    echo $0 $@
+    if [ -z "$LEVEL" ] ; then echo "No level supplied" ; fi
+    if [ -z "$PROBLEMDIR" ] ; then echo "No problemdir supplied" ; fi
+    if [ ! -d "$SUBMISSIONDIR" ] ; then echo "submissiondir $SUBMISSIONDIR doesn't exist" ; fi
+    if [ ! -d "$PROBLEMDIR" ] ; then echo "problemdir $PROBLEMDIR doesn't exist" ; fi
+    usage
+fi
+
+if [ "${SUBMISSIONDIR/#\//}" == "$SUBMISSIONDIR" ] ; then SUBMISSIONDIR=`pwd`/"$SUBMISSIONDIR" ; fi
+
+
+if [ "${PROBLEMDIR/#\//}" == "$PROBLEMDIR" ] ; then PROBLEMDIR=`pwd`/"$PROBLEMDIR" ; fi
+
+WORKDIR=`mktemp -d /tmp/labrat.XXXXXXXXXX`
+
+cd "$WORKDIR"
+
+if $cygwin; then
+    SUBMISSIONDIR=`cygpath -w $SUBMISSIONDIR`
+    PROBLEMDIR=`cygpath -w $PROBLEMDIR`
+    CLASSPATH=`cygpath -w $CLASSPATH`
+fi
+
+LC_ALL=en_US.UTF-8 java -Dcom.horstmann.codecheck -classpath "$CLASSPATH" com.horstmann.labrat.Main $LEVEL "$SUBMISSIONDIR" "$PROBLEMDIR" "$TITLE"
+cd - > /dev/null
+$BROWSER "$SUBMISSIONDIR/report.html" 

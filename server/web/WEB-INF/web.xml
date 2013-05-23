@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://java.sun.com/xml/ns/javaee" xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
+  <servlet>
+    <servlet-name>Jersey Web Application</servlet-name>
+    <servlet-class>com.sun.jersey.spi.container.servlet.ServletContainer</servlet-class>
+    <load-on-startup>1</load-on-startup>
+  </servlet>
+   <servlet>
+        <servlet-name>DefaultServlet</servlet-name>
+        <servlet-class>org.apache.catalina.servlets.DefaultServlet</servlet-class>
+    </servlet>
+  <servlet-mapping>
+    <servlet-name>DefaultServlet</servlet-name>
+    <url-pattern>/static/*</url-pattern>
+  </servlet-mapping>  
+  <servlet-mapping>
+    <servlet-name>Jersey Web Application</servlet-name>
+    <url-pattern>/*</url-pattern>
+  </servlet-mapping>
+  <context-param>
+    <param-name>com.horstmann.codecheck.repo.ext</param-name>
+    <param-value>/data/temp/ext</param-value>
+  </context-param>  
+  <context-param>
+    <param-name>com.horstmann.codecheck.repo.bj4fp</param-name>
+    <param-value>/data/cay/archive/books/bigj4/solutions</param-value>
+  </context-param>  
+  <context-param>
+    <param-name>com.horstmann.codecheck.repo.bj4cc</param-name>
+    <param-value>/data/cay/archive/books/bigj4/codecomp</param-value>
+  </context-param>  
+  <context-param>
+    <param-name>com.horstmann.codecheck.repo.jfe1cc</param-name>
+    <param-value>/data/cay/current/books/j4e/codecomp</param-value>
+  </context-param>  
+  <context-param>
+    <param-name>com.horstmann.codecheck.repo.cs46af12</param-name>
+    <param-value>/data/cay/archive/teach/fall2012/cs46a/homework</param-value>
+  </context-param>  
+  <context-param>
+    <param-name>com.horstmann.codecheck.repo.cs46a</param-name>
+    <param-value>/data/cay/archive/teach/spring2012/netbrat/cs46a</param-value>
+  </context-param>  
+  <context-param>
+    <param-name>com.horstmann.codecheck.repo.cs46b</param-name>
+    <param-value>/data/cay/archive/teach/spring2012/netbrat/cs46b</param-value>
+  </context-param>  
+  <context-param>
+    <param-name>com.horstmann.codecheck.repo.udacity</param-name>
+    <param-value>/data/cay/current/web/com/udacity/cs1java/codecheck</param-value>
+  </context-param>  
+  <context-param>
+    <param-name>com.horstmann.codecheck.submissions</param-name>
+    <param-value>/tmp/codecheck</param-value>
+  </context-param>    
+  <context-param>
+    <param-name>com.horstmann.codecheck.reports</param-name>
+    <param-value>/tmp/reports</param-value>
+  </context-param>    
+  <context-param>
+    <param-name>com.horstmann.codecheck.defaultcommand</param-name>
+    <param-value>/data/cay/current/projects/labrat2/runLabrat -q {0} {1} {2} {3}</param-value>
+  </context-param>    
+  <context-param>
+    <param-name>com.horstmann.codecheck.gradecommand</param-name>
+    <param-value>/data/cay/current/teach/util/gradeNetbrat {0} {1} {2} {3} {4} {5} {6} {7}</param-value>
+  </context-param>    
+</web-app>

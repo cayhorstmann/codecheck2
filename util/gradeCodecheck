@@ -1,0 +1,152 @@
+#!/bin/bash
+# gradeCodecheck archivePath submissions lmstype reportDir reportURL type repoPath problems
+
+function gradeOne() {
+# gradeOne problem student
+  SUBMISSIONS_DIR=`pwd`
+  PROBLEM=$REPOPATH/$1
+  GRADE_DIR=$SUBMISSIONS_DIR/`mktemp -d ../XXXXXXXXXX` 
+  SUBMISSION_DIR=$SUBMISSIONS_DIR/$2
+  cd $PROBLEM
+  for s in solution* ; do
+    cd $s
+    for f in * ; do if [ -e $SUBMISSION_DIR/$f ] ; then 
+      cp $SUBMISSION_DIR/$f $GRADE_DIR ; fi 
+    done
+    cd ..
+  done
+  cd $SUBMISSIONS_DIR
+  NAME=$1_$TYPE
+  TITLE=$1_$TYPE:$2
+  REPORTFILE=`"$CODECHECK_HOME"/codecheck -q $LEVEL $GRADE_DIR $PROBLEM $TITLE | tail -1`
+
+  SCORES=$SUBMISSION_DIR/scores.txt
+  echo $NAME >> $SCORES
+  if [ -s "$REPORTFILE" ] ; then
+    PREFIX=`date +%y%m%d%H%M%S`
+    REPORTDEST=${PREFIX}`basename $GRADE_DIR`.html
+    cp $REPORTFILE $REPORTDIR/$REPORTDEST
+    cp $REPORTFILE $SUBMISSION_DIR/$NAME.html
+    echo Report: ${REPORTURL}${REPORTDEST} >> $SCORES
+  else
+    echo Internal error: No report >> $SCORES
+  fi 
+  rm -rf $GRADE_DIR
+
+  if [ -e $PROBLEM/solution/$TYPE.txt ] ; then # legacy draft/final
+    cat $PROBLEM/solution/$TYPE.txt >> $SCORES
+  else
+    case $TYPE in
+      draft)
+        if [ -e $PROBLEM/solution1 ] ; then
+          cat $PROBLEM/solution1/rubric.txt >> $SCORES
+        else
+          cat $PROBLEM/solution/rubric.txt >> $SCORES
+        fi
+        ;;
+      final)
+        if [ -e $PROBLEM/solution2 ] ; then
+          cat $PROBLEM/solution2/rubric.txt >> $SCORES
+        elif [ -e $PROBLEM/solution1 ] ; then
+          cat $PROBLEM/solution1/rubric.txt >> $SCORES
+        else
+          cat $PROBLEM/solution/rubric.txt >> $SCORES
+        fi
+        ;;
+    esac
+  fi
+  echo >> $SCORES
+}
+
+STARTDIR=`dirname $0`
+if [ "${STARTDIR/#\//}" == "$STARTDIR" ] ; then STARTDIR=`pwd`/"$STARTDIR" ; fi
+
+if [ -z "$CODECHECK_HOME" -a -e "$STARTDIR"/codecheck ]
+then
+   CODECHECK_HOME=$STARTDIR
+fi
+
+if [ -z "$CODECHECK_HOME" ]
+then
+  CODECHECK_HOME=/home/cay/projects/codecheck
+fi
+
+ARCHIVE_DIR=$1
+if [ ! -e "$ARCHIVE_DIR" ] ; 
+then
+  echo $ARCHIVE_DIR doesn\'t exist
+  exit
+fi
+shift
+
+LOG=$ARCHIVE_DIR/codecheck.log
+
+echo $0 $@ >> $LOG
+
+SUBMISSIONS=$1
+if [ ! -e "$SUBMISSIONS" ]
+then
+  echo Missing submissions file $SUBMISSIONS >> $LOG
+  exit
+fi
+shift
+
+LMSTYPE=$1
+if [ ! -e $STARTDIR/${LMSTYPE}unpack ] ; 
+then
+  echo Can\'t unpack $LMSTYPE >> $LOG
+  exit
+fi
+shift
+
+REPORTDIR=$1
+shift
+
+REPORTURL=$1
+shift
+
+TYPE=$1
+case _"$TYPE" in
+    _draft)
+        LEVEL=check
+	;;
+    _final)
+        LEVEL=grade
+	;;
+    *)
+        echo Grading type $TYPE must be draft or final >> $LOG
+        exit
+        ;;
+esac
+shift
+
+REPOPATH=$1
+if [ ! -e $REPOPATH ] ; 
+then
+  echo Repository path $REPOPATH doesn\'t exist >> $LOG
+  exit
+fi
+shift
+
+if [ -z $1 ] ; then 
+  echo No problems to grade >> $LOG
+  exit
+fi
+
+# unpack
+
+cd `dirname $SUBMISSIONS`
+$STARTDIR/${LMSTYPE}unpack `basename $SUBMISSIONS` >> $LOG 2>&1
+
+for p in $@ ; do # for each problem ; do
+  for s in * ; do # for each student ; do
+    echo $p $s >> $LOG
+    gradeOne $p $s >> $LOG 2>&1
+  done
+done
+
+rm scores.zip
+zip scores.zip */scores.txt */*.html >> $LOG 2>&1
+mv scores.zip $ARCHIVE_DIR >> $LOG 2>&1
+
+# TODO: Remove directory? 
