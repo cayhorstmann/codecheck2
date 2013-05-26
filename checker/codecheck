@@ -2,26 +2,26 @@
 
 # Copyright 2006-2012 Cay S. Horstmann
 #
-# This file is part of Labrat.
+# This file is part of Codecheck.
 #
-# Labrat is free software: you can redistribute it and/or modify
+# Codecheck is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# Labrat is distributed in the hope that it will be useful,
+# Codecheck is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with Labrat.  If not, see <http://www.gnu.org/licenses/>.
+# along with Codecheck.  If not, see <http://www.gnu.org/licenses/>.
 
 # To test a solution, run
-# labrat grade problemdir/solution problemdir 
+# codecheck grade problemdir/solution problemdir 
 
 # To grade student homework, run
-# labrat grade submissiondir problemdir
+# codecheck grade submissiondir problemdir
 
 # Here, problemdir is the directory containing the directories
 # named student and grader
@@ -49,7 +49,7 @@ if [ -z "$BROWSER" ] ; then
   fi
 fi
 
-CLASSPATH=`dirname $0`/labrat2.jar
+CLASSPATH=`dirname $0`/codecheck.jar
 if [ "${CLASSPATH/#\//}" == "$CLASSPATH" ] ; then CLASSPATH=`pwd`/"$CLASSPATH" ; fi
 
 function usage() {
@@ -57,9 +57,19 @@ function usage() {
     exit
 }
 
+REPORT=report.html
+JAVA_OPTS=
+
 if [ "$1" == "-p" ] ; then BROWSER=cat ; shift ; fi
 
 if [ "$1" == "-q" ] ; then BROWSER=echo ; shift ; fi
+
+if [ "$1" == "-t" ] ; then 
+    BROWSER=cat 
+    REPORT=report.txt 
+    JAVA_OPTS=-Dcom.horstmann.codecheck.textreport
+    shift 
+fi
 
 LEVEL=$1
 if [ -z $3 ] ; then
@@ -101,7 +111,7 @@ if [ "${SUBMISSIONDIR/#\//}" == "$SUBMISSIONDIR" ] ; then SUBMISSIONDIR=`pwd`/"$
 
 if [ "${PROBLEMDIR/#\//}" == "$PROBLEMDIR" ] ; then PROBLEMDIR=`pwd`/"$PROBLEMDIR" ; fi
 
-WORKDIR=`mktemp -d /tmp/labrat.XXXXXXXXXX`
+WORKDIR=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
 
 cd "$WORKDIR"
 
@@ -111,6 +121,6 @@ if $cygwin; then
     CLASSPATH=`cygpath -w $CLASSPATH`
 fi
 
-LC_ALL=en_US.UTF-8 java -Dcom.horstmann.codecheck -classpath "$CLASSPATH" com.horstmann.labrat.Main $LEVEL "$SUBMISSIONDIR" "$PROBLEMDIR" "$TITLE"
+LC_ALL=en_US.UTF-8 java -Dcom.horstmann.codecheck $JAVA_OPTS -classpath "$CLASSPATH" com.horstmann.codecheck.Main $LEVEL "$SUBMISSIONDIR" "$PROBLEMDIR" "$TITLE"
 cd - > /dev/null
-$BROWSER "$SUBMISSIONDIR/report.html" 
+$BROWSER "$SUBMISSIONDIR/$REPORT"

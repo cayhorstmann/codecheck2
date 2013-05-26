@@ -104,6 +104,7 @@ public class Util {
         return result;
     }
 
+    @Deprecated
     public static String htmlEscape(String s) {
         StringBuilder b = new StringBuilder();
         if (s == null)

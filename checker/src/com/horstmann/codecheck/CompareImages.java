@@ -1,7 +1,6 @@
 package com.horstmann.codecheck;
 
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -50,7 +49,7 @@ public class CompareImages {
         return true;
     }
 
-    public byte[] diff() {
+    public BufferedImage diff() {
         if (image1 == null || image2 == null) return null;
         BufferedImage diff = new BufferedImage(Math.max(image1.getWidth(), image2.getWidth()),
                                                Math.max(image1.getHeight(), image2.getHeight()), BufferedImage.TYPE_INT_RGB);
@@ -72,13 +71,6 @@ public class CompareImages {
                 }
                 diff.setRGB(x, y, rgb);
             }
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try {
-            ImageIO.write(diff, "png", out);
-            out.close();
-            return out.toByteArray();
-        } catch (IOException e) {
-            return null;
-        }
+        return diff;
     }
 }

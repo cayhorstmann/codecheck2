@@ -76,21 +76,23 @@ public class CallMethod {
         return method.invoke(obj, methodArgs);
     }
 
-    public StringBuilder run(Path dir, Score score) throws Exception {
+    public void run(Path dir, Report report, Score score) throws Exception {
         URLClassLoader loader = new URLClassLoader(new URL[] { dir.toUri().toURL() });
+
+        report.header("Testing method " + getMethodName());
+
+        int n = size();
+        String[][] args = new String[n][1];
+        String[] actual = new String[n];
+        String[] expected = new String[n];
+        boolean[] outcomes = new boolean[n];
+
         try {
             Class<?> cl = loader.loadClass(className);
-            StringBuilder builder = new StringBuilder();
-            builder.append(props.getProperty("callmethod.start"));
-            int i = 1;
-            outcome = true;
-            while (true) {
-                List<String> paramValues = getParameterValues(i);
-                if (paramValues == null) {
-                    builder.append(props.getProperty("callmethod.end"));
-                    return builder;
-                }
 
+            outcome = true;
+            for (int i = 1; i <= n; i++) {
+                List<String> paramValues = getParameterValues(i);
                 Object actualRet = null;
                 Throwable thrown = null;
                 try {
@@ -101,17 +103,13 @@ public class CallMethod {
                     thrown = t;
                 }
 
-                builder.append(props.getProperty("callmethod.rowStart"));
-                builder.append(props.getProperty("callmethod.cellStart"));
-                builder.append(Util.htmlEscape(getMethodName(i)));
-                builder.append(props.getProperty("callmethod.cellEnd"));
-                builder.append(props.getProperty("callmethod.cellStart"));
+                StringBuilder builder = new StringBuilder();
                 for (int k = 0; k < paramValues.size(); k++) {
                     if (k > 0)
                         builder.append(',');
-                    builder.append(Util.htmlEscape(paramValues.get(k)));
+                    builder.append(paramValues.get(k));
                 }
-                builder.append(props.getProperty("callmethod.cellEnd"));
+                args[i][0] = builder.toString();
 
                 boolean pass = false;
                 Object expectedRet = expectedRets.get(i - 1);
@@ -123,27 +121,20 @@ public class CallMethod {
                     else
                         pass = actualRet.equals(expectedRet);
                 }
-                builder.append(props.getProperty("callmethod.cellStart"));
                 if (thrown == null)
-                    builder.append(Util.htmlEscape(toString(actualRet)));
+                	actual[i] = toString(actualRet);
                 else
-                    builder.append(Util.htmlEscape(thrown.getClass().getName()));
-                builder.append(props.getProperty("callmethod.cellEnd"));
-                builder.append(props.getProperty("callmethod.cellStart"));
-                builder.append(Util.htmlEscape(toString(expectedRet)));
-                builder.append(props.getProperty("callmethod.cellEnd"));
-                builder.append(props.getProperty("callmethod.cellStart"));
-                score.pass(pass, builder);
-                builder.append(props.getProperty("callmethod.cellEnd"));
-                builder.append(props.getProperty("callmethod.rowEnd"));
-
+                    actual[i] = thrown.getClass().getName();
+                expected[i] = toString(expectedRet);
+                score.pass(pass);
+                outcomes[i] = pass;
                 if (!pass)
                     outcome = false;
-                i++;
             }
         } finally {
             loader.close();
         }
+        report.runTable(new String[] { "Arguments" }, args, actual, expected, outcomes);
     }
 
     private Object convert(String value, Class<?> cl) {
@@ -248,14 +239,12 @@ public class CallMethod {
             return "" + obj;
     }
 
-    private String getMethodName(int i) {
-        String methodName = getProperty("test" + i + ".method", "test." + i + ".method"); // Legacy
-        if (methodName == null) methodName = getProperty("method", "test.method"); // Legacy
-        return methodName;
+    private String getMethodName() {
+        return getProperty("method", "test.method"); // Legacy
     }
 
     private Method getMethod(Class<?> cl, int i) {
-        String methodName = getMethodName(i);
+        String methodName = getMethodName();
         if (methodName == null) throw new IllegalArgumentException("no test.method");
         Method method = null;
         for (Method m : cl.getMethods()) {

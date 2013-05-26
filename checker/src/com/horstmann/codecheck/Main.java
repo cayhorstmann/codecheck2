@@ -58,6 +58,7 @@ public class Main {
     private Set<String> mainclasses = new TreeSet<String>(); // class names
     private SecurityManager securityManager = new StudentSecurityManager();
     private Score score = new Score();
+    private Comparison comp = new Comparison();
 
     /**
      * Entry point to program.
@@ -321,22 +322,27 @@ public class Main {
         }
     }
 
+    private boolean isTester(String classname) {
+    	return classname != null && classname.matches(".*Tester[0-9]*");
+    }
+    
     private void runTester(String mainclass) throws IOException, UnsupportedEncodingException,
         ReflectiveOperationException {
         report.header("Running " + mainclass);
         // TODO: Assume testers always in default package?
         if (compile(mainclass)) {
             String outerr = runJavaProgram(mainclass, workDir, "", null);
-            AsExpected cond = new AsExpected();
-            cond.setTolerance(getDoubleProperty("test.tolerance", DEFAULT_TOLERANCE));
-            String evaluation = cond.eval(outerr, checkProperties, score);
-            report.html(evaluation);
+            AsExpected cond = new AsExpected(comp);
+            cond.eval(outerr, report, score);
         }
     }
 
     private void testInputs(Map<String, String> inputs, String mainclass, Annotations annotations) throws UnsupportedEncodingException,
         IOException, ReflectiveOperationException {
         Path tempDir = null;
+        /*
+         * If there are no inputs, we feed in one empty input, or the legacy test.run.inputstring
+         */
         if (inputs.size() == 0)
             inputs.put("", getStringProperty("test.run.inputstring")); // Legacy
         report.header("Testing " + mainclass);
@@ -365,44 +371,30 @@ public class Main {
                     if (CompareImages.isImage(testExpectedFile)) {
                         if (outerr.length() > 0) report.output("Output", outerr);
                         imageComp = new CompareImages(testExpectedPath);
-                        report.image("Actual", testExpectedPath);
+                        report.image(testExpectedPath);
                     } else
                         contents = Util.read(testExpectedPath);
                 }
 
-                if (!test.equals("") || testExpectedFile != null) {
+                if (annotations.isSample(mainclass) || "true".equals(getStringProperty("test.run"))) // Run without testing
+                    report.output("Output", outerr);
+                else {
                     // Make output from solution
                     if (tempDir == null)
                         tempDir = compileSolution(mainclass, null, 0);
                     if (tempDir != null) {
                         if (testExpectedFile != null)
                             Files.delete(workDir.resolve(testExpectedFile));
-                        String result = runJavaProgram(mainclass, tempDir, runargs, input);
-                        if (!test.equals(""))
-                            expectedOuterr = result;
+                        expectedOuterr = runJavaProgram(mainclass, tempDir, runargs, input);
                         if (testExpectedFile != null) {
                             if (imageComp == null)
                                 expectedContents = Util.read(testExpectedPath);
                         }
                     }
-                }
 
-                double tolerance = annotations.findUniqueDoubleKey("TOLERANCE", DEFAULT_TOLERANCE);
-                if (tolerance == DEFAULT_TOLERANCE)
-                    tolerance = getDoubleProperty(test + ".tolerance", "tolerance", "test.tolerance",
-                                                  DEFAULT_TOLERANCE);
-                String token =  annotations.findUniqueKey("TOKEN");
-                if (token == null) token = getStringProperty(test + ".token", "token", "test.token", DEFAULT_TOKEN);
-
-                if (annotations.isSample(mainclass) || test.equals("") && imageComp == null) // Run without testing
-                    report.output("Output", outerr);
-                else {
                     if (expectedOuterr != null && expectedOuterr.length() > 0) {
-                        Comparison comp = new Comparison();
-                        comp.setToken(token);
-                        comp.setTolerance(tolerance);
-                        report.html("Program output", comp.execute(outerr, expectedOuterr, checkProperties));
-                        score.pass(comp.getOutcome(), report);
+                        boolean outcome = comp.execute(outerr, expectedOuterr, report);
+                        score.pass(outcome, report);
                     }
 
                     if (imageComp != null) {
@@ -414,14 +406,12 @@ public class Main {
                         }
                         score.pass(outcome, report);
                     } else if (testExpectedFile != null) {
-                        Comparison comp = new Comparison();
-                        comp.setToken(token);
-                        comp.setTolerance(tolerance);
-                        report.html(testExpectedFile, comp.execute(contents, expectedContents, checkProperties));
-                        score.pass(comp.getOutcome(), report);
+                        report.header(testExpectedFile);
+                        boolean outcome = comp.execute(contents, expectedContents, report);
+                        score.pass(outcome, report);
                     }
                 }
-            }
+        }
         }
     }
 
@@ -447,7 +437,7 @@ public class Main {
 
             for (Path p : files) {
                 String c = Util.javaClass(Util.tail(p));
-                if (c != null && c.contains("Tester"))
+                if (isTester(c))
                     mainclasses.add(c);
             }
         }
@@ -471,132 +461,69 @@ public class Main {
         Path p = Util.tail(sub.getFile());
         String mainclass = Util.javaClass(p);
         if (compile(mainclass)) {
-            StringBuilder builder = new StringBuilder();
-            builder.append(checkProperties.getProperty("sub.start"));
-            builder.append(checkProperties.getProperty("sub.headerStart"));
-            for (String name : sub.names()) {
-                builder.append(checkProperties.getProperty("sub.headerCellStart"));
-                builder.append(name);
-                builder.append(checkProperties.getProperty("sub.headerCellEnd"));
-            }
-            builder.append(checkProperties.getProperty("sub.headerEnd"));
+        	int n = sub.getSize();
+        	String[] argNames = sub.names().toArray(new String[0]);
+            String[][] args = new String[n][argNames.length];
+            String[] actual = new String[n];
+            String[] expected = new String[n];
+            boolean[] outcomes = new boolean[n];
+
 
             for (int i = 0; i < sub.getSize(); i++) {
                 sub.substitute(submissionDir.resolve(p),
                                workDir.resolve(p), i);
                 if (compile(mainclass)) {
-                    String actual = runJavaProgram(mainclass, workDir, null, null);
+                    actual[i] = runJavaProgram(mainclass, workDir, null, null);
                     Path tempDir = compileSolution(mainclass, sub, i);
-                    String expected = runJavaProgram(mainclass, tempDir, null, null);
-                    Comparison comp = new Comparison();
-                    comp.setToken(getStringProperty("token", "test.token", DEFAULT_TOKEN));
-                    comp.setTolerance(getDoubleProperty("tolerance", "test.tolerance",
-                                                        DEFAULT_TOLERANCE));
-                    builder.append(checkProperties.getProperty("sub.rowStart"));
-                    for (String v : sub.values(i)) {
-                        builder.append(checkProperties.getProperty("sub.cellStart"));
-                        builder.append(Util.htmlEscape(v));
-                        builder.append(checkProperties.getProperty("sub.cellEnd"));
-                    }
-                    builder.append(checkProperties.getProperty("sub.cellStart"));
-                    builder.append(Util.htmlEscape(actual));
-                    builder.append(checkProperties.getProperty("sub.cellEnd"));
-                    builder.append(checkProperties.getProperty("sub.cellStart"));
-                    builder.append(Util.htmlEscape(expected));
-                    builder.append(checkProperties.getProperty("sub.cellEnd"));
-                    comp.execute(actual, expected, checkProperties);
-
-                    builder.append(checkProperties.getProperty("sub.cellStart"));
-                    score.pass(comp.getOutcome(), builder);
-                    builder.append(checkProperties.getProperty("sub.cellEnd"));
-                    builder.append(checkProperties.getProperty("sub.rowEnd"));
+                    expected[i] = runJavaProgram(mainclass, tempDir, null, null);                    
+                    
+                    int j = 0;
+                    for (String v : sub.values(i)) { args[i][j] = v; j++; }                      
+                    outcomes[i] = comp.execute(actual[i], expected[i], null);
+                    score.pass(outcomes[i]);
                 }
             }
-            builder.append(checkProperties.getProperty("sub.end"));
-            report.html(builder);
+            report.runTable(argNames, args, actual, expected, outcomes);
         }
     }
 
     private void doCalls(Path submissionDir, Calls calls) throws IOException, ReflectiveOperationException {
-        report.header("Testing method calls");
+        report.header("Testing method " + calls.getName());
         Path p = Util.tail(calls.getFile());
         String mainclass = Util.javaClass(p) + "CodeCheck";
         calls.writeTester(problemDir, workDir);
+        
+        String[][] args = new String[calls.getSize()][1];
+        String[] actual = new String[calls.getSize()];
+        String[] expected = new String[calls.getSize()];
+        boolean[] outcomes = new boolean[calls.getSize()];
 
         if (compile(mainclass)) {
-            StringBuilder builder = new StringBuilder();
-            builder.append(checkProperties.getProperty("callmethod.start"));
-
-            for (int i = 1; i <= calls.getSize(); i++) {
-                String[] result = runJavaProgram(mainclass, workDir, "" + i, null).split("\n");
-                builder.append(checkProperties.getProperty("callmethod.rowStart"));
-                builder.append(checkProperties.getProperty("callmethod.cellStart"));
-                // TODO: Add method to header
-                builder.append(i == 1 ? calls.getName() : "&nbsp;");
-                builder.append(checkProperties.getProperty("callmethod.cellEnd"));
-                builder.append(checkProperties.getProperty("callmethod.cellStart"));
-                builder.append(Util.htmlEscape(calls.getArgs(i - 1)));
-                builder.append(checkProperties.getProperty("callmethod.cellEnd"));
-                for (int j = 0; j < 2; j++) {
-                    builder.append(checkProperties.getProperty("callmethod.cellStart"));
-                    builder.append(Util.htmlEscape(result[j]));
-                    builder.append(checkProperties.getProperty("callmethod.cellEnd"));
-                }
-                builder.append(checkProperties.getProperty("callmethod.cellStart"));
-                score.pass(result[2].equals("true"), builder);
-                builder.append(checkProperties.getProperty("callmethod.cellEnd"));
-                builder.append(checkProperties.getProperty("callmethod.rowEnd"));
+            for (int i = 0; i < calls.getSize(); i++) {
+                String[] result = runJavaProgram(mainclass, workDir, "" + (i + 1), null).split("\n");
+                args[i][0] = calls.getArgs(i);
+                actual[i] = result[0];
+                expected[i] = result[1];
+                outcomes[i] = result[2].equals("true"); 
+                score.pass(outcomes[i]);
             }
-            builder.append(checkProperties.getProperty("callmethod.end"));
-            report.html(builder);
+            report.runTable(new String[] { "Arguments" }, args, actual, expected, outcomes);
         }
     }
 
     public void run(String[] args) throws IOException {
         // TODO: Adjustable Timeouts
 
-        // TODO: Maybe put these style issues into a separate properties file
-        // like in the olden days?
-        checkProperties
-        .put("callmethod.start",
-             "<table style=\"font-size: 0.9em;\"><tr><th>Method</th><th>Arguments</th><th>Actual</th><th>Expected</th><th>&nbsp;</th></tr>\n");
-        checkProperties.put("callmethod.end", "</table>\n");
-        checkProperties.put("callmethod.rowStart", "<tr>");
-        checkProperties.put("callmethod.rowEnd", "</tr>\n");
-        checkProperties.put("callmethod.cellStart", "<td style=\"background: #EEE; margin: 0.5em; padding: 0.25em;\">");
-        checkProperties.put("callmethod.cellEnd", "</td>");
-
-        checkProperties.put("sub.start",
-                            "<table style=\"font-size: 0.9em;\">\n");
-        checkProperties.put("sub.end", "</table>\n");
-        checkProperties.put("sub.headerStart", "<tr>");
-        checkProperties.put("sub.headerEnd", "<th style=\"background: #EEE; margin: 0.5em; padding: 0.25em;\">Actual</th><th style=\"background: #EEE; margin: 0.5em; padding: 0.25em;\">Expected</th><th style=\"background: #EEE; margin: 0.5em; padding: 0.25em;\">&nbsp;</th></tr>\n");
-        checkProperties.put("sub.headerCellStart", "<td style=\"background: #EEE; margin: 0.5em; padding: 0.25em;\">");
-        checkProperties.put("sub.headerCellEnd", "</td>");
-        checkProperties.put("sub.rowStart", "<tr>");
-        checkProperties.put("sub.rowEnd", "</tr>\n");
-        checkProperties.put("sub.cellStart", "<td style=\"background: #EEE; margin: 0.5em; padding: 0.25em;\">");
-        checkProperties.put("sub.cellEnd", "</td>");
-
-        checkProperties.put("comparison.start",
-                            "<table style=\"font-size: 0.9em;\"><tr><th>Actual</th><th>Expected</th></tr>\n");
-        checkProperties.put("comparison.mismatchStart", "<font color=\"red\">");
-        checkProperties.put("comparison.mismatchEnd", "</font>");
-        checkProperties.put("comparison.questionableStart", "<font color=\"blue\">");
-        checkProperties.put("comparison.questionableEnd", "</font>");
-        checkProperties.put("comparison.expectedStart", "<font color=\"lightgray\">");
-        checkProperties.put("comparison.expectedEnd", "</font>");
-        checkProperties.put("expected.unexpectedStart", "<font color=\"red\">");
-        checkProperties.put("expected.unexpectedEnd", "</font>");
-        checkProperties.put("expected.matchedStart", "<font color=\"green\">");
-        checkProperties.put("expected.matchedEnd", "</font>");
 
         // TODO: What if args[0], args[1] don't exist?
 
         String mode = args[0].trim();
         Path submissionDir = FileSystems.getDefault().getPath(args[1]);
         problemDir = FileSystems.getDefault().getPath(args[2]);
-        report = new Report(args.length >= 4 ? args[3] : "Report");
+        if (System.getProperty("com.horstmann.codecheck.textreport") != null)
+        	report = new TextReport(args.length >= 4 ? args[3] : "Report", submissionDir);
+        else
+        	report = new HTMLReport(args.length >= 4 ? args[3] : "Report", submissionDir);
         int level = 0;
         try {
             level = Integer.parseInt(mode);
@@ -628,6 +555,7 @@ public class Main {
                 solutionDirectories.add("solution" + n);
 
         workDir = new File(".").getAbsoluteFile().toPath().normalize();
+                
         try {
             // Read check.properties in level dirs
             for (String levelDir : studentDirectories) {
@@ -647,6 +575,14 @@ public class Main {
             annotations.read(problemDir, studentFiles);
             annotations.read(problemDir, solutionFiles);
 
+            double tolerance = annotations.findUniqueDoubleKey("TOLERANCE", DEFAULT_TOLERANCE);
+            tolerance = getDoubleProperty("test.tolerance", tolerance); // Legacy
+            boolean ignoreCase = !"false".equals(annotations.findUniqueKey("IGNORECASE"));
+            boolean ignoreSpace = !"false".equals(annotations.findUniqueKey("IGNORESPACE"));
+            comp.setTolerance(tolerance);
+            comp.setIgnoreCase(ignoreCase);
+            comp.setIgnoreSpace(ignoreSpace);
+            
             getRequiredClasses();
             getMainClasses();
 
@@ -688,7 +624,7 @@ public class Main {
                 if (compile(mainclass)) {
                     report.header("Calling method");
                     call.prepare(compileSolution(mainclass, null, 0));
-                    report.html(call.run(workDir, score));
+                    call.run(workDir, report, score);
                 }
 
                 // TODO: If their program runs out of memory, it takes labrat
@@ -713,7 +649,7 @@ public class Main {
                 for (String mainclass : mainclasses) {
                     if (missingClasses.contains(mainclass))
                         report.error("Missing " + mainclass);
-                    else if (mainclass.contains("Tester")
+                    else if (isTester(mainclass)
                              && !annotations.isSample(mainclass)
                              && !(containsClass(solutionFiles, mainclass) && inputs.size() > 0))
                         runTester(mainclass);
@@ -725,35 +661,38 @@ public class Main {
                 }
             }
 
-            report.header("Student files");
-            for (Path file : requiredFiles)
-                report.file(submissionDir, file);
-
-            String nodoc = checkProperties.getProperty("nodoc");
-            Set<String> nodocCl = new HashSet<String>();
-            if (nodoc != null)
-                nodocCl.addAll(Arrays.asList(nodoc.split(",")));
-
-            Set<Path> hidden = annotations.findHidden();
-            Iterator<Path> iter = printFiles.iterator();
-            while (iter.hasNext()) {
-                Path p = iter.next();
-                if (hidden.contains(p) || nodocCl.contains(Util.javaClass(p)))
-                    iter.remove();
-            }
-
-            printFiles = filterNot(printFiles, "test*.in", "test*.out", "*.expected", "check.properties", "*.png",
-                                   "*.gif", "*.jpg", "*.jpeg", ".DS_Store");
-            if (printFiles.size() > 0) {
-                report.header("Other files");
-                for (Path file : printFiles)
-                    report.file(workDir, file);
+            if (System.getProperty("com.horstmann.codecheck.textreport") == null)
+            {
+	            report.header("Student files");
+	            for (Path file : requiredFiles)
+	                report.file(submissionDir, file);
+	
+	            String nodoc = checkProperties.getProperty("nodoc");
+	            Set<String> nodocCl = new HashSet<String>();
+	            if (nodoc != null)
+	                nodocCl.addAll(Arrays.asList(nodoc.split(",")));
+	
+	            Set<Path> hidden = annotations.findHidden();
+	            Iterator<Path> iter = printFiles.iterator();
+	            while (iter.hasNext()) {
+	                Path p = iter.next();
+	                if (hidden.contains(p) || nodocCl.contains(Util.javaClass(p)))
+	                    iter.remove();
+	            }
+	
+	            printFiles = filterNot(printFiles, "test*.in", "test*.out", "*.expected", "check.properties", "*.png",
+	                                   "*.gif", "*.jpg", "*.jpeg", ".DS_Store");
+	            if (printFiles.size() > 0) {
+	                report.header("Other files");
+	                for (Path file : printFiles)
+	                    report.file(workDir, file);
+	            }
             }
         } catch (Throwable t) {
             report.systemError(t);
         } finally {
             report.add(score);
-            report.save(submissionDir.resolve("report.html"));
+            report.save("report");
         }
         System.exit(0);
     }
