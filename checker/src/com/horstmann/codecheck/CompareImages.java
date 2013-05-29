@@ -56,19 +56,19 @@ public class CompareImages {
 
         for (int x = 0; x < diff.getWidth(); x++)
             for (int y = 0; y < diff.getHeight(); y++) {
-                int rgb = 0xFFFFFF;
-                if (x < image1.getWidth() && x < image2.getWidth()
-                        && y < image1.getHeight() && y < image2.getHeight()) {
-                    int rgb1 = image1.getRGB(x, y);
-                    int rgb2 = image2.getRGB(x, y);
-                    int dr = ((rgb1 >> 16) & 0xFF) - ((rgb2 >> 16) & 0xFF);
-                    int dg = ((rgb1 >> 8) & 0xFF) - ((rgb2 >> 8) & 0xFF);
-                    int db = (rgb1 & 0xFF) - (rgb2 & 0xFF);
+                int rgb1 = 0xFFFFFF;
+                int rgb2 = 0xFFFFFF;
+                if (x < image1.getWidth() && y < image1.getHeight())
+                	rgb1 = image1.getRGB(x, y) & 0xFFFFFF;
+                if (x < image2.getWidth() && y < image2.getHeight())                     
+                    rgb2 = image2.getRGB(x, y) & 0xFFFFFF;
+                int dr = ((rgb1 >> 16) & 0xFF) - ((rgb2 >> 16) & 0xFF);
+                int dg = ((rgb1 >> 8) & 0xFF) - ((rgb2 >> 8) & 0xFF);
+                int db = (rgb1 & 0xFF) - (rgb2 & 0xFF);
 
-                    int cdiff = Math.min(255, (dr * dr + dg + dg + db * db) /
-                                         255);
-                    rgb = 0xFF0000 + ((255 - cdiff) << 8) + 255 - cdiff;
-                }
+                int cdiff = Math.min(255, (dr * dr + dg * dg + db * db) /
+                                     255);
+                int rgb = 0xFF0000 + ((255 - cdiff) << 8) + 255 - cdiff;
                 diff.setRGB(x, y, rgb);
             }
         return diff;

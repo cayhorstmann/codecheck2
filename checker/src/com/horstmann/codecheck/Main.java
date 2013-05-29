@@ -25,6 +25,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -38,10 +39,6 @@ import javax.tools.ToolProvider;
  * execution happens. The submission directory and problem directory are left untouched.
  *
  */
-
-// TODO: How can student supply optional files?
-
-// TODO: Recognize Printer to automatically capture output?
 
 public class Main {
     public static final double DEFAULT_TOLERANCE = 1.0E-6;
@@ -500,11 +497,13 @@ public class Main {
 
         if (compile(mainclass)) {
             for (int i = 0; i < calls.getSize(); i++) {
-                String[] result = runJavaProgram(mainclass, workDir, "" + (i + 1), null).split("\n");
+            	String result = runJavaProgram(mainclass, workDir, "" + (i + 1), null);
+                Scanner in = new Scanner(result);
                 args[i][0] = calls.getArgs(i);
-                actual[i] = result[0];
-                expected[i] = result[1];
-                outcomes[i] = result[2].equals("true"); 
+                actual[i] = in.nextLine();
+                expected[i] = in.nextLine();
+                outcomes[i] = in.nextLine().equals("true");
+                in.close();
                 score.pass(outcomes[i]);
             }
             report.runTable(new String[] { "Arguments" }, args, actual, expected, outcomes);

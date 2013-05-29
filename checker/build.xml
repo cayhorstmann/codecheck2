@@ -29,6 +29,7 @@
   <property name="app.resources" 
              value="${src.dir}/com/horstmann/codecheck/codecheck.properties" />
   <property name="webfile" value="/data/cay/web/com/codecheck/codecheck.zip" />
+  <property name="webdir2" value="/home/cay/cs1java/codecheck" />
   <property name="runscript" value="codecheck" />
 
   <target name="clean" description="Delete all generated files">
@@ -70,6 +71,12 @@
        <include name="${jarfile}"/>
        <include name="${runscript}"/>
     </zip>
+    <copy todir="${webdir2}" preservelastmodified="true">
+      <fileset dir="${basedir}">
+       <include name="${jarfile}"/>
+       <include name="${runscript}"/>
+      </fileset>
+    </copy>
   </target>
 
   <target name="dist" description="Make the source distribution" depends="jar">
