@@ -366,7 +366,6 @@ public class Main {
 
                 if (testExpectedFile != null) {
                     if (CompareImages.isImage(testExpectedFile)) {
-                        if (outerr.length() > 0) report.output("Output", outerr);
                         imageComp = new CompareImages(testExpectedPath);
                         report.image(testExpectedPath);
                     } else
@@ -389,11 +388,6 @@ public class Main {
                         }
                     }
 
-                    if (expectedOuterr != null && expectedOuterr.length() > 0) {
-                        boolean outcome = comp.execute(outerr, expectedOuterr, report);
-                        score.pass(outcome, report);
-                    }
-
                     if (imageComp != null) {
                         imageComp.setOtherImage(testExpectedPath);
                         boolean outcome = imageComp.getOutcome();
@@ -405,6 +399,11 @@ public class Main {
                     } else if (testExpectedFile != null) {
                         report.header(testExpectedFile);
                         boolean outcome = comp.execute(contents, expectedContents, report);
+                        score.pass(outcome, report);
+                    }
+
+                    if (expectedOuterr != null && expectedOuterr.length() > 0) {
+                        boolean outcome = comp.execute(outerr, expectedOuterr, report);
                         score.pass(outcome, report);
                     }
                 }
