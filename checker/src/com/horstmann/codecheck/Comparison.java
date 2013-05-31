@@ -15,7 +15,7 @@ public class Comparison {
         List<String> lines2 = getLines(expected);
 
         List<Boolean> matches = new ArrayList<Boolean>();
-        boolean outcome = true;
+        boolean outcome = lines1.size() == lines2.size();
         for (int i = 0; i < lines1.size() && i < lines2.size(); i++) {
            String line1 = lines1.get(i);
            String line2 = lines2.get(i);
@@ -23,12 +23,10 @@ public class Comparison {
            outcome &= b;
            matches.add(b);
         }
-        if (report != null) {	        
-	        if (outcome) 
-	           report.output("Output", actual);
-	        else 
-	           report.compareTokens(matches, lines1, lines2);
-        }
+        if (outcome) 
+           report.output("Output", actual);
+        else 
+           report.compareTokens(matches, lines1, lines2);
         return outcome;
     }
 

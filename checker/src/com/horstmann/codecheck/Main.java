@@ -475,7 +475,7 @@ public class Main {
                     
                     int j = 0;
                     for (String v : sub.values(i)) { args[i][j] = v; j++; }                      
-                    outcomes[i] = comp.execute(actual[i], expected[i], null);
+                    outcomes[i] = comp.compare(actual[i], expected[i]);
                     score.pass(outcomes[i]);
                 }
             }

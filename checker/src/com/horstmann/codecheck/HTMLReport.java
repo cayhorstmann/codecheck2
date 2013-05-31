@@ -378,7 +378,7 @@ public class HTMLReport implements Report {
 	@Override
 	public HTMLReport compareTokens(List<Boolean> matches, List<String> actual,
 			List<String> expected) {
-		tableStart().rowStart().headerCell("Actual").headerCell("Expected")
+		tableStart().rowStart().headerCell("Actual output").headerCell("Expected output")
 				.rowEnd().rowStart();
 		builder.append("<td style=\"background: #EEE; margin: 0.5em; padding: 0.25em; vertical-align: top;\">");
 		builder.append("<pre>");

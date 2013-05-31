@@ -263,16 +263,21 @@ public class TextReport implements Report {
 	}
 	
 	private void repeat(char c, int count) { for (int i = 0; i < count; i++) builder.append(c); }
-	private void pad(String s, int col) { builder.append(s); repeat(' ', col - s.length()); }
+	private void pad(String s, int col) { s = s.trim(); builder.append(s); repeat(' ', col - s.length()); }
 	
 	@Override
 	public TextReport compareTokens(List<Boolean> matches, List<String> actual,
 			List<String> expected) {
 		
-		int col1 = longestLine(actual) + 1;
-		int col2 = longestLine(expected);
-		pad("  Actual", col1 + 2);
-		add("Expected");
+		String caption1 = "Actual output";
+		String caption2 = "Expected output";
+		
+		int col1 = Math.max(longestLine(actual), caption1.length()) + 3;
+		int col2 = Math.max(longestLine(expected), caption2.length());
+		
+		builder.append("  ");
+		pad(caption1, col1);
+		add(caption2);
 		builder.append("  ");
 		repeat('-', col1 + col2);
 		builder.append("\n");
@@ -281,7 +286,7 @@ public class TextReport implements Report {
 			if (i < matches.size() && matches.get(i)) 
 				builder.append("  ");
 			else
-				builder.append("-  ");
+				builder.append("- ");
 			
 			if (i < expected.size()) {
 				pad(actual.get(i), col1);
