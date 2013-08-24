@@ -22,11 +22,11 @@ public class Substitution {
             this.file = file;
         else if (!this.file.equals(file))
             throw new RuntimeException("SUB in " + this.file + " and " + file);
-        String patternString = "\\s*\\S+\\s+(\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*([^\\s;]+)\\s*;\\s*";
+        String patternString = ".*\\S\\s+(\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*([^;]+);\\s*";
         Pattern pattern = Pattern.compile(patternString);
         Matcher matcher = pattern.matcher(decl);
         if (matcher.matches()) {
-            String name = matcher.group(1);
+            String name = matcher.group(1).trim();
             ArrayList<String> values = new ArrayList<>();
             subs.put(name, values);
             values.add(matcher.group(2));
@@ -61,10 +61,11 @@ public class Substitution {
     }
 
     void substitute(Path from, Path to, int n) throws IOException {
-        String patternString = "\\s*\\S+\\s+(\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*([^\\s;]+)\\s*;.*";
+        String patternString = ".*\\S\\s+(\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*([^;]+);.*";
         Pattern pattern = Pattern.compile(patternString);
+        List<String> lines = Util.readLines(from);
         try (PrintWriter out = new PrintWriter(Files.newBufferedWriter(to, StandardCharsets.UTF_8))) {
-            for (String line : Util.readLines(from)) {
+            for (String line : lines) {
                 Matcher matcher = pattern.matcher(line);
                 if (matcher.matches()) {
                     String name = matcher.group(1);

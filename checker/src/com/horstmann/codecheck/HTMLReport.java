@@ -298,8 +298,9 @@ public class HTMLReport implements Report {
 	 * @see com.horstmann.codecheck.Report#save(java.nio.file.Path)
 	 */
 	@Override
-	public HTMLReport save(String out) throws IOException {
+	public HTMLReport save(String problemId, String out) throws IOException {
 		Path outPath = dir.resolve(out + ".html");
+		builder.append("<p><a href=\"" + problemId + ".jar\">Download</a>");
 		builder.append("</body></html>\n");
 		Files.write(outPath, builder.toString().getBytes());
 		return this;
@@ -417,6 +418,14 @@ public class HTMLReport implements Report {
 			cellEnd().rowEnd();
 		}
 		tableEnd();
+		return this;
+	}
+	
+	public HTMLReport comment(String text) {
+		if (builder.charAt(builder.length() - 1) != '\n') builder.append('\n');
+		builder.append("<!-- ");
+		builder.append(text.replaceAll("--", "-&#45;"));
+		builder.append(" -->\n");
 		return this;
 	}
 }

@@ -3,14 +3,19 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.MessageFormat;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.servlet.ServletContext;
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
@@ -22,6 +27,7 @@ public class Files {
 
     @Context
     ServletContext context;
+    @Context private HttpServletRequest request;
 
     private static String start = "<html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\" /></head><body style=\"font-family: sans;\">";
     private static String before = "<form method=\"post\" action=\"{0}\" {1}>";
@@ -39,6 +45,23 @@ public class Files {
     // TODO: Separate out empty and nonempty files, with "provide" and "complete"
 
     @GET
+    @javax.ws.rs.Path("/{problem}") 
+    @Produces("text/html")
+    public String files(@PathParam("problem") String problem)
+    		throws IOException {
+    	return files("ext", problem, "check", false);
+    }
+
+    @GET
+    @javax.ws.rs.Path("/{problem}/{level}") 
+    @Produces("text/html")
+    public String files(@PathParam("problem") String problem, @PathParam("level") String level)
+    		throws IOException {
+    	return files("ext", problem, level, false);
+    }
+    
+    @GET
+    @javax.ws.rs.Path("/")    
     @Produces("text/html")
     public String files(@QueryParam("repo") @DefaultValue("ext") String repo,
                         @QueryParam("problem") String problemName,
@@ -68,21 +91,34 @@ public class Files {
 
         Set<Path> requiredFiles = problem.getRequiredFiles();
         Set<Path> useFiles = problem.getUseFiles();
+        Map<Path, StringBuilder> contents = new HashMap<>();
+        Iterator<Path> iter = useFiles.iterator();
+        while (iter.hasNext()) {
+        	Path p = iter.next();
+        	StringBuilder cont = Util.htmlEscape(Util.read(problemPath, p));
+        	if (cont.substring(0, 7).matches("//HIDE\\s"))
+        		iter.remove();
+        	else
+        		contents.put(p, cont);
+        }
         if (description != null)
             result.append(description);
         if (includeCode && useFiles.size() > 0) {
             result.append(MessageFormat.format(useStart, useFiles.size()));
             for (Path p : useFiles) {
+            	StringBuilder cont = contents.get(p); 
                 result.append("<p>");
                 result.append(Util.tail(p).toString());
                 result.append("</p>\n");
                 result.append("<pre>");
-                result.append(Util.htmlEscape(Util.read(problemPath, p)));
+                result.append(cont);
                 result.append("</pre\n>");
             }
         }
         // TODO: In file upload, must still SHOW the non-empty required files
-        String url = upload ? "checkUpload" : "check";
+        String requestURL = request.getRequestURL().toString();
+        String url = requestURL.substring(0, requestURL.indexOf("files")) + (upload ? "checkUpload" : "check");
+        
         result.append(MessageFormat.format(before, url,
                                            upload ? "encoding=\"multipart/form-data\"" : ""));
         result.append(MessageFormat.format(provideStart, requiredFiles.size()));
@@ -104,16 +140,16 @@ public class Files {
                 result.append(MessageFormat.format(fileUpload, file));
             } else {
                 int lines = 0;
-                String contents = "";
+                String cont = "";
                 if (includeCode) {
-                    contents = Util.read(problemPath, p);
-                    lines = Util.countLines(contents);
-                    if (contents == null) contents = "";
+                    cont = Util.read(problemPath, p);
+                    lines = Util.countLines(cont);
+                    if (cont == null) cont = "";
                 }
                 if (lines == 0) lines = 20;
 
                 result.append(MessageFormat.format(fileAreaBefore, file, lines));
-                result.append(Util.htmlEscape(contents));
+                result.append(Util.htmlEscape(cont));
                 result.append(fileAreaAfter);
             }
         }

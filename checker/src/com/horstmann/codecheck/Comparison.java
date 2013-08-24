@@ -10,7 +10,7 @@ public class Comparison {
     private boolean ignoreCase = true;
     private boolean ignoreSpace = true;
     
-    public boolean execute(String actual, String expected, Report report) throws IOException {
+    public boolean execute(String actual, String expected, Report report, String title) throws IOException {
         List<String> lines1 = getLines(actual);
         List<String> lines2 = getLines(expected);
 
@@ -24,7 +24,7 @@ public class Comparison {
            matches.add(b);
         }
         if (outcome) 
-           report.output("Output", actual);
+           report.output(title, actual);
         else 
            report.compareTokens(matches, lines1, lines2);
         return outcome;
@@ -72,7 +72,7 @@ public class Comparison {
         return true;
     }
 
-    private boolean compareAsNumbers(String a, String b) {
+    public boolean compareAsNumbers(String a, String b) {
         try {
             double x = Double.parseDouble(a);
             double y = Double.parseDouble(b);

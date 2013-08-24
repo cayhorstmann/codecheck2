@@ -67,6 +67,11 @@ public class Annotations {
         }
         return match == null ? null : match.args;
     }
+    
+    public String findUniqueKey(String key, String defaultValue) {
+    	String result = findUniqueKey(key);
+    	return result == null ? defaultValue : result;
+    }
 
     public double findUniqueDoubleKey(String key, double defaultValue) {
         Annotation match = null;
@@ -92,7 +97,13 @@ public class Annotations {
             boolean forbidden = a.key.equals("FORBIDDEN");
             if (a.key.equals("REQUIRED") || forbidden) {
                 Path p = Util.tail(a.path);
-                boolean found = Pattern.compile(a.args).matcher(Util.read(dir.resolve(p))).find();
+                StringBuilder contents = new StringBuilder();
+                for (String line : Util.readLines(dir.resolve(p)))
+                {
+                	contents.append(line.replaceAll("//.*$", ""));
+               		contents.append(" ");
+                }
+                boolean found = Pattern.compile(a.args).matcher(contents).find();
                 if (found == forbidden) { // found && forbidden || !found && required
                     String message = a.next.startsWith("//") ? a.next.substring(2).trim() :
                                      ((forbidden ? "Found " : "Did not find ") + a.args);

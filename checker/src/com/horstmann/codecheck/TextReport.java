@@ -7,7 +7,9 @@ import java.io.PrintStream;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Date;
 import java.util.List;
+import java.util.ResourceBundle;
 import java.util.Set;
 
 import javax.imageio.ImageIO;
@@ -22,6 +24,12 @@ public class TextReport implements Report {
 	public TextReport(String title, Path outputDir) {
 		dir = outputDir;
 		builder = new StringBuilder();
+		builder.append("codecheck version ");
+		builder.append(ResourceBundle.getBundle("com.horstmann.codecheck.codecheck").getString("version"));
+		builder.append(" ");
+		builder.append(" started ");
+		builder.append(new Date());
+		builder.append("\n\n");
 	}
 
 	private TextReport add(CharSequence s) { builder.append(s); builder.append("\n"); return this; }
@@ -231,7 +239,7 @@ public class TextReport implements Report {
 	 * @see com.horstmann.codecheck.Report#save(java.nio.file.Path)
 	 */
 	@Override
-	public TextReport save(String out) throws IOException {
+	public TextReport save(String problemDir, String out) throws IOException {
 		Path outPath = dir.resolve(out + ".txt");
 		Files.write(outPath, builder.toString().getBytes());
 		return this;
@@ -324,6 +332,14 @@ public class TextReport implements Report {
 			pad(expected[i], cols[n + 1]);
 			pass(outcomes[i]);
 		}
+		return this;
+	}
+	
+	public TextReport comment(String text) {
+		if (builder.charAt(builder.length() - 1) != '\n') builder.append('\n');
+		builder.append("# ");
+		builder.append(text);
+		builder.append('\n');
 		return this;
 	}
 }

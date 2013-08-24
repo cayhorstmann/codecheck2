@@ -17,8 +17,8 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import com.sun.jersey.core.header.FormDataContentDisposition;
-import com.sun.jersey.multipart.FormDataParam;
+import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
+import org.glassfish.jersey.media.multipart.FormDataParam;
 
 @javax.ws.rs.Path("/uploadProblem")
 public class UploadProblem {
@@ -51,13 +51,12 @@ public class UploadProblem {
                 boolean multipleLevels = runs.keySet().size() > (grade ? 2 : 1);
                 String problem = dir.getFileName().toString();
                 String requestURL = request.getRequestURL().toString();
-                // TODO: Drop ext
-                String url = requestURL.substring(0, requestURL.lastIndexOf("/")) + "/files?problem=" + problem;
+                String url = requestURL.substring(0, requestURL.lastIndexOf("/")) + "/files/" + problem;
                 StringBuilder response = new StringBuilder();
                 response.append("<html><body style=\"font-family: sans\"><ul style=\"list-style: square\">");
                 for (String k : runs.keySet()) {
                     response.append("<li>");
-                    String reportUrl = requestURL.substring(0, requestURL.lastIndexOf("/")) + "/fetch?file=" + runs.get(k);
+                    String reportUrl = requestURL.substring(0, requestURL.lastIndexOf("/")) + "/fetch/" + runs.get(k);
                     if (k.equals("grade")) {
                         response.append("<a href=\"");
                         response.append(reportUrl);
@@ -66,7 +65,7 @@ public class UploadProblem {
                         String problemUrl = url;
                         if (multipleLevels) {
                             response.append("Level " + k + " ");
-                            problemUrl += "&amp;level=" + k;
+                            problemUrl += "/" + k;
                         }
                         response.append("URL: <code>");
                         response.append(problemUrl);
@@ -101,7 +100,7 @@ public class UploadProblem {
 
         int maxLevel = 1;
         for (int i = 9; i >= 2 && maxLevel == 1; i--) // Find highest level
-            if (Files.exists(dir.resolve("student" + i))) maxLevel = i;
+            if (Files.exists(dir.resolve("student" + i)) || Files.exists(dir.resolve("solution" + i))) maxLevel = i;
 
         boolean grade = Files.exists(dir.resolve("grader"));
         Path submissionDir = Util.getDir(context, "submissions");
@@ -116,12 +115,11 @@ public class UploadProblem {
             String problem = dir.getFileName().toString();
             String levelString = grade && i == maxLevel + 1 ? "grade" : "" + i;
             Util.runLabrat(context, repo, problem, levelString, tempDir.toAbsolutePath().toString());
-            String reportFileName = tempDir.getFileName().toString()+ ".html";
-            Path reportDir = Util.getDir(context, "reports");
-            Path reportFile = reportDir.resolve(reportFileName);
-            Files.copy(tempDir.resolve("report.html"), reportFile);
+            Path reportDir = Util.getDir(context, "reports").resolve(tempDir.getFileName());
+            Files.createDirectory(reportDir);
+            Files.copy(tempDir.resolve("report.html"), reportDir.resolve("report.html"));
             // TODO: Remove temp dir?
-            runs.put(levelString, reportFileName);
+            runs.put(levelString, tempDir.getFileName().toString() + "/report.html");
         }
         return true;
     }

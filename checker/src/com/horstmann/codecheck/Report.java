@@ -35,11 +35,13 @@ public interface Report
 
    public abstract Report add(Score score);
 
-   public abstract Report save(String out) throws IOException;
+   public abstract Report save(String problemId, String out) throws IOException;
    
    Report pass(boolean b);
    
    Report compareTokens(List<Boolean> matches, List<String> actual, List<String> expected);
    Report output(List<String> lines, Set<Integer> matches, Set<Integer> mismatches);
    Report runTable(String[] argNames, String[][] args, String[] actual, String[] expected, boolean[] outcomes);
+   
+   Report comment(String text);
 }

@@ -44,6 +44,8 @@ public class Main {
     public static final double DEFAULT_TOLERANCE = 1.0E-6;
     public static final int DEFAULT_TIMEOUT_MILLIS = 30000;
     public static final String DEFAULT_TOKEN = "line";
+    
+    private int timeoutMillis;
     private Path workDir;
     private Properties checkProperties = new Properties();
     private Report report;
@@ -172,16 +174,61 @@ public class Main {
      * @throws ReflectiveOperationException
      */
     @SuppressWarnings("deprecation")
-    public String runJavaProgram(final String mainclass, final Path classpathDir, String args, String input)
+    public String runJavaProgram(final String mainclass, final Path classpathDir, String args, String input, int timeoutMillis)
     throws IOException, ReflectiveOperationException {
         InputStream oldIn = System.in;
         PrintStream oldOut = System.out;
         PrintStream oldErr = System.err;
         if (input == null)
             input = "";
-        System.setIn(new ByteArrayInputStream(input.getBytes("UTF-8")));
-        ByteArrayOutputStream newOut = new ByteArrayOutputStream();
+        final ByteArrayOutputStream newOut = new ByteArrayOutputStream();
         final PrintStream newOutPrint = new PrintStream(newOut);
+        System.setIn(new ByteArrayInputStream(input.getBytes("UTF-8")) {
+            public int available() 
+            {
+               return 0;
+            }
+            public int read()  
+            {
+               int c = super.read();
+               if (c != -1) 
+               { 
+                  newOut.write((char) c); 
+               }
+               return c;
+            }
+            public int read(byte[] b)
+            {
+               return read(b, 0, b.length);
+            }
+            public int read(byte[] b, int off, int len)
+            {
+               // int r = super.read(b, off, len);
+               if (len == 0 || off >= b.length) return 0;
+               int r = 0;            
+               int c = super.read();
+               if (c == -1) return -1;
+               boolean done = false;
+               while (!done)
+               {
+                  b[off + r] = (byte) c;  
+                  r++;                  
+                  if (c == '\n') done = true;
+                  else 
+                  {  
+                     c = super.read();
+                     if (c == -1) done = true;
+                  }
+               }            
+               if (r != -1) 
+               { 
+                  newOut.write(b, off, r);
+               }
+               return r;
+            }        	
+        });
+        
+        String result = "";
         System.setOut(newOutPrint);
         System.setErr(newOutPrint);
         System.setSecurityManager(securityManager);
@@ -218,22 +265,20 @@ public class Main {
                 }
             };
 
-            long startTime = System.currentTimeMillis();
             mainmethodThread.start();
 
-            final int delayMillis = DEFAULT_TIMEOUT_MILLIS; // TODO:
-            // Parameterize
-
             try {
-                mainmethodThread.join(delayMillis);
+                mainmethodThread.join(timeoutMillis);
             } catch (InterruptedException e) {
             }
-            long endTime = System.currentTimeMillis();
-            if (endTime - startTime > delayMillis)
-                newOutPrint.println("Timed out after " + delayMillis / 1000 + " seconds");
-
-            if (!done.get())
+            result = newOut.toString("UTF-8");
+            if (!done.get()) {
+            	if (!result.endsWith("\n")) result += "\n";
+                result += "Timed out after " +
+                		(timeoutMillis >= 2000 ? timeoutMillis / 1000 + " seconds" 
+                				: timeoutMillis + " milliseconds");
                 mainmethodThread.stop();
+            }
         } finally {
             System.setIn(oldIn);
             System.setOut(oldOut);
@@ -241,7 +286,7 @@ public class Main {
             System.setSecurityManager(null);
             loader.close();
         }
-        return newOut.toString("UTF-8");
+        return result;
     }
 
     boolean getBooleanProperty(String key, boolean defaultValue) {
@@ -327,10 +372,15 @@ public class Main {
         ReflectiveOperationException {
         report.header("Running " + mainclass);
         // TODO: Assume testers always in default package?
+        
+        // TODO: Scoring doesn't work when outerr contains an exception report because we don't know how many
+        // test cases have not occurred. 
+        // May need to count the number of expected cases in the 
+        
         if (compile(mainclass)) {
-            String outerr = runJavaProgram(mainclass, workDir, "", null);
+            String outerr = runJavaProgram(mainclass, workDir, "", null, timeoutMillis);
             AsExpected cond = new AsExpected(comp);
-            cond.eval(outerr, report, score);
+            cond.eval(outerr, report, score, workDir.resolve(Util.javaPath(mainclass)));
         }
     }
 
@@ -344,6 +394,7 @@ public class Main {
             inputs.put("", getStringProperty("test.run.inputstring")); // Legacy
         report.header("Testing " + mainclass);
         if (compile(mainclass)) {
+        	int timeout = timeoutMillis / inputs.size();
             for (String test : inputs.keySet()) {
                 String input = inputs.get(test);
                 // TODO: Might be useful to have more than one set of ARGS
@@ -351,9 +402,11 @@ public class Main {
                 if (runargs == null)
                     runargs = getStringProperty(test + ".args", "args", "test.args", "test.run.args",
                                                 "test.test-inputs.args", "");
-                String outerr = runJavaProgram(mainclass, workDir, runargs, input);
+                String outerr = runJavaProgram(mainclass, workDir, runargs, input, timeout);
+                /*               
                 if (input != null && input.length() > 1)
                     report.output("Input " + test, input);
+                */
                 String testExpectedFile = annotations.findUniqueKey("OUT");
                 if (testExpectedFile == null)
                     testExpectedFile = getStringProperty(test + ".outputfile", (test.length() > 0 ? test
@@ -372,8 +425,11 @@ public class Main {
                         contents = Util.read(testExpectedPath);
                 }
 
-                if (annotations.isSample(mainclass) || "true".equals(getStringProperty("test.run"))) // Run without testing
-                    report.output("Output", outerr);
+            	String title = "Program run";
+            	if (test != null) title = (title + " " + test.replace("test", "")).trim(); 
+                if (annotations.isSample(mainclass) || "true".equals(getStringProperty("test.run"))) { // Run without testing
+                    report.output(title, outerr);
+                }
                 else {
                     // Make output from solution
                     if (tempDir == null)
@@ -381,7 +437,7 @@ public class Main {
                     if (tempDir != null) {
                         if (testExpectedFile != null)
                             Files.delete(workDir.resolve(testExpectedFile));
-                        expectedOuterr = runJavaProgram(mainclass, tempDir, runargs, input);
+                        expectedOuterr = runJavaProgram(mainclass, tempDir, runargs, input, timeout);
                         if (testExpectedFile != null) {
                             if (imageComp == null)
                                 expectedContents = Util.read(testExpectedPath);
@@ -398,12 +454,12 @@ public class Main {
                         score.pass(outcome, report);
                     } else if (testExpectedFile != null) {
                         report.header(testExpectedFile);
-                        boolean outcome = comp.execute(contents, expectedContents, report);
+                        boolean outcome = comp.execute(contents, expectedContents, report, title);
                         score.pass(outcome, report);
                     }
 
                     if (expectedOuterr != null && expectedOuterr.length() > 0) {
-                        boolean outcome = comp.execute(outerr, expectedOuterr, report);
+                        boolean outcome = comp.execute(outerr, expectedOuterr, report, title);
                         score.pass(outcome, report);
                     }
                 }
@@ -464,14 +520,14 @@ public class Main {
             String[] expected = new String[n];
             boolean[] outcomes = new boolean[n];
 
-
+            int timeout = timeoutMillis / Math.max(1, sub.getSize()); 
             for (int i = 0; i < sub.getSize(); i++) {
                 sub.substitute(submissionDir.resolve(p),
                                workDir.resolve(p), i);
                 if (compile(mainclass)) {
-                    actual[i] = runJavaProgram(mainclass, workDir, null, null);
+                    actual[i] = runJavaProgram(mainclass, workDir, null, null, timeout);
                     Path tempDir = compileSolution(mainclass, sub, i);
-                    expected[i] = runJavaProgram(mainclass, tempDir, null, null);                    
+                    expected[i] = runJavaProgram(mainclass, tempDir, null, null, timeout);                    
                     
                     int j = 0;
                     for (String v : sub.values(i)) { args[i][j] = v; j++; }                      
@@ -494,16 +550,27 @@ public class Main {
         String[] expected = new String[calls.getSize()];
         boolean[] outcomes = new boolean[calls.getSize()];
 
+        int timeout = timeoutMillis / calls.getSize();
+        
         if (compile(mainclass)) {
             for (int i = 0; i < calls.getSize(); i++) {
-            	String result = runJavaProgram(mainclass, workDir, "" + (i + 1), null);
+            	String result = runJavaProgram(mainclass, workDir, "" + (i + 1), null, timeout);
+            	System.out.println("result=" + result);
                 Scanner in = new Scanner(result);
-                args[i][0] = calls.getArgs(i);
-                actual[i] = in.nextLine();
-                expected[i] = in.nextLine();
-                outcomes[i] = in.nextLine().equals("true");
+                List<String> lines = new ArrayList<>();
+                while (in.hasNextLine()) lines.add(in.nextLine());
                 in.close();
-                score.pass(outcomes[i]);
+            	args[i][0] = calls.getArgs(i);
+                if (lines.size() == 3 && Arrays.asList("true", "false").contains(lines.get(2))) {
+                	expected[i] = lines.get(0);
+                	actual[i] = lines.get(1);
+                	outcomes[i] = lines.get(2).equals("true");                
+                } else {
+                	expected[i] = lines.size() > 0 ? lines.get(0) : "???";  
+                	actual[i] = lines.size() > 1 ? lines.get(1) : "???";
+                	outcomes[i] = false;
+                }
+            	score.pass(outcomes[i]);
             }
             report.runTable(new String[] { "Arguments" }, args, actual, expected, outcomes);
         }
@@ -553,6 +620,8 @@ public class Main {
                 solutionDirectories.add("solution" + n);
 
         workDir = new File(".").getAbsoluteFile().toPath().normalize();
+        
+        String problemId = null;
                 
         try {
             // Read check.properties in level dirs
@@ -573,13 +642,24 @@ public class Main {
             annotations.read(problemDir, studentFiles);
             annotations.read(problemDir, solutionFiles);
 
+            String uid = problemDir.getFileName().toString();
+            report.comment("UID: " + uid);
+            problemId = annotations.findUniqueKey("ID").replaceAll("[^A-Za-z0-9]", "").toLowerCase();
+            if (problemId == null) problemId = uid;
+            else report.comment("ID: " + problemId);
+            timeoutMillis = DEFAULT_TIMEOUT_MILLIS;
+            String timeoutProperty = System.getProperty("com.horstmann.codecheck.timeout");
+            if (timeoutProperty != null)
+            	timeoutMillis = Integer.parseInt(timeoutProperty);
+            timeoutMillis = (int) annotations.findUniqueDoubleKey("TIMEOUT", timeoutMillis);
+            
             double tolerance = annotations.findUniqueDoubleKey("TOLERANCE", DEFAULT_TOLERANCE);
             tolerance = getDoubleProperty("test.tolerance", tolerance); // Legacy
             boolean ignoreCase = !"false".equals(annotations.findUniqueKey("IGNORECASE"));
             boolean ignoreSpace = !"false".equals(annotations.findUniqueKey("IGNORESPACE"));
             comp.setTolerance(tolerance);
             comp.setIgnoreCase(ignoreCase);
-            comp.setIgnoreSpace(ignoreSpace);
+            comp.setIgnoreSpace(ignoreSpace);            
             
             getRequiredClasses();
             getMainClasses();
@@ -618,7 +698,10 @@ public class Main {
                 }
 
                 // Call method
-                CallMethod call = new CallMethod(mainclass, checkProperties);
+                CallMethod call = new CallMethod(mainclass, checkProperties, timeoutMillis);
+                call.setTolerance(tolerance);
+                call.setIgnoreCase(ignoreCase);
+                call.setIgnoreSpace(ignoreSpace);
                 if (compile(mainclass)) {
                     report.header("Calling method");
                     call.prepare(compileSolution(mainclass, null, 0));
@@ -690,7 +773,7 @@ public class Main {
             report.systemError(t);
         } finally {
             report.add(score);
-            report.save("report");
+            report.save(problemId, "report");
         }
         System.exit(0);
     }

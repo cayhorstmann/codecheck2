@@ -49,7 +49,8 @@ if [ -z "$BROWSER" ] ; then
   fi
 fi
 
-CLASSPATH=`dirname $0`/codecheck.jar
+BASEDIR=`dirname $0`
+CLASSPATH="$BASEDIR/codecheck.jar"
 if [ "${CLASSPATH/#\//}" == "$CLASSPATH" ] ; then CLASSPATH=`pwd`/"$CLASSPATH" ; fi
 
 function usage() {
@@ -111,16 +112,67 @@ if [ "${SUBMISSIONDIR/#\//}" == "$SUBMISSIONDIR" ] ; then SUBMISSIONDIR=`pwd`/"$
 
 if [ "${PROBLEMDIR/#\//}" == "$PROBLEMDIR" ] ; then PROBLEMDIR=`pwd`/"$PROBLEMDIR" ; fi
 
-WORKDIR=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
-
-cd "$WORKDIR"
-
 if $cygwin; then
     SUBMISSIONDIR=`cygpath -w $SUBMISSIONDIR`
     PROBLEMDIR=`cygpath -w $PROBLEMDIR`
     CLASSPATH=`cygpath -w $CLASSPATH`
 fi
 
+WORKDIR=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
+
+cd "$SUBMISSIONDIR"
+REPORT_JAR=`basename $PROBLEMDIR`.jar
+jar cf $REPORT_JAR .
+
+cd "$WORKDIR"
+
 LC_ALL=en_US.UTF-8 java -Dcom.horstmann.codecheck $JAVA_OPTS -classpath "$CLASSPATH" com.horstmann.codecheck.Main $LEVEL "$SUBMISSIONDIR" "$PROBLEMDIR" "$TITLE"
 cd - > /dev/null
 $BROWSER "$SUBMISSIONDIR/$REPORT"
+
+cd "$SUBMISSIONDIR"
+jar uf $REPORT_JAR report.html
+jarsigner -keystore "$BASEDIR/codecheck.certs" -storepass secret -keypass secret $REPORT_JAR  codecheck > /dev/null
+
+if [ -z $3 ] ; then
+  # Checking student files
+  SUBMISSIONDIR2=`mktemp -d`
+  if [ -e $2/student ] ; then 
+    cd $2/student
+    for f in `find .` ; do 
+      if [ -e ../solution/$f ] ; then
+        cp --parents $f $SUBMISSIONDIR2
+      fi 
+    done
+    cd ../..
+  fi
+  case $LEVEL in 
+    [1-9])
+      for n in `seq 1 $LEVEL` ; do
+        if [ -e $2/student$n ] ; then 
+          cd $2/student$n
+          for f in `find .` ; do 
+            if [ -e ../solution$n/$f ] ; then
+              cp --parents $f $SUBMISSIONDIR2
+            fi 
+          done
+          cd ../..
+        fi
+      done
+    ;;
+  esac  
+
+  WORKDIR=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
+
+  cd "$WORKDIR"
+
+  if $cygwin; then
+      SUBMISSIONDIR2=`cygpath -w $SUBMISSIONDIR2`
+  fi
+
+  LC_ALL=en_US.UTF-8 java -Dcom.horstmann.codecheck $JAVA_OPTS -classpath "$CLASSPATH" com.horstmann.codecheck.Main $LEVEL "$SUBMISSIONDIR2" "$PROBLEMDIR" "$TITLE"
+  cd - > /dev/null
+  $BROWSER "$SUBMISSIONDIR2/$REPORT"
+fi
+
+  

@@ -1,10 +1,10 @@
 cd `dirname $0`/../../server
 ant war
-jar uf antbuild/codecheck.war -C instances/aws WEB-INF/web.xml
+jar uf antbuild/codecheck.war -C ../instances/aws WEB-INF/web.xml
 rsync -e "ssh -i /home/cay/.ec2/aws1.pem" \
     -avz \
     antbuild/codecheck.war \
-    $EC2_HOST:/opt/glassfish3/glassfish/domains/domain1/autodeploy/
+    $EC2_HOST:/opt/glassfish4/glassfish/domains/domain1/autodeploy/
 
 cd ../checker
 ant
@@ -17,5 +17,5 @@ rsync -e "ssh -i /home/cay/.ec2/aws1.pem" \
 rsync -e "ssh -i /home/cay/.ec2/aws1.pem" \
     -avz \
     ../instances/aws/codecheck \
-    $EC2_HOST:/home/ubuntu/labrat/codecheck/
+    $EC2_HOST:/home/ubuntu/codecheck/
 

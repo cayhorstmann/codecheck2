@@ -12,8 +12,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
-// TODO: Pretty URLs
-
 @javax.ws.rs.Path("/check")
 public class Check {
     @Context
@@ -42,11 +40,15 @@ public class Check {
                 Util.write(tempDir, key, value);
         }
         Util.runLabrat(context, repo, problem, level, tempDir.toAbsolutePath().toString());
-        String reportFileName = tempDir.getFileName().toString()+ ".html";
-        Path reportDir = Util.getDir(context, "reports");
-        Path reportFile = reportDir.resolve(reportFileName);
-        Files.copy(tempDir.resolve("report.html"), reportFile);
+        Path tempDirName = tempDir.getFileName();
+        Path reportBaseDir = Util.getDir(context, "reports");
+        Path reportDir = reportBaseDir.resolve(tempDirName);
+        Files.createDirectory(reportDir);
+        Files.copy(tempDir.resolve("report.html"), reportDir.resolve("report.html"));
+        // TODO: Find the JAR file name and move it
+        // Files.copy(tempDir.resolve("report.jar"), reportDir.resolve("report.jar"));
         // TODO: Remove temp dir?
-        return Response.seeOther(URI.create("fetch?file=" + reportFileName)).build();
+
+        return Response.seeOther(URI.create("fetch/" + tempDirName + "/report.html")).build();
     }
 }

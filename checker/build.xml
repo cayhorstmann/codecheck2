@@ -38,18 +38,21 @@
 
   <target name="init">
     <mkdir dir="${build.dir}" />
-    <tstamp/>
+    <tstamp>
+       <format property="VERSION"
+               pattern="yyMMddHHmm"/>
+    </tstamp>
   </target>
-<!--
+
   <target name="props" depends="init" description="Set version-specific properties.">
     <replaceregexp file="${app.resources}" byline="true">
-       <regexp pattern="(version.date\s*=\s*).*"/>
-       <substitution expression="\1${DSTAMP}"/>
+       <regexp pattern="(version\s*=\s*).*"/>
+       <substitution expression="\1${VERSION}"/>
     </replaceregexp>
  </target>
--->
-  <target name="compile" description="Compiles the Task" depends="init">
-    <javac srcdir="${src.dir}" debug="true" destdir="${build.dir}"/>
+
+  <target name="compile" description="Compiles the Task" depends="init, props">
+    <javac includeantruntime="false" srcdir="${src.dir}" debug="true" destdir="${build.dir}"/>
     <copy todir="${build.dir}" preservelastmodified="true">
       <fileset dir="${src.dir}">
         <include name="**/*.xml" />

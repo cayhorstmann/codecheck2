@@ -9,20 +9,37 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class CallMethod {
     private boolean outcome;
     private List<Object> expectedRets = new ArrayList<>();
     private Properties props;
     private String className;
+    private double tolerance = 1.0E-6;
+    private int timeoutMillis;
+    private boolean ignoreCase = true;
+    private boolean ignoreSpace = true;    
 
-    public CallMethod(String className, Properties props) {
+    public CallMethod(String className, Properties props, int timeoutMillis) {
         this.className = className;
         this.props = props;
+        this.timeoutMillis = timeoutMillis;
     }
+    
+    public void setTolerance(double tolerance) {
+		this.tolerance = tolerance;
+	}
+    
+    public void setIgnoreCase(boolean ignoreCase) {
+		this.ignoreCase = ignoreCase;
+	}
+    
+    public void setIgnoreSpace(boolean ignoreSpace) {
+		this.ignoreSpace = ignoreSpace;
+	}
 
     public boolean getOutcome() {
         return outcome;
@@ -39,6 +56,7 @@ public class CallMethod {
 
     public void prepare(Path dir) throws Exception {
         URLClassLoader loader = new URLClassLoader(new URL[] { dir.toUri().toURL() });
+        loader.setDefaultAssertionStatus(true);
         // TODO: equals will fail if this compilation involves supplied classes
         // since this class loader is different than the one with which the
         // student submission is loaded
@@ -61,23 +79,50 @@ public class CallMethod {
         }
     }
 
-    private Object callMethod(Class<?> cl, int i, List<String> paramValues) throws Exception {
-        Object obj = null;
-        Method method = getMethod(cl, i);
-
-        if ((method.getModifiers() & Modifier.STATIC) == 0)
-            obj = cl.newInstance();
+    @SuppressWarnings("deprecation")
+    private Object callMethod(Class<?> cl, int i, List<String> paramValues) throws Throwable {
+        final Method method = getMethod(cl, i);
+        final Object obj = (method.getModifiers() & Modifier.STATIC) == 0 ? cl.newInstance() : null;
 
         Class<?>[] paramTypes = method.getParameterTypes();
-        Object[] methodArgs = new Object[paramValues.size()];
+        final Object[] methodArgs = new Object[paramValues.size()];
         for (int j = 0; j < paramValues.size(); j++)
             methodArgs[j] = convert(paramValues.get(j), paramTypes[j]);
+        
+        final Object[] result = { null };
+        
+        final AtomicBoolean done = new AtomicBoolean(false);
+        final Thread mainmethodThread = new Thread() {
+            public void run() {
+                try {
+                	result[0] = method.invoke(obj, methodArgs);
+                } catch (Throwable t) {
+                    result[0] = t;
+                }
+                done.set(true);
+            }
+        };
 
-        return method.invoke(obj, methodArgs);
+        mainmethodThread.start();
+
+        try {
+            mainmethodThread.join(timeoutMillis);
+        } catch (InterruptedException e) {
+        }
+        if (!done.get()) {
+            mainmethodThread.stop();        
+            throw new RuntimeException("Timed out after " 
+            		+ (timeoutMillis >= 2000 ? timeoutMillis / 1000 + " seconds" 
+            				: timeoutMillis + " milliseconds"));
+        }
+        
+        if (result[0] instanceof Throwable) throw (Throwable) result[0]; // TODO: Really? Do this upstream?
+        else return result[0];
     }
 
     public void run(Path dir, Report report, Score score) throws Exception {
         URLClassLoader loader = new URLClassLoader(new URL[] { dir.toUri().toURL() });
+        loader.setDefaultAssertionStatus(true);
 
         report.header("Testing method " + getMethodName());
 
@@ -96,7 +141,7 @@ public class CallMethod {
                 Object actualRet = null;
                 Throwable thrown = null;
                 try {
-                    actualRet = callMethod(cl, i, paramValues);;
+                    actualRet = callMethod(cl, i, paramValues);
                 } catch (InvocationTargetException ex) {
                     thrown = ex.getCause();
                 } catch (Throwable t) {
@@ -114,12 +159,7 @@ public class CallMethod {
                 boolean pass = false;
                 Object expectedRet = expectedRets.get(i - 1);
                 if (thrown == null) {
-                    if (actualRet == null)
-                        pass = actualRet == expectedRet;
-                    else if (actualRet.getClass().isArray())
-                        pass = Arrays.deepEquals(new Object[] { actualRet }, new Object[] { expectedRet });
-                    else
-                        pass = actualRet.equals(expectedRet);
+                	pass = compare(actualRet, expectedRet);
                 }
                 if (thrown == null)
                 	actual[i] = toString(actualRet);
@@ -135,6 +175,34 @@ public class CallMethod {
             loader.close();
         }
         report.runTable(new String[] { "Arguments" }, args, actual, expected, outcomes);
+    }
+    
+    private boolean compare(Object a, Object b) {
+        if (a == null)
+            return a == b;
+        else if (a.getClass().isArray() && b.getClass().isArray()) { 
+        	int alen = Array.getLength(a);
+        	if (alen != Array.getLength(b)) return false;
+        	for (int i = 0; i < alen; i++) {
+        		if (!(compare(Array.get(a, i), Array.get(b, i)))) return false;
+        	}
+            return true;
+        }
+        else if (a instanceof Number && b instanceof Number) {
+        	return Math.abs(((Number) a).doubleValue() - ((Number) b).doubleValue()) <= tolerance;
+        }
+        else if (a instanceof String && b instanceof String) {
+        	if (ignoreSpace) {
+        		a = ((String) a).replaceAll("\\s+", " ").trim();
+        		b = ((String) b).replaceAll("\\s+", " ").trim();
+        	}
+        	if (ignoreCase) 
+        		return ((String) a).equalsIgnoreCase((String) b);
+        	else
+        		return a.equals(b);
+        }
+        else
+            return a.equals(b);    	
     }
 
     private Object convert(String value, Class<?> cl) {

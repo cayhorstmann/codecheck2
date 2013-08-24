@@ -73,11 +73,11 @@ public class Calls {
         for (int k = 0; k < argsList.size(); k++) {
             lines.add(i++, "        if (args[0].equals(\"" + (k + 1) + "\"))");
             lines.add(i++, "        {");
-            lines.add(i++, "            Object actual = " + (isStatic ? className : "obj1") + "." + name + "(" + argsList.get(k) + ");");
             lines.add(i++, "            Object expected = " + (isStatic ? "" : "obj2.") + name + "(" + argsList.get(k) + ");");
-            lines.add(i++, "            System.out.println(actual);");
             lines.add(i++, "            System.out.println(expected);");
-            lines.add(i++, "            System.out.println(actual.equals(expected));");
+            lines.add(i++, "            Object actual = " + (isStatic ? className : "obj1") + "." + name + "(" + argsList.get(k) + ");");
+            lines.add(i++, "            System.out.println(actual);");
+            lines.add(i++, "            System.out.println(java.util.Objects.deepEquals(actual, expected));");
             lines.add(i++, "        }");
         }
         lines.add(i++, "    }");

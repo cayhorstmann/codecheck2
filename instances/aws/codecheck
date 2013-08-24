@@ -9,6 +9,15 @@ if [ "${CLASSPATH/#\//}" == "$CLASSPATH" ] ; then CLASSPATH=`pwd`/"$CLASSPATH" ;
 
 JAVA_HOME=/usr/lib/jvm/java-7-oracle
 
-DISPLAY=:3 LC_ALL=en_US.UTF-8 $JAVA_HOME/bin/java -classpath $CLASSPATH com.horstmann.codecheck.Main $1 $2 $3 >> codecheck.out 2>&1
+# Removed DISPLAY=:3 
+
+REPORT_JAR=`basename $3`.jar
+jar cf $REPORT_JAR .
+
+LC_ALL=en_US.UTF-8 $JAVA_HOME/bin/java -Dcom.horstmann.codecheck -classpath $CLASSPATH com.horstmann.codecheck.Main $1 $2 $3 >> codecheck.out 2>&1
+
+jar uf $REPORT_JAR report.html
+jarsigner -keystore "$BASEDIR/codecheck.certs" -storepass secret -keypass secret $REPORT_JAR  codecheck > /dev/null
+
 
 # TODO: Copy report.html to appropriate place

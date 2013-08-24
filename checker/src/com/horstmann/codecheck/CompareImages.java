@@ -1,7 +1,7 @@
 package com.horstmann.codecheck;
 
 import java.awt.image.BufferedImage;
-import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 
@@ -26,16 +26,30 @@ public class CompareImages {
     }
 
     private static BufferedImage readImage(Path p) {
-        try {
-            // TODO: Better way to wait for image to be written
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {}
-
-            return ImageIO.read(p.toFile());
-        } catch (IOException ex) {
-            return null;
-        }
+    	int tries = 10;
+    	while (tries > 0) {
+    		tries--;
+    		if (Files.exists(p)) {
+    	    	tries = 10;
+    	    	while (tries > 0) {
+    	    		tries--;
+    	    		try {            
+    	    			return ImageIO.read(p.toFile());
+    	    		} catch (Exception ex) {
+    	    		}
+    	    		if (tries == 0) throw new RuntimeException(p + " not readable");
+    	            try {
+    	                Thread.sleep(1000);
+    	            } catch (InterruptedException e) {}    		    		
+    	    	}    			
+    		}
+    		else {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {}
+    		}    		
+    	}
+		throw new RuntimeException(p + " not found");
     }
 
     public boolean getOutcome() {
