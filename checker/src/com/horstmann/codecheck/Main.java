@@ -18,8 +18,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.nio.file.StandardCopyOption;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -27,6 +30,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -644,9 +648,16 @@ public class Main {
 
             String uid = problemDir.getFileName().toString();
             report.comment("UID: " + uid);
-            problemId = annotations.findUniqueKey("ID").replaceAll("[^A-Za-z0-9]", "").toLowerCase();
+            problemId = annotations.findUniqueKey("ID");
             if (problemId == null) problemId = uid;
-            else report.comment("ID: " + problemId);
+            else {
+            	problemId = problemId.replaceAll("[^A-Za-z0-9]", "").toLowerCase();
+            	report.comment("ID: " + problemId);
+            }
+            report.comment("Level: " + level);
+            DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+            df.setTimeZone(TimeZone.getTimeZone("UTC"));
+            report.comment("Time: " + df.format(new Date()));
             timeoutMillis = DEFAULT_TIMEOUT_MILLIS;
             String timeoutProperty = System.getProperty("com.horstmann.codecheck.timeout");
             if (timeoutProperty != null)
