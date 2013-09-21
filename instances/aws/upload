@@ -11,7 +11,7 @@ ant
 
 rsync -e "ssh -i /home/cay/.ec2/aws1.pem" \
     -avz \
-    codecheck.jar \
+    codecheck.jar horstmanncomodo.jks \
     $EC2_HOST:/home/ubuntu/codecheck/
 
 rsync -e "ssh -i /home/cay/.ec2/aws1.pem" \

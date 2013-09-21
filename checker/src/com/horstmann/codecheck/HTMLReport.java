@@ -300,7 +300,7 @@ public class HTMLReport implements Report {
 	@Override
 	public HTMLReport save(String problemId, String out) throws IOException {
 		Path outPath = dir.resolve(out + ".html");
-		builder.append("<p><a href=\"" + problemId + ".jar\">Download</a>");
+		builder.append("<p><a href=\"" + problemId + ".signed.zip\">Download</a>");
 		builder.append("</body></html>\n");
 		Files.write(outPath, builder.toString().getBytes());
 		return this;

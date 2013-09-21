@@ -1,18 +1,10 @@
 package com.horstmann.codecheck;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -23,7 +15,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -33,10 +24,6 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import javax.tools.JavaCompiler;
-import javax.tools.ToolProvider;
 
 /*
  * Run this program from the "work directory", the directory in which all compilation and
@@ -44,7 +31,7 @@ import javax.tools.ToolProvider;
  *
  */
 
-public class Main {
+public class Main { 
     public static final double DEFAULT_TOLERANCE = 1.0E-6;
     public static final int DEFAULT_TIMEOUT_MILLIS = 30000;
     public static final String DEFAULT_TOKEN = "line";
@@ -58,10 +45,10 @@ public class Main {
     private Set<Path> requiredFiles = new TreeSet<>(); // tails only
     private Set<Path> solutionFiles;
     private Set<Path> printFiles = new TreeSet<>();
-    private Set<String> mainclasses = new TreeSet<String>(); // class names
-    private SecurityManager securityManager = new StudentSecurityManager();
+    private Set<String> mainmodules = new TreeSet<String>(); // module names
     private Score score = new Score();
     private Comparison comp = new Comparison();
+    private Language language = new JavaLanguage();
 
     /**
      * Entry point to program.
@@ -121,18 +108,18 @@ public class Main {
         }
     }
 
-    public boolean containsClass(Set<Path> files, String classname) {
+    public boolean containsModule(Set<Path> files, String modulename) {
         for (Path file : files)
-            if (Util.javaClass(Util.tail(file)).equals(classname))
+            if (language.moduleOf(Util.tail(file)).equals(modulename))
                 return true;
         return false;
     }
 
-    public boolean compile(String classname) {
-        return compile(classname, workDir);
+    public boolean compile(String modulename) {
+        return language.compile(modulename, workDir, report);
     }
 
-    public Path compileSolution(String classname, Substitution sub, int n) throws IOException {
+    public Path compileSolution(String modulename, Substitution sub, int n) throws IOException {
         Path tempDir = Files.createTempDirectory("labrat");
         for (Path p : studentFiles) {
             Path source = problemDir.resolve(p);
@@ -147,150 +134,8 @@ public class Main {
             else
                 Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
         }
-        boolean result = compile(classname, tempDir);
+        boolean result = language.compile(modulename, tempDir, report);
         return result ? tempDir : null;
-    }
-
-    public boolean compile(String classname, Path dir) {
-        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        OutputStream outStream = new ByteArrayOutputStream();
-        OutputStream errStream = new ByteArrayOutputStream();
-        int result = compiler.run(null, outStream, errStream, "-sourcepath", dir.toString(),
-                                  "-d", dir.toString(), dir.resolve(Util.javaPath(classname)).toString());
-        if (result != 0) {
-            String errorReport = errStream.toString();
-            if (errorReport.trim().equals(""))
-                report.output(null, "Error compiling " + classname);
-            else
-                report.error("Compiler error", errorReport);
-        }
-        return result == 0;
-    }
-
-    /**
-     * Runs a Java program
-     *
-     * @param mainclass
-     * @param classpathDir
-     * @param input
-     * @return an array of two strings, holding the program output and errors
-     * @throws IOException
-     * @throws ReflectiveOperationException
-     */
-    @SuppressWarnings("deprecation")
-    public String runJavaProgram(final String mainclass, final Path classpathDir, String args, String input, int timeoutMillis)
-    throws IOException, ReflectiveOperationException {
-        InputStream oldIn = System.in;
-        PrintStream oldOut = System.out;
-        PrintStream oldErr = System.err;
-        if (input == null)
-            input = "";
-        final ByteArrayOutputStream newOut = new ByteArrayOutputStream();
-        final PrintStream newOutPrint = new PrintStream(newOut);
-        System.setIn(new ByteArrayInputStream(input.getBytes("UTF-8")) {
-            public int available() 
-            {
-               return 0;
-            }
-            public int read()  
-            {
-               int c = super.read();
-               if (c != -1) 
-               { 
-                  newOut.write((char) c); 
-               }
-               return c;
-            }
-            public int read(byte[] b)
-            {
-               return read(b, 0, b.length);
-            }
-            public int read(byte[] b, int off, int len)
-            {
-               // int r = super.read(b, off, len);
-               if (len == 0 || off >= b.length) return 0;
-               int r = 0;            
-               int c = super.read();
-               if (c == -1) return -1;
-               boolean done = false;
-               while (!done)
-               {
-                  b[off + r] = (byte) c;  
-                  r++;                  
-                  if (c == '\n') done = true;
-                  else 
-                  {  
-                     c = super.read();
-                     if (c == -1) done = true;
-                  }
-               }            
-               if (r != -1) 
-               { 
-                  newOut.write(b, off, r);
-               }
-               return r;
-            }        	
-        });
-        
-        String result = "";
-        System.setOut(newOutPrint);
-        System.setErr(newOutPrint);
-        System.setSecurityManager(securityManager);
-        final URLClassLoader loader = new URLClassLoader(new URL[] { classpathDir.toFile().toURI().toURL() });
-        try {
-
-            final AtomicBoolean done = new AtomicBoolean(false);
-
-            final String[] argsArray;
-            if (args == null || args.trim().equals(""))
-                argsArray = new String[0];
-            else
-                argsArray = args.trim().split("\\s+");
-            loader.setDefaultAssertionStatus(true);
-
-            final Thread mainmethodThread = new Thread() {
-                public void run() {
-                    try {
-                        Class<?> klass = loader.loadClass(mainclass);
-                        final Method mainmethod = klass.getMethod("main", String[].class);
-                        mainmethod.invoke(null, (Object) argsArray);
-                    } catch (InvocationTargetException ex) {
-                        Throwable cause = ex.getCause();
-                        if (cause instanceof StudentSecurityManager.ExitException) {
-                            // do nothing
-                        } else if (cause == null)
-                            ex.printStackTrace(newOutPrint);
-                        else
-                            cause.printStackTrace(newOutPrint);
-                    } catch (Throwable t) {
-                        t.printStackTrace(newOutPrint);
-                    }
-                    done.set(true);
-                }
-            };
-
-            mainmethodThread.start();
-
-            try {
-                mainmethodThread.join(timeoutMillis);
-            } catch (InterruptedException e) {
-            }
-            result = newOut.toString("UTF-8");
-            if (!done.get()) {
-            	if (!result.endsWith("\n")) result += "\n";
-                result += "Timed out after " +
-                		(timeoutMillis >= 2000 ? timeoutMillis / 1000 + " seconds" 
-                				: timeoutMillis + " milliseconds");
-                mainmethodThread.stop();
-            }
-        } finally {
-            System.setIn(oldIn);
-            System.setOut(oldOut);
-            System.setErr(oldErr);
-            System.setSecurityManager(null);
-            loader.close();
-        }
-        return result;
     }
 
     boolean getBooleanProperty(String key, boolean defaultValue) {
@@ -345,7 +190,9 @@ public class Main {
             return null;
     }
 
-    private void snap(String mainclass) throws Exception {
+    private void snap(String mainclass) throws Exception { // Legacy
+        SecurityManager securityManager = new StudentSecurityManager();
+
         report.header("Screen capture of " + mainclass);
         if (compile(mainclass)) {
             String[] progArgs = getStringProperty("args", "test.snap.args", "test.args", "").split("\\s+");
@@ -366,29 +213,25 @@ public class Main {
                 report.output(result);
             report.image(workDir.resolve(mainclass + ".png"));
         }
-    }
-
-    private boolean isTester(String classname) {
-    	return classname != null && classname.matches(".*Tester[0-9]*");
-    }
+    }    
     
-    private void runTester(String mainclass) throws IOException, UnsupportedEncodingException,
+    private void runTester(String mainmodule) throws IOException, UnsupportedEncodingException,
         ReflectiveOperationException {
-        report.header("Running " + mainclass);
+        report.header("Running " + mainmodule);
         // TODO: Assume testers always in default package?
         
         // TODO: Scoring doesn't work when outerr contains an exception report because we don't know how many
         // test cases have not occurred. 
         // May need to count the number of expected cases in the 
         
-        if (compile(mainclass)) {
-            String outerr = runJavaProgram(mainclass, workDir, "", null, timeoutMillis);
+        if (compile(mainmodule)) {
+            String outerr = language.run(mainmodule, workDir, "", null, timeoutMillis);
             AsExpected cond = new AsExpected(comp);
-            cond.eval(outerr, report, score, workDir.resolve(Util.javaPath(mainclass)));
+            cond.eval(outerr, report, score, workDir.resolve(language.pathOf(mainmodule)));
         }
     }
 
-    private void testInputs(Map<String, String> inputs, String mainclass, Annotations annotations) throws UnsupportedEncodingException,
+    private void testInputs(Map<String, String> inputs, String mainmodule, Annotations annotations) throws UnsupportedEncodingException,
         IOException, ReflectiveOperationException {
         Path tempDir = null;
         /*
@@ -396,8 +239,8 @@ public class Main {
          */
         if (inputs.size() == 0)
             inputs.put("", getStringProperty("test.run.inputstring")); // Legacy
-        report.header("Testing " + mainclass);
-        if (compile(mainclass)) {
+        report.header("Testing " + mainmodule);
+        if (compile(mainmodule)) {
         	int timeout = timeoutMillis / inputs.size();
             for (String test : inputs.keySet()) {
                 String input = inputs.get(test);
@@ -406,7 +249,7 @@ public class Main {
                 if (runargs == null)
                     runargs = getStringProperty(test + ".args", "args", "test.args", "test.run.args",
                                                 "test.test-inputs.args", "");
-                String outerr = runJavaProgram(mainclass, workDir, runargs, input, timeout);
+                String outerr = language.run(mainmodule, workDir, runargs, input, timeout);
                 /*               
                 if (input != null && input.length() > 1)
                     report.output("Input " + test, input);
@@ -431,17 +274,17 @@ public class Main {
 
             	String title = "Program run";
             	if (test != null) title = (title + " " + test.replace("test", "")).trim(); 
-                if (annotations.isSample(mainclass) || "true".equals(getStringProperty("test.run"))) { // Run without testing
+                if (annotations.isSample(mainmodule) || "true".equals(getStringProperty("test.run"))) { // Run without testing
                     report.output(title, outerr);
                 }
                 else {
                     // Make output from solution
                     if (tempDir == null)
-                        tempDir = compileSolution(mainclass, null, 0);
+                        tempDir = compileSolution(mainmodule, null, 0);
                     if (tempDir != null) {
                         if (testExpectedFile != null)
                             Files.delete(workDir.resolve(testExpectedFile));
-                        expectedOuterr = runJavaProgram(mainclass, tempDir, runargs, input, timeout);
+                        expectedOuterr = language.run(mainmodule, tempDir, runargs, input, timeout);
                         if (testExpectedFile != null) {
                             if (imageComp == null)
                                 expectedContents = Util.read(testExpectedPath);
@@ -471,52 +314,52 @@ public class Main {
         }
     }
 
-    private void getMainClasses() {
+    private void getMainModules() {
         Set<Path> files = new TreeSet<>();
         files.addAll(studentFiles);
         if (solutionFiles.size() > 0) {
             files.addAll(solutionFiles);
             for (Path p : files) {
-                String c = Util.javaClass(Util.tail(p));
-                if (c != null && Util.isMain(problemDir, p))
-                    mainclasses.add(c);
+                String c = language.moduleOf(Util.tail(p));
+                if (c != null && language.isMain(problemDir, p))
+                    mainmodules.add(c);
             }
 
         } else { // Legacy
             String mainclassProperty = getStringProperty("mainclass");
 
             if (mainclassProperty != null) {
-                mainclasses.add(mainclassProperty);
+                mainmodules.add(mainclassProperty);
                 if (!getBooleanProperty("mainclass.required", true))
-                    requiredFiles.remove(Util.javaPath(mainclassProperty));
+                    requiredFiles.remove(language.pathOf(mainclassProperty));
             }
 
             for (Path p : files) {
-                String c = Util.javaClass(Util.tail(p));
-                if (isTester(c))
-                    mainclasses.add(c);
+                String c = language.moduleOf(Util.tail(p));
+                if (language.isTester(c))
+                    mainmodules.add(c);
             }
         }
     }
 
-    private void getRequiredClasses() {
+    private void getRequiredModules() {
         if (solutionFiles.size() > 0) {
             for (Path p : solutionFiles)
-                if (p.toString().endsWith(".java"))
+                if (language.isSource(p))
                     requiredFiles.add(Util.tail(p));
         } else { // Legacy
             String requiredclasses = getStringProperty("requiredclasses");
             if (requiredclasses != null)
                 for (String f : requiredclasses.trim().split("\\s*,\\s*"))
-                    requiredFiles.add(Util.javaPath(f));
+                    requiredFiles.add(language.pathOf(f));
         }
     }
 
     private void doSubstitutions(Path submissionDir, Substitution sub) throws IOException, ReflectiveOperationException {
         report.header("Running program with substitutions");
         Path p = Util.tail(sub.getFile());
-        String mainclass = Util.javaClass(p);
-        if (compile(mainclass)) {
+        String mainmodule = language.moduleOf(p);
+        if (compile(mainmodule)) {
         	int n = sub.getSize();
         	String[] argNames = sub.names().toArray(new String[0]);
             String[][] args = new String[n][argNames.length];
@@ -528,10 +371,10 @@ public class Main {
             for (int i = 0; i < sub.getSize(); i++) {
                 sub.substitute(submissionDir.resolve(p),
                                workDir.resolve(p), i);
-                if (compile(mainclass)) {
-                    actual[i] = runJavaProgram(mainclass, workDir, null, null, timeout);
-                    Path tempDir = compileSolution(mainclass, sub, i);
-                    expected[i] = runJavaProgram(mainclass, tempDir, null, null, timeout);                    
+                if (compile(mainmodule)) {
+                    actual[i] = language.run(mainmodule, workDir, null, null, timeout);
+                    Path tempDir = compileSolution(mainmodule, sub, i);
+                    expected[i] = language.run(mainmodule, tempDir, null, null, timeout);                    
                     
                     int j = 0;
                     for (String v : sub.values(i)) { args[i][j] = v; j++; }                      
@@ -546,7 +389,7 @@ public class Main {
     private void doCalls(Path submissionDir, Calls calls) throws IOException, ReflectiveOperationException {
         report.header("Testing method " + calls.getName());
         Path p = Util.tail(calls.getFile());
-        String mainclass = Util.javaClass(p) + "CodeCheck";
+        String mainmodule = language.moduleOf(p) + "CodeCheck";
         calls.writeTester(problemDir, workDir);
         
         String[][] args = new String[calls.getSize()][1];
@@ -556,9 +399,9 @@ public class Main {
 
         int timeout = timeoutMillis / calls.getSize();
         
-        if (compile(mainclass)) {
+        if (compile(mainmodule)) {
             for (int i = 0; i < calls.getSize(); i++) {
-            	String result = runJavaProgram(mainclass, workDir, "" + (i + 1), null, timeout);
+            	String result = language.run(mainmodule, workDir, "" + (i + 1), null, timeout);
             	System.out.println("result=" + result);
                 Scanner in = new Scanner(result);
                 List<String> lines = new ArrayList<>();
@@ -583,9 +426,18 @@ public class Main {
     public void run(String[] args) throws IOException {
         // TODO: Adjustable Timeouts
 
-
-        // TODO: What if args[0], args[1] don't exist?
-
+    	
+    	// TODO: Discover from file extension
+    	String languageName = System.getProperty("com.horstmann.codecheck.language");
+    	if (languageName != null) {
+    		try {
+				language = (Language) Class.forName(languageName + "Language").newInstance();
+			} catch (InstantiationException | IllegalAccessException
+					| ClassNotFoundException e) {
+				report.error("Cannot process language " + languageName);
+			}
+    	}
+    	
         String mode = args[0].trim();
         Path submissionDir = FileSystems.getDefault().getPath(args[1]);
         problemDir = FileSystems.getDefault().getPath(args[2]);
@@ -642,23 +494,27 @@ public class Main {
             solutionFiles = filterNot(Util.getDescendantFiles(problemDir, solutionDirectories), "*.txt", ".DS_Store");
             // Filtering out rubric
 
-            Annotations annotations = new Annotations();
+            Annotations annotations = new Annotations(language);
             annotations.read(problemDir, studentFiles);
             annotations.read(problemDir, solutionFiles);
 
             String uid = problemDir.getFileName().toString();
-            report.comment("UID: " + uid);
-            problemId = annotations.findUniqueKey("ID");
-            if (problemId == null) problemId = uid;
-            else {
-            	problemId = problemId.replaceAll("[^A-Za-z0-9]", "").toLowerCase();
-            	report.comment("ID: " + problemId);
-            }
+            report.comment("Submission: " + submissionDir.getFileName());
+            report.comment("Problem: " + uid);
             report.comment("Level: " + level);
             DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
             df.setTimeZone(TimeZone.getTimeZone("UTC"));
             report.comment("Time: " + df.format(new Date()));
-            timeoutMillis = DEFAULT_TIMEOUT_MILLIS;
+            problemId = annotations.findUniqueKey("ID");
+            if (problemId == null) {
+            	problemId = language.moduleOf(Util.tail(solutionFiles.iterator().next()));            	
+            }
+            else {
+            	problemId = problemId.replaceAll("[^A-Za-z0-9]", "").toLowerCase();
+            }
+        	
+            report.comment("ID: " + problemId);
+        	timeoutMillis = DEFAULT_TIMEOUT_MILLIS;
             String timeoutProperty = System.getProperty("com.horstmann.codecheck.timeout");
             if (timeoutProperty != null)
             	timeoutMillis = Integer.parseInt(timeoutProperty);
@@ -672,50 +528,50 @@ public class Main {
             comp.setIgnoreCase(ignoreCase);
             comp.setIgnoreSpace(ignoreSpace);            
             
-            getRequiredClasses();
-            getMainClasses();
-
+            getRequiredModules();
+            getMainModules();            
+            
             for (String modeDir : studentDirectories)
                 getGradingFiles(problemDir.resolve(modeDir));
 
-            Set<String> missingClasses = new TreeSet<>();
+            Set<String> missingModules = new TreeSet<>();
             for (Path file : requiredFiles) {
                 Path source = submissionDir.resolve(file);
                 if (Files.exists(source))
                     Files.copy(source, workDir.resolve(file), StandardCopyOption.REPLACE_EXISTING);
                 else {
                     report.error("Missing file " + file);
-                    missingClasses.add(Util.javaClass(file));
+                    missingModules.add(language.moduleOf(file));
                 }
             }
 
             if (!annotations.checkConditions(workDir, report)) {
                 // Do nothing
             } else if (getStringProperty("test.method") != null) {
-                String mainclass = getStringProperty("mainclass");
+                String mainmodule = getStringProperty("mainclass");
                 // Must be able to override since sometimes the mainclass
                 // contains the
                 // check method, and the student is expected to supply a
                 // different class
-                if (mainclass == null) {
-                    if (mainclasses.size() == 1)
-                        mainclass = mainclasses.iterator().next();
+                if (mainmodule == null) {
+                    if (mainmodules.size() == 1)
+                        mainmodule = mainmodules.iterator().next();
                     else if (solutionFiles.size() == 1)
-                        mainclass = Util.javaClass(Util.tail(solutionFiles.iterator().next()));
+                        mainmodule = language.moduleOf(Util.tail(solutionFiles.iterator().next()));
                     else
-                        report.systemError("Can't identify mainclass");
+                        report.systemError("Can't identify main module");
                     // TODO: It ought to be able to locate the class that has a
                     // method with the given name
                 }
 
                 // Call method
-                CallMethod call = new CallMethod(mainclass, checkProperties, timeoutMillis);
+                CallMethod call = new CallMethod(mainmodule, checkProperties, timeoutMillis);
                 call.setTolerance(tolerance);
                 call.setIgnoreCase(ignoreCase);
                 call.setIgnoreSpace(ignoreSpace);
-                if (compile(mainclass)) {
+                if (compile(mainmodule)) {
                     report.header("Calling method");
-                    call.prepare(compileSolution(mainclass, null, 0));
+                    call.prepare(compileSolution(mainmodule, null, 0));
                     call.run(workDir, report, score);
                 }
 
@@ -738,18 +594,18 @@ public class Main {
                         inputs.put("test" + i, in);
                 }
 
-                for (String mainclass : mainclasses) {
-                    if (missingClasses.contains(mainclass))
-                        report.error("Missing " + mainclass);
-                    else if (isTester(mainclass)
-                             && !annotations.isSample(mainclass)
-                             && !(containsClass(solutionFiles, mainclass) && inputs.size() > 0))
-                        runTester(mainclass);
+                for (String mainmodule : mainmodules) {
+                    if (missingModules.contains(mainmodule))
+                        report.error("Missing " + mainmodule);
+                    else if (language.isTester(mainmodule)
+                             && !annotations.isSample(mainmodule)
+                             && !(containsModule(solutionFiles, mainmodule) && inputs.size() > 0))
+                        runTester(mainmodule);
                     else if (getBooleanProperty("test.snap", false))
                         // TODO: Remove legacy
-                        snap(mainclass);
+                        snap(mainmodule);
                     else
-                        testInputs(inputs, mainclass, annotations);
+                        testInputs(inputs, mainmodule, annotations);
                 }
             }
 
@@ -759,21 +615,25 @@ public class Main {
 	            for (Path file : requiredFiles)
 	                report.file(submissionDir, file);
 	
-	            String nodoc = checkProperties.getProperty("nodoc");
-	            Set<String> nodocCl = new HashSet<String>();
+	            String nodoc = checkProperties.getProperty("nodoc"); // Legacy
+	            Set<String> nodocCl = new TreeSet<String>();
 	            if (nodoc != null)
 	                nodocCl.addAll(Arrays.asList(nodoc.split(",")));
 	
+	            printFiles = filterNot(printFiles, "test*.in", "test*.out", "*.expected", "check.properties", "*.png",
+                        "*.gif", "*.jpg", "*.jpeg", ".DS_Store");
+
 	            Set<Path> hidden = annotations.findHidden();
 	            Iterator<Path> iter = printFiles.iterator();
 	            while (iter.hasNext()) {
 	                Path p = iter.next();
-	                if (hidden.contains(p) || nodocCl.contains(Util.javaClass(p)))
-	                    iter.remove();
+	                if (hidden.contains(p)) iter.remove();
+	                else {
+	                	String cl = language.moduleOf(p);
+	                	if (cl != null && nodocCl.contains(cl)) iter.remove();
+	                }	                    
 	            }
 	
-	            printFiles = filterNot(printFiles, "test*.in", "test*.out", "*.expected", "check.properties", "*.png",
-	                                   "*.gif", "*.jpg", "*.jpeg", ".DS_Store");
 	            if (printFiles.size() > 0) {
 	                report.header("Other files");
 	                for (Path file : printFiles)

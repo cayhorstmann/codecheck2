@@ -16,21 +16,25 @@ public class Substitution {
     private Path file;
     private Map<String, ArrayList<String>> subs = new LinkedHashMap<>();
     private int size;
+    private Language language;
+    
+    public Substitution(Language language) {
+    	this.language = language;
+	}
 
     public void addVariable(Path file, String decl, String args) {
         if (this.file == null)
             this.file = file;
         else if (!this.file.equals(file))
             throw new RuntimeException("SUB in " + this.file + " and " + file);
-        String patternString = ".*\\S\\s+(\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*([^;]+);\\s*";
-        Pattern pattern = Pattern.compile(patternString);
+        Pattern pattern = language.variablePattern();
         Matcher matcher = pattern.matcher(decl);
         if (matcher.matches()) {
             String name = matcher.group(1).trim();
             ArrayList<String> values = new ArrayList<>();
             subs.put(name, values);
             values.add(matcher.group(2));
-            for (String v : args.split(";"))
+            for (String v : args.split(language.substitutionSeparator()))
                 if (v.trim().length() > 0)
                     values.add(v);
             if (size == 0)
@@ -61,8 +65,7 @@ public class Substitution {
     }
 
     void substitute(Path from, Path to, int n) throws IOException {
-        String patternString = ".*\\S\\s+(\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*([^;]+);.*";
-        Pattern pattern = Pattern.compile(patternString);
+        Pattern pattern = language.variablePattern();
         List<String> lines = Util.readLines(from);
         try (PrintWriter out = new PrintWriter(Files.newBufferedWriter(to, StandardCharsets.UTF_8))) {
             for (String line : lines) {

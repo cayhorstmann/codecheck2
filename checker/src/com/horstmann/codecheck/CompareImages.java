@@ -80,9 +80,15 @@ public class CompareImages {
                 int dg = ((rgb1 >> 8) & 0xFF) - ((rgb2 >> 8) & 0xFF);
                 int db = (rgb1 & 0xFF) - (rgb2 & 0xFF);
 
-                int cdiff = Math.min(255, (dr * dr + dg * dg + db * db) /
-                                     255);
-                int rgb = 0xFF0000 + ((255 - cdiff) << 8) + 255 - cdiff;
+                int cdiff = dr * dr + dg * dg + db * db;
+                int rgb;
+                if (cdiff == 0) rgb = 0xFFFFFF; 
+                else {
+                	int THRESHOLD = 200;
+                	int MAXCDIFF = 3 * 255 * 255;
+                	int gray = THRESHOLD - THRESHOLD * cdiff / MAXCDIFF;
+                	rgb = 0xFF0000 + (gray << 8) + gray;
+                }
                 diff.setRGB(x, y, rgb);
             }
         return diff;

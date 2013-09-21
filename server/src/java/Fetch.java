@@ -19,17 +19,14 @@ public class Fetch {
     @GET 
     @javax.ws.rs.Path("/{dir}/{file}")
     public Response files1(@PathParam("dir") String dir, @PathParam("file") String file) throws IOException {
+        Path submissionDir = Util.getDir(context, "submissions");
+        File data = submissionDir.resolve(dir).resolve(file).toFile();
         if (file.endsWith(".html")) { 
-            Path reportDir = Util.getDir(context, "reports");
-            File data = reportDir.resolve(dir).resolve(file).toFile();
             return Response.ok(data)
                    .type(MediaType.TEXT_HTML_TYPE)
                    .build();
         }
-        // TODO: This is a hack because I couldn't get the JAR file name to move it 
         else { // JAR
-            Path submissionDir = Util.getDir(context, "submissions");
-            File data = submissionDir.resolve(dir).resolve(file).toFile();
         	return Response.ok(data)
                     .type(MediaType.APPLICATION_OCTET_STREAM)
                     .build();

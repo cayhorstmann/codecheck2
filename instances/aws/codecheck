@@ -2,6 +2,8 @@
 
 # Already has student files in temp directory $2
 
+BASEDIR=`dirname $0`
+
 cd $2
 
 CLASSPATH=`dirname $0`/codecheck.jar
@@ -11,13 +13,18 @@ JAVA_HOME=/usr/lib/jvm/java-7-oracle
 
 # Removed DISPLAY=:3 
 
-REPORT_JAR=`basename $3`.jar
+REPORT_JAR=`basename $3`.signed.zip
 jar cf $REPORT_JAR .
 
 LC_ALL=en_US.UTF-8 $JAVA_HOME/bin/java -Dcom.horstmann.codecheck -classpath $CLASSPATH com.horstmann.codecheck.Main $1 $2 $3 >> codecheck.out 2>&1
 
 jar uf $REPORT_JAR report.html
-jarsigner -keystore "$BASEDIR/codecheck.certs" -storepass secret -keypass secret $REPORT_JAR  codecheck > /dev/null
 
+MATCH=(`grep  -o '^[<]!-- ID: \(.*\) -->$' report.html`)
+ID=${MATCH[2]}
+if [[ -n $ID ]] ; then
+  mv $REPORT_JAR $ID.signed.zip
+  REPORT_JAR=$ID.signed.zip
+fi
 
-# TODO: Copy report.html to appropriate place
+jarsigner -keystore "$BASEDIR/horstmanncomodo.jks" -storepass rivu6nitt $REPORT_JAR  horstmanncomodo2013 > /dev/null

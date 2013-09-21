@@ -1,6 +1,5 @@
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Random;
 
@@ -41,10 +40,10 @@ public class Check {
         }
         Util.runLabrat(context, repo, problem, level, tempDir.toAbsolutePath().toString());
         Path tempDirName = tempDir.getFileName();
-        Path reportBaseDir = Util.getDir(context, "reports");
-        Path reportDir = reportBaseDir.resolve(tempDirName);
-        Files.createDirectory(reportDir);
-        Files.copy(tempDir.resolve("report.html"), reportDir.resolve("report.html"));
+        // Path reportBaseDir = Util.getDir(context, "reports");
+        // Path reportDir = reportBaseDir.resolve(tempDirName);
+        // Files.createDirectory(reportDir);
+        // Files.copy(tempDir.resolve("report.html"), reportDir.resolve("report.html"));
         // TODO: Find the JAR file name and move it
         // Files.copy(tempDir.resolve("report.jar"), reportDir.resolve("report.jar"));
         // TODO: Remove temp dir?

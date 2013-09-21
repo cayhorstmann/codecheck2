@@ -115,9 +115,9 @@ public class UploadProblem {
             String problem = dir.getFileName().toString();
             String levelString = grade && i == maxLevel + 1 ? "grade" : "" + i;
             Util.runLabrat(context, repo, problem, levelString, tempDir.toAbsolutePath().toString());
-            Path reportDir = Util.getDir(context, "reports").resolve(tempDir.getFileName());
-            Files.createDirectory(reportDir);
-            Files.copy(tempDir.resolve("report.html"), reportDir.resolve("report.html"));
+            // Path reportDir = Util.getDir(context, "reports").resolve(tempDir.getFileName());
+            // Files.createDirectory(reportDir);
+            // Files.copy(tempDir.resolve("report.html"), reportDir.resolve("report.html"));
             // TODO: Remove temp dir?
             runs.put(levelString, tempDir.getFileName().toString() + "/report.html");
         }

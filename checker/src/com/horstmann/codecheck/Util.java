@@ -2,7 +2,6 @@ package com.horstmann.codecheck;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,23 +16,6 @@ import java.util.Set;
 import java.util.TreeSet;
 
 public class Util {
-    public static String javaClass(Path path) {
-        String name = path.toString();
-        if (!name.endsWith(".java"))
-            return null;
-        name = name.substring(0, name.length() - 5); // drop .java
-        return name.replace(FileSystems.getDefault().getSeparator(), ".");
-    }
-
-    public static Path javaPath(String classname) {
-        Path p = FileSystems.getDefault().getPath("", classname.split("[.]"));
-        Path parent = p.getParent();
-        if (parent == null)
-            return FileSystems.getDefault().getPath(classname + ".java");
-        else
-            return parent.resolve(p.getFileName().toString() + ".java");
-    }
-
     public static boolean sameContents(Path p1, Path p2) throws IOException {
         return Files.exists(p1) && Files.exists(p2) && Arrays.equals(Files.readAllBytes(p1), Files.readAllBytes(p2));
     }
@@ -125,13 +107,6 @@ public class Util {
                 b.append(c);
         }
         return b.toString();
-    }
-
-    public static boolean isMain(Path dir, Path p) {
-        if (!p.toString().endsWith(".java"))
-            return false;
-        String contents = Util.read(dir, p);
-        return contents != null && contents.contains("public static void main(String[] args)");
     }
 
     public static byte[] readBytes(Path path) {

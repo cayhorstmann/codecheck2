@@ -18,15 +18,21 @@ public class Annotations {
         String next;
     }
 
+    private Language language;
     private List<Annotation> annotations = new ArrayList<>();
     private Set<String> keys = new HashSet<>();
+    
+    public Annotations(Language language) {
+		this.language = language;
+	}
 
-    public void read(Path dir, Set<Path> ps) {
+	public void read(Path dir, Set<Path> ps) {
         for (Path p : ps) read(dir, p);
     }
 
     public void read(Path dir, Path p) {
-        Pattern pattern = Pattern.compile("(.* |)//([A-Z]+)( .*|)");
+    	String[] delims = language.pseudoCommentDelimiters();
+        Pattern pattern = Pattern.compile("(.* |)" + delims[0] + "([A-Z]+)( .*|)" + delims[1]);
         List<String> lines =  Util.readLines(dir.resolve(p));
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i).trim();
@@ -62,17 +68,12 @@ public class Annotations {
         for (Annotation a : annotations) {
             if (a.key.equals(key)) {
                 if (match == null) match = a;
-                else throw new RuntimeException("Duplicate " + key + " in " + a.path + " and " + match.path);
+                else if (!match.args.equals(a.args)) throw new RuntimeException("Duplicate " + key + " in " + a.path + " and " + match.path);
             }
         }
         return match == null ? null : match.args;
     }
     
-    public String findUniqueKey(String key, String defaultValue) {
-    	String result = findUniqueKey(key);
-    	return result == null ? defaultValue : result;
-    }
-
     public double findUniqueDoubleKey(String key, double defaultValue) {
         Annotation match = null;
         double result = 0;
@@ -85,7 +86,7 @@ public class Annotations {
                     } catch (NumberFormatException ex) {
                         throw new RuntimeException(key + " has bad double argument " + a.args + " in " + a.path);
                     }
-                } else throw new RuntimeException("Duplicate " + key + " in " + a.path + " and " + match.path);
+                } else if (!match.args.equals(a.args)) throw new RuntimeException("Duplicate " + key + " in " + a.path + " and " + match.path);
             }
         }
         return match == null ? defaultValue : result;
@@ -120,7 +121,7 @@ public class Annotations {
     }
 
     public Substitution findSubstitution() {
-        Substitution sub = new Substitution();
+        Substitution sub = new Substitution(language);
         for (Annotation a : annotations) {
             if (a.key.equals("SUB"))
                 sub.addVariable(a.path, a.before, a.args);
@@ -130,14 +131,14 @@ public class Annotations {
 
     public boolean isSample(String classname) {
         for (Annotation a : annotations) {
-            if (a.key.equals("SAMPLE") && Util.javaClass(Util.tail(a.path)).equals(classname)) return true;
+            if (a.key.equals("SAMPLE") && language.moduleOf(Util.tail(a.path)).equals(classname)) return true;
         }
         return false;
     }
 
 
     public Calls findCalls() {
-        Calls calls = new Calls();
+        Calls calls = new Calls(language);
         for (Annotation a : annotations) {
             if (a.key.equals("CALL"))
                 calls.addCall(a.path, a.args, a.next);
