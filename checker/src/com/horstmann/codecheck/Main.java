@@ -514,6 +514,18 @@ public class Main {
             }
         	
             report.comment("ID: " + problemId);
+            
+            // Used to pass in machine instance into report 
+            for (int iarg = 3; iarg < args.length; iarg++) {
+            	String arg = args[iarg];
+            	int keyEnd = arg.indexOf("=");
+            	if (keyEnd >= 0) {
+            		report.comment(arg.substring(0, keyEnd) + ": " + arg.substring(keyEnd + 1));
+            	}
+            }
+            
+            
+            
         	timeoutMillis = DEFAULT_TIMEOUT_MILLIS;
             String timeoutProperty = System.getProperty("com.horstmann.codecheck.timeout");
             if (timeoutProperty != null)

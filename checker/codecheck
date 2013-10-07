@@ -122,7 +122,7 @@ fi
 WORKDIR=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
 
 cd "$SUBMISSIONDIR"
-REPORT_JAR=report.jar
+REPORT_JAR=REPORT_JAR=`basename $3`.signed.zip
 jar cf $REPORT_JAR .
 
 cd "$WORKDIR"
@@ -137,8 +137,8 @@ if [ -e report.html ] ; then
   MATCH=(`grep  -o '^[<]!-- ID: \(.*\) -->$' report.html`)
   ID=${MATCH[2]}
   if [[ -n $ID ]] ; then
-    mv $REPORT_JAR $ID.jar
-    REPORT_JAR=$ID.jar
+    mv $REPORT_JAR $ID.signed.zip
+    REPORT_JAR=$ID.signed.zip
   fi
 fi
 
