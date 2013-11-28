@@ -7,6 +7,7 @@ import java.io.PrintStream;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.ResourceBundle;
@@ -19,6 +20,7 @@ public class TextReport implements Report {
 	private Path dir;
 	private int imageCount;
 	private int sections;
+	private List<String> footnotes = new ArrayList<>();
 
 	// TODO: Directory
 	public TextReport(String title, Path outputDir) {
@@ -70,6 +72,11 @@ public class TextReport implements Report {
 		return this;
 	}
 
+	@Override
+	public Report footnote(String text) {
+		footnotes.add(text);
+		return this;
+	}
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -227,6 +234,10 @@ public class TextReport implements Report {
 
 	@Override
 	public TextReport add(Score score) {
+		if (footnotes.size() > 0) {
+			builder.append("\n---\n");
+			for (String footnote : footnotes) { builder.append(footnote); builder.append("\n"); }
+		}
 		builder.append("\n");
 		add("Score");
 		add("" + score);

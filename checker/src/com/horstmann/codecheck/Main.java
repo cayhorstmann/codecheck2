@@ -5,6 +5,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -233,84 +235,103 @@ public class Main {
 
     private void testInputs(Map<String, String> inputs, String mainmodule, Annotations annotations) throws UnsupportedEncodingException,
         IOException, ReflectiveOperationException {
-        Path tempDir = null;
         /*
          * If there are no inputs, we feed in one empty input, or the legacy test.run.inputstring
          */
         if (inputs.size() == 0)
             inputs.put("", getStringProperty("test.run.inputstring")); // Legacy
         report.header("Testing " + mainmodule);
+        Path solutionDir = null;
+        if (!(annotations.isSample(mainmodule) || "true".equals(getStringProperty("test.run")))) {
+            solutionDir = compileSolution(mainmodule, null, 0);
+            if (solutionDir == null) return;
+        }        
+        
         if (compile(mainmodule)) {
-        	int timeout = timeoutMillis / inputs.size();
             for (String test : inputs.keySet()) {
                 String input = inputs.get(test);
-                // TODO: Might be useful to have more than one set of ARGS
-                String runargs = annotations.findUniqueKey("ARGS");
-                if (runargs == null)
-                    runargs = getStringProperty(test + ".args", "args", "test.args", "test.run.args",
-                                                "test.test-inputs.args", "");
-                String outerr = language.run(mainmodule, workDir, runargs, input, timeout);
-                /*               
-                if (input != null && input.length() > 1)
-                    report.output("Input " + test, input);
-                */
-                String testExpectedFile = annotations.findUniqueKey("OUT");
-                if (testExpectedFile == null)
-                    testExpectedFile = getStringProperty(test + ".outputfile", (test.length() > 0 ? test
-                                                         : "test.run") + ".expectedfile", "outputfile", "test.expectedfile", null); // Legacy
-                String contents = null;
-                String expectedContents = null;
-                String expectedOuterr = null;
-                CompareImages imageComp = null;
-                Path testExpectedPath = testExpectedFile == null ? null : workDir.resolve(testExpectedFile);
-
-                if (testExpectedFile != null) {
-                    if (CompareImages.isImage(testExpectedFile)) {
-                        imageComp = new CompareImages(testExpectedPath);
-                        report.image(testExpectedPath);
-                    } else
-                        contents = Util.read(testExpectedPath);
-                }
-
-            	String title = "Program run";
-            	if (test != null) title = (title + " " + test.replace("test", "")).trim(); 
-                if (annotations.isSample(mainmodule) || "true".equals(getStringProperty("test.run"))) { // Run without testing
-                    report.output(title, outerr);
-                }
-                else {
-                    // Make output from solution
-                    if (tempDir == null)
-                        tempDir = compileSolution(mainmodule, null, 0);
-                    if (tempDir != null) {
-                        if (testExpectedFile != null)
-                            Files.delete(workDir.resolve(testExpectedFile));
-                        expectedOuterr = language.run(mainmodule, tempDir, runargs, input, timeout);
-                        if (testExpectedFile != null) {
-                            if (imageComp == null)
-                                expectedContents = Util.read(testExpectedPath);
-                        }
-                    }
-
-                    if (imageComp != null) {
-                        imageComp.setOtherImage(testExpectedPath);
-                        boolean outcome = imageComp.getOutcome();
-                        if (!outcome) {
-                            report.image("Expected", testExpectedPath);
-                            report.image("Mismatched pixels", imageComp.diff());
-                        }
-                        score.pass(outcome, report);
-                    } else if (testExpectedFile != null) {
-                        report.header(testExpectedFile);
-                        boolean outcome = comp.execute(contents, expectedContents, report, title);
-                        score.pass(outcome, report);
-                    }
-
-                    if (expectedOuterr != null && expectedOuterr.length() > 0) {
-                        boolean outcome = comp.execute(outerr, expectedOuterr, report, title);
-                        score.pass(outcome, report);
-                    }
-                }
+                testInput(mainmodule, annotations, solutionDir, test, input);
+            }
         }
+    }
+
+    private void testInput(String mainmodule, Annotations annotations,
+            Path solutionDir, String test, String input)
+            throws IOException, ReflectiveOperationException {
+        // TODO: Might be useful to have more than one set of ARGS        
+        String runargs = annotations.findUniqueKey("ARGS");
+        if (runargs == null)
+            runargs = getStringProperty(test + ".args", "args", "test.args", "test.run.args",
+                                        "test.test-inputs.args", "");
+        String outFile = annotations.findUniqueKey("OUT");
+        if (outFile == null)
+            outFile = getStringProperty(test + ".outputfile", (test.length() > 0 ? test
+                                                 : "test.run") + ".expectedfile", "outputfile", "test.expectedfile", null); // Legacy
+        Path outPath = outFile == null ? null : workDir.resolve(outFile);
+
+        if (outPath != null)
+            Files.deleteIfExists(outPath);
+
+        String outerr = language.run(mainmodule, workDir, runargs, input, timeoutMillis);
+        /*               
+        if (input != null && input.length() > 1)
+            report.output("Input " + test, input);
+        */
+        String contents = null;
+        String expectedContents = null;
+        String expectedOuterr = null;
+        CompareImages imageComp = null;
+        if (outPath != null) {
+            if (CompareImages.isImage(outFile)) {
+                try {
+                    imageComp = new CompareImages(outPath);
+                    report.image(outPath);
+                } catch (IOException ex) {
+                    report.error(ex.getMessage());
+                    return; 
+                }
+            } else
+                contents = Util.read(outPath);
+        }
+
+        String title = "Program run";
+        if (test != null) title = (title + " " + test.replace("test", "")).trim(); 
+        if (solutionDir == null) { // Run without testing
+            report.output(title, outerr);
+            // TODO: Score?
+            return;
+        }
+        expectedOuterr = language.run(mainmodule, solutionDir, runargs, input, timeoutMillis);
+        if (outPath != null) {
+            if (imageComp == null)
+                expectedContents = Util.read(outPath);
+        }
+
+        if (outFile != null) {
+            if (imageComp != null) {
+                try {
+                    imageComp.setOtherImage(outPath);
+                    boolean outcome = imageComp.getOutcome();
+                    if (!outcome) {
+                        report.image("Expected", outPath);
+                        report.image("Mismatched pixels",
+                                imageComp.diff());
+                    }
+                    score.pass(outcome, report);
+                } catch (IOException ex) {
+                    report.systemError(ex.getMessage());
+                }
+            } else {
+                report.header(outFile);
+                boolean outcome = comp.execute(contents,
+                        expectedContents, report, title);
+                score.pass(outcome, report);
+            }
+        }
+
+        if (expectedOuterr != null && expectedOuterr.length() > 0) {
+            boolean outcome = comp.execute(outerr, expectedOuterr, report, title);
+            score.pass(outcome, report);
         }
     }
 
@@ -402,8 +423,7 @@ public class Main {
         if (compile(mainmodule)) {
             for (int i = 0; i < calls.getSize(); i++) {
             	String result = language.run(mainmodule, workDir, "" + (i + 1), null, timeout);
-            	System.out.println("result=" + result);
-                Scanner in = new Scanner(result);
+            	Scanner in = new Scanner(result);
                 List<String> lines = new ArrayList<>();
                 while (in.hasNextLine()) lines.add(in.nextLine());
                 in.close();
@@ -426,6 +446,16 @@ public class Main {
     public void run(String[] args) throws IOException {
         // TODO: Adjustable Timeouts
 
+        for (URL url : ((URLClassLoader) getClass().getClassLoader()).getURLs()) {
+            String urlString = url.toString();
+            if (urlString.endsWith("codecheck.jar")) {
+                String path = urlString.substring(urlString.indexOf('/'),
+                        urlString.lastIndexOf('/'));
+                System.setProperty("java.security.policy", path
+                        + "/codecheck.policy");
+            }
+        }
+        System.setSecurityManager(new SecurityManager());
     	
     	// TODO: Discover from file extension
     	String languageName = System.getProperty("com.horstmann.codecheck.language");
@@ -504,7 +534,9 @@ public class Main {
             report.comment("Level: " + level);
             DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
             df.setTimeZone(TimeZone.getTimeZone("UTC"));
-            report.comment("Time: " + df.format(new Date()));
+            String currentTime = df.format(new Date());
+            report.comment("Time: " + currentTime);
+            report.footnote(currentTime);
             problemId = annotations.findUniqueKey("ID");
             if (problemId == null) {
             	problemId = language.moduleOf(Util.tail(solutionFiles.iterator().next()));            	

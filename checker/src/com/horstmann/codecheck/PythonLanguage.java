@@ -14,7 +14,7 @@ public class PythonLanguage implements Language {
 
 	@Override
 	public boolean isSource(Path p) {
-		return p.toString().endsWith(".java");
+		return p.toString().endsWith(".py");
 	}
 
 	@Override

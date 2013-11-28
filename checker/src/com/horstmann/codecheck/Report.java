@@ -44,4 +44,6 @@ public interface Report
    Report runTable(String[] argNames, String[][] args, String[] actual, String[] expected, boolean[] outcomes);
    
    Report comment(String text);
+   
+   Report footnote(String text);
 }

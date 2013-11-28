@@ -60,7 +60,6 @@ function usage() {
 }
 
 REPORT=report.html
-JAVA_OPTS=
 
 if [ "$1" == "-p" ] ; then BROWSER=cat ; shift ; fi
 
@@ -69,33 +68,39 @@ if [ "$1" == "-q" ] ; then BROWSER=echo ; shift ; fi
 if [ "$1" == "-t" ] ; then 
     BROWSER=cat 
     REPORT=report.txt 
-    JAVA_OPTS=-Dcom.horstmann.codecheck.textreport
+    JAVA_OPTS=$JAVA_OPTS -Dcom.horstmann.codecheck.textreport
     shift 
 fi
 
-LEVEL=$1
-if [ -z $3 ] ; then
+if [ -z $2 ] ; then
+  LEVEL=1
+else
+  LEVEL=$1
+  shift
+fi
+
+if [ -z $2 ] ; then
   # Checking solution
   SUBMISSIONDIR=`mktemp -d`
-  if [ -e $2/solution ] ; then cp -R $2/solution/* $SUBMISSIONDIR ; fi
+  if [ -e $1/solution ] ; then cp -R $1/solution/* $SUBMISSIONDIR ; fi
   case $LEVEL in 
     [1-9])
       for n in `seq 1 $LEVEL` ; do
-        if [ -e $2/solution$n ] ; then cp -R $2/solution$n/* $SUBMISSIONDIR ; fi
+        if [ -e $1/solution$n ] ; then cp -R $1/solution$n/* $SUBMISSIONDIR ; fi
       done
     ;;
     grade)
       for n in `seq 1 9` ; do
-        if [ -e $2/solution$n ] ; then cp -R $2/solution$n/* $SUBMISSIONDIR ; fi
+        if [ -e $1/solution$n ] ; then cp -R $1/solution$n/* $SUBMISSIONDIR ; fi
       done
-      if [ -e $2/grader ] ; then cp -R $2/grader/* $SUBMISSIONDIR ; fi
+      if [ -e $1/grader ] ; then cp -R $1/grader/* $SUBMISSIONDIR ; fi
     ;;
   esac  
-  PROBLEMDIR=$2
+  PROBLEMDIR=$1
 else
-  SUBMISSIONDIR=$2
-  PROBLEMDIR=$3
-  TITLE=$4
+  SUBMISSIONDIR=$1
+  PROBLEMDIR=$2
+  TITLE=$3
 fi
 
 if [ -z "$LEVEL" ] || [ -z "$PROBLEMDIR" ] || [ ! -d "$SUBMISSIONDIR" ] || [ ! -d "$PROBLEMDIR" ]
@@ -122,12 +127,14 @@ fi
 WORKDIR=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
 
 cd "$SUBMISSIONDIR"
-REPORT_JAR=REPORT_JAR=`basename $3`.signed.zip
+REPORT_JAR=REPORT_JAR=`basename $PROBLEMDIR`.signed.zip
 jar cf $REPORT_JAR .
 
 cd "$WORKDIR"
 
-LC_ALL=en_US.UTF-8 java -Dcom.horstmann.codecheck $JAVA_OPTS -classpath "$CLASSPATH" com.horstmann.codecheck.Main $LEVEL "$SUBMISSIONDIR" "$PROBLEMDIR" "$TITLE"
+JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck"
+
+LC_ALL=en_US.UTF-8 java $JAVA_OPTS -classpath "$CLASSPATH" com.horstmann.codecheck.Main $LEVEL "$SUBMISSIONDIR" "$PROBLEMDIR" "$TITLE"
 cd - > /dev/null
 $BROWSER "$SUBMISSIONDIR/$REPORT"
 cd "$SUBMISSIONDIR"
@@ -146,23 +153,23 @@ jarsigner -keystore "$BASEDIR/horstmanncomodo.jks" -storepass rivu6nitt $REPORT_
 
 cd $STARTDIR
 
-if [ -z $3 ] ; then
+if [ -z $2 ] ; then
   # Checking student files
   SUBMISSIONDIR2=`mktemp -d`
-  if [ -e $2/student ] ; then 
-    cd $2/student
+  if [ -e $1/student ] ; then 
+    cd $1/student
     for f in `find .` ; do 
-      cp --parents $f $SUBMISSIONDIR2
+      if [ "$f" != "." ] ; then cp --parents $f $SUBMISSIONDIR2 ; fi
     done
     cd ../..
   fi
   case $LEVEL in 
     [1-9])
       for n in `seq 1 $LEVEL` ; do
-        if [ -e $2/student$n ] ; then 
-          cd $2/student$n
+        if [ -e $1/student$n ] ; then 
+          cd $1/student$n
           for f in `find .` ; do 
-            cp --parents $f $SUBMISSIONDIR2
+            if [ "$f" != "." ] ; then cp --parents $f $SUBMISSIONDIR2 ; fi
           done
           cd ../..
         fi

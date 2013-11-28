@@ -7,6 +7,7 @@ import java.io.PrintStream;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -15,6 +16,7 @@ import javax.imageio.ImageIO;
 public class HTMLReport implements Report {
 	private StringBuilder builder;
 	private Path dir;
+	private List<String> footnotes = new ArrayList<>();
 
 	// TODO: Directory
 	public HTMLReport(String title, Path outputDir) {
@@ -63,6 +65,12 @@ public class HTMLReport implements Report {
 		return this;
 	}
 
+	@Override
+	public Report footnote(String text) {
+		footnotes.add(text);
+		return this;
+	}
+	
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -301,6 +309,14 @@ public class HTMLReport implements Report {
 	public HTMLReport save(String problemId, String out) throws IOException {
 		Path outPath = dir.resolve(out + ".html");
 		builder.append("<p><a href=\"" + problemId + ".signed.zip\">Download</a>");
+		if (footnotes.size() > 0) {
+			builder.append("\n<hr/>\n");
+			for (String footnote : footnotes) {
+				builder.append("<div style=\"font-size: 0.7em;\">");
+				escape(footnote);
+				builder.append("</div>\n");
+			}
+		}
 		builder.append("</body></html>\n");
 		Files.write(outPath, builder.toString().getBytes());
 		return this;

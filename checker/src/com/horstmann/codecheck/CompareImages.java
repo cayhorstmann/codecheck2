@@ -1,6 +1,7 @@
 package com.horstmann.codecheck;
 
 import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -17,15 +18,15 @@ public class CompareImages {
         return Arrays.asList(ImageIO.getReaderFileSuffixes()).contains(extension);
     }
 
-    public CompareImages(Path firstImage) {
+    public CompareImages(Path firstImage) throws IOException  {
         image1 = readImage(firstImage);
     }
 
-    public void setOtherImage(Path p) {
+    public void setOtherImage(Path p) throws IOException {
         image2 = readImage(p);
     }
 
-    private static BufferedImage readImage(Path p) {
+    private static BufferedImage readImage(Path p) throws IOException {
     	int tries = 10;
     	while (tries > 0) {
     		tries--;
@@ -37,7 +38,7 @@ public class CompareImages {
     	    			return ImageIO.read(p.toFile());
     	    		} catch (Exception ex) {
     	    		}
-    	    		if (tries == 0) throw new RuntimeException(p + " not readable");
+    	    		if (tries == 0) throw new IOException(p + " not readable");
     	            try {
     	                Thread.sleep(1000);
     	            } catch (InterruptedException e) {}    		    		
@@ -49,7 +50,7 @@ public class CompareImages {
                 } catch (InterruptedException e) {}
     		}    		
     	}
-		throw new RuntimeException(p + " not found");
+    	throw new IOException(p + " not found");
     }
 
     public boolean getOutcome() {
