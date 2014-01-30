@@ -1,5 +1,6 @@
 package com.horstmann.codecheck;
 
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -58,7 +59,7 @@ public class Main {
      * @param args
      *            command-line arguments. args[0] = level (1, 2, 3, ..., or
      *            check/grade for compatibility) args[1] = submission dir,
-     *            args[2] = problem dir args[3] = report title (optional)
+     *            args[2] = problem dir args[3] etc = metadata key=value pairs (optional)
      * @throws IOException
      */
     public static void main(String[] args) throws IOException {
@@ -301,6 +302,7 @@ public class Main {
             // TODO: Score?
             return;
         }
+        if (outPath != null) Files.delete(outPath); // TODO: This is to deal with the flaky graphics that may never write the file
         expectedOuterr = language.run(mainmodule, solutionDir, runargs, input, timeoutMillis);
         if (outPath != null) {
             if (imageComp == null)
@@ -314,8 +316,7 @@ public class Main {
                     boolean outcome = imageComp.getOutcome();
                     if (!outcome) {
                         report.image("Expected", outPath);
-                        report.image("Mismatched pixels",
-                                imageComp.diff());
+                        report.image("Mismatched pixels", imageComp.diff());
                     }
                     score.pass(outcome, report);
                 } catch (IOException ex) {
@@ -455,7 +456,7 @@ public class Main {
                         + "/codecheck.policy");
             }
         }
-        System.setSecurityManager(new SecurityManager());
+        //System.setSecurityManager(new SecurityManager());
     	
     	// TODO: Discover from file extension
     	String languageName = System.getProperty("com.horstmann.codecheck.language");
@@ -472,9 +473,9 @@ public class Main {
         Path submissionDir = FileSystems.getDefault().getPath(args[1]);
         problemDir = FileSystems.getDefault().getPath(args[2]);
         if (System.getProperty("com.horstmann.codecheck.textreport") != null)
-        	report = new TextReport(args.length >= 4 ? args[3] : "Report", submissionDir);
+        	report = new TextReport("Report", submissionDir);
         else
-        	report = new HTMLReport(args.length >= 4 ? args[3] : "Report", submissionDir);
+        	report = new HTMLReport("Report", submissionDir);
         int level = 0;
         try {
             level = Integer.parseInt(mode);
@@ -529,13 +530,13 @@ public class Main {
             annotations.read(problemDir, solutionFiles);
 
             String uid = problemDir.getFileName().toString();
-            report.comment("Submission: " + submissionDir.getFileName());
-            report.comment("Problem: " + uid);
-            report.comment("Level: " + level);
+            report.comment("Submission", submissionDir.getFileName().toString());
+            report.comment("Problem", uid);
+            report.comment("Level", "" + level);
             DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
             df.setTimeZone(TimeZone.getTimeZone("UTC"));
             String currentTime = df.format(new Date());
-            report.comment("Time: " + currentTime);
+            report.comment("Time", currentTime);
             report.footnote(currentTime);
             problemId = annotations.findUniqueKey("ID");
             if (problemId == null) {
@@ -545,14 +546,14 @@ public class Main {
             	problemId = problemId.replaceAll("[^A-Za-z0-9]", "").toLowerCase();
             }
         	
-            report.comment("ID: " + problemId);
+            report.comment("ID", problemId);
             
             // Used to pass in machine instance into report 
             for (int iarg = 3; iarg < args.length; iarg++) {
             	String arg = args[iarg];
             	int keyEnd = arg.indexOf("=");
             	if (keyEnd >= 0) {
-            		report.comment(arg.substring(0, keyEnd) + ": " + arg.substring(keyEnd + 1));
+            		report.comment(arg.substring(0, keyEnd), arg.substring(keyEnd + 1));
             	}
             }
             

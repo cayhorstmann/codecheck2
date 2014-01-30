@@ -125,9 +125,11 @@ public class Files {
             }
         }
         // TODO: In file upload, must still SHOW the non-empty required files
-        String requestURL = request.getRequestURL().toString();
-        String url = requestURL.substring(0, requestURL.indexOf("files")) + (upload ? "checkUpload" : "check");
-        
+        // String requestURL = request.getRequestURL().toString();
+        // String url = requestURL.substring(0, requestURL.indexOf("files")) + (upload ? "checkUpload" : "check");
+        // String appURL = Util.appURL(request);
+        String contextPath = context.getContextPath();
+        String url = contextPath + "/" + (upload ? "checkUpload" : "check");
         result.append(MessageFormat.format(before, url,
                                            upload ? "encoding=\"multipart/form-data\"" : ""));
         result.append(MessageFormat.format(provideStart, requiredFiles.size()));

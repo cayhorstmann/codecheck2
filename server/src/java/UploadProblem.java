@@ -70,17 +70,15 @@ public class UploadProblem {
 					boolean grade = runs.keySet().contains("grade");
 					boolean multipleLevels = runs.keySet().size() > (grade ? 2
 							: 1);
-					String requestURL = request.getRequestURL().toString();
-					String url = requestURL.substring(0,
-							requestURL.lastIndexOf("/"))
-							+ "/files/" + problem;
+					// String appURL = Util.appURL(request);
+					String contextPath = request.getContextPath();
+					String url =  contextPath + "/files/" + problem; 
+					
 					StringBuilder response = new StringBuilder();
 					response.append("<html><body style=\"font-family: sans\"><ul style=\"list-style: square\">");
 					for (String k : runs.keySet()) {
 						response.append("<li>");
-						String reportUrl = requestURL.substring(0,
-								requestURL.lastIndexOf("/"))
-								+ "/fetch/" + runs.get(k);
+						String reportUrl = contextPath + "/fetch/" + runs.get(k);
 						if (k.equals("grade")) {
 							response.append("<a href=\"");
 							response.append(reportUrl);
@@ -92,7 +90,7 @@ public class UploadProblem {
 								problemUrl += "/" + k;
 							}
 							response.append("URL: <code>");
-							response.append(problemUrl);
+							response.append("http://go.code-check.org" + problemUrl); // TODO: Fix
 							response.append("</code> | <a href=\"");
 							response.append(problemUrl);
 							response.append("\" target=\"_blank\">Preview</a>");
@@ -102,6 +100,7 @@ public class UploadProblem {
 						}
 						response.append("</li>\n");
 					}
+					// response.append("</ul><ul>[DEBUG] Server name: " + request.getServerName()); // TODO: Remove
 					response.append("</ul></body></html>\n");
 					return Response.status(Response.Status.OK)
 							.entity(response.toString()).build();

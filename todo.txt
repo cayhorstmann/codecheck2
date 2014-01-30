@@ -1,6 +1,33 @@
 Checker
 =======
 
+Here's another one that you might be interested in. It seems all of the graphics exercises do this:
+
+java.awt.HeadlessException: 
+No X11 DISPLAY variable was set, but this program performed an operation which requires it.
+	at java.awt.GraphicsEnvironment.checkHeadless(GraphicsEnvironment.java:207)
+	at java.awt.Window.<init>(Window.java:535)
+	at java.awt.Frame.<init>(Frame.java:420)
+	at java.awt.Frame.<init>(Frame.java:385)
+	at javax.swing.JFrame.<init>(JFrame.java:180)
+	at com.horstmann.codecheck.SnapFrame.run(SnapFrame.java:60)
+	at com.horstmann.codecheck.Main.snap(Main.java:205)
+	at com.horstmann.codecheck.Main.run(Main.java:650)
+	at com.horstmann.codecheck.Main.main(Main.java:65)
+
+--Steve
+------------------------------------------------------------------
+
+
+Le 01/22/2014 09:32 AM, Stephen Gilbert a écrit :> http://go.code-check.org/codecheck/files?repo=bj4cc&problem=ch19/c19_exp_19_102
+
+Thanks, I figured out the problem. It doesn't make sense to show the binary file encrypted.txt to the student, and it can't be read in as a text file because it's invalid UTF-8. But I changed the mechanism for hiding files, and I'll have to refine that. I'll put it on my todo list.
+
+
+------------------------------------------------------------------
+
+
+
 It depends, unfortunately. They won't get 4/6, but they might get 4 (without a denominator) if code-check can't figure out what the total was because it died prematurely.
 
 It would be a good idea to have it figure out the total, perhaps by grading the solution. I'll add that to the wish list.

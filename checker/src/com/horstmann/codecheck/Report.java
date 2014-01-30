@@ -43,7 +43,7 @@ public interface Report
    Report output(List<String> lines, Set<Integer> matches, Set<Integer> mismatches);
    Report runTable(String[] argNames, String[][] args, String[] actual, String[] expected, boolean[] outcomes);
    
-   Report comment(String text);
+   Report comment(String key, String value);
    
    Report footnote(String text);
 }

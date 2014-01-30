@@ -27,7 +27,7 @@ public class CompareImages {
     }
 
     private static BufferedImage readImage(Path p) throws IOException {
-    	int tries = 10;
+    	int tries = 20;
     	while (tries > 0) {
     		tries--;
     		if (Files.exists(p)) {

@@ -346,10 +346,12 @@ public class TextReport implements Report {
 		return this;
 	}
 	
-	public TextReport comment(String text) {
+	public TextReport comment(String key, String value) {
 		if (builder.charAt(builder.length() - 1) != '\n') builder.append('\n');
 		builder.append("# ");
-		builder.append(text);
+		builder.append(key);
+		builder.append(": ");
+		builder.append(value);
 		builder.append('\n');
 		return this;
 	}

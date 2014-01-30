@@ -327,7 +327,7 @@ public class JavaLanguage implements Language {
         return new String[] { "//", "" };
     }
 
-    private static String patternString = ".*\\S\\s+(\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*([^\\s;]+)\\s*;.*";
+    private static String patternString = ".*\\S\\s+(\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*([^;]+);.*";
     private static Pattern pattern = Pattern.compile(patternString);
 
     /*

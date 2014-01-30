@@ -27,6 +27,8 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import javax.servlet.ServletContext;
+import javax.servlet.ServletRequest;
+import javax.servlet.http.HttpServletRequest;
 
 import com.amazonaws.*;
 import com.amazonaws.auth.*;
@@ -291,6 +293,7 @@ public class Util {
 		if (command == null)
 			command = context
 					.getInitParameter("com.horstmann.codecheck.defaultcommand");
+		
 		String script = MessageFormat.format(command, level, tempDir,
 				problemDir, repo + ":" + problem + ":" + level);
 		runScript(script);
@@ -355,5 +358,14 @@ public class Util {
 			return FileSystems.getDefault().getPath(classname + ".java");
 		else
 			return parent.resolve(p.getFileName().toString() + ".java");
+	}
+	
+	public static String appURL(HttpServletRequest request) {
+		String result = request.getScheme() + "://";
+		result += request.getServerName(); // TODO: Does not work
+		int port = request.getServerPort();
+		if (port != 80) result += ":" + port; 
+		result += request.getContextPath();
+		return result;		
 	}
 }
