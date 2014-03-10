@@ -116,4 +116,28 @@ public class Util {
             return null;
         }
     }
+    
+    public static void deleteDirectory(Path start) throws IOException {
+        if (start == null) return;
+        Files.walkFileTree(start, new SimpleFileVisitor<Path>() {
+                @Override
+                public FileVisitResult visitFile(Path file,
+                                BasicFileAttributes attrs) throws IOException {
+                        Files.delete(file);
+                        return FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult postVisitDirectory(Path dir, IOException e)
+                                throws IOException {
+                        if (e == null) {
+                                Files.delete(dir);
+                                return FileVisitResult.CONTINUE;
+                        } else {
+                                // directory iteration failed
+                                throw e;
+                        }
+                }
+        });
+}
 }

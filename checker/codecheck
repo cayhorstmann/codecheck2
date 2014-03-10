@@ -81,26 +81,31 @@ fi
 
 if [ -z $2 ] ; then
   # Checking solution
-  SUBMISSIONDIR=`mktemp -d`
-  if [ -e $1/solution ] ; then cp -R $1/solution/* $SUBMISSIONDIR ; fi
+  PROBLEMDIR=$1
+  SUBMISSIONDIR=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
+  # For checking student files
+  SUBMISSIONDIR2=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
+
+  if [ -e $PROBLEMDIR/solution ] ; then cp -R $PROBLEMDIR/solution/* $SUBMISSIONDIR ; fi
   case $LEVEL in 
     [1-9])
       for n in `seq 1 $LEVEL` ; do
-        if [ -e $1/solution$n ] ; then cp -R $1/solution$n/* $SUBMISSIONDIR ; fi
+        if [ -e $PROBLEMDIR/solution$n ] ; then cp -R $PROBLEMDIR/solution$n/* $SUBMISSIONDIR ; fi
       done
     ;;
     grade)
       for n in `seq 1 9` ; do
-        if [ -e $1/solution$n ] ; then cp -R $1/solution$n/* $SUBMISSIONDIR ; fi
+        if [ -e $PROBLEMDIR/solution$n ] ; then cp -R $PROBLEMDIR/solution$n/* $SUBMISSIONDIR ; fi
       done
-      if [ -e $1/grader ] ; then cp -R $1/grader/* $SUBMISSIONDIR ; fi
+      if [ -e $PROBLEMDIR/grader ] ; then cp -R $PROBLEMDIR/grader/* $SUBMISSIONDIR ; fi
     ;;
   esac  
-  PROBLEMDIR=$1
+  shift
 else
   SUBMISSIONDIR=$1
-  PROBLEMDIR=$2
-  TITLE=$3
+  shift
+  PROBLEMDIR=$1
+  shift
 fi
 
 if [ -z "$LEVEL" ] || [ -z "$PROBLEMDIR" ] || [ ! -d "$SUBMISSIONDIR" ] || [ ! -d "$PROBLEMDIR" ]
@@ -134,16 +139,16 @@ cd "$WORKDIR"
 
 JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck"
 
-echo LC_ALL=en_US.UTF-8 java $JAVA_OPTS -classpath "$CLASSPATH" com.horstmann.codecheck.Main $LEVEL "$SUBMISSIONDIR" "$PROBLEMDIR" "$TITLE"
+echo LC_ALL=en_US.UTF-8 java $JAVA_OPTS -classpath "$CLASSPATH" com.horstmann.codecheck.Main $LEVEL "$SUBMISSIONDIR" "$PROBLEMDIR" $@
 
-LC_ALL=en_US.UTF-8 java $JAVA_OPTS -classpath "$CLASSPATH" com.horstmann.codecheck.Main $LEVEL "$SUBMISSIONDIR" "$PROBLEMDIR" "$TITLE"
+LC_ALL=en_US.UTF-8 java $JAVA_OPTS -classpath "$CLASSPATH" com.horstmann.codecheck.Main $LEVEL "$SUBMISSIONDIR" "$PROBLEMDIR" $@
 cd - > /dev/null
 $BROWSER "$SUBMISSIONDIR/$REPORT" 2> /dev/null 
 cd "$SUBMISSIONDIR"
 
 if [ -e report.html ] ; then
   jar uf $REPORT_JAR report.html
-  MATCH=`grep  -o '^[<]meta name="ID" content="\(.*\)"/>$' report.html`
+  MATCH=`grep --text -o '^[<]meta name="ID" content="\(.*\)"/>$' report.html`
   if [[ -n $MATCH ]] ; then
     MATCH=${MATCH##*\=\"}
     ID=${MATCH%\"*}
@@ -156,11 +161,10 @@ jarsigner -keystore "$BASEDIR/horstmanncomodo.jks" -storepass rivu6nitt $REPORT_
 
 cd $STARTDIR
 
-if [ -z $2 ] ; then
+if [ ! -z $SUBMISSIONDIR2 ] ; then
   # Checking student files
-  SUBMISSIONDIR2=`mktemp -d`
-  if [ -e $1/student ] ; then 
-    cd $1/student
+  if [ -e $PROBLEMDIR/student ] ; then 
+    cd $PROBLEMDIR/student
     for f in `find .` ; do 
       if [ "$f" != "." ] ; then cp --parents $f $SUBMISSIONDIR2 ; fi
     done
@@ -169,8 +173,8 @@ if [ -z $2 ] ; then
   case $LEVEL in 
     [1-9])
       for n in `seq 1 $LEVEL` ; do
-        if [ -e $1/student$n ] ; then 
-          cd $1/student$n
+        if [ -e $PROBLEMDIR/student$n ] ; then 
+          cd $PROBLEMDIR/student$n
           for f in `find .` ; do 
             if [ "$f" != "." ] ; then cp --parents $f $SUBMISSIONDIR2 ; fi
           done

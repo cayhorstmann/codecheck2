@@ -12,6 +12,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -126,7 +128,8 @@ public class Util {
 
 	public static Path createTempDirectory(Path parent) throws IOException {
 		String prefix = new SimpleDateFormat("yyMMddkkmm").format(new Date());
-		return java.nio.file.Files.createTempDirectory(parent, prefix);
+		Set<PosixFilePermission> perms = PosixFilePermissions.fromString("rwxr-xr-x");
+		return java.nio.file.Files.createTempDirectory(parent, prefix, PosixFilePermissions.asFileAttribute(perms));
 	}
 
 	public static String createUID() {
@@ -211,6 +214,7 @@ public class Util {
 				result.append("\n");
 			}
 			in.close();
+						
 			// CAUTION: Apparently, one can't just large input from the process
 			// stdout
 			// http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4062587
@@ -242,9 +246,18 @@ public class Util {
 	public static void putToS3(Path problemZip, String bucket, String key)
 			throws IOException {
 		InputStream in = Files.newInputStream(problemZip);
-		getS3Connection().putObject(bucket, key, in, new ObjectMetadata());
-		in.close();
+		try {
+		   getS3Connection().putObject(bucket, key, in, new ObjectMetadata());
+		} finally {
+		  in.close();
+		}
 	}
+	
+	public static void deleteFromS3(String bucket, String key)
+			throws IOException {
+		getS3Connection().deleteObject(bucket, key);
+	}
+	
 
 	// Delete returnedPath.getParent() when done
 	public static Path unzipFromS3(String repo, String problem)
@@ -263,7 +276,7 @@ public class Util {
 	}
 
 	public static void runLabrat(ServletContext context, String repo,
-			String problem, String level, String tempDir) throws IOException {
+			String problem, String level, String tempDir, String metaData) throws IOException {
 		String repoPath = context
 				.getInitParameter("com.horstmann.codecheck.repo." + repo);
 		String problemDir = repoPath + File.separator + problem;
@@ -276,14 +289,14 @@ public class Util {
 			problemDir = tempProblemDir.toAbsolutePath().toString();
 		}
 
-		runLabrat(context, repo, problem, level, problemDir, tempDir);
+		runLabrat(context, repo, problem, level, problemDir, tempDir, metaData);
 
-		if (unzipDir != null)
+		if (unzipDir != null && Files.exists(Paths.get(tempDir).resolve("report.html"))) // TODO: For now, leave directory for debugging
 			deleteDirectory(unzipDir);
 	}
 
 	public static void runLabrat(ServletContext context, String repo,
-			String problem, String level, String problemDir, String tempDir)
+			String problem, String level, String problemDir, String tempDir, String metaData)
 			throws IOException {
 		// TODO: Obsolete
 		String repoPath = context
@@ -295,8 +308,9 @@ public class Util {
 					.getInitParameter("com.horstmann.codecheck.defaultcommand");
 		
 		String script = MessageFormat.format(command, level, tempDir,
-				problemDir, repo + ":" + problem + ":" + level);
-		runScript(script);
+				problemDir, metaData);
+		String result = runScript(script);
+		Files.write(Paths.get(tempDir).resolve("codecheck.log"), (script + "\n" + result).getBytes("UTF-8"));
 	}
 
 	/**

@@ -254,6 +254,8 @@ public class Main {
                 testInput(mainmodule, annotations, solutionDir, test, input);
             }
         }
+        
+        Util.deleteDirectory(solutionDir);
     }
 
     private void testInput(String mainmodule, Annotations annotations,
@@ -397,7 +399,7 @@ public class Main {
                     actual[i] = language.run(mainmodule, workDir, null, null, timeout);
                     Path tempDir = compileSolution(mainmodule, sub, i);
                     expected[i] = language.run(mainmodule, tempDir, null, null, timeout);                    
-                    
+                    Util.deleteDirectory(tempDir);
                     int j = 0;
                     for (String v : sub.values(i)) { args[i][j] = v; j++; }                      
                     outcomes[i] = comp.compare(actual[i], expected[i]);
@@ -616,8 +618,10 @@ public class Main {
                 call.setIgnoreSpace(ignoreSpace);
                 if (compile(mainmodule)) {
                     report.header("Calling method");
-                    call.prepare(compileSolution(mainmodule, null, 0));
+                    Path tempDir = compileSolution(mainmodule, null, 0); 
+                    call.prepare(tempDir);
                     call.run(workDir, report, score);
+                    Util.deleteDirectory(tempDir);
                 }
 
                 // TODO: If their program runs out of memory, it takes labrat

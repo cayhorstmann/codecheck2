@@ -63,10 +63,8 @@ public class UploadProblem {
 				Util.unzip(in, problemDir);
 				in.close();
 
+				Util.putToS3(problemZip, repo + ".code-check.org", problem);
 				if (check()) {
-
-					Util.putToS3(problemZip, repo + ".code-check.org", problem);
-
 					boolean grade = runs.keySet().contains("grade");
 					boolean multipleLevels = runs.keySet().size() > (grade ? 2
 							: 1);
@@ -109,6 +107,7 @@ public class UploadProblem {
 							.entity(reason + "\n").build();
 			} finally {
 				Util.deleteDirectory(unzipDir);
+				Util.deleteFromS3(repo + ".code-check.org", problem);
 			}
 		} catch (Exception ex) {
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR)

@@ -1,6 +1,74 @@
 Checker
 =======
 
+Remedy 1: Check that the method returned without an exception, and don't give any points otherwise.
+
+Remedy 2: Instead of doing the Expected thing, just compare with the outcome from the expected run
+
+public class TrafficLight
+{
+    // instance variable
+    private int value;
+
+    public void next()
+    {
+        // code for next method
+        TrafficLight light1 = new TrafficLight();
+        System.out.println(light1.getReds());
+        System.out.println("Expected: 1");
+        light1.next();
+        System.out.println(light1.getReds());
+        System.out.println("Expected: 1");
+        light1.next();
+        System.out.println(light1.getReds());
+        System.out.println("Expected: 1");
+        light1.next();
+        System.out.println(light1.getReds());
+        System.out.println("Expected: 2");
+    }
+
+    public int getReds()
+    {
+        
+        return 0 + 1; // Fix this statement
+    }
+}
+
+public class TrafficLightTester
+{
+    public static void main(String[] args)
+    {
+        TrafficLight light1 = new TrafficLight();
+        System.out.println(light1.getReds());
+        System.out.println("Expected: 1");
+        light1.next();
+        System.out.println(light1.getReds());
+        System.out.println("Expected: 1");
+        light1.next();
+        System.out.println(light1.getReds());
+        System.out.println("Expected: 1");
+        light1.next();
+        System.out.println(light1.getReds());
+        System.out.println("Expected: 2");
+    }
+}
+
+The result is 
+
+1
+Expected: 1
+...
+1
+Expected: 1
+java.lang.StackOverflowError
+	at sun.nio.cs.UTF_8.updatePositions(UTF_8.java:77)
+
+Score
+
+3862/3862
+
+----------------------------------------------------------------------
+
 Here's another one that you might be interested in. It seems all of the graphics exercises do this:
 
 java.awt.HeadlessException: 

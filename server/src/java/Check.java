@@ -5,10 +5,12 @@ import java.util.Random;
 
 import javax.servlet.ServletContext;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.CookieParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
 
 @javax.ws.rs.Path("/check")
@@ -20,7 +22,7 @@ public class Check {
     @POST
     @Consumes("application/x-www-form-urlencoded")
     @Produces("text/html")
-    public Response check(MultivaluedMap<String, String> formParams)
+    public Response check(MultivaluedMap<String, String> formParams, @CookieParam("ccu") String ccu)
     throws IOException {
         Path submissionDir = Util.getDir(context, "submissions");
         Path tempDir = Util.createTempDirectory(submissionDir);
@@ -38,8 +40,10 @@ public class Check {
             else
                 Util.write(tempDir, key, value);
         }
-        Util.runLabrat(context, repo, problem, level, tempDir.toAbsolutePath().toString());
         Path tempDirName = tempDir.getFileName();
+        if (ccu == null) ccu = tempDirName.toString();
+        // TODO: Pass on to report
+        Util.runLabrat(context, repo, problem, level, tempDir.toAbsolutePath().toString(), "User=" + ccu);
         // Path reportBaseDir = Util.getDir(context, "reports");
         // Path reportDir = reportBaseDir.resolve(tempDirName);
         // Files.createDirectory(reportDir);
@@ -47,7 +51,8 @@ public class Check {
         // TODO: Find the JAR file name and move it
         // Files.copy(tempDir.resolve("report.jar"), reportDir.resolve("report.jar"));
         // TODO: Remove temp dir?
-
-        return Response.seeOther(URI.create("fetch/" + tempDirName + "/report.html")).build();
+        int age = 180 * 24 * 60 * 60;
+        NewCookie cookie = new NewCookie(new NewCookie("ccu", ccu), "", age, false);
+        return Response.seeOther(URI.create("fetch/" + tempDirName + "/report.html")).cookie(cookie).build();
     }
 }
