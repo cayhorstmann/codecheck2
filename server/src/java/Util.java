@@ -5,10 +5,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.math.BigInteger;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -228,14 +231,24 @@ public class Util {
 	public static boolean isOnS3(String repo, String problem) {
 		return true;
 	}
+	
+	private static String s3AccessKey = null;
+	private static String s3SecretKey = null;
+	
+	public static void loadS3Credentials(ServletContext context) throws IOException
+	{
+		String s3CredentialsPath = context
+				.getInitParameter("com.horstmann.codecheck.s3credentials");
+		Properties props = new Properties();
+		props.load(Files.newBufferedReader(Paths.get(s3CredentialsPath), StandardCharsets.UTF_8));
+		s3AccessKey = props.getProperty("accessKey");
+		s3SecretKey = props.getProperty("secretKey");
+	}
+	
 
 	private static AmazonS3 getS3Connection() {
-		// TODO: Don't hardwire
-		String accessKey = "12Y1EEATQ8DDYJCVQYR2";
-		String secretKey = "rPcsXCCDIWKlLxjGltT9XA0MZ0LNUUF7JK6Xibae";
-
-		AWSCredentials credentials = new BasicAWSCredentials(accessKey,
-				secretKey);
+		AWSCredentials credentials = new BasicAWSCredentials(s3AccessKey,
+				s3SecretKey);
 
 		ClientConfiguration clientConfig = new ClientConfiguration();
 		clientConfig.setProtocol(Protocol.HTTP);
@@ -274,7 +287,7 @@ public class Util {
 		in.close();
 		return problemDir;
 	}
-
+		
 	public static void runLabrat(ServletContext context, String repo,
 			String problem, String level, String tempDir, String metaData) throws IOException {
 		String repoPath = context
@@ -382,4 +395,21 @@ public class Util {
 		result += request.getContextPath();
 		return result;		
 	}
+	
+    public static Set<Path> filterNot(Set<Path> paths, String... glob) {
+        Set<Path> result = new TreeSet<>();
+        PathMatcher[] matcher = new PathMatcher[glob.length];
+        for (int i = 0; i < matcher.length; i++)
+            matcher[i] = FileSystems.getDefault().getPathMatcher(
+                             "glob:" + glob[i].replace("/", FileSystems.getDefault().getSeparator()));
+        for (Path p : paths) {
+            boolean matchesOne = false;
+            for (int i = 0; i < matcher.length && !matchesOne; i++)
+                if (matcher[i].matches(p.getFileName()))
+                    matchesOne = true;
+            if (!matchesOne)
+                result.add(p);
+        }
+        return result;
+    }    	
 }

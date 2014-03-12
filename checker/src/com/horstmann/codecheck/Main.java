@@ -523,8 +523,8 @@ public class Main {
                 }
             }
 
-            studentFiles = filterNot(Util.getDescendantFiles(problemDir, studentDirectories), "check.properties", ".DS_Store");
-            solutionFiles = filterNot(Util.getDescendantFiles(problemDir, solutionDirectories), "*.txt", ".DS_Store");
+            studentFiles = filterNot(Util.getDescendantFiles(problemDir, studentDirectories), "check.properties", ".*");
+            solutionFiles = filterNot(Util.getDescendantFiles(problemDir, solutionDirectories), "*.txt", ".*");
             // Filtering out rubric
 
             Annotations annotations = new Annotations(language);

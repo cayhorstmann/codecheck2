@@ -153,11 +153,11 @@ public class Problem {
             nodocCl.addAll(Arrays.asList(nodoc.trim().split("\\s*,\\s*")));
 
         Set<Path> studentFiles = Util.getDescendantFiles(problemPath, studentDirectories);
+        studentFiles = Util.filterNot(studentFiles, ".*");
 
         for (Path path : studentFiles)
             if (path.toString().endsWith(".java")) {
                 String cl = Util.javaClass(Util.tail(path));
-                System.out.println(cl);
                 if (!requiredFiles.contains(path) && !nodocCl.contains(cl))
                     useFiles.add(path);
             }

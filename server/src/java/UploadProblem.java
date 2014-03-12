@@ -103,11 +103,11 @@ public class UploadProblem {
 					return Response.status(Response.Status.OK)
 							.entity(response.toString()).build();
 				} else
+					Util.deleteFromS3(repo + ".code-check.org", problem);
 					return Response.status(Response.Status.NOT_ACCEPTABLE)
 							.entity(reason + "\n").build();
 			} finally {
 				Util.deleteDirectory(unzipDir);
-				Util.deleteFromS3(repo + ".code-check.org", problem);
 			}
 		} catch (Exception ex) {
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR)

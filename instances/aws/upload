@@ -16,6 +16,6 @@ rsync -e "ssh -i /home/cay/.ec2/aws1.pem" \
 
 rsync -e "ssh -i /home/cay/.ec2/aws1.pem" \
     -avz \
-    ../instances/aws/codecheck \
+    ../instances/aws/codecheck ../instances/s3.properties \
     $EC2_HOST:/home/ubuntu/codecheck/
 

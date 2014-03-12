@@ -7,7 +7,10 @@
    <servlet-mapping>
     <servlet-name>DefaultServlet</servlet-name>
     <url-pattern>/static/*</url-pattern>
-  </servlet-mapping>  
+  </servlet-mapping>
+  <listener>
+     <listener-class>Initializer</listener-class>
+  </listener>  
   <context-param>
     <param-name>com.horstmann.codecheck.repo.ext</param-name>
     <param-value>/data/temp/ext</param-value>
@@ -55,5 +58,9 @@
   <context-param>
     <param-name>com.horstmann.codecheck.gradecommand</param-name>
     <param-value>/data/cay/current/teach/util/gradeNetbrat {0} {1} {2} {3} {4} {5} {6} {7}</param-value>
+  </context-param>  
+  <context-param>
+    <param-name>com.horstmann.codecheck.s3credentials</param-name>
+    <param-value>/data/cay/projects/codecheck/instances/s3.properties</param-value>
   </context-param>  
 </web-app>
