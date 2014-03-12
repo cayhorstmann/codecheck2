@@ -286,7 +286,7 @@ public class HTMLReport implements Report {
                 }
                 builder.append("\n");
             } catch (IOException e) {
-                systemError(e);
+               systemError(e);
             }
 
         } else {

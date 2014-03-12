@@ -2,12 +2,15 @@ package com.horstmann.codecheck;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
@@ -15,6 +18,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.AccessControlException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
@@ -23,15 +27,15 @@ import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
 
 public class JavaLanguage implements Language {
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.horstmann.codecheck.Language#isSource(java.nio.file.Path)
-     */
-    @Override
-    public boolean isSource(Path p) {
-        return p.toString().endsWith(".java");
-    }
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.horstmann.codecheck.Language#isSource(java.nio.file.Path)
+	 */
+	@Override
+	public boolean isSource(Path p) {
+		return p.toString().endsWith(".java");
+	}
 
     /*
      * (non-Javadoc)
@@ -100,9 +104,19 @@ public class JavaLanguage implements Language {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         OutputStream outStream = new ByteArrayOutputStream();
         OutputStream errStream = new ByteArrayOutputStream();
-        int result = compiler.run(null, outStream, errStream, "-sourcepath",
-                dir.toString(), "-d", dir.toString(),
-                dir.resolve(pathOf(modulename)).toString());
+        final String classPath = buildClasspath(dir);
+
+        int result;
+        if (classPath.length() == 0) {
+                result = compiler.run(null, outStream, errStream, "-sourcepath",
+                                      dir.toString(), "-d", dir.toString(),
+                                      dir.resolve(pathOf(modulename)).toString());
+        } else {
+                result = compiler.run(null, outStream, errStream, "-sourcepath",
+                                      dir.toString(), "-d", dir.toString(),
+                                      dir.resolve(pathOf(modulename)).toString(), "-cp",
+                                      classPath.toString());
+        }
         if (result != 0) {
             String errorReport = errStream.toString();
             if (errorReport.trim().equals(""))
@@ -178,8 +192,11 @@ public class JavaLanguage implements Language {
         String result = "";
         System.setOut(newOutPrint);
         System.setErr(newOutPrint);
+        // Adds all of the user jars to URLClassLoader.
+        final List<URL> jars = getJarFilePaths(classpathDir);
+        jars.add(classpathDir.toFile().toURI().toURL());
         final URLClassLoader loader = new URLClassLoader(
-                new URL[] { classpathDir.toFile().toURI().toURL() });
+                jars.toArray(new URL[jars.size()]));
         try {
 
             final AtomicBoolean done = new AtomicBoolean(false);
@@ -331,6 +348,16 @@ public class JavaLanguage implements Language {
     private static Pattern pattern = Pattern.compile(patternString);
 
     /*
+     * Used to filter for jar files.
+     */
+    private static FilenameFilter jarFilter = new FilenameFilter() {
+        @Override
+        public boolean accept(File dir, String name) {
+            return name.endsWith(".jar");
+        }
+    };
+
+    /*
      * (non-Javadoc)
      * 
      * @see com.horstmann.codecheck.Language#variablePattern()
@@ -348,5 +375,48 @@ public class JavaLanguage implements Language {
     @Override
     public String substitutionSeparator() {
         return ";";
+    }
+    
+    /**
+     * Builds the classpath argument using the jars found in dir.
+     * 
+     * @param dir
+     *            Path in which to search for jars.
+     * @return The appropriate classpath argument.
+     */
+    private static String buildClasspath(Path dir) {
+        StringBuilder classPath = new StringBuilder();
+        boolean isFirst = true;
+        for (File currentFile : dir.toFile().listFiles(jarFilter)) {
+            if (!isFirst) {
+                classPath.append(File.pathSeparatorChar);
+            } else {
+                isFirst = true;
+            }
+            classPath.append(currentFile.getAbsolutePath());
+        }
+
+        return classPath.toString();
+    }
+
+    /**
+     * Gets a collection of the absolute file paths for each jar.
+     * 
+     * @param dir
+     *            Path in which to search for jars.
+     * @return Iterable collection of absolute file paths for user jars.
+     */
+    private List<URL> getJarFilePaths(Path dir) {
+        List<URL> returnValue = new ArrayList<URL>();
+        for (File currentFile : dir.toFile().listFiles(jarFilter)) {
+            try {
+                returnValue.add(currentFile.getAbsoluteFile().toURI().toURL());
+            } catch (MalformedURLException e) {
+                // Save to ignore given that we are reading from the file
+                // system.
+            }
+        }
+
+        return returnValue;
     }
 }

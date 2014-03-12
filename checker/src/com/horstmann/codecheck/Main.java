@@ -670,7 +670,7 @@ public class Main {
 	                nodocCl.addAll(Arrays.asList(nodoc.split(",")));
 	
 	            printFiles = filterNot(printFiles, "test*.in", "test*.out", "*.expected", "check.properties", "*.png",
-                        "*.gif", "*.jpg", "*.jpeg", ".DS_Store");
+                       "*.gif", "*.jpg", "*.jpeg", ".DS_Store", "*.jar");
 
 	            Set<Path> hidden = annotations.findHidden();
 	            Iterator<Path> iter = printFiles.iterator();
