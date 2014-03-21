@@ -200,10 +200,13 @@ public class Files {
         while (matcher.find(start)) {
             start = matcher.start(1);
             end = matcher.end(1);
-            String replacement = "data:image/png;base64,"
-                                 + Util.base64(problemDir, result.substring(start, end));
-            result.replace(start, end, replacement);
-            start += replacement.length();
+            String src = result.substring(start, end);
+            if (!src.trim().startsWith("http://")) {
+	            String replacement = "data:image/png;base64,"
+	                                 + Util.base64(problemDir, src);
+	            result.replace(start, end, replacement);
+	            start += replacement.length();
+            }
         }
 
         // Old-style Wiley Plus crud

@@ -147,8 +147,7 @@ public class UploadProblem {
 			String problem = problemDir.getFileName().toString();
 			String levelString = grade && i == maxLevel + 1 ? "grade" : "" + i;
 			Util.runLabrat(context, repo, problem, levelString,
-					problemDir.toAbsolutePath().toString(),
-					tempDir.toAbsolutePath().toString());
+					tempDir.toAbsolutePath().toString(), "");
 			// Path reportDir = Util.getDir(context,
 			// "reports").resolve(tempDir.getFileName());
 			// Files.createDirectory(reportDir);

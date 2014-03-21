@@ -289,7 +289,7 @@ public class Util {
 	}
 		
 	public static void runLabrat(ServletContext context, String repo,
-			String problem, String level, String tempDir, String metaData) throws IOException {
+			String problem, String level, String submissionDir, String metaData) throws IOException {
 		String repoPath = context
 				.getInitParameter("com.horstmann.codecheck.repo." + repo);
 		String problemDir = repoPath + File.separator + problem;
@@ -302,14 +302,14 @@ public class Util {
 			problemDir = tempProblemDir.toAbsolutePath().toString();
 		}
 
-		runLabrat(context, repo, problem, level, problemDir, tempDir, metaData);
+		runLabrat(context, repo, problem, level, problemDir, submissionDir, metaData);
 
-		if (unzipDir != null && Files.exists(Paths.get(tempDir).resolve("report.html"))) // TODO: For now, leave directory for debugging
+		if (unzipDir != null && Files.exists(Paths.get(submissionDir).resolve("report.html"))) // TODO: For now, leave directory for debugging
 			deleteDirectory(unzipDir);
 	}
 
 	public static void runLabrat(ServletContext context, String repo,
-			String problem, String level, String problemDir, String tempDir, String metaData)
+			String problem, String level, String problemDir, String submissionDir, String metaData)
 			throws IOException {
 		// TODO: Obsolete
 		String repoPath = context
@@ -320,10 +320,10 @@ public class Util {
 			command = context
 					.getInitParameter("com.horstmann.codecheck.defaultcommand");
 		
-		String script = MessageFormat.format(command, level, tempDir,
+		String script = MessageFormat.format(command, level, submissionDir,
 				problemDir, metaData);
 		String result = runScript(script);
-		Files.write(Paths.get(tempDir).resolve("codecheck.log"), (script + "\n" + result).getBytes("UTF-8"));
+		Files.write(Paths.get(submissionDir).resolve("codecheck.log"), (script + "\n" + result).getBytes("UTF-8"));
 	}
 
 	/**
