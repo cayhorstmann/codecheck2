@@ -1,0 +1,21 @@
+HOST=horstmann@cs12.cs.sjsu.edu
+DOMAIN=/opt/glassfish4/glassfish/domains/domain1
+CODECHECK_HOME=/opt/codecheck
+
+BASENAME=`pwd`/`dirname $0`
+cd $BASENAME
+
+cd ../../server
+ant war
+
+cd $BASENAME
+jar uf ../../server/antbuild/codecheck.war WEB-INF/web.xml
+
+scp -p -P 62222 ../../server/antbuild/codecheck.war $HOST:$DOMAIN/autodeploy
+scp -p -P 62222 codecheck codecheck.policy ../s3.properties $HOST:$CODECHECK_HOME
+
+cd ../../checker
+ant
+scp -p -P 62222 codecheck.jar horstmanncomodo.jks $HOST:$CODECHECK_HOME
+
+
