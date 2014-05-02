@@ -51,8 +51,8 @@ fi
 
 STARTDIR=`pwd`
 BASEDIR=`dirname $0`
-CLASSPATH="$BASEDIR/codecheck.jar"
-if [ "${CLASSPATH/#\//}" == "$CLASSPATH" ] ; then CLASSPATH=`pwd`/"$CLASSPATH" ; fi
+if [ "${BASEDIR/#\//}" == "$BASEDIR" ] ; then BASEDIR=`pwd`/"$BASEDIR" ; fi
+CLASSPATH="$BASEDIR"/codecheck.jar:"$BASEDIR"/lib/\*
 
 function usage() {
     echo "Usage: `basename $0` [-q] level submissiondir problemdir"
@@ -132,7 +132,7 @@ fi
 WORKDIR=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
 
 cd "$SUBMISSIONDIR"
-REPORT_JAR=REPORT_JAR=`basename $PROBLEMDIR`.signed.zip
+REPORT_JAR=`basename $PROBLEMDIR`.signed.zip
 jar cf $REPORT_JAR .
 
 cd "$WORKDIR"

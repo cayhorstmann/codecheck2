@@ -3,11 +3,14 @@ package com.horstmann.codecheck;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
@@ -18,13 +21,18 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.AccessControlException;
+import java.security.Permission;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
+import javax.swing.JFrame;
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
+
+import com.horstmann.codecheck.StudentSecurityManager.ExitException;
 
 public class JavaLanguage implements Language {
 	/*
@@ -419,4 +427,83 @@ public class JavaLanguage implements Language {
 
         return returnValue;
     }
+    
+    @Override
+    public boolean accept(Path file, Path dir, Set<Path> requiredFiles, Report report, Score score) {
+        if (file.getFileName().toString().equals("checkstyle.xml")) {
+            report.header("CheckStyle");
+            for (Path p : requiredFiles) {
+                if (isSource(p)) {
+                    String result = runCheckStyle(dir.resolve(p));
+                    report.output(p.getFileName().toString(), result.length() == 0 ? "Ok" : result);
+                    score.pass(result.length() == 0, report); 
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+        
+    static class ExitException extends SecurityException {
+    }
+
+    public static String runCheckStyle(final Path javaFile) {
+        PrintStream oldOut = System.out;
+        PrintStream oldErr = System.err;
+        final ByteArrayOutputStream newOut = new ByteArrayOutputStream();
+        final PrintStream newOutPrint = new PrintStream(newOut);
+        System.setOut(newOutPrint);
+        System.setErr(newOutPrint);
+        
+        // Annoyingly, checkstyle calls System.exit
+
+        final SecurityManager oldManager = System.getSecurityManager();
+        System.setSecurityManager(new SecurityManager() {
+            @Override
+            public void checkExit(int status) {
+                throw new ExitException();
+            }
+
+            @Override
+            public void checkPermission(Permission perm) {
+                // oldManager.checkPermission(perm);
+            }
+
+            @Override
+            public void checkPermission(Permission perm, Object context) {
+                // oldManager.checkPermission(perm, context);
+            }                
+        });
+        
+        try {
+            String[] args = new String[3];
+            args[0] = "-c";
+            args[1] = "checkstyle.xml"; //CheckStyle file
+            args[2] = javaFile.toAbsolutePath().toString(); //Java file will be checked
+            com.puppycrawl.tools.checkstyle.Main.main(args);
+        } catch (ExitException e) {
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            System.setSecurityManager(oldManager);
+            newOutPrint.close();            
+            System.setOut(oldOut);
+            System.setOut(oldErr);
+        }
+
+        String result;
+        try {
+            result = newOut.toString("UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            result = e.getMessage();
+        }
+        String header = "Starting audit...\n";
+        if (result.startsWith(header)) result = result.substring(header.length());
+        String footer = "Audit done.\n";
+        if (result.endsWith(footer)) result = result.substring(0, result.length() - footer.length());
+        return result;
+    }
+
+    
+    
 }

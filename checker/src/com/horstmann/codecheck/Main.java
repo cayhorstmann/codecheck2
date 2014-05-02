@@ -1,6 +1,5 @@
 package com.horstmann.codecheck;
 
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -276,6 +275,9 @@ public class Main {
             Files.deleteIfExists(outPath);
 
         String outerr = language.run(mainmodule, workDir, runargs, input, timeoutMillis);
+        String title = "Program run";
+        if (test != null) title = (title + " " + test.replace("test", "")).trim(); 
+
         /*               
         if (input != null && input.length() > 1)
             report.output("Input " + test, input);
@@ -288,6 +290,7 @@ public class Main {
             if (CompareImages.isImage(outFile)) {
                 try {
                     imageComp = new CompareImages(outPath);
+                    report.output(title, outerr);
                     report.image(outPath);
                 } catch (IOException ex) {
                     report.error(ex.getMessage());
@@ -297,8 +300,6 @@ public class Main {
                 contents = Util.read(outPath);
         }
 
-        String title = "Program run";
-        if (test != null) title = (title + " " + test.replace("test", "")).trim(); 
         if (solutionDir == null) { // Run without testing
             report.output(title, outerr);
             // TODO: Score?
@@ -332,7 +333,7 @@ public class Main {
             }
         }
 
-        if (expectedOuterr != null && expectedOuterr.length() > 0) {
+        if (imageComp == null && expectedOuterr != null && expectedOuterr.length() > 0) {
             boolean outcome = comp.execute(outerr, expectedOuterr, report, title);
             score.pass(outcome, report);
         }
@@ -657,6 +658,13 @@ public class Main {
                         testInputs(inputs, mainmodule, annotations);
                 }
             }
+            
+            // Process checkstyle.xml etc.
+            for (Path p : studentFiles) {
+                if (language.accept(p, submissionDir, requiredFiles, report, score)) {
+                    printFiles = filterNot(printFiles, p.getFileName().toString());
+                }
+            }
 
             if (System.getProperty("com.horstmann.codecheck.textreport") == null)
             {
@@ -670,7 +678,7 @@ public class Main {
 	                nodocCl.addAll(Arrays.asList(nodoc.split(",")));
 	
 	            printFiles = filterNot(printFiles, "test*.in", "test*.out", "*.expected", "check.properties", "*.png",
-                       "*.gif", "*.jpg", "*.jpeg", ".DS_Store", "*.jar");
+	                    "*.gif", "*.jpg", "*.jpeg", ".DS_Store", "*.jar");
 
 	            Set<Path> hidden = annotations.findHidden();
 	            Iterator<Path> iter = printFiles.iterator();

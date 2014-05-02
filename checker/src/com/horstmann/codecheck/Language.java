@@ -3,6 +3,7 @@ package com.horstmann.codecheck;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 public interface Language {
@@ -41,5 +42,15 @@ public interface Language {
 	Pattern variablePattern();
 
 	String substitutionSeparator();
-
+	
+	/**
+	 * Accepts an optional file for processing (such as checkstyle.xml)
+	 * @param file the file to check for optional processing
+	 * @param dir the directory containing the student files
+	 * @param studentFiles all student files
+	 * @param report the report to add to, if an action was taken
+	 * @param score the score object to reward
+	 * @return true if an action was taken
+	 */
+	boolean accept(Path file, Path dir, Set<Path> studentFiles, Report report, Score score); // TODO: Make an object describing the problem
 }

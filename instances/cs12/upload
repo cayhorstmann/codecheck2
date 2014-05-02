@@ -1,3 +1,8 @@
+export JAVA_HOME=/data/apps/jdk1.7.0
+export JDK_HOME=$JAVA_HOME
+export PATH=$JAVA_HOME/bin:$PATH
+
+
 HOST=horstmann@cs12.cs.sjsu.edu
 DOMAIN=/opt/glassfish4/glassfish/domains/domain1
 CODECHECK_HOME=/opt/codecheck
@@ -11,11 +16,17 @@ ant war
 cd $BASENAME
 jar uf ../../server/antbuild/codecheck.war WEB-INF/web.xml
 
-scp -p -P 62222 ../../server/antbuild/codecheck.war $HOST:$DOMAIN/autodeploy
-scp -p -P 62222 codecheck codecheck.policy ../s3.properties $HOST:$CODECHECK_HOME
+cd ../../server/antbuild
+rsync -e "ssh -p 62222" codecheck.war $HOST:$DOMAIN/autodeploy
+
+cd $BASENAME
+cp ../s3.properties .
+rsync -e "ssh -p 62222" codecheck codecheck.policy s3.properties $HOST:$CODECHECK_HOME
+rm s3.properties
 
 cd ../../checker
+ant clean
 ant
-scp -p -P 62222 codecheck.jar horstmanncomodo.jks $HOST:$CODECHECK_HOME
+rsync -e "ssh -p 62222" codecheck.jar horstmanncomodo.jks lib $HOST:$CODECHECK_HOME
 
 

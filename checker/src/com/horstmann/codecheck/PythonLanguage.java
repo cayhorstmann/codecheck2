@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 public class PythonLanguage implements Language {
@@ -91,5 +92,11 @@ public class PythonLanguage implements Language {
 	 * @see com.horstmann.codecheck.Language#substitutionSeparator()
 	 */
     @Override
-	public String substitutionSeparator() { return ";"; } 
+	public String substitutionSeparator() { return ";"; }
+    
+    @Override
+    public boolean accept(Path file, Path dir, Set<Path> studentFiles,
+        Report report, Score score) {
+        return false;
+    }
 }

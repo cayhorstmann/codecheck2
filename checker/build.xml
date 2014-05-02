@@ -32,6 +32,12 @@
   <property name="webdir2" value="/home/cay/cs1java/codecheck" />
   <property name="runscript" value="codecheck" />
 
+   <path id="classpath">
+      <fileset dir="${basedir}/lib">
+	       <include name="*.jar"/>
+      </fileset>
+   </path>
+
   <target name="clean" description="Delete all generated files">
     <delete dir="${build.dir}" />
   </target>
@@ -52,7 +58,9 @@
  </target>
 
   <target name="compile" description="Compiles the Task" depends="init, props">
-    <javac includeantruntime="false" srcdir="${src.dir}" debug="true" destdir="${build.dir}"/>
+    <javac includeantruntime="false" srcdir="${src.dir}" debug="true" destdir="${build.dir}">
+       <classpath refid="classpath"/>
+    </javac>
     <copy todir="${build.dir}" preservelastmodified="true">
       <fileset dir="${src.dir}">
         <include name="**/*.xml" />

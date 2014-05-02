@@ -3,11 +3,10 @@
 # Already has student files in temp directory $2
 
 BASEDIR=`dirname $0`
+if [ "${BASEDIR/#\//}" == "$BASEDIR" ] ; then BASEDIR=`pwd`/"$BASEDIR" ; fi
+CLASSPATH="$BASEDIR"/codecheck.jar:"$BASEDIR"/lib/\*
 
 cd $2
-
-CLASSPATH=`dirname $0`/codecheck.jar
-if [ "${CLASSPATH/#\//}" == "$CLASSPATH" ] ; then CLASSPATH=`pwd`/"$CLASSPATH" ; fi
 
 JAVA_HOME=/usr/lib/jvm/java-7-oracle
 
