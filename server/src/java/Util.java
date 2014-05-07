@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.math.BigInteger;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
@@ -32,12 +31,14 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import javax.servlet.ServletContext;
-import javax.servlet.ServletRequest;
 import javax.servlet.http.HttpServletRequest;
 
-import com.amazonaws.*;
-import com.amazonaws.auth.*;
-import com.amazonaws.services.s3.*;
+import com.amazonaws.ClientConfiguration;
+import com.amazonaws.Protocol;
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 
 public class Util {
@@ -227,9 +228,10 @@ public class Util {
 		}
 	}
 
-	// TODO: Check if there is a web.xml entry?
-	public static boolean isOnS3(String repo, String problem) {
-		return true;
+	public static boolean isOnS3(ServletContext context, String repo) {
+		String repoPath = context
+				.getInitParameter("com.horstmann.codecheck.repo." + repo);		
+		return repoPath != null;
 	}
 	
 	private static String s3AccessKey = null;
@@ -290,16 +292,18 @@ public class Util {
 		
 	public static void runLabrat(ServletContext context, String repo,
 			String problem, String level, String submissionDir, String metaData) throws IOException {
-		String repoPath = context
-				.getInitParameter("com.horstmann.codecheck.repo." + repo);
-		String problemDir = repoPath + File.separator + problem;
+		String problemDir;
 
 		// If problem is on S3 (eventually all will be)
 		java.nio.file.Path unzipDir = null;
-		if (isOnS3(repo, problem)) {
+		if (isOnS3(context, repo)) {
 			Path tempProblemDir = unzipFromS3(repo, problem);
 			unzipDir = tempProblemDir.getParent();
 			problemDir = tempProblemDir.toAbsolutePath().toString();
+		} else {
+			String repoPath = context
+					.getInitParameter("com.horstmann.codecheck.repo." + repo);
+			problemDir = repoPath + File.separator + problem;			
 		}
 
 		runLabrat(context, repo, problem, level, problemDir, submissionDir, metaData);

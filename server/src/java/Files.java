@@ -74,8 +74,7 @@ public class Files {
         Path unzipDir = null;
         Path problemPath;
         
-        // TODO: Eventually all are
-        if (Util.isOnS3(repo, problemName)) {
+        if (Util.isOnS3(context, repo)) {
         	problemPath = Util.unzipFromS3(repo, problemName);
         	unzipDir = problemPath.getParent();
         } else {        

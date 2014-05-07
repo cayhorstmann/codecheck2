@@ -48,6 +48,7 @@ public class Main {
     private Set<Path> solutionFiles;
     private Set<Path> printFiles = new TreeSet<>();
     private Set<String> mainmodules = new TreeSet<String>(); // module names
+    
     private Score score = new Score();
     private Comparison comp = new Comparison();
     private Language language = new JavaLanguage();
@@ -379,6 +380,14 @@ public class Main {
                     requiredFiles.add(language.pathOf(f));
         }
     }
+    
+    private void runUnitTests() {
+        for (Path p : studentFiles) {
+            String testClass = language.moduleOf(Util.tail(p));
+            if (language.isUnitTest(testClass))
+                language.runUnitTest(testClass, workDir, report, score);
+        }
+    }
 
     private void doSubstitutions(Path submissionDir, Substitution sub) throws IOException, ReflectiveOperationException {
         report.header("Running program with substitutions");
@@ -524,7 +533,7 @@ public class Main {
                 }
             }
 
-            studentFiles = filterNot(Util.getDescendantFiles(problemDir, studentDirectories), "check.properties", ".*");
+            studentFiles = filterNot(Util.getDescendantFiles(problemDir, studentDirectories), "check.properties", ".*", "problem.ch");
             solutionFiles = filterNot(Util.getDescendantFiles(problemDir, solutionDirectories), "*.txt", ".*");
             // Filtering out rubric
 
@@ -658,6 +667,8 @@ public class Main {
                         testInputs(inputs, mainmodule, annotations);
                 }
             }
+            
+            runUnitTests();
             
             // Process checkstyle.xml etc.
             for (Path p : studentFiles) {

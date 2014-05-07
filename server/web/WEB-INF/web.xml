@@ -12,22 +12,6 @@
      <listener-class>Initializer</listener-class>
   </listener>  
   <context-param>
-    <param-name>com.horstmann.codecheck.repo.ext</param-name>
-    <param-value>/data/temp/ext</param-value>
-  </context-param>  
-  <context-param>
-    <param-name>com.horstmann.codecheck.repo.bj4fp</param-name>
-    <param-value>/data/cay/archive/books/bigj4/solutions</param-value>
-  </context-param>  
-  <context-param>
-    <param-name>com.horstmann.codecheck.repo.bj4cc</param-name>
-    <param-value>/data/cay/archive/books/bigj4/codecomp</param-value>
-  </context-param>  
-  <context-param>
-    <param-name>com.horstmann.codecheck.repo.jfe1cc</param-name>
-    <param-value>/data/cay/current/books/j4e/codecomp</param-value>
-  </context-param>  
-  <context-param>
     <param-name>com.horstmann.codecheck.repo.cs46af12</param-name>
     <param-value>/data/cay/archive/teach/fall2012/cs46a/homework</param-value>
   </context-param>  

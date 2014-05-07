@@ -21,6 +21,12 @@ public class Score {
         pass(b);
         r.pass(b);
     }
+    
+    public void add(int passed, int total, Report r) {
+        this.passed += passed;
+        this.total += total;
+        pass(passed == total, r);
+    }
 
     public String toString() {
         return total == 0 ? "" + passed : passed + "/" + total;

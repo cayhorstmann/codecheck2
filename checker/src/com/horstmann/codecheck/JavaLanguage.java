@@ -3,8 +3,6 @@ package com.horstmann.codecheck;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.AccessControlException;
 import java.security.Permission;
 import java.util.ArrayList;
@@ -28,11 +27,10 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
-import javax.swing.JFrame;
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
 
-import com.horstmann.codecheck.StudentSecurityManager.ExitException;
+import org.junit.runner.notification.Failure;
 
 public class JavaLanguage implements Language {
 	/*
@@ -55,6 +53,11 @@ public class JavaLanguage implements Language {
         return modulename != null && modulename.matches(".*Tester[0-9]*");
     }
 
+    @Override
+    public boolean isUnitTest(String modulename) {
+        return modulename != null && modulename.matches(".*Test[0-9]*");
+    }
+        
     private static Pattern mainPattern = Pattern
             .compile("public\\s+static\\s+void\\s+main\\s*\\(\\s*String(\\s*\\[\\s*\\]\\s*\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*|\\s+\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*\\s*\\[\\s*\\])\\s*\\)");
 
@@ -200,11 +203,7 @@ public class JavaLanguage implements Language {
         String result = "";
         System.setOut(newOutPrint);
         System.setErr(newOutPrint);
-        // Adds all of the user jars to URLClassLoader.
-        final List<URL> jars = getJarFilePaths(classpathDir);
-        jars.add(classpathDir.toFile().toURI().toURL());
-        final URLClassLoader loader = new URLClassLoader(
-                jars.toArray(new URL[jars.size()]));
+        final URLClassLoader loader = buildClassLoader(classpathDir);
         try {
 
             final AtomicBoolean done = new AtomicBoolean(false);
@@ -392,19 +391,46 @@ public class JavaLanguage implements Language {
      *            Path in which to search for jars.
      * @return The appropriate classpath argument.
      */
-    private static String buildClasspath(Path dir) {
+    private String buildClasspath(Path dir) {
         StringBuilder classPath = new StringBuilder();
         boolean isFirst = true;
         for (File currentFile : dir.toFile().listFiles(jarFilter)) {
-            if (!isFirst) {
-                classPath.append(File.pathSeparatorChar);
+            if (isFirst) {
+                isFirst = false;
             } else {
-                isFirst = true;
+                classPath.append(File.pathSeparatorChar);
             }
             classPath.append(currentFile.getAbsolutePath());
         }
+        // Add the JAR files on the class path with which the checker was launched (JUnit etc.)
+        for (URL url : ((URLClassLoader) getClass().getClassLoader()).getURLs()) {
+            String urlString = url.toString(); 
+            if (urlString.startsWith("file:") && urlString.endsWith(".jar")) {
+                Path p = Paths.get(urlString.substring(5));    
+                
+                if (isFirst) {
+                    isFirst = false;
+                } else {
+                    classPath.append(File.pathSeparatorChar);
+                }
+                classPath.append(dir.resolve(p).toString());
+            }
+        }
 
         return classPath.toString();
+    }
+    
+    /**
+     * Builds a class loader with all JAR files on a given directory, as well as the directory itself
+     * @param dir a directory with class and JAR files
+     * @return a class loader that can load all the classes, using the JARs
+     * @throws MalformedURLException
+     */
+    private URLClassLoader buildClassLoader(Path dir) throws MalformedURLException {
+        // Adds all of the user jars to URLClassLoader.
+        final List<URL> jars = getJarFilePaths(dir);
+        jars.add(dir.toFile().toURI().toURL());
+        return new URLClassLoader(jars.toArray(new URL[jars.size()]));
     }
 
     /**
@@ -443,6 +469,29 @@ public class JavaLanguage implements Language {
         }
         return false;
     }
+    
+    
+    @Override
+    public void runUnitTest(String moduleName, Path dir, Report report, Score score) {
+        report.header("JUnit: " + moduleName);
+        if (compile(moduleName, dir, report)) {
+            try {
+                try (URLClassLoader loader = buildClassLoader(dir)) {
+                    Class<?> c = loader.loadClass(moduleName);
+                    org.junit.runner.Result r = org.junit.runner.JUnitCore.runClasses(c);
+        
+                    int pass = r.getRunCount() - r.getFailureCount();
+                    report.output("Pass: " + pass + "\nFail: " + r.getFailureCount());                    
+                    for (Failure failure : r.getFailures()) {
+                        report.output(failure.getDescription().getDisplayName().trim() + ": " + failure.getMessage());
+                    }                    
+                    score.add(pass, r.getRunCount(), report);
+                } 
+            } catch (Throwable t) {
+                report.systemError(t);
+            }
+        }
+    }    
         
     static class ExitException extends SecurityException {
     }
@@ -502,8 +551,5 @@ public class JavaLanguage implements Language {
         String footer = "Audit done.\n";
         if (result.endsWith(footer)) result = result.substring(0, result.length() - footer.length());
         return result;
-    }
-
-    
-    
+    }        
 }

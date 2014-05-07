@@ -11,6 +11,8 @@ public interface Language {
 	boolean isSource(Path p);
 
 	boolean isTester(String modulename);
+	
+	boolean isUnitTest(String modulename);
 
 	boolean isMain(Path dir, Path p);
 
@@ -42,6 +44,8 @@ public interface Language {
 	Pattern variablePattern();
 
 	String substitutionSeparator();
+	
+	void runUnitTest(String modulename, Path dir, Report report, Score score);
 	
 	/**
 	 * Accepts an optional file for processing (such as checkstyle.xml)
