@@ -53,6 +53,6 @@
 -->
   <context-param>
     <param-name>com.horstmann.codecheck.s3credentials</param-name>
-    <param-value>/data/cay/projects/codecheck/instances/s3.properties</param-value>
+    <param-value>/data/fred/projects/codecheck/instances/s3.properties</param-value>
   </context-param>  
 </web-app>

@@ -47,13 +47,21 @@ public class UploadProblem {
 						.entity(reason + "\n").build();
 			}
 			*/
+			
 
 			String problem = Util.createUID();
-
-			Path unzipDir = java.nio.file.Files.createTempDirectory("problem");
+			Path unzipDir;
+			boolean isOnS3 = Util.isOnS3(context, "ext"); 
+			if (isOnS3) {
+				unzipDir = Files.createTempDirectory("problem");				
+			} else {
+				unzipDir = java.nio.file.Paths.get(context
+						.getInitParameter("com.horstmann.codecheck.repo.ext"));
+				if (!Files.exists(unzipDir)) Files.createDirectory(unzipDir);
+			}
+			Path problemZip = unzipDir.resolve(problem + ".zip");
 			try {
 				problemDir = unzipDir.resolve(problem);
-				Path problemZip = unzipDir.resolve(problem + ".zip");
 
 				Files.createDirectory(problemDir);
 				Files.copy(in, problemZip);
@@ -63,7 +71,7 @@ public class UploadProblem {
 				Util.unzip(in, problemDir);
 				in.close();
 
-				Util.putToS3(problemZip, repo + ".code-check.org", problem);
+				if (isOnS3) Util.putToS3(problemZip, repo + ".code-check.org", problem);
 				if (check()) {
 					boolean grade = runs.keySet().contains("grade");
 					boolean multipleLevels = runs.keySet().size() > (grade ? 2
@@ -103,11 +111,11 @@ public class UploadProblem {
 					return Response.status(Response.Status.OK)
 							.entity(response.toString()).build();
 				} else
-					Util.deleteFromS3(repo + ".code-check.org", problem);
+					if (isOnS3) Util.deleteFromS3(repo + ".code-check.org", problem);
 					return Response.status(Response.Status.NOT_ACCEPTABLE)
 							.entity(reason + "\n").build();
 			} finally {
-				Util.deleteDirectory(unzipDir);
+				if (isOnS3) Util.deleteDirectory(unzipDir); else Files.delete(problemZip);
 			}
 		} catch (Exception ex) {
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR)

@@ -231,7 +231,7 @@ public class Util {
 	public static boolean isOnS3(ServletContext context, String repo) {
 		String repoPath = context
 				.getInitParameter("com.horstmann.codecheck.repo." + repo);		
-		return repoPath != null;
+		return repoPath == null;
 	}
 	
 	private static String s3AccessKey = null;
