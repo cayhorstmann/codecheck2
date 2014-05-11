@@ -76,7 +76,7 @@ public class UploadProblem {
 					boolean grade = runs.keySet().contains("grade");
 					boolean multipleLevels = runs.keySet().size() > (grade ? 2
 							: 1);
-					// String appURL = Util.appURL(request);
+					String hostUrl = Util.hostURL(request);
 					String contextPath = request.getContextPath();
 					String url =  contextPath + "/files/" + problem; 
 					
@@ -96,7 +96,7 @@ public class UploadProblem {
 								problemUrl += "/" + k;
 							}
 							response.append("URL: <code>");
-							response.append("http://go.code-check.org" + problemUrl); // TODO: Fix
+							response.append(hostUrl + problemUrl); // TODO: Fix
 							response.append("</code> | <a href=\"");
 							response.append(problemUrl);
 							response.append("\" target=\"_blank\">Preview</a>");
@@ -106,7 +106,7 @@ public class UploadProblem {
 						}
 						response.append("</li>\n");
 					}
-					// response.append("</ul><ul>[DEBUG] Server name: " + request.getServerName()); // TODO: Remove
+					
 					response.append("</ul></body></html>\n");
 					return Response.status(Response.Status.OK)
 							.entity(response.toString()).build();

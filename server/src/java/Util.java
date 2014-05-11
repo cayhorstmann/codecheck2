@@ -391,13 +391,12 @@ public class Util {
 			return parent.resolve(p.getFileName().toString() + ".java");
 	}
 	
-	public static String appURL(HttpServletRequest request) {
-		String result = request.getScheme() + "://";
-		result += request.getServerName(); // TODO: Does not work
-		int port = request.getServerPort();
-		if (port != 80) result += ":" + port; 
-		result += request.getContextPath();
-		return result;		
+	public static String hostURL(HttpServletRequest request) {
+		String requestUrl = request.getRequestURL().toString(); 
+			// If that doesn't work, try request.getHeader("referer")) --Referer: http://localhost:8080/codecheck-server/static/uploadProblem.html
+		int pos = requestUrl.indexOf("//"); // http://
+		pos = requestUrl.indexOf("/", pos + 2); // cs12.cs.sjsu.edu:8080/
+		return requestUrl.substring(0, pos);
 	}
 	
     public static Set<Path> filterNot(Set<Path> paths, String... glob) {
