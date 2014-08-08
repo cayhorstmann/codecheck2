@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Already has student files in temp directory $2
+
+BASEDIR=`dirname $0`
+if [ "${BASEDIR/#\//}" == "$BASEDIR" ] ; then BASEDIR=`pwd`/"$BASEDIR" ; fi
+CLASSPATH="$BASEDIR"/codecheck.jar:"$BASEDIR"/lib/\*
+
+cd $2
+
+JAVA_HOME=/opt/jdk1.8.0
+
+REPORT_JAR=`basename $3`.signed.zip
+$JAVA_HOME/bin/jar cf $REPORT_JAR . 
+
+LC_ALL=en_US.UTF-8 $JAVA_HOME/bin/java -Dcom.horstmann.codecheck -classpath $CLASSPATH com.horstmann.codecheck.Main $@ 
+
+$JAVA_HOME/bin/jar uf $REPORT_JAR report.html 
+
+MATCH=`grep --text -o '^[<]meta name="ID" content="\(.*\)"/>$' report.html`
+if [[ -n $MATCH ]] ; then
+  MATCH=${MATCH##*\=\"}
+  ID=${MATCH%\"*}
+  mv $REPORT_JAR $ID.signed.zip
+  REPORT_JAR=$ID.signed.zip
+fi
+
+# No signing for now

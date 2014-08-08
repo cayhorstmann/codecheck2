@@ -1,6 +1,55 @@
 Checker
 =======
 
+In http://go.code-check.org/codecheck/files?repo=jfe1cc&problem=ch01/c01_exp_1_103, if the student has a \n at the end, the test fails:
+
+Testing Triangle
+
+
+Actual output
+
+   x
+  xxx
+ xxxxx
+xxxxxxx
+
+
+Expected output
+
+   x
+  xxx
+ xxxxx
+xxxxxxx
+
+ 
+fail
+
+ /** 
+   A program to draw a filled triangle.
+*/
+
+public class Triangle
+{
+   public static void main(String[] args)
+   {
+      System.out.println("   x");
+      System.out.println("  xxx");
+      System.out.println(" xxxxx");
+      System.out.println("xxxxxxx\n");
+
+      /* Your work here */
+
+   }
+}
+
+
+ 
+
+
+
+------------------------------------------------------------------
+
+
 Remedy 1: Check that the method returned without an exception, and don't give any points otherwise.
 
 Remedy 2: Instead of doing the Expected thing, just compare with the outcome from the expected run

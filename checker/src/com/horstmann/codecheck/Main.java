@@ -51,7 +51,11 @@ public class Main {
     
     private Score score = new Score();
     private Comparison comp = new Comparison();
-    private Language language = new JavaLanguage();
+    private Language language = null;
+    private Language[] languages = {
+       new JavaLanguage(),
+       new PythonLanguage()
+    };
 
     /**
      * Entry point to program.
@@ -469,18 +473,7 @@ public class Main {
             }
         }
         //System.setSecurityManager(new SecurityManager());
-    	
-    	// TODO: Discover from file extension
-    	String languageName = System.getProperty("com.horstmann.codecheck.language");
-    	if (languageName != null) {
-    		try {
-				language = (Language) Class.forName(languageName + "Language").newInstance();
-			} catch (InstantiationException | IllegalAccessException
-					| ClassNotFoundException e) {
-				report.error("Cannot process language " + languageName);
-			}
-    	}
-    	
+    	   	
         String mode = args[0].trim();
         Path submissionDir = FileSystems.getDefault().getPath(args[1]);
         problemDir = FileSystems.getDefault().getPath(args[2]);
@@ -536,6 +529,38 @@ public class Main {
             studentFiles = filterNot(Util.getDescendantFiles(problemDir, studentDirectories), "check.properties", ".*", "problem.ch");
             solutionFiles = filterNot(Util.getDescendantFiles(problemDir, solutionDirectories), "*.txt", ".*");
             // Filtering out rubric
+                        
+            // Determine language
+            
+            String languageName = System
+                    .getProperty("com.horstmann.codecheck.language");
+            if (languageName != null) {
+                try {
+                    language = (Language) Class.forName(
+                            languageName + "Language").newInstance();
+                } catch (InstantiationException | IllegalAccessException
+                        | ClassNotFoundException e) {
+                    report.error("Cannot process language " + languageName);
+                }
+            } else {
+                // Guess from solution file
+                if (solutionFiles.size() == 0) {
+                    report.error("No solution files");
+                } else {
+                    Path solutionFile = solutionFiles.iterator().next();
+                    boolean found = false;
+                    int i = 0;
+                    while (!found && i < languages.length) {
+                        if (languages[i].isSource(solutionFile)) {
+                            found = true;
+                        } else {
+                            i++;
+                        }
+                    }
+                    if (found) language = languages[i];
+                    else report.error("Cannot find language for " + solutionFile);
+                }
+            }
 
             Annotations annotations = new Annotations(language);
             annotations.read(problemDir, studentFiles);

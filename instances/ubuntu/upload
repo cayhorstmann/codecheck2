@@ -1,0 +1,31 @@
+if -z "$1" ; then
+  echo Usage: `basename $0` user@host, e.g. `basename $0` codecheck@cs123.cs.sjsu.edu
+else
+  HOST="$1"
+fi
+
+DOMAIN=/opt/glassfish4/glassfish/domains/domain1
+CODECHECK_HOME=/opt/codecheck
+RSYNC='rsync -e "ssh -p 62222"'
+
+BASE=`pwd`/`dirname $0`
+cd $BASE
+
+cd ../../server
+ant war
+
+cd $BASE
+jar uf ../../server/antbuild/codecheck.war WEB-INF/web.xml
+
+cd ../../server/antbuild
+$RSYNC codecheck.war $HOST:$DOMAIN/autodeploy
+
+cd $BASE
+$RSYNC codecheck codecheck.policy $HOST:$CODECHECK_HOME
+
+cd ../../checker
+ant clean
+ant
+$RSYNC codecheck.jar lib $HOST:$CODECHECK_HOME
+
+
