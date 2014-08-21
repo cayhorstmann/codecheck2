@@ -1,6 +1,40 @@
 Checker
 =======
 
+AIOOBE in image calculation didn't get displayed :-(
+
+http://wiley.code-check.org/codecheck/files?repo=bjlo2&problem=06_10
+
+public class EdgeDetect
+{
+   public static void main(String[] args)
+   {
+      Picture picture = new Picture("eiffel-tower-picture.jpg");
+      int[][] grays = picture.getGrayLevels();
+
+      for (int i = 0; i < grays.length; i++)
+      {
+         for (int j = 0; j < grays[0].length; j++)
+         {
+            int neighborAverage = (grays[i][j + 1] + grays[i + 1][j] + grays[i + 1][j + 1]) / 3;
+            if (Math.abs(grays[i][j] - neighborAverage) > 20)
+            {
+               grays[i][j] = 0;               
+            }
+            else
+            {
+               grays[i][j] = 255;               
+            }
+         }         
+      }
+      Picture edges = new Picture(grays);
+      edges.draw();
+   }
+}
+
+
+=======
+
 In http://go.code-check.org/codecheck/files?repo=jfe1cc&problem=ch01/c01_exp_1_103, if the student has a \n at the end, the test fails:
 
 Testing Triangle

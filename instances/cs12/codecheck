@@ -25,4 +25,4 @@ if [[ -n $MATCH ]] ; then
   REPORT_JAR=$ID.signed.zip
 fi
 
-$JAVA_HOME/bin/jarsigner -keystore "$BASEDIR/horstmanncomodo.jks" -storepass rivu6nitt $REPORT_JAR  horstmanncomodo2013 
+$JAVA_HOME/bin/jarsigner -keystore "$BASEDIR/horstmanncomodo.jks" -storepass rivu6nitt $REPORT_JAR  horstmanncomodo

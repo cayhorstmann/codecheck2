@@ -26,4 +26,4 @@ if [[ -n $ID ]] ; then
   REPORT_JAR=$ID.signed.zip
 fi
 
-jarsigner -keystore "$BASEDIR/horstmanncomodo.jks" -storepass rivu6nitt $REPORT_JAR  horstmanncomodo2013 > /dev/null
+jarsigner -keystore "$BASEDIR/horstmanncomodo.jks" -storepass rivu6nitt $REPORT_JAR  horstmanncomodo > /dev/null
