@@ -25,4 +25,4 @@ if [[ -n $MATCH ]] ; then
   REPORT_JAR=$ID.signed.zip
 fi
 
-# No signing for now
+$JAVA_HOME/bin/jarsigner -keystore "$BASEDIR/codecheck.jks" -storepass secret $REPORT_JAR  codecheck
