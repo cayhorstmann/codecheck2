@@ -22,7 +22,7 @@ cd ../../server/antbuild
 eval "$RSYNC codecheck.war $HOST:$DOMAIN/autodeploy"
 
 cd $BASE
-eval "$RSYNC codecheck codecheck.policy $HOST:$CODECHECK_HOME"
+eval "$RSYNC codecheck codecheck.policy codecheck.jks $HOST:$CODECHECK_HOME"
 
 cd ../../checker
 ant clean
