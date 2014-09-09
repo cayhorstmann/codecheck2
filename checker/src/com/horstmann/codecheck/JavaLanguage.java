@@ -22,6 +22,7 @@ import java.nio.file.Paths;
 import java.security.AccessControlException;
 import java.security.Permission;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -33,15 +34,15 @@ import javax.tools.ToolProvider;
 import org.junit.runner.notification.Failure;
 
 public class JavaLanguage implements Language {
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.horstmann.codecheck.Language#isSource(java.nio.file.Path)
-	 */
-	@Override
-	public boolean isSource(Path p) {
-		return p.toString().endsWith(".java");
-	}
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.horstmann.codecheck.Language#isSource(java.nio.file.Path)
+     */
+    @Override
+    public boolean isSource(Path p) {
+        return p.toString().endsWith(".java");
+    }
 
     /*
      * (non-Javadoc)
@@ -57,7 +58,7 @@ public class JavaLanguage implements Language {
     public boolean isUnitTest(String modulename) {
         return modulename != null && modulename.matches(".*Test[0-9]*");
     }
-        
+
     private static Pattern mainPattern = Pattern
             .compile("public\\s+static\\s+void\\s+main\\s*\\(\\s*String(\\s*\\[\\s*\\]\\s*\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*|\\s+\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*\\s*\\[\\s*\\])\\s*\\)");
 
@@ -119,14 +120,14 @@ public class JavaLanguage implements Language {
 
         int result;
         if (classPath.length() == 0) {
-                result = compiler.run(null, outStream, errStream, "-sourcepath",
-                                      dir.toString(), "-d", dir.toString(),
-                                      dir.resolve(pathOf(modulename)).toString());
+            result = compiler.run(null, outStream, errStream, "-sourcepath",
+                    dir.toString(), "-d", dir.toString(),
+                    dir.resolve(pathOf(modulename)).toString());
         } else {
-                result = compiler.run(null, outStream, errStream, "-sourcepath",
-                                      dir.toString(), "-d", dir.toString(),
-                                      dir.resolve(pathOf(modulename)).toString(), "-cp",
-                                      classPath.toString());
+            result = compiler.run(null, outStream, errStream, "-sourcepath",
+                    dir.toString(), "-d", dir.toString(),
+                    dir.resolve(pathOf(modulename)).toString(), "-cp",
+                    classPath.toString());
         }
         if (result != 0) {
             String errorReport = errStream.toString();
@@ -224,7 +225,9 @@ public class JavaLanguage implements Language {
                         mainmethod.invoke(null, (Object) argsArray);
                     } catch (InvocationTargetException ex) {
                         Throwable cause = ex.getCause();
-                        if (cause instanceof AccessControlException && cause.getMessage().equals("access denied (\"java.lang.RuntimePermission\" \"exitVM.0\")")) {
+                        if (cause instanceof AccessControlException
+                                && cause.getMessage()
+                                        .equals("access denied (\"java.lang.RuntimePermission\" \"exitVM.0\")")) {
                             // do nothing
                         } else if (cause == null)
                             ex.printStackTrace(newOutPrint);
@@ -383,7 +386,7 @@ public class JavaLanguage implements Language {
     public String substitutionSeparator() {
         return ";";
     }
-    
+
     /**
      * Builds the classpath argument using the jars found in dir.
      * 
@@ -402,12 +405,13 @@ public class JavaLanguage implements Language {
             }
             classPath.append(currentFile.getAbsolutePath());
         }
-        // Add the JAR files on the class path with which the checker was launched (JUnit etc.)
+        // Add the JAR files on the class path with which the checker was
+        // launched (JUnit etc.)
         for (URL url : ((URLClassLoader) getClass().getClassLoader()).getURLs()) {
-            String urlString = url.toString(); 
+            String urlString = url.toString();
             if (urlString.startsWith("file:") && urlString.endsWith(".jar")) {
-                Path p = Paths.get(urlString.substring(5));    
-                
+                Path p = Paths.get(urlString.substring(5));
+
                 if (isFirst) {
                     isFirst = false;
                 } else {
@@ -419,14 +423,18 @@ public class JavaLanguage implements Language {
 
         return classPath.toString();
     }
-    
+
     /**
-     * Builds a class loader with all JAR files on a given directory, as well as the directory itself
-     * @param dir a directory with class and JAR files
+     * Builds a class loader with all JAR files on a given directory, as well as
+     * the directory itself
+     * 
+     * @param dir
+     *            a directory with class and JAR files
      * @return a class loader that can load all the classes, using the JARs
      * @throws MalformedURLException
      */
-    private URLClassLoader buildClassLoader(Path dir) throws MalformedURLException {
+    private URLClassLoader buildClassLoader(Path dir)
+            throws MalformedURLException {
         // Adds all of the user jars to URLClassLoader.
         final List<URL> jars = getJarFilePaths(dir);
         jars.add(dir.toFile().toURI().toURL());
@@ -453,46 +461,52 @@ public class JavaLanguage implements Language {
 
         return returnValue;
     }
-    
+
     @Override
-    public boolean accept(Path file, Path dir, Set<Path> requiredFiles, Report report, Score score) {
+    public boolean accept(Path file, Path dir, Set<Path> requiredFiles,
+            Report report, Score score) {
         if (file.getFileName().toString().equals("checkstyle.xml")) {
             report.header("CheckStyle");
             for (Path p : requiredFiles) {
                 if (isSource(p)) {
                     String result = runCheckStyle(dir.resolve(p));
-                    report.output(p.getFileName().toString(), result.length() == 0 ? "Ok" : result);
-                    score.pass(result.length() == 0, report); 
+                    report.output(p.getFileName().toString(),
+                            result.length() == 0 ? "Ok" : result);
+                    score.pass(result.length() == 0, report);
                 }
             }
             return true;
         }
         return false;
     }
-    
-    
+
     @Override
-    public void runUnitTest(String moduleName, Path dir, Report report, Score score) {
+    public void runUnitTest(String moduleName, Path dir, Report report,
+            Score score) {
         report.header("JUnit: " + moduleName);
         if (compile(moduleName, dir, report)) {
             try {
                 try (URLClassLoader loader = buildClassLoader(dir)) {
                     Class<?> c = loader.loadClass(moduleName);
-                    org.junit.runner.Result r = org.junit.runner.JUnitCore.runClasses(c);
-        
+                    org.junit.runner.Result r = org.junit.runner.JUnitCore
+                            .runClasses(c);
+
                     int pass = r.getRunCount() - r.getFailureCount();
-                    report.output("Pass: " + pass + "\nFail: " + r.getFailureCount());                    
+                    report.output("Pass: " + pass + "\nFail: "
+                            + r.getFailureCount());
                     for (Failure failure : r.getFailures()) {
-                        report.output(failure.getDescription().getDisplayName().trim() + ": " + failure.getMessage());
-                    }                    
+                        report.output(failure.getDescription().getDisplayName()
+                                .trim()
+                                + ": " + failure.getMessage());
+                    }
                     score.add(pass, r.getRunCount(), report);
-                } 
+                }
             } catch (Throwable t) {
                 report.systemError(t);
             }
         }
-    }    
-        
+    }
+
     static class ExitException extends SecurityException {
     }
 
@@ -503,7 +517,7 @@ public class JavaLanguage implements Language {
         final PrintStream newOutPrint = new PrintStream(newOut);
         System.setOut(newOutPrint);
         System.setErr(newOutPrint);
-        
+
         // Annoyingly, checkstyle calls System.exit
 
         final SecurityManager oldManager = System.getSecurityManager();
@@ -521,21 +535,22 @@ public class JavaLanguage implements Language {
             @Override
             public void checkPermission(Permission perm, Object context) {
                 // oldManager.checkPermission(perm, context);
-            }                
+            }
         });
-        
+
         try {
             String[] args = new String[3];
             args[0] = "-c";
-            args[1] = "checkstyle.xml"; //CheckStyle file
-            args[2] = javaFile.toAbsolutePath().toString(); //Java file will be checked
+            args[1] = "checkstyle.xml"; // CheckStyle file
+            args[2] = javaFile.toAbsolutePath().toString(); // Java file will be
+                                                            // checked
             com.puppycrawl.tools.checkstyle.Main.main(args);
         } catch (ExitException e) {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
             System.setSecurityManager(oldManager);
-            newOutPrint.close();            
+            newOutPrint.close();
             System.setOut(oldOut);
             System.setOut(oldErr);
         }
@@ -547,9 +562,16 @@ public class JavaLanguage implements Language {
             result = e.getMessage();
         }
         String header = "Starting audit...\n";
-        if (result.startsWith(header)) result = result.substring(header.length());
+        if (result.startsWith(header))
+            result = result.substring(header.length());
         String footer = "Audit done.\n";
-        if (result.endsWith(footer)) result = result.substring(0, result.length() - footer.length());
+        if (result.endsWith(footer))
+            result = result.substring(0, result.length() - footer.length());
         return result;
-    }        
+    }
+    
+    @Override
+    public List<String> modifiers(String declaration) {
+        if (declaration.contains(" static ")) return Collections.singletonList("static"); else return Collections.emptyList();
+    }
 }

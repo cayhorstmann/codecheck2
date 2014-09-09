@@ -78,7 +78,7 @@ public class Grade {
                                   problems.replaceAll("[\\s,]+", " "));
             new Thread() {
                 public void run() {
-                    Util.runScript(script);
+                    Util.runProcess(script);
                 }
             } .start();
             String fetchfile = Paths.get(submissionsDir).relativize(archiveDir.resolve("scores.zip")).toString();

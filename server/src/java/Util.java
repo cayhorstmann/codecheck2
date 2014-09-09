@@ -196,9 +196,9 @@ public class Util {
 		zin.close();
 	}
 
-	public static String runScript(String script) {
+	public static String runProcess(String command) {
 		try {
-			Process process = Runtime.getRuntime().exec(script);
+			Process process = Runtime.getRuntime().exec(command);
 			process.waitFor();
 
 			Scanner in = new Scanner(process.getErrorStream(), "UTF-8");
@@ -326,7 +326,7 @@ public class Util {
 		
 		String script = MessageFormat.format(command, level, submissionDir,
 				problemDir, metaData);
-		String result = runScript(script);
+		String result = runProcess(script);
 		Files.write(Paths.get(submissionDir).resolve("codecheck.log"), (script + "\n" + result).getBytes("UTF-8"));
 	}
 

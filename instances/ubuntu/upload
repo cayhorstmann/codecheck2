@@ -7,7 +7,7 @@ fi
 
 DOMAIN=/opt/glassfish4/glassfish/domains/domain1
 CODECHECK_HOME=/opt/codecheck
-RSYNC='rsync -e "ssh -p 62222"'
+RSYNC='rsync -az -e "ssh -p 62222"'
 
 BASE=`pwd`/`dirname $0`
 cd $BASE

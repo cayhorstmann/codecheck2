@@ -1,6 +1,8 @@
 package com.horstmann.codecheck;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -8,16 +10,22 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
 
 public class Util {
     public static boolean sameContents(Path p1, Path p2) throws IOException {
-        return Files.exists(p1) && Files.exists(p2) && Arrays.equals(Files.readAllBytes(p1), Files.readAllBytes(p2));
+        return Files.exists(p1)
+                && Files.exists(p2)
+                && Arrays
+                        .equals(Files.readAllBytes(p1), Files.readAllBytes(p2));
     }
 
     public static Path tail(Path p) {
@@ -35,7 +43,8 @@ public class Util {
     @SuppressWarnings("unchecked")
     public static List<String> readLines(Path path) {
         try {
-            return java.nio.file.Files.readAllLines(path, StandardCharsets.UTF_8);
+            return java.nio.file.Files.readAllLines(path,
+                    StandardCharsets.UTF_8);
         } catch (IOException ex) {
             return Collections.EMPTY_LIST;
         }
@@ -54,13 +63,15 @@ public class Util {
      *         dir
      * @throws IOException
      */
-    public static Set<Path> getDescendantFiles(final Path dir) throws IOException {
+    public static Set<Path> getDescendantFiles(final Path dir)
+            throws IOException {
         final Set<Path> result = new TreeSet<>();
         if (dir == null || !Files.exists(dir))
             return result;
         Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
             @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+            public FileVisitResult visitFile(Path file,
+                    BasicFileAttributes attrs) throws IOException {
                 result.add(dir.relativize(file));
                 return FileVisitResult.CONTINUE;
             }
@@ -68,7 +79,8 @@ public class Util {
         return result;
     }
 
-    public static Set<Path> getDescendantFiles(Path dir, List<String> subdirs) throws IOException {
+    public static Set<Path> getDescendantFiles(Path dir, List<String> subdirs)
+            throws IOException {
         Set<Path> result = new TreeSet<>();
         for (String subdir : subdirs) {
             for (Path p : getDescendantFiles(dir.resolve(subdir))) {
@@ -116,28 +128,59 @@ public class Util {
             return null;
         }
     }
-    
-    public static void deleteDirectory(Path start) throws IOException {
-        if (start == null) return;
-        Files.walkFileTree(start, new SimpleFileVisitor<Path>() {
-                @Override
-                public FileVisitResult visitFile(Path file,
-                                BasicFileAttributes attrs) throws IOException {
-                        Files.delete(file);
-                        return FileVisitResult.CONTINUE;
-                }
 
-                @Override
-                public FileVisitResult postVisitDirectory(Path dir, IOException e)
-                                throws IOException {
-                        if (e == null) {
-                                Files.delete(dir);
-                                return FileVisitResult.CONTINUE;
-                        } else {
-                                // directory iteration failed
-                                throw e;
-                        }
+    public static void deleteDirectory(Path start) throws IOException {
+        if (start == null)
+            return;
+        Files.walkFileTree(start, new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(Path file,
+                    BasicFileAttributes attrs) throws IOException {
+                Files.delete(file);
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult postVisitDirectory(Path dir, IOException e)
+                    throws IOException {
+                if (e == null) {
+                    Files.delete(dir);
+                    return FileVisitResult.CONTINUE;
+                } else {
+                    // directory iteration failed
+                    throw e;
                 }
+            }
         });
-}
+    }
+
+    public static String runProcess(List<String> cmd, String input, int millis) {
+        try {            
+            ProcessBuilder builder = new ProcessBuilder(cmd);
+            Path in = null;
+            if (input != null) {
+                in = Files.createTempFile("codecheck", "");
+                Files.write(in, input.getBytes(StandardCharsets.UTF_8));
+                builder.redirectInput(in.toFile());
+            }
+            Path out = Files.createTempFile("codecheck", "");
+            builder.redirectErrorStream(true);
+            builder.redirectOutput(out.toFile());
+            Process process = builder.start();
+            boolean completed = process.waitFor(millis, TimeUnit.MILLISECONDS);
+            String result = new String(Files.readAllBytes(out), StandardCharsets.UTF_8);
+            if (!completed) result += "\nTimeout after " + millis + " milliseconds\n";
+            if (in != null) Files.delete(in);
+            Files.delete(out);
+            return result;
+        } catch (Exception ex) {
+            return getStackTrace(ex);
+        }
+    }
+    
+    public static String getStackTrace(Throwable t) {
+        StringWriter out = new StringWriter();
+        t.printStackTrace(new PrintWriter(out));
+        return out.toString();
+    }
 }
