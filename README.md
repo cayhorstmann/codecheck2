@@ -1,0 +1,1 @@
+[Wiki](https://bitbucket.org/cayhorstmann/codecheck/wiki)
