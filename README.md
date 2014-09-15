@@ -1,1 +1,1 @@
-[Wiki](https://bitbucket.org/cayhorstmann/codecheck/wiki)
+For project info, go to the [Wiki](https://bitbucket.org/cayhorstmann/codecheck/wiki)
