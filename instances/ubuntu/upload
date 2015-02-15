@@ -38,7 +38,8 @@ ant jar
 cp -a codecheck.jar codecheck.policy comprog runprog runprog.apparmor lib $TMPDIR
 
 cd $BASE
-cp codecheck codecheck.jks ../s3.properties $TMPDIR
+cp codecheck codecheck.jks $TMPDIR
+[[ -e ../s3.properties ]] && cp ../s3.properties $TMPDIR
 
 cd $TMPDIR
 eval "$RSYNC -az * $HOST:$CODECHECK_HOME"
