@@ -17,17 +17,12 @@
   </context-param>  
   <context-param>
     <param-name>com.horstmann.codecheck.submissions</param-name>
-    <param-value>/home/horstmann/codecheck/submissions</param-value>
-  </context-param>    
-  <context-param>
-    <param-name>com.horstmann.codecheck.reports</param-name>
-    <param-value>/home/horstmann/codecheck/reports</param-value>
+    <param-value>/home/codecheck/submissions</param-value>
   </context-param>    
   <context-param>
     <param-name>com.horstmann.codecheck.defaultcommand</param-name>
     <param-value>/opt/codecheck/codecheck {0} {1} {2} {3}</param-value>
   </context-param>    
-<!-- TODO: Eliminate -->
   <context-param>
     <param-name>com.horstmann.codecheck.s3credentials</param-name>
     <param-value>/opt/codecheck/s3.properties</param-value>

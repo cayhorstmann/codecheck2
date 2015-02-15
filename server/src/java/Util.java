@@ -4,8 +4,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.math.BigInteger;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -18,6 +23,9 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -25,7 +33,6 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
-import java.util.Stack;
 import java.util.TreeSet;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -43,7 +50,6 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 
 public class Util {
 	private static Random generator = new Random();
-	
 
 	public static Path getDir(ServletContext context, String key)
 			throws IOException {
@@ -87,7 +93,8 @@ public class Util {
 	}
 
 	public static String base64(Path dir, String fileName) throws IOException {
-		return new sun.misc.BASE64Encoder().encode(java.nio.file.Files
+		Base64.Encoder encoder = Base64.getEncoder();
+		return encoder.encodeToString(java.nio.file.Files
 				.readAllBytes(dir.resolve(fileName)));
 	}
 
@@ -132,8 +139,10 @@ public class Util {
 
 	public static Path createTempDirectory(Path parent) throws IOException {
 		String prefix = new SimpleDateFormat("yyMMddkkmm").format(new Date());
-		Set<PosixFilePermission> perms = PosixFilePermissions.fromString("rwxr-xr-x");
-		return java.nio.file.Files.createTempDirectory(parent, prefix, PosixFilePermissions.asFileAttribute(perms));
+		Set<PosixFilePermission> perms = PosixFilePermissions
+				.fromString("rwxr-xr-x");
+		return java.nio.file.Files.createTempDirectory(parent, prefix,
+				PosixFilePermissions.asFileAttribute(perms));
 	}
 
 	public static String createUID() {
@@ -170,20 +179,13 @@ public class Util {
 		ZipInputStream zin = new ZipInputStream(in);
 		ZipEntry entry;
 		while ((entry = zin.getNextEntry()) != null) {
-			if (!entry.isDirectory()) {
-				String name = entry.getName();
-				Path outputPath = dir.resolve(name);
+			String name = entry.getName();
+			Path outputPath = dir.resolve(name);
+			if (entry.isDirectory()) {
+				java.nio.file.Files.createDirectories(outputPath);
+			} else {
 				Path parent = outputPath.getParent();
-				Stack<Path> parents = new Stack<>();
-				while (!parent.equals(dir)) {
-					parents.push(parent);
-					parent = parent.getParent();
-				}
-				while (!parents.empty()) {
-					Path top = parents.pop();
-					if (!java.nio.file.Files.exists(top))
-						java.nio.file.Files.createDirectory(top);
-				}
+				java.nio.file.Files.createDirectories(parent);
 				OutputStream out = new FileOutputStream(outputPath.toFile());
 				byte[] buf = new byte[1024];
 				int len;
@@ -218,7 +220,7 @@ public class Util {
 				result.append("\n");
 			}
 			in.close();
-						
+
 			// CAUTION: Apparently, one can't just large input from the process
 			// stdout
 			// http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4062587
@@ -230,23 +232,26 @@ public class Util {
 
 	public static boolean isOnS3(ServletContext context, String repo) {
 		String repoPath = context
-				.getInitParameter("com.horstmann.codecheck.repo." + repo);		
+				.getInitParameter("com.horstmann.codecheck.repo." + repo);
 		return repoPath == null;
 	}
-	
+
 	private static String s3AccessKey = null;
 	private static String s3SecretKey = null;
-	
-	public static void loadS3Credentials(ServletContext context) throws IOException
-	{
+
+	public static void loadS3Credentials(ServletContext context)
+			throws IOException {
 		String s3CredentialsPath = context
 				.getInitParameter("com.horstmann.codecheck.s3credentials");
+		if (s3CredentialsPath == null)
+			throw new IOException(
+					"No init parameter com.horstmann.codecheck.s3credentials");
 		Properties props = new Properties();
-		props.load(Files.newBufferedReader(Paths.get(s3CredentialsPath), StandardCharsets.UTF_8));
+		props.load(Files.newBufferedReader(Paths.get(s3CredentialsPath),
+				StandardCharsets.UTF_8));
 		s3AccessKey = props.getProperty("accessKey");
 		s3SecretKey = props.getProperty("secretKey");
 	}
-	
 
 	private static AmazonS3 getS3Connection() {
 		AWSCredentials credentials = new BasicAWSCredentials(s3AccessKey,
@@ -258,21 +263,51 @@ public class Util {
 		return new AmazonS3Client(credentials, clientConfig);
 	}
 
-	public static void putToS3(Path problemZip, String bucket, String key)
-			throws IOException {
-		InputStream in = Files.newInputStream(problemZip);
+	public static void zip(Path source, Path zipPath) throws IOException {
+		URI uri;
 		try {
-		   getS3Connection().putObject(bucket, key, in, new ObjectMetadata());
-		} finally {
-		  in.close();
+			uri = new URI("jar", zipPath.toUri().toString(), null);
+			Files.deleteIfExists(zipPath);
+			// Constructs the URI jar:file://myfile.zip
+			try (FileSystem zipfs = FileSystems.newFileSystem(uri,
+					Collections.singletonMap("create", "true"))) {
+				Files.walk(source).forEach(p -> {
+					try {
+						String target = source.relativize(p).toString();
+						if (target.length() > 0) {
+							System.out.println(p + ", " + target);
+							Path q = zipfs.getPath("/" + target);
+							if (Files.isDirectory(p))
+								Files.createDirectory(q);
+							else
+								Files.copy(p, q);
+						}
+					} catch (IOException ex) {
+						throw new java.io.UncheckedIOException(ex);
+					}
+				});
+			}
+		} catch (URISyntaxException e) {
+			throw new IOException(e);
+		} catch (java.io.UncheckedIOException ex) {
+			throw ex.getCause();
 		}
 	}
-	
+
+	public static void putToS3(Path file, String bucket, String key)
+			throws IOException {
+		InputStream in = Files.newInputStream(file);
+		try {
+			getS3Connection().putObject(bucket, key, in, new ObjectMetadata());
+		} finally {
+			in.close();
+		}
+	}
+
 	public static void deleteFromS3(String bucket, String key)
 			throws IOException {
 		getS3Connection().deleteObject(bucket, key);
 	}
-	
 
 	// Delete returnedPath.getParent() when done
 	public static Path unzipFromS3(String repo, String problem)
@@ -289,9 +324,10 @@ public class Util {
 		in.close();
 		return problemDir;
 	}
-		
+
 	public static void runLabrat(ServletContext context, String repo,
-			String problem, String level, String submissionDir, String metaData) throws IOException {
+			String problem, String level, String submissionDir, String metaData)
+			throws IOException {
 		String problemDir;
 
 		// If problem is on S3 (eventually all will be)
@@ -303,18 +339,19 @@ public class Util {
 		} else {
 			String repoPath = context
 					.getInitParameter("com.horstmann.codecheck.repo." + repo);
-			problemDir = repoPath + File.separator + problem;			
+			problemDir = repoPath + File.separator + problem;
 		}
 
-		runLabrat(context, repo, problem, level, problemDir, submissionDir, metaData);
+		runLabrat(context, repo, problem, level, problemDir, submissionDir,
+				metaData);
 
-		if (unzipDir != null && Files.exists(Paths.get(submissionDir).resolve("report.html"))) // TODO: For now, leave directory for debugging
+		if (unzipDir != null)
 			deleteDirectory(unzipDir);
 	}
 
 	public static void runLabrat(ServletContext context, String repo,
-			String problem, String level, String problemDir, String submissionDir, String metaData)
-			throws IOException {
+			String problem, String level, String problemDir,
+			String submissionDir, String metaData) throws IOException {
 		// TODO: Obsolete
 		String repoPath = context
 				.getInitParameter("com.horstmann.codecheck.repo." + repo);
@@ -323,11 +360,12 @@ public class Util {
 		if (command == null)
 			command = context
 					.getInitParameter("com.horstmann.codecheck.defaultcommand");
-		
+
 		String script = MessageFormat.format(command, level, submissionDir,
 				problemDir, metaData);
 		String result = runProcess(script);
-		Files.write(Paths.get(submissionDir).resolve("codecheck.log"), (script + "\n" + result).getBytes("UTF-8"));
+		Files.write(Paths.get(submissionDir).resolve("codecheck.log"), (script
+				+ "\n" + result).getBytes("UTF-8"));
 	}
 
 	/**
@@ -374,45 +412,58 @@ public class Util {
 		return result;
 	}
 
-	public static String javaClass(Path path) {
+	public static String moduleOf(Path path) {
 		String name = path.toString();
-		if (!name.endsWith(".java"))
-			return null;
-		name = name.substring(0, name.length() - 5); // drop .java
-		return name.replace(FileSystems.getDefault().getSeparator(), ".");
+		if (name.endsWith(".java")) {
+			name = name.substring(0, name.length() - 5); // drop .java
+			return name.replace(FileSystems.getDefault().getSeparator(), ".");
+		} else {
+			int n = name.lastIndexOf('.');
+			return name.substring(0, n);
+		}
 	}
 
-	public static Path javaPath(String classname) {
-		Path p = FileSystems.getDefault().getPath("", classname.split("[.]"));
-		Path parent = p.getParent();
-		if (parent == null)
-			return FileSystems.getDefault().getPath(classname + ".java");
-		else
-			return parent.resolve(p.getFileName().toString() + ".java");
+	public static boolean isSource(Path path) {
+		String name = path.toString();
+		int n = name.lastIndexOf('.');
+		if (n == -1)
+			return false;
+		String extension = name.substring(n + 1).toLowerCase();
+		return Arrays.asList("java", "c", "cpp", "c++", "py").contains(
+				extension);
 	}
-	
+
 	public static String hostURL(HttpServletRequest request) {
-		String requestUrl = request.getRequestURL().toString(); 
-			// If that doesn't work, try request.getHeader("referer")) --Referer: http://localhost:8080/codecheck-server/static/uploadProblem.html
+		String requestUrl = request.getRequestURL().toString();
+		// If that doesn't work, try request.getHeader("referer")) --Referer:
+		// http://localhost:8080/codecheck-server/static/uploadProblem.html
 		int pos = requestUrl.indexOf("//"); // http://
 		pos = requestUrl.indexOf("/", pos + 2); // cs12.cs.sjsu.edu:8080/
 		return requestUrl.substring(0, pos);
 	}
-	
-    public static Set<Path> filterNot(Set<Path> paths, String... glob) {
-        Set<Path> result = new TreeSet<>();
-        PathMatcher[] matcher = new PathMatcher[glob.length];
-        for (int i = 0; i < matcher.length; i++)
-            matcher[i] = FileSystems.getDefault().getPathMatcher(
-                             "glob:" + glob[i].replace("/", FileSystems.getDefault().getSeparator()));
-        for (Path p : paths) {
-            boolean matchesOne = false;
-            for (int i = 0; i < matcher.length && !matchesOne; i++)
-                if (matcher[i].matches(p.getFileName()))
-                    matchesOne = true;
-            if (!matchesOne)
-                result.add(p);
-        }
-        return result;
-    }    	
+
+	public static Set<Path> filterNot(Set<Path> paths, String... glob) {
+		Set<Path> result = new TreeSet<>();
+		PathMatcher[] matcher = new PathMatcher[glob.length];
+		for (int i = 0; i < matcher.length; i++)
+			matcher[i] = FileSystems.getDefault().getPathMatcher(
+					"glob:"
+							+ glob[i].replace("/", FileSystems.getDefault()
+									.getSeparator()));
+		for (Path p : paths) {
+			boolean matchesOne = false;
+			for (int i = 0; i < matcher.length && !matchesOne; i++)
+				if (matcher[i].matches(p.getFileName()))
+					matchesOne = true;
+			if (!matchesOne)
+				result.add(p);
+		}
+		return result;
+	}
+
+	public static String getStackTrace(Throwable t) {
+		StringWriter out = new StringWriter();
+		t.printStackTrace(new PrintWriter(out));
+		return out.toString();
+	}
 }

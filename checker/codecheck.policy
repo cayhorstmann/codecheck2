@@ -1,4 +1,4 @@
-grant codeBase "file:/opt/codecheck/codecheck.jar" {
+grant codeBase "file:/data/cay/projects/codecheck/checker/codecheck.jar" {
    permission java.security.AllPermission;
 };
 
@@ -7,7 +7,6 @@ grant codeBase "file:${java.home}/../lib/tools.jar" {
 };
 
 grant {
-  permission java.io.FilePermission "${user.home}${/}-", "read,write,delete";
   permission java.io.FilePermission "-", "read,write,delete";
   permission java.util.PropertyPermission "com.horstmann.codecheck", "read";
 };

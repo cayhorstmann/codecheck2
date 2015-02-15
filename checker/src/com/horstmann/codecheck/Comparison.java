@@ -24,7 +24,7 @@ public class Comparison {
            matches.add(b);
         }
         if (outcome) 
-           report.output(title, actual);
+           report.output(title, actual.length() == 0 ? "(empty)" : actual); 
         else 
            report.compareTokens(matches, lines1, lines2);
         return outcome;
@@ -32,6 +32,7 @@ public class Comparison {
 
     private static List<String> getLines(String contents) {
         List<String> r = new ArrayList<String>();
+        if (contents == null) return r;
         Scanner in = new Scanner(contents);
         boolean first = true;
         while (in.hasNextLine()) {

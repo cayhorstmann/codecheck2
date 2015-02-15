@@ -1,11 +1,19 @@
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
@@ -67,6 +75,8 @@ public class UploadProblem {
 				Files.copy(in, problemZip);
 				in.close();
 
+				fixZip(problemZip);
+				
 				in = Files.newInputStream(problemZip);
 				Util.unzip(in, problemDir);
 				in.close();
@@ -122,7 +132,51 @@ public class UploadProblem {
 					.entity(ex.getClass() + " " + ex.getMessage()).build();
 		}
 	}
-
+	
+	// In case the zip file contains an initial directory
+	 private static void fixZip(Path zipPath) throws IOException {
+	      try (FileSystem zipfs = FileSystems.newFileSystem(zipPath, null)) {
+	          Path root = zipfs.getPath("/");
+	          try (Stream<Path> rootEntries = Files.list(root)) {
+	              Set<Path> result = rootEntries.filter(Files::isDirectory).collect(Collectors.toSet());
+	              if (result.size() == 1) {
+	                 Path child = result.iterator().next();
+	                 try (Stream<Path> entries = Files.list(child)) {
+	                     result = entries.collect(Collectors.toSet());
+	                     if (result.contains(child.resolve("solution/"))) {
+	                        Files.walkFileTree(child, new SimpleFileVisitor<Path>() {
+	                              public FileVisitResult preVisitDirectory(Path dir,
+	                                  BasicFileAttributes attrs) throws IOException {
+	                                 int n = dir.getNameCount();
+	                                 if (n > 1) {              
+	                                    Path q = root.resolve(dir.subpath(1, n));
+	                                    Files.createDirectory(q);
+	                                 }
+	                                 return FileVisitResult.CONTINUE;
+	                              }
+	                              public FileVisitResult visitFile(Path p,
+	                                 BasicFileAttributes attrs) throws IOException {
+	                                 int n = p.getNameCount();
+	                                 if (n > 1) {
+	                                    Path q = root.resolve(p.subpath(1, n));
+	                                    Files.move(child.resolve(p), q);
+	                                 }
+	                                 return FileVisitResult.CONTINUE;
+	                              }
+	                              public FileVisitResult postVisitDirectory(Path dir,
+	                                 IOException e) throws IOException {
+	                                 if (e != null) throw e;
+	                                 Files.delete(dir);
+	                                 return FileVisitResult.CONTINUE;
+	                              }
+	                           });
+	                     }
+	                    }
+	              }
+	             }
+	         }
+	   }
+	 
 	private boolean check() throws IOException {
 		// TODO: Only good for old-style
 		if (!Files.exists(problemDir.resolve("student"))) {
@@ -167,5 +221,4 @@ public class UploadProblem {
 		}
 		return true;
 	}
-
 }

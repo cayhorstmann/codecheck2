@@ -1,0 +1,37 @@
+#!/bin/bash
+#
+# chkconfig: 3 80 05
+# description: Startup script for Glassfish
+     
+AS_JAVA=/opt/jdk1.8.0;
+GLASSFISH_OWNER=codecheck;
+GLASSFISH_HOME=/opt/glassfish4/glassfish;
+export AS_JAVA GLASSFISH_HOME GLASSFISH_OWNER 
+
+start() {
+    echo -n "Starting Glassfish: "
+    su $GLASSFISH_OWNER -c "$GLASSFISH_HOME/bin/asadmin start-domain"
+    echo "done"
+}
+ 
+stop() {
+    echo -n "Stopping Glassfish: "
+    su $GLASSFISH_OWNER -c "$GLASSFISH_HOME/bin/asadmin stop-domain"
+    echo "done"
+}
+     
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    restart)
+        stop
+        start
+        ;;
+    *)
+        echo $"Usage: Glassfish {start|stop|restart}"
+        exit
+esac

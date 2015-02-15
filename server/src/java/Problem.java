@@ -2,6 +2,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -112,8 +113,15 @@ public class Problem {
         return Paths.get("student0").resolve(p);
     }
 
-    private Path findClass(String cl) {
-        return find(Util.javaPath(cl));
+    private Path findClass(String cl) { // TODO: Legacy
+		Path p = FileSystems.getDefault().getPath("", cl.split("[.]"));
+		Path parent = p.getParent();
+		if (parent == null)
+			p = FileSystems.getDefault().getPath(cl + ".java");
+		else
+			p = parent.resolve(p.getFileName().toString() + ".java");
+    	
+        return find(p);
     }
 
     private void classifyFiles() throws IOException {
@@ -123,10 +131,6 @@ public class Problem {
         while (iter.hasNext()) if (iter.next().toString().endsWith(".txt")) iter.remove();
 
         String mainclass = getStringProperty("mainclass");
-
-        if (mainclass == null && solutionFiles.size() == 1)
-            mainclass = Util.javaClass(Util.tail(solutionFiles.iterator().next()));
-
         String requiredclasses = getStringProperty("requiredclasses");
 
         if (requiredclasses != null)
@@ -134,7 +138,7 @@ public class Problem {
                 requiredFiles.add(findClass(cl));
         else       // TODO: Maybe always
             for (Path p : solutionFiles)
-                if (p.toString().endsWith(".java"))
+                if (!p.toString().endsWith(".class"))
                     requiredFiles.add(find(Util.tail(p)));
 
         String editclass = getStringProperty("editclass");
@@ -156,12 +160,12 @@ public class Problem {
         studentFiles = Util.filterNot(studentFiles, ".*");
 
         for (Path path : studentFiles)
-            if (path.toString().endsWith(".java")) {
-                String cl = Util.javaClass(Util.tail(path));
+            if (Util.isSource(path)) {
+                String cl = Util.moduleOf(Util.tail(path));
                 if (!requiredFiles.contains(path) && !nodocCl.contains(cl))
                     useFiles.add(path);
             }
-        if (editclass != null)
+        if (editclass != null) 
             useFiles.remove(findClass(mainclass));
     }
 }

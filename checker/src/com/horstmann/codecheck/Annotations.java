@@ -2,6 +2,7 @@ package com.horstmann.codecheck;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -10,12 +11,17 @@ import java.util.regex.Pattern;
 
 
 public class Annotations {
+    private static Set<String> validSolutionAnnotations = new HashSet<>(Arrays.asList(
+            "CALL", "SUB", "ID", "SAMPLE", "ARGS", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "REQUIRED", "FORBIDDEN"));    
+    private static Set<String> validStudentAnnotations = new HashSet<>(Arrays.asList("HIDE", "OUT"));    
+    
     class Annotation {
         Path path;
         String key;
         String args;
         String before;
         String next;
+        boolean inSolution;
     }
 
     private Language language;
@@ -23,14 +29,14 @@ public class Annotations {
     private Set<String> keys = new HashSet<>();
     
     public Annotations(Language language) {
-		this.language = language;
-	}
-
-	public void read(Path dir, Set<Path> ps) {
-        for (Path p : ps) read(dir, p);
+        this.language = language;
     }
 
-    public void read(Path dir, Path p) {
+    public void read(Path dir, Set<Path> ps, boolean inSolution) {
+        for (Path p : ps) read(dir, p, inSolution);
+    }
+
+    private void read(Path dir, Path p, boolean inSolution) {
     	String[] delims = language.pseudoCommentDelimiters();
         Pattern pattern = Pattern.compile("(.* |)" + delims[0] + "([A-Z]+)( .*|)" + delims[1]);
         List<String> lines =  Util.readLines(dir.resolve(p));
@@ -49,12 +55,20 @@ public class Annotations {
                     if (!pattern.matcher(line).matches())
                         a.next = line.trim();
                 }
-                annotations.add(a);
+                a.inSolution = inSolution;
                 a.path = p;
+                annotations.add(a);
             }
         }
     }
 
+    public void check(Report r) {
+        for (Annotation a : annotations) {
+            if (!(a.inSolution && validSolutionAnnotations.contains(a.key) || !a.inSolution && validStudentAnnotations.contains(a.key))) 
+                r.systemError("Unknown pseudocomment " + a.key + " in " + a.path);
+        }
+    }
+    
     public Set<Path> findHidden() {
         Set<Path> result = new HashSet<>();
         for (Annotation a : annotations) {
@@ -72,6 +86,15 @@ public class Annotations {
             }
         }
         return match == null ? null : match.args;
+    }
+    
+    public List<String> findKeys(String key) {
+        List<String> result = new ArrayList<>();
+        for (Annotation a : annotations) 
+            if (a.key.equals(key)) 
+                result.add(a.args);
+            
+        return result;
     }
     
     public double findUniqueDoubleKey(String key, double defaultValue) {
@@ -129,9 +152,14 @@ public class Annotations {
         return sub;
     }
 
-    public boolean isSample(String classname) {
+    /**
+     * Checks if a path is a sample
+     * @param p the path without student/solution directory
+     * @return true if the path was annotated as a sample
+     */
+    public boolean isSample(Path p) {
         for (Annotation a : annotations) {
-            if (a.key.equals("SAMPLE") && language.moduleOf(Util.tail(a.path)).equals(classname)) return true;
+            if (a.key.equals("SAMPLE") && Util.tail(a.path).equals(p)) return true;
         }
         return false;
     }

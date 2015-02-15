@@ -2,6 +2,8 @@ package com.horstmann.codecheck;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -9,44 +11,117 @@ import java.util.regex.Pattern;
 
 public interface Language {
 
+    /**
+     * Tests if a file is a source file in this language.
+     * @param p the path to the file
+     * @return true if it is a source file
+     */
     boolean isSource(Path p);
 
-    boolean isTester(String modulename);
-
-    boolean isUnitTest(String modulename);
-
-    boolean isMain(Path dir, Path p);
-
-    String moduleOf(Path path);
-
-    Path pathOf(String moduleName);
-
-    boolean compile(String modulename, Path dir, Report report);
+    /**
+     * Tests if a file is an "Expected" style unit test file in this language.
+     * @param p the path to the file
+     * @return true if it is an "Expected" style unit test file
+     */
+    default boolean isTester(Path modulename) { return false; }
 
     /**
-     * Runs a Java program
-     *
-     * @param mainclass
-     * @param classpathDir
-     * @param input
-     * @return an array of two strings, holding the program output and errors
-     * @throws IOException
-     * @throws ReflectiveOperationException
+     * Tests if a file is an "XUnit" style unit test file in this language.
+     * @param p the path to the file
+     * @return true if it is an "XUnit" style unit test file
      */
-    String run(String mainmodule, Path moduleDir, String args, String input,
-            int timeoutMillis) throws IOException, ReflectiveOperationException;
+    default boolean isUnitTest(Path modulename) { return false; }
 
-    void writeTester(Path sourceDir, Path targetDir, Path file,
+    /**
+     * Tests if a file is a "main" file, i.e. an entry point for execution.
+     * @param p the path to the file
+     * @return true if it is a "main" file
+     */
+    boolean isMain(Path p);
+
+    // TODO: Why wire in the report? Maybe needs to return a compilation result with success, messages, name of executable?
+    /**
+     * Compiles a program
+     * @param modules the modules that need to be compiled. The first one
+     * is the "main" one. 
+     * @param dir the directory containing the modules
+     * @return null for no error, or an error report if there was an error.
+     */
+    default String compile(List<Path> modules, Path dir) {
+        List<String> cmd = new ArrayList<>();
+        cmd.add(Util.getHomeDir() + "/comprog");
+        cmd.add(getLanguage());
+        for (Path p : modules)
+            cmd.add(dir.resolve(p).toString());
+        StringBuilder output = new StringBuilder();
+        int exitValue = Util.runProcess(cmd, null, Integer.MAX_VALUE, output);
+        if (exitValue != 0) {
+            return output.toString();
+        } else
+            return null;
+    }
+
+    /**
+     * Runs a program
+     * @param mainModule the path of the main module (from which the
+     * program name needs to be derived, in concert with the compile method) 
+     * @param dir the directory containing the main module
+     * @param args the command-line arguments
+     * @param input the input to pass to stdin  
+     * @return the combined stdout/stderr of the run 
+     */
+    default String run(Path mainModule, Path dir, String args,
+            String input, int timeoutMillis) throws Exception {
+        List<String> cmd = new ArrayList<>();
+        cmd.add(Util.getHomeDir() + "/runprog");
+        cmd.add(getLanguage());
+        String programName = dir.resolve(mainModule).toString();
+        cmd.add(programName);
+        if (args != null) cmd.addAll(Arrays.asList(args.split("\\s+")));
+        StringBuilder output = new StringBuilder();        
+        Util.runProcess(cmd, input, timeoutMillis, output);
+        return output.toString();
+    }
+
+    
+    /**
+     * Gets the language string for this language.
+     * @return the language string (which may be passed on to the comprog/runprog scripts)
+     */
+    default String getLanguage() {
+        String lang = getClass().getName();
+        lang = lang.substring(lang.lastIndexOf(".") + 1).replace("Language", "");
+        return lang;
+    }
+    
+
+    /**
+     * Writes a CALL tester.
+     * @param sourceDir the directory of the source of the files
+     * @param targetDir the target directory to write the tester to
+     * @param file the template file
+     * @param modifiers any modifiers for the test generation
+     * @param name the name of the method being tested
+     * @param argsList the args to pass to the calls
+     * @return the Path to the written tester relative to the target directory, and any helper modules
+     * @throws IOException
+     */
+    List<Path> writeTester(Path sourceDir, Path targetDir, Path file,
             List<String> modifiers, String name, List<String> argsList)
             throws IOException;
 
-    String[] pseudoCommentDelimiters();
+    default String[] pseudoCommentDelimiters() { return new String[] { "//", "" }; }
 
     Pattern variablePattern();
 
-    String substitutionSeparator();
-
-    void runUnitTest(String modulename, Path dir, Report report, Score score);
+    /**
+     * Gets the separator between substitutions in SUB
+     * @return
+     */
+    default String substitutionSeparator() { return ";"; }
+    
+    default void runUnitTest(List<Path> modules, Path workdir, Report report, Score score) {        
+    }
 
     /**
      * Accepts an optional file for processing (such as checkstyle.xml)
@@ -63,8 +138,10 @@ public interface Language {
      *            the score object to reward
      * @return true if an action was taken
      */
-    boolean accept(Path file, Path dir, Set<Path> studentFiles, Report report,
-            Score score); // TODO: Make an object describing the problem
+    default boolean accept(Path file, Path dir, Set<Path> studentFiles, Report report,
+            Score score) { 
+        return false; 
+    }
 
     /**
      * Parses the function name from a function declaration. 
@@ -99,8 +176,13 @@ public interface Language {
      * @return a list of the modifiers
      */
     default List<String> modifiers(String declaration) {
-        // TODO: Use regexp--what if it's '\tstatic'?
-        return declaration.contains(" static ") ? Collections.singletonList("static")
-                : Collections.emptyList();
+        return Collections.emptyList();
     }
+    
+    /**
+     * Reports whether, when running the program, stdin is echoed to stdout, making input
+     * and output interleaved.
+     * @return true if stdin is echoed 
+     */
+    default boolean echoesStdin() { return false; }
 }

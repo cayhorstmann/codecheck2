@@ -7,26 +7,36 @@ fi
 
 DOMAIN=/opt/glassfish4/glassfish/domains/domain1
 CODECHECK_HOME=/opt/codecheck
-RSYNC='rsync -az -e "ssh -p 62222"'
+RSYNC='rsync -v -e "ssh -p 62222"'
 
-BASE=`pwd`/`dirname $0`
+TMPDIR=`mktemp -d`
+
+BASE=`dirname $0`
 cd $BASE
+BASE=`pwd`
 
 cd ../../server
 ant war
+cp antbuild/codecheck.war $TMPDIR
 
 cd $BASE
-jar uf ../../server/antbuild/codecheck.war WEB-INF/web.xml
-
-cd ../../server/antbuild
-eval "$RSYNC codecheck.war $HOST:$DOMAIN/autodeploy"
-
-cd $BASE
-eval "$RSYNC codecheck codecheck.policy codecheck.jks $HOST:$CODECHECK_HOME"
+jar uf $TMPDIR/codecheck.war WEB-INF/web.xml
+eval "$RSYNC $TMPDIR/codecheck.war $HOST:$DOMAIN/autodeploy"
+rm $TMPDIR/codecheck.war
 
 cd ../../checker
 ant clean
 ant jar
-eval "$RSYNC codecheck.jar lib $HOST:$CODECHECK_HOME"
+
+cp -a codecheck.jar codecheck.policy comprog runprog runprog.apparmor lib $TMPDIR
+
+cd $BASE
+cp codecheck codecheck.jks ../s3.properties $TMPDIR
+
+cd $TMPDIR
+eval "$RSYNC -az * $HOST:$CODECHECK_HOME"
+
+cd $BASE
+rm -rf $TMPDIR
 
 
