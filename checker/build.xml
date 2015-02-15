@@ -27,7 +27,7 @@
   <property name="jarfile" value="${ant.project.name}.jar" />
   <property name="runnerfile" value="run${ant.project.name}.jar" />
   <property name="app.resources" 
-             value="${src.dir}/com/horstmann/codecheck/codecheck.properties" />
+             value="com/horstmann/codecheck/codecheck.properties" />
   <property name="webfile" value="/data/cay/web/com/codecheck/codecheck.zip" />
   <property name="webdir2" value="/home/cay/cs1java/codecheck" />
   <property name="runscript" value="codecheck" />
@@ -50,14 +50,7 @@
     </tstamp>
   </target>
 
-  <target name="props" depends="init" description="Set version-specific properties.">
-    <replaceregexp file="${app.resources}" byline="true">
-       <regexp pattern="(version\s*=\s*).*"/>
-       <substitution expression="\1${VERSION}"/>
-    </replaceregexp>
- </target>
-
-  <target name="compile" description="Compiles the Task" depends="init, props">
+  <target name="compile" description="Compiles the Task" depends="init">
     <javac includeantruntime="false" srcdir="${src.dir}" debug="true" destdir="${build.dir}">
        <classpath refid="classpath"/>
     </javac>
@@ -69,6 +62,10 @@
         <include name="**/*.h" />
       </fileset>
     </copy>
+    <replaceregexp file="${build.dir}/${app.resources}" byline="true">
+       <regexp pattern="(version\s*=\s*).*"/>
+       <substitution expression="\1${VERSION}"/>
+    </replaceregexp>
   </target>
   
   <target name="jar" description="Makes the JAR file" depends="compile">

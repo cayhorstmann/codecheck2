@@ -36,8 +36,16 @@
          </fileset>
       </copy>
    </target>
+
+   <target name="webxml" depends="copy" description="Update web.xml" if="env.CODECHECK_HOME">
+      <echo message="Updating web.xml"/>
+      <replaceregexp file="${builddir}/WEB-INF/web.xml" flags="s">
+         <regexp pattern="(&lt;param-name>com.horstmann.codecheck.defaultcommand&lt;/param-name>\s*&lt;param-value>).*(/codecheck .*&lt;/param-value>)"/>
+         <substitution expression="\1${env.CODECHECK_HOME}\2"/>
+      </replaceregexp>
+   </target>
    
-   <target name="compile" depends="copy" 
+   <target name="compile" depends="copy,webxml" 
          description="Compile source files.">
       <javac 
          srcdir="${appdir}/src/java" 
