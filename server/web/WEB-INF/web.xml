@@ -23,16 +23,4 @@
     <param-name>com.horstmann.codecheck.defaultcommand</param-name>
     <param-value>/data/cay/projects/codecheck/checker/codecheck -q {0} {1} {2} {3}</param-value>
   </context-param>    
-<!--
-  <context-param>
-    <param-name>com.horstmann.codecheck.gradecommand</param-name>
-    <param-value>/data/cay/current/teach/util/gradeNetbrat {0} {1} {2} {3} {4} {5} {6} {7}</param-value>
-  </context-param>  
--->
-<!--
-  <context-param>
-    <param-name>com.horstmann.codecheck.s3credentials</param-name>
-    <param-value>/opt/codecheck/instances/s3.properties</param-value>
-  </context-param>
--->  
 </web-app>

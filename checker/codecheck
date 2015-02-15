@@ -68,7 +68,7 @@ if [ "$1" == "-q" ] ; then BROWSER=echo ; shift ; fi
 if [ "$1" == "-t" ] ; then 
     BROWSER=cat 
     REPORT=report.txt 
-    JAVA_OPTS=$JAVA_OPTS -Dcom.horstmann.codecheck.textreport
+    JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck.textreport"
     shift 
 fi
 
