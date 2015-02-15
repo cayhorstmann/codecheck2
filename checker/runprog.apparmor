@@ -1,0 +1,22 @@
+#include <tunables/global>
+
+/data/cay/projects/codecheck/checker/runprog {
+  #include <abstractions/base>
+  #include <abstractions/bash>
+  #include <abstractions/consoles>
+  #include <abstractions/python>
+
+  /bin/bash ix,
+  /data/cay/projects/codecheck/checker/runprog r,
+  /etc/apt/** r,
+  /etc/default/apport r,
+  /tmp/codecheck*/ rwk,
+  /tmp/codecheck*/** rwix,
+  /usr/bin/python3.4 mrix,
+  /data/apps/scala*/** mrix,
+  /data/apps/jdk*/** mrix,
+  /bin/grep ix,
+  /bin/uname ix,
+  /usr/bin/dirname ix,
+  /usr/bin/basename ix,
+}

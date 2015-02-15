@@ -3,6 +3,8 @@ package com.horstmann.codecheck;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -10,12 +12,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Scanner;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
@@ -30,6 +30,13 @@ public class Util {
 
     public static Path tail(Path p) {
         return p.subpath(1, p.getNameCount());
+    }
+    
+    public static String removeExtension(Path p) {
+        String result = p.toString();
+        int n = result.lastIndexOf(".");
+        if (n >= 0) result = result.substring(0, n);
+        return result;
     }
 
     public static String read(Path path) {
@@ -48,10 +55,6 @@ public class Util {
         } catch (IOException ex) {
             return Collections.EMPTY_LIST;
         }
-    }
-
-    public static String read(Path dir, Path file) {
-        return read(dir.resolve(file));
     }
 
     /**
@@ -98,29 +101,6 @@ public class Util {
         return result;
     }
 
-    @Deprecated
-    public static String htmlEscape(String s) {
-        StringBuilder b = new StringBuilder();
-        if (s == null)
-            return "null";
-        if (s.length() == 0)
-            return "&#160;"; // for inclusion in lame table
-        for (int i = 0; i < s.length(); i++) {
-            char c = s.charAt(i);
-            if (c == '<')
-                b.append("&lt;");
-            else if (c == '>')
-                b.append("&gt;");
-            else if (c == '&')
-                b.append("&amp;");
-            else if (c == ' ')
-                b.append("&#160;"); // so that multiple spaces show up
-            else
-                b.append(c);
-        }
-        return b.toString();
-    }
-
     public static byte[] readBytes(Path path) {
         try {
             return java.nio.file.Files.readAllBytes(path);
@@ -154,27 +134,33 @@ public class Util {
         });
     }
 
-    public static String runProcess(List<String> cmd, String input, int millis) {
-        try {            
-            ProcessBuilder builder = new ProcessBuilder(cmd);
-            Path in = null;
-            if (input != null) {
-                in = Files.createTempFile("codecheck", "");
-                Files.write(in, input.getBytes(StandardCharsets.UTF_8));
-                builder.redirectInput(in.toFile());
-            }
+    public static int runProcess(List<String> cmd, String input, int millis, StringBuilder output) {
+        try {
             Path out = Files.createTempFile("codecheck", "");
-            builder.redirectErrorStream(true);
-            builder.redirectOutput(out.toFile());
-            Process process = builder.start();
-            boolean completed = process.waitFor(millis, TimeUnit.MILLISECONDS);
-            String result = new String(Files.readAllBytes(out), StandardCharsets.UTF_8);
-            if (!completed) result += "\nTimeout after " + millis + " milliseconds\n";
-            if (in != null) Files.delete(in);
-            Files.delete(out);
-            return result;
+            try {            
+                ProcessBuilder builder = new ProcessBuilder(cmd);
+                Path in = null;
+                if (input != null) {
+                    in = Files.createTempFile("codecheck", "");
+                    Files.write(in, input.getBytes(StandardCharsets.UTF_8));
+                    builder.redirectInput(in.toFile());
+                }
+                builder.redirectErrorStream(true);
+                builder.redirectOutput(out.toFile());
+                Process process = builder.start();
+                boolean completed = process.waitFor(millis, TimeUnit.MILLISECONDS);
+                int exitValue = process.exitValue();
+                String result = new String(Files.readAllBytes(out), StandardCharsets.UTF_8);
+                if (!completed) result += "\nTimeout after " + millis + " milliseconds\n";
+                output.append(result);
+                if (in != null) Files.delete(in);                
+                return exitValue;
+            } finally {
+                Files.deleteIfExists(out);
+            }                
         } catch (Exception ex) {
-            return getStackTrace(ex);
+            output.append(getStackTrace(ex));
+            return -1;
         }
     }
     
@@ -182,5 +168,17 @@ public class Util {
         StringWriter out = new StringWriter();
         t.printStackTrace(new PrintWriter(out));
         return out.toString();
+    }
+    
+    public static String getHomeDir() {
+        Object obj = new Util();
+        for (URL url : ((URLClassLoader) obj.getClass().getClassLoader()).getURLs()) {
+            String urlString = url.toString();
+            if (urlString.endsWith("codecheck.jar")) {
+                return urlString.substring(urlString.indexOf('/'),
+                        urlString.lastIndexOf('/'));
+            }
+        }
+        return System.getProperty("com.horstmann.codecheck.home");        
     }
 }

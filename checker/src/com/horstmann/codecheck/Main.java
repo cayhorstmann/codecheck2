@@ -4,20 +4,19 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -39,22 +38,27 @@ public class Main {
     public static final String DEFAULT_TOKEN = "line";
     
     private int timeoutMillis;
+    private String homeDir;
     private Path workDir;
     private Properties checkProperties = new Properties();
     private Report report;
     private Path problemDir;
+    private List<String> studentDirectories = new ArrayList<>();
     private Set<Path> studentFiles;
-    private Set<Path> requiredFiles = new TreeSet<>(); // tails only
     private Set<Path> solutionFiles;
     private Set<Path> printFiles = new TreeSet<>();
-    private Set<String> mainmodules = new TreeSet<String>(); // module names
+    private Set<Path> requiredFiles = new TreeSet<>(); // tails only
+    private Set<Path> mainModules = new TreeSet<>(); // tails only
+    private Set<Path> dependentModules = new TreeSet<>(); // tails only
     
     private Score score = new Score();
     private Comparison comp = new Comparison();
     private Language language = null;
     private Language[] languages = {
        new JavaLanguage(),
-       new PythonLanguage()
+       new PythonLanguage(),
+       new CppLanguage(),
+       new ScalaLanguage()
     };
 
     /**
@@ -101,33 +105,54 @@ public class Main {
         return result;
     }
 
-    public void getGradingFiles(Path dir) throws IOException {
-        if (dir == null)
-            return;
-        for (Path p : Util.getDescendantFiles(dir)) {
-            Path source = dir.resolve(p);
-            Path target = workDir.resolve(p);
-            // Copy if it is not required to be submitted
-            if (!requiredFiles.contains(p) && !"check.properties".equals(p.toString())) {
-                Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
-                printFiles.add(p);
+    public void copySuppliedFiles() throws IOException {
+        for (String s : studentDirectories) {
+            Path dir = problemDir.resolve(s);        
+            for (Path p : Util.getDescendantFiles(dir)) {
+                Path source = dir.resolve(p);
+                Path target = workDir.resolve(p);
+                // Copy if it is not required to be submitted
+                if (!requiredFiles.contains(p)) {
+                    Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+                }
             }
         }
     }
 
-    public boolean containsModule(Set<Path> files, String modulename) {
+    public void copyAll(Collection<Path> paths, Path fromDir, Path toDir)  throws IOException {
+        for (Path p : paths) {
+            Path source = fromDir.resolve(p);
+            Path target = toDir.resolve(p);
+            Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+        }        
+    }
+    
+    private boolean containsModule(Set<Path> files, Path modulename) {
         for (Path file : files)
-            if (language.moduleOf(Util.tail(file)).equals(modulename))
+            if (Util.tail(file).equals(modulename))
                 return true;
         return false;
     }
 
-    public boolean compile(String modulename) {
-        return language.compile(modulename, workDir, report);
+    public boolean compile(Path mainModule) {
+        return compile(Collections.singletonList(mainModule));
     }
 
-    public Path compileSolution(String modulename, Substitution sub, int n) throws IOException {
-        Path tempDir = Files.createTempDirectory("labrat");
+    public boolean compile(List<Path> modules) {
+        List<Path> allModules = new ArrayList<>();
+        allModules.addAll(modules);
+        allModules.addAll(dependentModules);
+        String errorReport = language.compile(allModules, workDir);
+        if (errorReport == null) return true;        
+        if (errorReport.trim().equals(""))
+            report.output(null, "Error compiling " + modules.get(0));
+        else
+            report.error("Compiler error", errorReport);
+        return false;
+    }
+
+    public Path compileSolution(Path mainModule, Substitution sub, int n) throws IOException {
+        Path tempDir = Files.createTempDirectory("codecheck");
         for (Path p : studentFiles) {
             Path source = problemDir.resolve(p);
             Path target = tempDir.resolve(Util.tail(p));
@@ -141,48 +166,18 @@ public class Main {
             else
                 Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
         }
-        boolean result = language.compile(modulename, tempDir, report);
-        return result ? tempDir : null;
+        List<Path> modules = new ArrayList<>();
+        modules.add(mainModule);
+        modules.addAll(dependentModules);        
+        String errorReport = language.compile(modules, tempDir);
+        if (errorReport == null) return tempDir;
+        else {
+            report.systemError("Error compiling " + modules + "\n" + errorReport);
+            return null;
+        }
     }
 
-    boolean getBooleanProperty(String key, boolean defaultValue) {
-        String value = checkProperties.getProperty(key);
-        if (value == null)
-            return defaultValue;
-        return value.toLowerCase().equals("true");
-    }
-
-    double getDoubleProperty(String key, double defaultValue) {
-        String value = checkProperties.getProperty(key);
-        if (value != null)
-            try {
-                return Double.parseDouble(value.trim());
-            } catch (NumberFormatException ex) {
-            }
-        return defaultValue;
-    }
-
-    double getDoubleProperty(String key, String key2, double defaultValue) {
-        String value = checkProperties.getProperty(key);
-        if (value != null)
-            try {
-                return Double.parseDouble(value.trim());
-            } catch (NumberFormatException ex) {
-            }
-        return getDoubleProperty(key2, defaultValue);
-    }
-
-    double getDoubleProperty(String key, String key2, String key3, double defaultValue) {
-        String value = checkProperties.getProperty(key);
-        if (value != null)
-            try {
-                return Double.parseDouble(value.trim());
-            } catch (NumberFormatException ex) {
-            }
-        return getDoubleProperty(key2, key3, defaultValue);
-    }
-
-    String getStringProperty(String key, String... fallbackKeysAndDefaultValue) {
+    private String getStringProperty(String key, String... fallbackKeysAndDefaultValue) {
         String value = checkProperties.getProperty(key);
         if (value != null)
             return value;
@@ -197,33 +192,7 @@ public class Main {
             return null;
     }
 
-    private void snap(String mainclass) throws Exception { // Legacy
-        SecurityManager securityManager = new StudentSecurityManager();
-
-        report.header("Screen capture of " + mainclass);
-        if (compile(mainclass)) {
-            String[] progArgs = getStringProperty("args", "test.snap.args", "test.args", "").split("\\s+");
-            System.setSecurityManager(securityManager);
-            String result = "";
-            try {
-                try {
-                    result = SnapFrame.run(mainclass, mainclass + ".png",
-                                           getStringProperty("test.snap.keys", "test.keys", ""), progArgs, workDir, false);
-                } finally {
-                    System.setSecurityManager(null);
-                }
-            } catch (Exception ex) {
-                if (!(ex instanceof StudentSecurityManager.ExitException))
-                    throw ex;
-            }
-            if (result.length() > 0)
-                report.output(result);
-            report.image(workDir.resolve(mainclass + ".png"));
-        }
-    }    
-    
-    private void runTester(String mainmodule) throws IOException, UnsupportedEncodingException,
-        ReflectiveOperationException {
+    private void runTester(Path mainmodule) throws Exception {
         report.header("Running " + mainmodule);
         // TODO: Assume testers always in default package?
         
@@ -234,20 +203,19 @@ public class Main {
         if (compile(mainmodule)) {
             String outerr = language.run(mainmodule, workDir, "", null, timeoutMillis);
             AsExpected cond = new AsExpected(comp);
-            cond.eval(outerr, report, score, workDir.resolve(language.pathOf(mainmodule)));
+            cond.eval(outerr, report, score, workDir.resolve(mainmodule));
         }
     }
 
-    private void testInputs(Map<String, String> inputs, String mainmodule, Annotations annotations) throws UnsupportedEncodingException,
-        IOException, ReflectiveOperationException {
+    private void testInputs(Map<String, String> inputs, Path mainmodule, Annotations annotations) throws Exception {
         /*
-         * If there are no inputs, we feed in one empty input, or the legacy test.run.inputstring
+         * If there are no inputs, we feed in one empty input to execute the program.
          */
         if (inputs.size() == 0)
-            inputs.put("", getStringProperty("test.run.inputstring")); // Legacy
+            inputs.put("", ""); 
         report.header("Testing " + mainmodule);
         Path solutionDir = null;
-        if (!(annotations.isSample(mainmodule) || "true".equals(getStringProperty("test.run")))) {
+        if (!annotations.isSample(mainmodule)) {
             solutionDir = compileSolution(mainmodule, null, 0);
             if (solutionDir == null) return;
         }        
@@ -262,141 +230,137 @@ public class Main {
         Util.deleteDirectory(solutionDir);
     }
 
-    private void testInput(String mainmodule, Annotations annotations,
+    private void testInput(Path mainmodule, Annotations annotations,
             Path solutionDir, String test, String input)
-            throws IOException, ReflectiveOperationException {
-        // TODO: Might be useful to have more than one set of ARGS        
-        String runargs = annotations.findUniqueKey("ARGS");
-        if (runargs == null)
-            runargs = getStringProperty(test + ".args", "args", "test.args", "test.run.args",
-                                        "test.test-inputs.args", "");
-        String outFile = annotations.findUniqueKey("OUT");
-        if (outFile == null)
-            outFile = getStringProperty(test + ".outputfile", (test.length() > 0 ? test
-                                                 : "test.run") + ".expectedfile", "outputfile", "test.expectedfile", null); // Legacy
-        Path outPath = outFile == null ? null : workDir.resolve(outFile);
-
-        if (outPath != null)
-            Files.deleteIfExists(outPath);
-
-        String outerr = language.run(mainmodule, workDir, runargs, input, timeoutMillis);
-        String title = "Program run";
-        if (test != null) title = (title + " " + test.replace("test", "")).trim(); 
-
-        /*               
-        if (input != null && input.length() > 1)
-            report.output("Input " + test, input);
-        */
-        String contents = null;
-        String expectedContents = null;
-        String expectedOuterr = null;
-        CompareImages imageComp = null;
-        if (outPath != null) {
-            if (CompareImages.isImage(outFile)) {
-                try {
-                    imageComp = new CompareImages(outPath);
-                    report.output(title, outerr);
-                    report.image(outPath);
-                } catch (IOException ex) {
-                    report.error(ex.getMessage());
-                    return; 
-                }
-            } else
-                contents = Util.read(outPath);
-        }
-
-        if (solutionDir == null) { // Run without testing
-            report.output(title, outerr);
-            // TODO: Score?
-            return;
-        }
-        if (outPath != null) Files.delete(outPath); // TODO: This is to deal with the flaky graphics that may never write the file
-        expectedOuterr = language.run(mainmodule, solutionDir, runargs, input, timeoutMillis);
-        if (outPath != null) {
-            if (imageComp == null)
-                expectedContents = Util.read(outPath);
-        }
-
-        if (outFile != null) {
-            if (imageComp != null) {
-                try {
-                    imageComp.setOtherImage(outPath);
-                    boolean outcome = imageComp.getOutcome();
-                    if (!outcome) {
-                        report.image("Expected", outPath);
-                        report.image("Mismatched pixels", imageComp.diff());
-                    }
-                    score.pass(outcome, report);
-                } catch (IOException ex) {
-                    report.systemError(ex.getMessage());
-                }
-            } else {
-                report.header(outFile);
-                boolean outcome = comp.execute(contents,
-                        expectedContents, report, title);
-                score.pass(outcome, report);
-            }
-        }
-
-        if (imageComp == null && expectedOuterr != null && expectedOuterr.length() > 0) {
-            boolean outcome = comp.execute(outerr, expectedOuterr, report, title);
-            score.pass(outcome, report);
+            throws Exception {
+        List<String> runargs = annotations.findKeys("ARGS");
+        if (runargs.size() == 0) runargs.add("");
+        String out = annotations.findUniqueKey("OUT");
+        String[] outFiles = out == null ? new String[0] : out.trim().split("\\s+");
+        
+        
+        String runNumber = test.replace("test", "").trim();
+        if (runNumber.length() > 0) report.header("Test " + runNumber);
+        
+        for (String args : runargs) {
+            testInput(mainmodule, solutionDir, test, input, args, outFiles);
         }
     }
+    
+    private void testInput(Path mainmodule,
+            Path solutionDir, String test, String input, String runargs, String[] outFiles)
+            throws Exception {
+        
+        // Before the run, clear any output files in case they existed, 
+        // and recopy any supplied files (in case an input has been mutated by a previous run) 
+        
+        for (String f : outFiles) Files.deleteIfExists(workDir.resolve(f));           
+        copySuppliedFiles(); 
 
-    private void getMainModules() {
+        report.output("Command line arguments", runargs);
+
+        if (!language.echoesStdin()) report.output("Input", input);
+
+        // Run student program and capture stdout/err and output files
+
+        String outerr = language.run(mainmodule, workDir, runargs, input, timeoutMillis);
+        List<String> contents = new ArrayList<>();
+        List<CompareImages> imageComp = new ArrayList<>();
+        
+        for (String f : outFiles) {
+            Path p = workDir.resolve(f);
+            if (CompareImages.isImage(f)) {
+                try {
+                    imageComp.add(new CompareImages(p));
+                } catch (Exception ex) {
+                    report.output(outerr);
+                    throw ex;
+                }
+            }
+            else
+                contents.add(Util.read(p));            
+        }
+                
+        if (solutionDir == null) { // Run without testing
+            report.output("Output", outerr);
+            for (String f : outFiles) {
+                if (CompareImages.isImage(f))          
+                    report.image("Image", imageComp.remove(0).first());                    
+                else
+                    report.output(f, contents.remove(0));
+            }
+            // No score
+        } else { // Run solution in the same way 
+        
+            for (String f : outFiles) Files.deleteIfExists(workDir.resolve(f));           
+            copySuppliedFiles(); // Might have been deleted or mutated
+        
+            String expectedOuterr = language.run(mainmodule, solutionDir, runargs, input, timeoutMillis);
+        
+            // Report on results
+
+            if (expectedOuterr != null && expectedOuterr.length() > 0) {
+                boolean outcome = comp.execute(outerr, expectedOuterr, report, "Output");
+                score.pass(outcome, report);
+            }        
+        
+            for (String f : outFiles) {
+                Path p = workDir.resolve(f);
+                if (CompareImages.isImage(f)) {
+                    CompareImages ic = imageComp.remove(0);
+                    ic.setOtherImage(p);
+                    boolean outcome = ic.getOutcome();
+                    report.image("Image", ic.first());
+                    if (!outcome) {
+                        report.image("Expected", ic.other());
+                        report.image("Mismatched pixels", ic.diff());
+                    }
+                    score.pass(outcome, report);                   
+                } else {
+                    String expectedContents = Util.read(p);                
+                    boolean outcome = comp.execute(contents.remove(0),
+                            expectedContents, report, f);
+                    score.pass(outcome, report);
+                }
+            }
+        }       
+    }
+
+    private void getMainAndDependentModules() {
         Set<Path> files = new TreeSet<>();
         files.addAll(studentFiles);
-        if (solutionFiles.size() > 0) {
-            files.addAll(solutionFiles);
-            for (Path p : files) {
-                String c = language.moduleOf(Util.tail(p));
-                if (c != null && language.isMain(problemDir, p))
-                    mainmodules.add(c);
-            }
-
-        } else { // Legacy
-            String mainclassProperty = getStringProperty("mainclass");
-
-            if (mainclassProperty != null) {
-                mainmodules.add(mainclassProperty);
-                if (!getBooleanProperty("mainclass.required", true))
-                    requiredFiles.remove(language.pathOf(mainclassProperty));
-            }
-
-            for (Path p : files) {
-                String c = language.moduleOf(Util.tail(p));
-                if (language.isTester(c))
-                    mainmodules.add(c);
-            }
+        files.addAll(solutionFiles);
+        for (Path p : files) {
+            Path fullPath = problemDir.resolve(p);
+            Path tailPath = Util.tail(p);
+            if (language.isMain(fullPath))
+                mainModules.add(tailPath);
+            else if (!mainModules.contains(tailPath) // Just in case that there is a student version without the main method declaration 
+                    && language.isSource(fullPath) && !language.isUnitTest(fullPath))
+                dependentModules.add(tailPath);
         }
     }
 
     private void getRequiredModules() {
-        if (solutionFiles.size() > 0) {
-            for (Path p : solutionFiles)
-                if (language.isSource(p))
-                    requiredFiles.add(Util.tail(p));
-        } else { // Legacy
-            String requiredclasses = getStringProperty("requiredclasses");
-            if (requiredclasses != null)
-                for (String f : requiredclasses.trim().split("\\s*,\\s*"))
-                    requiredFiles.add(language.pathOf(f));
-        }
+        for (Path p : solutionFiles)
+            if (language.isSource(p))
+                requiredFiles.add(Util.tail(p));
     }
     
     private void runUnitTests() {
         for (Path p : studentFiles) {
-            String testClass = language.moduleOf(Util.tail(p));
-            if (language.isUnitTest(testClass))
-                language.runUnitTest(testClass, workDir, report, score);
+            if (language.isUnitTest(p)) {
+                List<Path> modules = new ArrayList<>();
+                modules.add(Util.tail(p));
+                modules.addAll(dependentModules);
+                language.runUnitTest(modules, workDir, report, score);
+            }
         }
     }
 
-    private void doSubstitutions(Path submissionDir, Substitution sub) throws IOException, ReflectiveOperationException {
+    private void doSubstitutions(Path submissionDir, Substitution sub) throws Exception {
         report.header("Running program with substitutions");
-        Path p = Util.tail(sub.getFile());
-        String mainmodule = language.moduleOf(p);
+        Path mainmodule = Util.tail(sub.getFile());
         if (compile(mainmodule)) {
         	int n = sub.getSize();
         	String[] argNames = sub.names().toArray(new String[0]);
@@ -407,8 +371,8 @@ public class Main {
 
             int timeout = timeoutMillis / Math.max(1, sub.getSize()); 
             for (int i = 0; i < sub.getSize(); i++) {
-                sub.substitute(submissionDir.resolve(p),
-                               workDir.resolve(p), i);
+                sub.substitute(submissionDir.resolve(mainmodule),
+                               workDir.resolve(mainmodule), i);
                 if (compile(mainmodule)) {
                     actual[i] = language.run(mainmodule, workDir, null, null, timeout);
                     Path tempDir = compileSolution(mainmodule, sub, i);
@@ -424,11 +388,9 @@ public class Main {
         }
     }
 
-    private void doCalls(Path submissionDir, Calls calls) throws IOException, ReflectiveOperationException {
+    private void doCalls(Path submissionDir, Calls calls) throws Exception {
         report.header("Testing method " + calls.getName());
-        Path p = Util.tail(calls.getFile());
-        String mainmodule = language.moduleOf(p) + "CodeCheck";
-        calls.writeTester(problemDir, workDir);
+        List<Path> testModules = calls.writeTester(problemDir, workDir);
         
         String[][] args = new String[calls.getSize()][1];
         String[] actual = new String[calls.getSize()];
@@ -437,9 +399,9 @@ public class Main {
 
         int timeout = timeoutMillis / calls.getSize();
         
-        if (compile(mainmodule)) {
+        if (compile(testModules)) {
             for (int i = 0; i < calls.getSize(); i++) {
-            	String result = language.run(mainmodule, workDir, "" + (i + 1), null, timeout);
+            	String result = language.run(testModules.get(0), workDir, "" + (i + 1), null, timeout);
             	Scanner in = new Scanner(result);
                 List<String> lines = new ArrayList<>();
                 while (in.hasNextLine()) lines.add(in.nextLine());
@@ -463,16 +425,10 @@ public class Main {
     public void run(String[] args) throws IOException {
         // TODO: Adjustable Timeouts
 
-        for (URL url : ((URLClassLoader) getClass().getClassLoader()).getURLs()) {
-            String urlString = url.toString();
-            if (urlString.endsWith("codecheck.jar")) {
-                String path = urlString.substring(urlString.indexOf('/'),
-                        urlString.lastIndexOf('/'));
-                System.setProperty("java.security.policy", path
+        homeDir = Util.getHomeDir();
+        
+        System.setProperty("java.security.policy", homeDir
                         + "/codecheck.policy");
-            }
-        }
-        //System.setSecurityManager(new SecurityManager());
     	   	
         String mode = args[0].trim();
         Path submissionDir = FileSystems.getDefault().getPath(args[1]);
@@ -491,7 +447,6 @@ public class Main {
             level = 1;
         else if (mode.equals("grade"))
             level = 9; // to pick up all
-        List<String> studentDirectories = new ArrayList<>();
         if (Files.exists(problemDir.resolve("student")))
             studentDirectories.add("student");
         for (int n = 1; n <= level; n++)
@@ -532,8 +487,7 @@ public class Main {
                         
             // Determine language
             
-            String languageName = System
-                    .getProperty("com.horstmann.codecheck.language");
+            String languageName = System.getProperty("com.horstmann.codecheck.language");
             if (languageName != null) {
                 try {
                     language = (Language) Class.forName(
@@ -563,8 +517,8 @@ public class Main {
             }
 
             Annotations annotations = new Annotations(language);
-            annotations.read(problemDir, studentFiles);
-            annotations.read(problemDir, solutionFiles);
+            annotations.read(problemDir, studentFiles, false);
+            annotations.read(problemDir, solutionFiles, true);
 
             String uid = problemDir.getFileName().toString();
             report.comment("Submission", submissionDir.getFileName().toString());
@@ -577,7 +531,7 @@ public class Main {
             report.footnote(currentTime);
             problemId = annotations.findUniqueKey("ID");
             if (problemId == null) {
-            	problemId = language.moduleOf(Util.tail(solutionFiles.iterator().next()));            	
+                problemId = Util.removeExtension(solutionFiles.iterator().next().getFileName());            	
             }
             else {
             	problemId = problemId.replaceAll("[^A-Za-z0-9]", "").toLowerCase();
@@ -590,77 +544,55 @@ public class Main {
             	String arg = args[iarg];
             	int keyEnd = arg.indexOf("=");
             	if (keyEnd >= 0) {
-            		report.comment(arg.substring(0, keyEnd), arg.substring(keyEnd + 1));
+            	    report.comment(arg.substring(0, keyEnd), arg.substring(keyEnd + 1));
             	}
             }
             
             
             
-        	timeoutMillis = DEFAULT_TIMEOUT_MILLIS;
+            timeoutMillis = DEFAULT_TIMEOUT_MILLIS;
             String timeoutProperty = System.getProperty("com.horstmann.codecheck.timeout");
             if (timeoutProperty != null)
             	timeoutMillis = Integer.parseInt(timeoutProperty);
             timeoutMillis = (int) annotations.findUniqueDoubleKey("TIMEOUT", timeoutMillis);
             
             double tolerance = annotations.findUniqueDoubleKey("TOLERANCE", DEFAULT_TOLERANCE);
-            tolerance = getDoubleProperty("test.tolerance", tolerance); // Legacy
             boolean ignoreCase = !"false".equals(annotations.findUniqueKey("IGNORECASE"));
             boolean ignoreSpace = !"false".equals(annotations.findUniqueKey("IGNORESPACE"));
             comp.setTolerance(tolerance);
             comp.setIgnoreCase(ignoreCase);
             comp.setIgnoreSpace(ignoreSpace);            
             
-            getRequiredModules();
-            getMainModules();            
+            annotations.check(report);
             
-            for (String modeDir : studentDirectories)
-                getGradingFiles(problemDir.resolve(modeDir));
+            getRequiredModules();
+            getMainAndDependentModules();            
+            
+            
+            for (String dir : studentDirectories) {
+                for (Path p : Util.getDescendantFiles(problemDir.resolve(dir))) {
+                    if (!requiredFiles.contains(p)) 
+                        printFiles.add(p);
+                }
+            }
 
-            Set<String> missingModules = new TreeSet<>();
+            copySuppliedFiles();
+                
+            Set<Path> missingModules = new TreeSet<>();
             for (Path file : requiredFiles) {
                 Path source = submissionDir.resolve(file);
                 if (Files.exists(source))
                     Files.copy(source, workDir.resolve(file), StandardCopyOption.REPLACE_EXISTING);
                 else {
                     report.error("Missing file " + file);
-                    missingModules.add(language.moduleOf(file));
+                    missingModules.add(file);
                 }
             }
 
             if (!annotations.checkConditions(workDir, report)) {
                 // Do nothing
-            } else if (getStringProperty("test.method") != null) {
-                String mainmodule = getStringProperty("mainclass");
-                // Must be able to override since sometimes the mainclass
-                // contains the
-                // check method, and the student is expected to supply a
-                // different class
-                if (mainmodule == null) {
-                    if (mainmodules.size() == 1)
-                        mainmodule = mainmodules.iterator().next();
-                    else if (solutionFiles.size() == 1)
-                        mainmodule = language.moduleOf(Util.tail(solutionFiles.iterator().next()));
-                    else
-                        report.systemError("Can't identify main module");
-                    // TODO: It ought to be able to locate the class that has a
-                    // method with the given name
-                }
-
-                // Call method
-                CallMethod call = new CallMethod(mainmodule, checkProperties, timeoutMillis);
-                call.setTolerance(tolerance);
-                call.setIgnoreCase(ignoreCase);
-                call.setIgnoreSpace(ignoreSpace);
-                if (compile(mainmodule)) {
-                    report.header("Calling method");
-                    Path tempDir = compileSolution(mainmodule, null, 0); 
-                    call.prepare(tempDir);
-                    call.run(workDir, report, score);
-                    Util.deleteDirectory(tempDir);
-                }
-
-                // TODO: If their program runs out of memory, it takes labrat
-                // with it. Better to run in new process after all?
+            } else if (getStringProperty("test.method") != null) { // Legacy
+                callMethod(tolerance, ignoreCase, ignoreSpace);
             } else if (annotations.has("CALL"))
                 doCalls(submissionDir, annotations.findCalls());
             else if (annotations.has("SUB"))
@@ -678,21 +610,18 @@ public class Main {
                         inputs.put("test" + i, in);
                 }
 
-                for (String mainmodule : mainmodules) {
+                for (Path mainmodule : mainModules) {
                     if (missingModules.contains(mainmodule))
                         report.error("Missing " + mainmodule);
                     else if (language.isTester(mainmodule)
                              && !annotations.isSample(mainmodule)
-                             && !(containsModule(solutionFiles, mainmodule) && inputs.size() > 0))
+                             && !(containsModule(solutionFiles, mainmodule) && inputs.size() > 0)) // TODO: Legacy
                         runTester(mainmodule);
-                    else if (getBooleanProperty("test.snap", false))
-                        // TODO: Remove legacy
-                        snap(mainmodule);
                     else
                         testInputs(inputs, mainmodule, annotations);
                 }
             }
-            
+            // TODO: Move with previous case
             runUnitTests();
             
             // Process checkstyle.xml etc.
@@ -707,28 +636,15 @@ public class Main {
 	            report.header("Student files");
 	            for (Path file : requiredFiles)
 	                report.file(submissionDir, file);
-	
-	            String nodoc = checkProperties.getProperty("nodoc"); // Legacy
-	            Set<String> nodocCl = new TreeSet<String>();
-	            if (nodoc != null)
-	                nodocCl.addAll(Arrays.asList(nodoc.split(",")));
-	
-	            printFiles = filterNot(printFiles, "test*.in", "test*.out", "*.expected", "check.properties", "*.png",
+		
+	            printFiles = filterNot(printFiles, "test*.in", "test*.out", "check.properties", "*.png",
 	                    "*.gif", "*.jpg", "*.jpeg", ".DS_Store", "*.jar");
 
-	            Set<Path> hidden = annotations.findHidden();
-	            Iterator<Path> iter = printFiles.iterator();
-	            while (iter.hasNext()) {
-	                Path p = iter.next();
-	                if (hidden.contains(p)) iter.remove();
-	                else {
-	                	String cl = language.moduleOf(p);
-	                	if (cl != null && nodocCl.contains(cl)) iter.remove();
-	                }	                    
-	            }
+	            printFiles.removeAll(annotations.findHidden());
 	
 	            if (printFiles.size() > 0) {
-	                report.header("Other files");
+	                copySuppliedFiles(); // Might have been mutated
+	                report.header("Provided files");
 	                for (Path file : printFiles)
 	                    report.file(workDir, file);
 	            }
@@ -740,5 +656,32 @@ public class Main {
             report.save(problemId, "report");
         }
         System.exit(0);
+    }
+
+    private void callMethod(double tolerance, boolean ignoreCase,
+            boolean ignoreSpace) throws IOException, Exception {
+        String mainclass = getStringProperty("mainclass");
+        Path mainModule = null;
+        if (mainclass == null) {
+            if (mainModules.size() == 1)
+                mainModule = mainModules.iterator().next();
+            else if (solutionFiles.size() == 1)
+                mainModule = Util.tail(solutionFiles.iterator().next());
+            else
+                report.systemError("Can't identify main module");
+            mainclass = Util.removeExtension(mainModule);
+        } else mainModule = Paths.get(mainclass + ".java");
+
+        CallMethod call = new CallMethod(mainclass, checkProperties, timeoutMillis);
+        call.setTolerance(tolerance);
+        call.setIgnoreCase(ignoreCase);
+        call.setIgnoreSpace(ignoreSpace);
+        if (compile(mainModule)) {
+            report.header("Calling method");
+            Path tempDir = compileSolution(mainModule, null, 0); 
+            call.prepare(tempDir);
+            call.run(workDir, report, score);
+            Util.deleteDirectory(tempDir);
+        }
     }
 }

@@ -26,6 +26,9 @@ public class CompareImages {
         image2 = readImage(p);
     }
 
+    public BufferedImage first() { return image1; }
+    public BufferedImage other() { return image2; }
+    
     private static BufferedImage readImage(Path p) throws IOException {
     	int tries = 20;
     	while (tries > 0) {

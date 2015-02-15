@@ -51,8 +51,8 @@ public class Calls {
         }
     }
 
-    public void writeTester(Path sourceDir, Path targetDir) throws IOException {
-        language.writeTester(sourceDir, targetDir, file, modifiers, name,
+    public List<Path> writeTester(Path sourceDir, Path targetDir) throws IOException {
+        return language.writeTester(sourceDir, targetDir, file, modifiers, name,
                 argsList);
     }
 }

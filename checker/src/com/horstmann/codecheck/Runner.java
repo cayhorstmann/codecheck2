@@ -56,7 +56,7 @@ public class Runner {
                             return;
                         }
 
-                        File submissiondir = Files.createTempDirectory("labrat").toFile();
+                        File submissiondir = Files.createTempDirectory("codecheck").toFile();
                         File outputFile = new File(submissiondir, "error.txt");
                         File errorFile = new File(submissiondir, "error.txt");
                         String classPath = "";

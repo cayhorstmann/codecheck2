@@ -33,10 +33,6 @@
     <param-value>/home/ubuntu/submissions</param-value>
   </context-param>    
   <context-param>
-    <param-name>com.horstmann.codecheck.reports</param-name>
-    <param-value>/data/reports</param-value>
-  </context-param>    
-  <context-param>
     <param-name>com.horstmann.codecheck.defaultcommand</param-name>
     <param-value>/home/ubuntu/codecheck/codecheck {0} {1} {2} {3}</param-value>
   </context-param>    

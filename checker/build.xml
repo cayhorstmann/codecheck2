@@ -65,6 +65,8 @@
       <fileset dir="${src.dir}">
         <include name="**/*.xml" />
         <include name="**/*.properties" />
+        <include name="**/*.cpp" />
+        <include name="**/*.h" />
       </fileset>
     </copy>
   </target>

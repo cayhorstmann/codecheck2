@@ -1,5 +1,36 @@
+AppArmor
+========
+
+sudo cat /etc/apparmor.d/data.cay.projects.codecheck.checker.runprog 
+
+# Last Modified: Thu Sep 11 18:23:09 2014
+#include <tunables/global>
+
+/data/cay/projects/codecheck/checker/runpython {
+  #include <abstractions/base>
+  #include <abstractions/bash>
+
+  /bin/bash ix,
+  /data/cay/projects/codecheck/checker/runpython r,
+}
+
+sudo apparmor_parser -r /etc/apparmor.d/data.cay.projects.codecheck.checker.runprog
+sudo aa-enforce /etc/apparmor.d/data.cay.projects.codecheck.checker.runprog
+
+sudo /etc/init.d/apparmor reload
+vi /var/log/syslog
+sudo aa-logprof
+
+
+---> Check that it can't read a neighbor
+
+
+
 Checker
 =======
+
+Bug in /home/cay/projects/codecheck/checker/../samples/python/test5: 
+Shouldn't run two tests
 
 AIOOBE in image calculation didn't get displayed :-(
 

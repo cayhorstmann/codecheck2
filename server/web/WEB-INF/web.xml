@@ -16,10 +16,6 @@
     <param-value>/tmp/codecheck</param-value>
   </context-param>    
   <context-param>
-    <param-name>com.horstmann.codecheck.reports</param-name>
-    <param-value>/tmp/reports</param-value>
-  </context-param>    
-  <context-param>
     <param-name>com.horstmann.codecheck.repo.ext</param-name>
     <param-value>/tmp/ext</param-value>
   </context-param>  

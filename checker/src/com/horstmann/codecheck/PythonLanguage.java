@@ -6,9 +6,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 import java.util.regex.Pattern;
 
 public class PythonLanguage implements Language {
@@ -23,13 +21,8 @@ public class PythonLanguage implements Language {
     }
 
     @Override
-    public boolean isTester(String modulename) {
-        return modulename != null && modulename.matches("(.+_)?tester[0-9]*");
-    }
-
-    @Override
-    public boolean isUnitTest(String modulename) {
-        return false;
+    public boolean isTester(Path modulename) {
+        return modulename != null && modulename.toString().matches(".*Tester[0-9]*");
     }
 
     private static Pattern mainPattern = Pattern.compile("def\\s+main\\s*\\(\\s*\\)\\s*:");
@@ -42,26 +35,24 @@ public class PythonLanguage implements Language {
      * java.nio.file.Path)
      */
     @Override
-    public boolean isMain(Path dir, Path p) {
+    public boolean isMain(Path p) {
         if (!isSource(p))
             return false;
-        String contents = Util.read(dir, p);
+        String contents = Util.read(p);
         if (contents == null) return false;
         if (mainPattern.matcher(contents).find()) return true;
         if (fundefPattern.matcher(contents).find()) return false;
         return true;
     }
 
-    @Override
-    public String moduleOf(Path path) {
+    private String moduleOf(Path path) {
         String name = path.toString();
         if (!name.endsWith(".py"))
             return null;
         return name.substring(0, name.length() - 3); // drop .py
     }
 
-    @Override
-    public Path pathOf(String moduleName) {
+    private Path pathOf(String moduleName) {
         Path p = FileSystems.getDefault().getPath("", moduleName);
         Path parent = p.getParent();
         if (parent == null)
@@ -71,33 +62,7 @@ public class PythonLanguage implements Language {
     }
 
     @Override
-    public boolean compile(String modulename, Path dir, Report report) {
-        List<String> cmd = new ArrayList<>();
-        cmd.add("python3");        
-        cmd.add("-m");
-        cmd.add("py_compile");
-        cmd.add(dir.resolve(pathOf(modulename)).toString());
-        String errorReport = Util.runProcess(cmd, null, Integer.MAX_VALUE).trim();
-        if (errorReport.length() > 0) {
-            report.error("Compiler error", errorReport);
-            return false;
-        } else
-            return true;
-    }
-
-    @Override
-    public String run(String mainclass, Path classpathDir, String args,
-            String input, int timeoutMillis) throws IOException {
-        List<String> cmd = new ArrayList<>();
-        cmd.add("python3");
-        cmd.add(classpathDir.resolve(pathOf(mainclass)).toString());
-        if (args != null) cmd.addAll(Arrays.asList(args.split("\\s+")));
-        
-        return Util.runProcess(cmd, input, timeoutMillis);
-    }
-
-    @Override
-    public void writeTester(Path sourceDir, Path targetDir, Path file,
+    public List<Path> writeTester(Path sourceDir, Path targetDir, Path file,
             List<String> modifiers, String name, List<String> argsList)
             throws IOException {
         String moduleName = moduleOf(Util.tail(file));
@@ -133,8 +98,11 @@ public class PythonLanguage implements Language {
                     "            print(\"false\")");
         }
         lines.add("main()");
-        Files.write(targetDir.resolve(pathOf(moduleName + "CodeCheck")), lines,
-                StandardCharsets.UTF_8);        
+        Path p = pathOf(moduleName + "CodeCheck");
+        Files.write(targetDir.resolve(p), lines, StandardCharsets.UTF_8);        
+        List<Path> testModules = new ArrayList<>();
+        testModules.add(p);
+        return testModules;        
     }
 
     @Override
@@ -153,25 +121,5 @@ public class PythonLanguage implements Language {
     @Override
     public Pattern variablePattern() {
         return pattern;
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.horstmann.codecheck.Language#substitutionSeparator()
-     */
-    @Override
-    public String substitutionSeparator() {
-        return ";";
-    }
-    
-    @Override
-    public void runUnitTest(String moduleName, Path path, Report report, Score score) {             
-    }
-    
-    @Override
-    public boolean accept(Path file, Path dir, Set<Path> studentFiles,
-            Report report, Score score) {
-        return false;
     }
 }

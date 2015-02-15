@@ -480,18 +480,18 @@ public class HTMLReport implements Report {
     public HTMLReport runTable(String[] argNames, String[][] args,
             String[] actual, String[] expected, boolean[] outcomes) {
         tableStart("run").rowStart();
+        headerCell("");
         for (String n : argNames)
             headerCell(n);
-        headerCell("Actual").headerCell("Expected").headerCell("").rowEnd();
+        headerCell("Actual").headerCell("Expected").rowEnd();
         for (int i = 0; i < args.length; i++) {
             rowStart();
+            cellStart().pass(outcomes[i]).cellEnd();
             for (String a : args[i])
-                cell(a);
+                codeCell(a.trim());
             codeCell(actual[i]);
             codeCell(expected[i]);
-            cellStart();
-            pass(outcomes[i]);
-            cellEnd().rowEnd();
+            rowEnd();
         }
         tableEnd();
         return this;

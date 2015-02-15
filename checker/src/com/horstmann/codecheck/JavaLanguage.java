@@ -50,13 +50,13 @@ public class JavaLanguage implements Language {
      * @see com.horstmann.codecheck.Language#isTester(java.lang.String)
      */
     @Override
-    public boolean isTester(String modulename) {
-        return modulename != null && modulename.matches(".*Tester[0-9]*");
+    public boolean isTester(Path modulename) {
+        return modulename != null && modulename.toString().matches(".*Tester[0-9]*");
     }
 
     @Override
-    public boolean isUnitTest(String modulename) {
-        return modulename != null && modulename.matches(".*Test[0-9]*");
+    public boolean isUnitTest(Path modulename) {
+        return modulename != null && modulename.toString().matches(".*Test[0-9]*");
     }
 
     private static Pattern mainPattern = Pattern
@@ -69,34 +69,19 @@ public class JavaLanguage implements Language {
      * java.nio.file.Path)
      */
     @Override
-    public boolean isMain(Path dir, Path p) {
+    public boolean isMain(Path p) {
         if (!isSource(p))
             return false;
-        String contents = Util.read(dir, p);
+        String contents = Util.read(p);
         return contents != null && mainPattern.matcher(contents).find();
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.horstmann.codecheck.Language#moduleOf(java.nio.file.Path)
-     */
-    @Override
-    public String moduleOf(Path path) {
-        String name = path.toString();
-        if (!name.endsWith(".java"))
-            return null;
-        name = name.substring(0, name.length() - 5); // drop .java
+    private String moduleOf(Path path) {
+        String name = Util.removeExtension(path); // drop .java
         return name.replace(FileSystems.getDefault().getSeparator(), ".");
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.horstmann.codecheck.Language#pathOf(java.lang.String)
-     */
-    @Override
-    public Path pathOf(String moduleName) {
+    private Path pathOf(String moduleName) {
         Path p = FileSystems.getDefault().getPath("", moduleName.split("[.]"));
         Path parent = p.getParent();
         if (parent == null)
@@ -105,38 +90,29 @@ public class JavaLanguage implements Language {
             return parent.resolve(p.getFileName().toString() + ".java");
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.horstmann.codecheck.Language#compile(java.lang.String,
-     * java.nio.file.Path, com.horstmann.codecheck.Report)
-     */
     @Override
-    public boolean compile(String modulename, Path dir, Report report) {
+    public String compile(List<Path> modules, Path dir) {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         OutputStream outStream = new ByteArrayOutputStream();
         OutputStream errStream = new ByteArrayOutputStream();
         final String classPath = buildClasspath(dir);
 
         int result;
+        Path mainModule = modules.get(0);
         if (classPath.length() == 0) {
             result = compiler.run(null, outStream, errStream, "-sourcepath",
                     dir.toString(), "-d", dir.toString(),
-                    dir.resolve(pathOf(modulename)).toString());
+                    dir.resolve(mainModule).toString());
         } else {
             result = compiler.run(null, outStream, errStream, "-sourcepath",
                     dir.toString(), "-d", dir.toString(),
-                    dir.resolve(pathOf(modulename)).toString(), "-cp",
+                    dir.resolve(mainModule).toString(), "-cp",
                     classPath.toString());
         }
         if (result != 0) {
-            String errorReport = errStream.toString();
-            if (errorReport.trim().equals(""))
-                report.output(null, "Error compiling " + modulename);
-            else
-                report.error("Compiler error", errorReport);
+            return errStream.toString();
         }
-        return result == 0;
+        else return null;
     }
 
     /*
@@ -147,7 +123,7 @@ public class JavaLanguage implements Language {
      */
     @Override
     @SuppressWarnings("deprecation")
-    public String run(final String mainclass, final Path classpathDir,
+    public String run(final Path mainModule, final Path classpathDir,
             String args, String input, int timeoutMillis) throws IOException,
             ReflectiveOperationException {
         InputStream oldIn = System.in;
@@ -219,7 +195,7 @@ public class JavaLanguage implements Language {
             final Thread mainmethodThread = new Thread() {
                 public void run() {
                     try {
-                        Class<?> klass = loader.loadClass(mainclass);
+                        Class<?> klass = loader.loadClass(classNameOfModule(mainModule));
                         final Method mainmethod = klass.getMethod("main",
                                 String[].class);
                         mainmethod.invoke(null, (Object) argsArray);
@@ -273,7 +249,7 @@ public class JavaLanguage implements Language {
      * java.util.List)
      */
     @Override
-    public void writeTester(Path sourceDir, Path targetDir, Path file,
+    public List<Path> writeTester(Path sourceDir, Path targetDir, Path file,
             List<String> modifiers, String name, List<String> argsList)
             throws IOException {
         String className = moduleOf(Util.tail(file));
@@ -340,20 +316,14 @@ public class JavaLanguage implements Language {
         // java.util.Arrays.deepToString((Object[]) expected) :
         // expected.getClass().isArray() ? java.util.Arrays.toString(expected) :
         // expected
-        Files.write(targetDir.resolve(pathOf(className + "CodeCheck")), lines,
+        Path p = pathOf(className + "CodeCheck");
+        Files.write(targetDir.resolve(p), lines,
                 StandardCharsets.UTF_8);
+        List<Path> testModules = new ArrayList<>();
+        testModules.add(p);
+        return testModules;
     }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.horstmann.codecheck.Language#pseudoCommentDelimiters()
-     */
-    @Override
-    public String[] pseudoCommentDelimiters() {
-        return new String[] { "//", "" };
-    }
-
+    
     private static String patternString = ".*\\S\\s+(\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*([^;]+);.*";
     private static Pattern pattern = Pattern.compile(patternString);
 
@@ -375,16 +345,6 @@ public class JavaLanguage implements Language {
     @Override
     public Pattern variablePattern() {
         return pattern;
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.horstmann.codecheck.Language#substitutionSeparator()
-     */
-    @Override
-    public String substitutionSeparator() {
-        return ";";
     }
 
     /**
@@ -480,14 +440,23 @@ public class JavaLanguage implements Language {
         return false;
     }
 
+    private String classNameOfModule(Path moduleName) {
+        String className = moduleName.toString();
+        className = className.substring(0, className.lastIndexOf("."));
+        className = className.replace('/', '.');
+        return className;
+    }
+    
     @Override
-    public void runUnitTest(String moduleName, Path dir, Report report,
+    public void runUnitTest(List<Path> modules, Path dir, Report report,
             Score score) {
-        report.header("JUnit: " + moduleName);
-        if (compile(moduleName, dir, report)) {
+        Path module = modules.get(0);
+        report.header("JUnit: " + module);
+        String errorReport = compile(Collections.singletonList(module), dir); 
+        if (errorReport == null) {
             try {
                 try (URLClassLoader loader = buildClassLoader(dir)) {
-                    Class<?> c = loader.loadClass(moduleName);
+                    Class<?> c = loader.loadClass(classNameOfModule(module));
                     org.junit.runner.Result r = org.junit.runner.JUnitCore
                             .runClasses(c);
 
@@ -505,6 +474,13 @@ public class JavaLanguage implements Language {
                 report.systemError(t);
             }
         }
+        else {
+            if (errorReport.trim().equals(""))
+                report.output(null, "Error compiling " + module);
+            else
+                report.error("Compiler error", errorReport);
+        }
+
     }
 
     static class ExitException extends SecurityException {
@@ -572,6 +548,9 @@ public class JavaLanguage implements Language {
     
     @Override
     public List<String> modifiers(String declaration) {
+        // TODO: Use regexp--what if it's '\tstatic'?
         if (declaration.contains(" static ")) return Collections.singletonList("static"); else return Collections.emptyList();
     }
+    
+    public boolean echoesStdin() { return true; }
 }

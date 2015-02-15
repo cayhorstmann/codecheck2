@@ -1,0 +1,26 @@
+#!/bin/bash
+
+source `dirname $0`/runprog.env
+
+LANG=$1
+shift
+
+case _"$LANG" in
+    _Python)        
+        python3 -m py_compile $@
+        ;;
+
+    _Cpp)
+        cd `dirname $1`
+        g++ -std=c++11 -g -o prog $@
+        ;;
+
+    _Scala)
+        PATH=$PATH:$JAVA_HOME/bin $SCALA_HOME/bin/scalac $@
+        ;;
+
+    _)  
+        echo Unknown language $LANG 
+        ;;          
+esac
+
