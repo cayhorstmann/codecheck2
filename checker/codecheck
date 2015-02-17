@@ -83,8 +83,6 @@ if [ -z $2 ] ; then
   # Checking solution
   PROBLEMDIR=$1
   SUBMISSIONDIR=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
-  # For checking student files
-  SUBMISSIONDIR2=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
 
   if [ -e $PROBLEMDIR/solution ] ; then cp -R $PROBLEMDIR/solution/* $SUBMISSIONDIR ; fi
   case $LEVEL in 
@@ -161,6 +159,9 @@ jarsigner -keystore "$BASEDIR/horstmanncomodo.jks" -storepass rivu6nitt $REPORT_
 
 cd $STARTDIR
 
+# Checking student files
+SUBMISSIONDIR2=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
+
 if [ ! -z $SUBMISSIONDIR2 ] ; then
   # Checking student files
   if [ -e $PROBLEMDIR/student ] ; then 
@@ -182,7 +183,26 @@ if [ ! -z $SUBMISSIONDIR2 ] ; then
         fi
       done
     ;;
-  esac  
+    grade)
+      for n in `seq 1 9` ; do
+        if [ -e $PROBLEMDIR/student$n ] ; then 
+          cd $PROBLEMDIR/student$n
+          for f in `find .` ; do 
+            if [ "$f" != "." ] ; then cp --parents $f $SUBMISSIONDIR2 ; fi
+          done
+          cd ../..
+        fi
+      done
+
+      if [ -e $PROBLEMDIR/grader ] ; then 
+          cd $PROBLEMDIR/grader
+          for f in `find .` ; do 
+              if [ "$f" != "." ] ; then cp --parents $f $SUBMISSIONDIR2 ; fi
+          done
+          cd ../..
+      fi
+    ;;
+  esac
 
   WORKDIR=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
 

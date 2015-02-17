@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <!--
 
-    Copyright 2006-2012 Cay S. Horstmann
+    Copyright 2006-2015 Cay S. Horstmann
 
     This file is part of Codecheck.
 
@@ -25,7 +25,6 @@
   <property name="src.dir" value="${basedir}/src" />
   <property name="build.dir" value="${basedir}/antbuild" />
   <property name="jarfile" value="${ant.project.name}.jar" />
-  <property name="runnerfile" value="run${ant.project.name}.jar" />
   <property name="app.resources" 
              value="com/horstmann/codecheck/codecheck.properties" />
   <property name="webfile" value="/data/cay/web/com/codecheck/codecheck.zip" />

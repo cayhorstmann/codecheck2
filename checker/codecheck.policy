@@ -1,4 +1,4 @@
-grant codeBase "file:/data/cay/projects/codecheck/checker/codecheck.jar" {
+grant codeBase "file:/opt/codecheck/codecheck.jar" {
    permission java.security.AllPermission;
 };
 
