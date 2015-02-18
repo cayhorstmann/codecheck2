@@ -1,3 +1,6 @@
+DOMAIN=/opt/glassfish4/glassfish/domains/domain1
+CODECHECK_HOME=/opt/codecheck
+
 if [ -z "$1" ] ; then
   echo Usage: `basename $0` [-p port] user@host, e.g. `basename $0` codecheck@cs123.cs.sjsu.edu
   exit
@@ -12,9 +15,6 @@ if [[ "$1" = "-p" ]] ; then
 else
   RSYNC="rsync -v"
 fi
-
-DOMAIN=/opt/glassfish4/glassfish/domains/domain1
-CODECHECK_HOME=/opt/codecheck
 
 TMPDIR=`mktemp -d`
 
@@ -32,10 +32,9 @@ eval "$RSYNC $TMPDIR/codecheck.war $HOST:$DOMAIN/autodeploy"
 rm $TMPDIR/codecheck.war
 
 cd ../../checker
-ant clean
 ant jar
 
-cp -a codecheck codecheck.jar codecheck.policy codecheck.env comprog runprog runprog.apparmor lib $TMPDIR
+cp -a codecheck codecheck.jar codecheck.policy codecheck.env comprog runprog runprog.apparmor lib ../server/glassfish $TMPDIR
 
 cd $BASE
 cp codecheck.jks $TMPDIR
