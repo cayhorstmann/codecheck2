@@ -2,8 +2,8 @@
 
 # args: language module arg1 arg2 ...
 
-if [ -e `dirname $0`/runprog.env ] ; then
-    source `dirname $0`/runprog.env
+if [ -e `dirname $0`/codecheck.env ] ; then
+    source `dirname $0`/codecheck.env
 fi    
 
 LANG=$1

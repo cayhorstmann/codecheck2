@@ -20,16 +20,13 @@
 
 -->
 
-<project name="codecheck" basedir="." default="web">
+<project name="codecheck" basedir="." default="dist">
 
-  <property name="src.dir" value="${basedir}/src" />
-  <property name="build.dir" value="${basedir}/antbuild" />
-  <property name="jarfile" value="${ant.project.name}.jar" />
-  <property name="app.resources" 
+   <property name="src.dir" value="${basedir}/src" />
+   <property name="build.dir" value="${basedir}/antbuild" />
+   <property name="app.resources" 
              value="com/horstmann/codecheck/codecheck.properties" />
-  <property name="webfile" value="/data/cay/web/com/codecheck/codecheck.zip" />
-  <property name="webdir2" value="/home/cay/cs1java/codecheck" />
-  <property name="runscript" value="codecheck" />
+   <property name="distdir" value="/opt/codecheck" />
 
    <path id="classpath">
       <fileset dir="${basedir}/lib">
@@ -68,27 +65,29 @@
   </target>
   
   <target name="jar" description="Makes the JAR file" depends="compile">
-    <jar destfile="${jarfile}" basedir="${build.dir}">
+    <jar destfile="codecheck.jar" basedir="${build.dir}">
       <manifest>
         <attribute name="Main-Class" value="com.horstmann.codecheck.Runner" />
       </manifest>
     </jar>
   </target>
 
-  <target name="web" depends="jar">
-    <zip basedir="${basedir}" destfile="${webfile}">
-       <include name="${jarfile}"/>
-       <include name="${runscript}"/>
-    </zip>
-    <copy todir="${webdir2}" preservelastmodified="true">
-      <fileset dir="${basedir}">
-       <include name="${jarfile}"/>
-       <include name="${runscript}"/>
-      </fileset>
+  <target name="dist" depends="jar">
+    <copy todir="${distdir}" preservelastmodified="true">
+        <fileset dir="${basedir}">
+           <include name="codecheck.jar"/>
+           <include name="codecheck"/>
+           <include name="codecheck.policy"/>
+           <include name="codecheck.env"/>
+           <include name="comprog"/>
+           <include name="runprog"/>
+           <include name="runprog.apparmor"/>
+           <include name="lib/**"/>
+        </fileset>
     </copy>
   </target>
 
-  <target name="dist" description="Make the source distribution" depends="jar">
+  <target name="sourcedist" description="Make the source distribution" depends="jar">
     <zip basedir="${basedir}" destfile="codecheck-src-${DSTAMP}.zip" >
       <include name="COPYING"/>
       <include name="HISTORY"/>

@@ -13,6 +13,7 @@
   /etc/default/apport r,
   /tmp/codecheck*/ rwk,
   /tmp/codecheck*/** rwix,
+  /home/codecheck/submissions/** rwix,
   /usr/bin/python3.4 mrix,
   /opt/scala*/** mrix,
   /opt/jdk*/** mrix,

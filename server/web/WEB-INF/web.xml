@@ -21,6 +21,10 @@
   </context-param>  
   <context-param>
     <param-name>com.horstmann.codecheck.defaultcommand</param-name>
-    <param-value>/data/cay/projects/codecheck/checker/codecheck -q {0} {1} {2} {3}</param-value>
+    <param-value>/opt/codecheck/codecheck -s {0} {1} {2} {3}</param-value>
   </context-param>    
+  <context-param>
+    <param-name>com.horstmann.codecheck.s3credentials</param-name>
+    <param-value>/opt/codecheck/s3.properties</param-value>
+  </context-param>  
 </web-app>

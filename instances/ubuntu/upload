@@ -35,10 +35,10 @@ cd ../../checker
 ant clean
 ant jar
 
-cp -a codecheck.jar codecheck.policy comprog runprog runprog.apparmor lib $TMPDIR
+cp -a codecheck codecheck.jar codecheck.policy codecheck.env comprog runprog runprog.apparmor lib $TMPDIR
 
 cd $BASE
-cp codecheck codecheck.jks $TMPDIR
+cp codecheck.jks $TMPDIR
 [[ -e ../s3.properties ]] && cp ../s3.properties $TMPDIR
 
 cd $TMPDIR
@@ -46,5 +46,3 @@ eval "$RSYNC -az * $HOST:$CODECHECK_HOME"
 
 cd $BASE
 rm -rf $TMPDIR
-
-

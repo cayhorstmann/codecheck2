@@ -26,9 +26,72 @@
 # Here, problemdir is the directory containing the directories
 # named student and grader
 
-# This script does not modify the contents of submissiondir. 
+# This script does not modify the contents of submissiondir unless
+# the -s option is used
 
-# detect Cygwin
+function grade {
+    cd "$SUBMISSIONDIR"
+    REPORT_JAR=`basename $PROBLEMDIR`.signed.zip
+    $JAVA_HOME/bin/jar cf $REPORT_JAR . 
+
+    cd "$WORKDIR"
+
+    LC_ALL=en_US.UTF-8 $JAVA_HOME/bin/java $JAVA_OPTS -Dcom.horstmann.codecheck -classpath $CLASSPATH com.horstmann.codecheck.Main $LEVEL "$SUBMISSIONDIR" "$PROBLEMDIR" $@
+
+    cd "$SUBMISSIONDIR"
+
+    if [ -e report.html ] ; then
+        jar uf $REPORT_JAR report.html
+        MATCH=`grep --text -o '^[<]meta name="ID" content="\(.*\)"/>$' report.html`
+        if [[ -n $MATCH ]] ; then
+            MATCH=${MATCH##*\=\"}
+            ID=${MATCH%\"*}
+            mv $REPORT_JAR $ID.signed.zip
+            REPORT_JAR=$ID.signed.zip
+        fi
+    fi
+
+    $JAVA_HOME/bin/jarsigner -keystore "$BASEDIR/codecheck.jks" -storepass secret $REPORT_JAR codecheck > /dev/null
+}
+
+# Script start
+
+# Pick up JAVA_HOME, maybe JAVA_OPTS
+
+BASEDIR=`dirname $0`
+
+if [ -e $BASEDIR/codecheck.env ] ; then
+    source $BASEDIR/codecheck.env
+fi    
+
+# Set classpath
+
+if [ "${BASEDIR/#\//}" == "$BASEDIR" ] ; then BASEDIR=`pwd`/"$BASEDIR" ; fi
+CLASSPATH="$BASEDIR"/codecheck.jar:"$BASEDIR"/lib/\*
+
+# Get server execution out of the way
+
+if [ "$1" == "-s" ] ; then
+    shift
+    LEVEL=$1
+    shift
+    # Program is executed in submission dir
+    SUBMISSIONDIR=$1
+    WORKDIR=$1
+    shift
+    PROBLEMDIR=$1
+    shift
+
+    grade $@
+
+    exit
+fi
+
+# From here on, client execution
+
+STARTDIR=`pwd`
+
+# Detect Cygwin
 cygwin=false;
 case "`uname`" in
   CYGWIN*) cygwin=true;
@@ -49,18 +112,6 @@ if [ -z "$BROWSER" ] ; then
   fi
 fi
 
-STARTDIR=`pwd`
-BASEDIR=`dirname $0`
-if [ "${BASEDIR/#\//}" == "$BASEDIR" ] ; then BASEDIR=`pwd`/"$BASEDIR" ; fi
-CLASSPATH="$BASEDIR"/codecheck.jar:"$BASEDIR"/lib/\*
-
-function usage() {
-    echo "Usage: `basename $0` [-q] level submissiondir problemdir"
-    exit
-}
-
-REPORT=report.html
-
 if [ "$1" == "-p" ] ; then BROWSER=cat ; shift ; fi
 
 if [ "$1" == "-q" ] ; then BROWSER=echo ; shift ; fi
@@ -70,6 +121,8 @@ if [ "$1" == "-t" ] ; then
     REPORT=report.txt 
     JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck.textreport"
     shift 
+else
+    REPORT=report.html
 fi
 
 if [ -z $2 ] ; then
@@ -80,7 +133,7 @@ else
 fi
 
 if [ -z $2 ] ; then
-  # Checking solution
+  # Check solution
   PROBLEMDIR=$1
   SUBMISSIONDIR=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
 
@@ -108,12 +161,11 @@ fi
 
 if [ -z "$LEVEL" ] || [ -z "$PROBLEMDIR" ] || [ ! -d "$SUBMISSIONDIR" ] || [ ! -d "$PROBLEMDIR" ]
 then
-    echo $0 $@
     if [ -z "$LEVEL" ] ; then echo "No level supplied" ; fi
     if [ -z "$PROBLEMDIR" ] ; then echo "No problemdir supplied" ; fi
     if [ ! -d "$SUBMISSIONDIR" ] ; then echo "submissiondir $SUBMISSIONDIR doesn't exist" ; fi
     if [ ! -d "$PROBLEMDIR" ] ; then echo "problemdir $PROBLEMDIR doesn't exist" ; fi
-    usage
+    echo "Usage: `basename $0` [-pqst] level submissiondir problemdir"
 fi
 
 if [ "${SUBMISSIONDIR/#\//}" == "$SUBMISSIONDIR" ] ; then SUBMISSIONDIR=`pwd`/"$SUBMISSIONDIR" ; fi
@@ -129,45 +181,20 @@ fi
 
 WORKDIR=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
 
-cd "$SUBMISSIONDIR"
-REPORT_JAR=`basename $PROBLEMDIR`.signed.zip
-jar cf $REPORT_JAR .
+grade $@
 
-cd "$WORKDIR"
-
-JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck"
-
-echo LC_ALL=en_US.UTF-8 java $JAVA_OPTS -classpath "$CLASSPATH" com.horstmann.codecheck.Main $LEVEL "$SUBMISSIONDIR" "$PROBLEMDIR" $@
-
-LC_ALL=en_US.UTF-8 java $JAVA_OPTS -classpath "$CLASSPATH" com.horstmann.codecheck.Main $LEVEL "$SUBMISSIONDIR" "$PROBLEMDIR" $@
-cd - > /dev/null
 $BROWSER "$SUBMISSIONDIR/$REPORT" 2> /dev/null 
-cd "$SUBMISSIONDIR"
-
-if [ -e report.html ] ; then
-  jar uf $REPORT_JAR report.html
-  MATCH=`grep --text -o '^[<]meta name="ID" content="\(.*\)"/>$' report.html`
-  if [[ -n $MATCH ]] ; then
-    MATCH=${MATCH##*\=\"}
-    ID=${MATCH%\"*}
-    mv $REPORT_JAR $ID.signed.zip
-    REPORT_JAR=$ID.signed.zip
-  fi
-fi
-
-jarsigner -keystore "$BASEDIR/horstmanncomodo.jks" -storepass rivu6nitt $REPORT_JAR  horstmanncomodo > /dev/null
-
-cd $STARTDIR
 
 # Checking student files
-SUBMISSIONDIR2=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
+cd $STARTDIR
+SUBMISSIONDIR=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
 
-if [ ! -z $SUBMISSIONDIR2 ] ; then
+if [ ! -z $SUBMISSIONDIR ] ; then
   # Checking student files
   if [ -e $PROBLEMDIR/student ] ; then 
     cd $PROBLEMDIR/student
     for f in `find .` ; do 
-      if [ "$f" != "." ] ; then cp --parents $f $SUBMISSIONDIR2 ; fi
+      if [ "$f" != "." ] ; then cp --parents $f $SUBMISSIONDIR ; fi
     done
     cd ../..
   fi
@@ -177,7 +204,7 @@ if [ ! -z $SUBMISSIONDIR2 ] ; then
         if [ -e $PROBLEMDIR/student$n ] ; then 
           cd $PROBLEMDIR/student$n
           for f in `find .` ; do 
-            if [ "$f" != "." ] ; then cp --parents $f $SUBMISSIONDIR2 ; fi
+            if [ "$f" != "." ] ; then cp --parents $f $SUBMISSIONDIR ; fi
           done
           cd ../..
         fi
@@ -188,7 +215,7 @@ if [ ! -z $SUBMISSIONDIR2 ] ; then
         if [ -e $PROBLEMDIR/student$n ] ; then 
           cd $PROBLEMDIR/student$n
           for f in `find .` ; do 
-            if [ "$f" != "." ] ; then cp --parents $f $SUBMISSIONDIR2 ; fi
+            if [ "$f" != "." ] ; then cp --parents $f $SUBMISSIONDIR ; fi
           done
           cd ../..
         fi
@@ -197,24 +224,21 @@ if [ ! -z $SUBMISSIONDIR2 ] ; then
       if [ -e $PROBLEMDIR/grader ] ; then 
           cd $PROBLEMDIR/grader
           for f in `find .` ; do 
-              if [ "$f" != "." ] ; then cp --parents $f $SUBMISSIONDIR2 ; fi
+              if [ "$f" != "." ] ; then cp --parents $f $SUBMISSIONDIR ; fi
           done
           cd ../..
       fi
     ;;
   esac
 
+  if $cygwin; then
+      SUBMISSIONDIR=`cygpath -w $SUBMISSIONDIR`
+  fi
   WORKDIR=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
 
-  cd "$WORKDIR"
+  grade $@
 
-  if $cygwin; then
-      SUBMISSIONDIR2=`cygpath -w $SUBMISSIONDIR2`
-  fi
-
-  LC_ALL=en_US.UTF-8 java -Dcom.horstmann.codecheck $JAVA_OPTS -classpath "$CLASSPATH" com.horstmann.codecheck.Main $LEVEL "$SUBMISSIONDIR2" "$PROBLEMDIR" "$TITLE"
-  cd - > /dev/null
-  $BROWSER "$SUBMISSIONDIR2/$REPORT" 2> /dev/null 
+  $BROWSER "$SUBMISSIONDIR/$REPORT" 2> /dev/null 
 fi
 
   
