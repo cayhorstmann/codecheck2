@@ -17,5 +17,5 @@ public class Application extends javax.ws.rs.core.Application {
             Grade.class, 
             Problems.class,
             org.glassfish.jersey.media.multipart.MultiPartFeature.class));   
-}
+   }
 }

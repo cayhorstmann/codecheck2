@@ -4,8 +4,6 @@ CODECHECK_HOME=/opt/codecheck
 if [ -z "$1" ] ; then
   echo Usage: `basename $0` [-p port] user@host, e.g. `basename $0` codecheck@cs123.cs.sjsu.edu
   exit
-else
-  HOST="$1"
 fi
 
 if [[ "$1" = "-p" ]] ; then
@@ -15,6 +13,8 @@ if [[ "$1" = "-p" ]] ; then
 else
   RSYNC="rsync -v"
 fi
+
+HOST="$1"
 
 TMPDIR=`mktemp -d`
 

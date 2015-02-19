@@ -8,7 +8,7 @@
 
   /bin/bash ix,
   /opt/codecheck/runprog r,
-  /opt/codecheck/runprog.env r,
+  /opt/codecheck/codecheck.env r,
   /etc/apt/** r,
   /etc/default/apport r,
   /tmp/codecheck*/ rwk,

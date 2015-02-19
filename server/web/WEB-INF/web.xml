@@ -8,6 +8,10 @@
     <servlet-name>DefaultServlet</servlet-name>
     <url-pattern>/static/*</url-pattern>
   </servlet-mapping>
+  <welcome-file-list>
+      <welcome-file>static/welcome.html</welcome-file>
+  </welcome-file-list>
+  <!-- This doesn't actually work because the Application has a path of / -->
   <listener>
      <listener-class>Initializer</listener-class>
   </listener>  

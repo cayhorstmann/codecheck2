@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source `dirname $0`/runprog.env
+source `dirname $0`/codecheck.env
 
 LANG=$1
 shift
@@ -12,7 +12,7 @@ case _"$LANG" in
 
     _Cpp)
         cd `dirname $1`
-        g++ -pedantic -Wall -Wextra -Wcast-align -Wcast-qual -Wmissing-declarations -Wsign-conversion -Wswitch-default -Wundef -Werror -Wno-unused -std=c++11 -g -o prog $@
+        g++ -std=c++11 -g -o prog $@
         ;;
 
     _Scala)

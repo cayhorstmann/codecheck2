@@ -137,9 +137,9 @@ public class Util {
     public static int runProcess(List<String> cmd, String input, int millis, StringBuilder output) {
         try {
             Path out = Files.createTempFile("codecheck", "");
+            Path in = null;
             try {            
                 ProcessBuilder builder = new ProcessBuilder(cmd);
-                Path in = null;
                 if (input != null) {
                     in = Files.createTempFile("codecheck", "");
                     Files.write(in, input.getBytes(StandardCharsets.UTF_8));
@@ -153,9 +153,9 @@ public class Util {
                 String result = new String(Files.readAllBytes(out), StandardCharsets.UTF_8);
                 if (!completed) result += "\nTimeout after " + millis + " milliseconds\n";
                 output.append(result);
-                if (in != null) Files.delete(in);                
                 return exitValue;
             } finally {
+                if (in != null) Files.delete(in);                
                 Files.deleteIfExists(out);
             }                
         } catch (Exception ex) {
