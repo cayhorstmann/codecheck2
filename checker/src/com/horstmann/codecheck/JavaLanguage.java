@@ -44,16 +44,6 @@ public class JavaLanguage implements Language {
         return p.toString().endsWith(".java");
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.horstmann.codecheck.Language#isTester(java.lang.String)
-     */
-    @Override
-    public boolean isTester(Path modulename) {
-        return modulename != null && modulename.toString().matches(".*Tester[0-9]*");
-    }
-
     @Override
     public boolean isUnitTest(Path modulename) {
         return modulename != null && modulename.toString().matches(".*Test[0-9]*");

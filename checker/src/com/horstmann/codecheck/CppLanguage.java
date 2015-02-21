@@ -18,11 +18,6 @@ public class CppLanguage implements Language {
         return p.toString().endsWith(".cpp");
     }
 
-    @Override
-    public boolean isTester(Path modulename) {
-        return modulename != null && modulename.toString().matches(".*Tester[0-9]*");
-    }
-
     private static Pattern mainPattern = Pattern.compile("\\s*((int|void)\\s+)?main\\s*\\([^)]*\\)\\s*(\\{\\s*)?");
 
     /*

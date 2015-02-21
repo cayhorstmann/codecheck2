@@ -429,7 +429,7 @@ public class Util {
 		if (n == -1)
 			return false;
 		String extension = name.substring(n + 1).toLowerCase();
-		return Arrays.asList("java", "c", "cpp", "c++", "py").contains(
+		return Arrays.asList("java", "c", "cpp", "c++", "py", "scala").contains(
 				extension);
 	}
 

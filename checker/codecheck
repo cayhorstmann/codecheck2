@@ -42,6 +42,10 @@ function grade {
 
     cd "$WORKDIR"
 
+    if [ ! -z "$DEBUG" ] ; then
+        echo LC_ALL=en_US.UTF-8 $JAVA_HOME/bin/java $JAVA_OPTS -Dcom.horstmann.codecheck -classpath $CLASSPATH com.horstmann.codecheck.Main $LEVEL "$SUBMISSIONDIR" "$PROBLEMDIR" $@
+    fi
+        
     LC_ALL=en_US.UTF-8 $JAVA_HOME/bin/java $JAVA_OPTS -Dcom.horstmann.codecheck -classpath $CLASSPATH com.horstmann.codecheck.Main $LEVEL "$SUBMISSIONDIR" "$PROBLEMDIR" $@
 
     cd "$SUBMISSIONDIR"
@@ -120,6 +124,8 @@ fi
 if [ "$1" == "-p" ] ; then BROWSER=cat ; shift ; fi
 
 if [ "$1" == "-q" ] ; then BROWSER=echo ; shift ; fi
+
+if [ "$1" == "-d" ] ; then DEBUG=true ; shift ; fi
 
 if [ "$1" == "-t" ] ; then 
     BROWSER=cat 

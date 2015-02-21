@@ -20,11 +20,6 @@ public class PythonLanguage implements Language {
         return p.toString().endsWith(".py");
     }
 
-    @Override
-    public boolean isTester(Path modulename) {
-        return modulename != null && modulename.toString().matches(".*Tester[0-9]*");
-    }
-
     private static Pattern mainPattern = Pattern.compile("def\\s+main\\s*\\(\\s*\\)\\s*:");
     private static Pattern fundefPattern = Pattern.compile("def\\s+[A-Za-z0-9_]+\\s*\\(\\s*([A-Za-z0-9_]+(\\s*,\\s*[A-Za-z0-9_]+)*\\s*)?\\s*\\)\\s*:");
 
