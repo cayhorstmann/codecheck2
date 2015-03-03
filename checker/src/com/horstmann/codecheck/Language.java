@@ -24,7 +24,7 @@ public interface Language {
      * @return true if it is an "Expected" style unit test file
      */
     default boolean isTester(Path modulename) { 
-        return modulename != null && modulename.toString().matches(".*Tester[0-9]*");
+        return modulename != null && modulename.toString().matches(".*Tester[0-9]*\\.[^.]+");
     }
 
 

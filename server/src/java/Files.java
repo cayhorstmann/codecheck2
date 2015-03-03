@@ -42,6 +42,7 @@ public class Files {
 
     private static String useStart = "<p>Use the following {0,choice,1#file|2#files}:</p>";
     private static String provideStart = "<p>Complete the following {0,choice,1#file|2#files}:</p>";
+    // TODO: Localize
     // TODO: Separate out empty and nonempty files, with "provide" and "complete"
 
     @GET
@@ -103,11 +104,11 @@ public class Files {
         Iterator<Path> iter = useFiles.iterator();
         while (iter.hasNext()) {
         	Path p = iter.next();
-        	StringBuilder cont = Util.htmlEscape(Util.read(problemPath, p));
-        	if (cont.substring(0, 7).matches("//HIDE\\s"))
+        	String cont = Util.read(problemPath, p);
+        	if (Problem.isHidden(cont))
         		iter.remove();
         	else
-        		contents.put(p, cont);
+        		contents.put(p, Util.htmlEscape(cont));
         }
         if (description != null)
             result.append(description);

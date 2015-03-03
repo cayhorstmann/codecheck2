@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 
 public class Problem {
     private Path problemPath;
@@ -53,7 +54,14 @@ public class Problem {
     public Set<Path> getUseFiles() {
         return useFiles;
     }
+    
+    private static Pattern hiddenPattern = Pattern.compile("[^\\pL&&[^\\s]]*HIDE[^\\pL]*[\\s]*\\n");
+    	// No letters or spaces, HIDE, optional no letters, trailing space (e.g. \r), \n
 
+    public static boolean isHidden(String cont) {
+    	return hiddenPattern.matcher(cont).lookingAt();
+    }
+    
     private void getLevelDirectories() {
         if (Files.exists(problemPath.resolve("student")))
             studentDirectories.add("student");
@@ -159,6 +167,9 @@ public class Problem {
         Set<Path> studentFiles = Util.getDescendantFiles(problemPath, studentDirectories);
         studentFiles = Util.filterNot(studentFiles, ".*");
 
+        // TODO: We only show students source files, not text or images
+        // Would be better to show those as well
+        
         for (Path path : studentFiles)
             if (Util.isSource(path)) {
                 String cl = Util.moduleOf(Util.tail(path));

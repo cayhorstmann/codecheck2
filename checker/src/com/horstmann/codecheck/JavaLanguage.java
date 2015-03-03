@@ -46,7 +46,7 @@ public class JavaLanguage implements Language {
 
     @Override
     public boolean isUnitTest(Path modulename) {
-        return modulename != null && modulename.toString().matches(".*Test[0-9]*");
+        return modulename != null && modulename.toString().matches(".*Test[0-9]*.java");
     }
 
     private static Pattern mainPattern = Pattern
