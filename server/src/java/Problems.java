@@ -72,7 +72,8 @@ public class Problems {
                     if (gProperties.exists()) {
                         Properties p = new Properties();
                         p.load(new FileInputStream(gProperties));
-                        title = p.getProperty("group.title");
+                        title = p.getProperty("group.title"); // Legacy
+                        if (title == null) title = p.getProperty("title");
                     }
                     if (title == null)
                         title = f.getName();

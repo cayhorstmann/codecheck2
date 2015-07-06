@@ -262,7 +262,7 @@ public class JavaLanguage implements Language {
             throw new RuntimeException("Can't find } for inserting CALL in "
                     + file);
         // Insert main here
-        lines.add(i++, "    public static void main(String[] args) ");
+        lines.add(i++, "    public static void main(String[] args) throws Exception");
         lines.add(i++, "    {");
         if (!isStatic) {
             lines.add(i++, "        " + className + " obj1 = new " + className

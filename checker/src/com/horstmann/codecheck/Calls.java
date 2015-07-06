@@ -40,18 +40,20 @@ public class Calls {
         argsList.add(args);
         if (next.length() > 0) {
             if (name != null)
-                throw new RuntimeException("Multiple methods tagged CALL in "
+                throw new RuntimeException("Multiple functions tagged CALL in "
                         + file);
             
             name = language.functionName(next);
             
             if (name == null)
-                throw new RuntimeException("No method below CALL in " + file);
+                throw new RuntimeException("No function below CALL in " + file + "\n" + next);
             modifiers = language.modifiers(next);
-        }
+        } 
     }
 
     public List<Path> writeTester(Path sourceDir, Path targetDir) throws IOException {
+       if (modifiers == null) 
+           throw new RuntimeException("No function directly below CALL in " + file);
         return language.writeTester(sourceDir, targetDir, file, modifiers, name,
                 argsList);
     }

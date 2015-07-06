@@ -124,6 +124,7 @@ public class Annotations {
                 StringBuilder contents = new StringBuilder();
                 for (String line : Util.readLines(dir.resolve(p)))
                 {
+                   // TODO: Removing comments like this is language specific
                 	contents.append(line.replaceAll("//.*$", ""));
                		contents.append(" ");
                 }

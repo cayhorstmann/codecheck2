@@ -482,9 +482,10 @@ public class Main {
             }
 
             studentFiles = filterNot(Util.getDescendantFiles(problemDir, studentDirectories), "check.properties", ".*", "problem.ch");
-            solutionFiles = filterNot(Util.getDescendantFiles(problemDir, solutionDirectories), "*.txt", ".*");
-            // Filtering out rubric
-                        
+            solutionFiles = filterNot(Util.getDescendantFiles(problemDir, solutionDirectories), "*.txt", ".*", "*.class");
+            // TODO: Filtering out rubric
+            // TODO: Unify with server/src/Problem.java
+
             // Determine language
             
             String languageName = System.getProperty("com.horstmann.codecheck.language");

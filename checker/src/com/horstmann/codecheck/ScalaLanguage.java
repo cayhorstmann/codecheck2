@@ -38,8 +38,11 @@ public class ScalaLanguage implements Language {
         
         // Find class name
         int i = 0;
-        while (i < lines.size() && !lines.get(i).trim().startsWith("object")) i++;
+        while (i < lines.size() && !lines.get(i).contains("//CALL")) i++;
         if (i == lines.size())
+            throw new RuntimeException("Can't find object in " + file);
+        while (i >= 0 && !lines.get(i).trim().startsWith("object")) i--;
+        if (i < 0)
             throw new RuntimeException("Can't find object in " + file);
         String[] tokens = lines.get(i).split("\\P{javaJavaIdentifierPart}+");
         int j = 0;
@@ -69,7 +72,7 @@ public class ScalaLanguage implements Language {
     }
     
     private static Pattern functionPattern = Pattern.compile(
-            "\\s*(def|val)\\s+(?<name>\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*([(=]|$).*");
+            "\\s*(def|val)\\s+(?<name>\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*([\\[(=]|$).*");
     
     @Override public String functionName(String declaration) {
         Matcher matcher = functionPattern.matcher(declaration);

@@ -38,8 +38,6 @@ public class Files {
     private static String after = "<p><input type=\"submit\"/><input type=\"hidden\" name=\"repo\" value=\"{0}\"><input type=\"hidden\" name=\"problem\" value=\"{1}\"><input type=\"hidden\" name=\"level\" value=\"{2}\"></p></form>";
     private static String end = "</body></html>";
 
-    // TODO: Singular/plural
-
     private static String useStart = "<p>Use the following {0,choice,1#file|2#files}:</p>";
     private static String provideStart = "<p>Complete the following {0,choice,1#file|2#files}:</p>";
     // TODO: Localize

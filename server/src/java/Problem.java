@@ -132,9 +132,10 @@ public class Problem {
         return find(p);
     }
 
+   // TODO: Unify with client identification code
     private void classifyFiles() throws IOException {
         Set<Path> solutionFiles = Util.getDescendantFiles(problemPath, solutionDirectories);
-        // Remove rubrics
+        // TODO: Remove rubrics
         Iterator<Path> iter = solutionFiles.iterator();
         while (iter.hasNext()) if (iter.next().toString().endsWith(".txt")) iter.remove();
 
@@ -146,7 +147,7 @@ public class Problem {
                 requiredFiles.add(findClass(cl));
         else       // TODO: Maybe always
             for (Path p : solutionFiles)
-                if (!p.toString().endsWith(".class"))
+               if (!p.toString().endsWith(".class") && !p.getFileName().toString().startsWith("."))
                     requiredFiles.add(find(Util.tail(p)));
 
         String editclass = getStringProperty("editclass");
