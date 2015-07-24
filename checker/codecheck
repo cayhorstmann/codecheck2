@@ -29,6 +29,20 @@
 # This script does not modify the contents of submissiondir unless
 # the -s option is used
 
+function copyToSubmission {
+    if [ -e $PROBLEMDIR/$1 ] ; then 
+        cd $PROBLEMDIR/$1
+        for f in `find .` ; do 
+            if [ "$f" != "." ] ; then
+                mkdir -p $SUBMISSIONDIR/`dirname $f`
+                cp $f $SUBMISSIONDIR/$f
+                # cp --parents $f $SUBMISSIONDIR
+            fi
+        done
+        cd ../..
+    fi  
+}
+
 function grade {
     if [ "${SUBMISSIONDIR/#\//}" == "$SUBMISSIONDIR" ] ; then SUBMISSIONDIR="$STARTDIR"/"$SUBMISSIONDIR" ; fi
 
@@ -45,7 +59,8 @@ function grade {
     if [ ! -z "$DEBUG" ] ; then
         echo LC_ALL=en_US.UTF-8 $JAVA_HOME/bin/java $JAVA_OPTS -Dcom.horstmann.codecheck -classpath $CLASSPATH com.horstmann.codecheck.Main $LEVEL "$SUBMISSIONDIR" "$PROBLEMDIR" $@
     fi
-        
+
+    JAVA_OPTS="-Duser.language=en -Duser.country=US $JAVA_OPTS"
     LC_ALL=en_US.UTF-8 $JAVA_HOME/bin/java $JAVA_OPTS -Dcom.horstmann.codecheck -classpath $CLASSPATH com.horstmann.codecheck.Main $LEVEL "$SUBMISSIONDIR" "$PROBLEMDIR" $@
 
     cd "$SUBMISSIONDIR"
@@ -196,45 +211,20 @@ cd "$STARTDIR"
 SUBMISSIONDIR=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
 
 if [ ! -z $SUBMISSIONDIR ] ; then
-  # Checking student files
-  if [ -e $PROBLEMDIR/student ] ; then 
-    cd $PROBLEMDIR/student
-    for f in `find .` ; do 
-      if [ "$f" != "." ] ; then cp --parents $f $SUBMISSIONDIR ; fi
-    done
-    cd ../..
-  fi
+    # Checking student files
+    copyToSubmission student
   case $LEVEL in 
     [1-9])
-      for n in `seq 1 $LEVEL` ; do
-        if [ -e $PROBLEMDIR/student$n ] ; then 
-          cd $PROBLEMDIR/student$n
-          for f in `find .` ; do 
-            if [ "$f" != "." ] ; then cp --parents $f $SUBMISSIONDIR ; fi
-          done
-          cd ../..
-        fi
-      done
-    ;;
+        for n in `seq 1 $LEVEL` ; do
+            copyToSubmission student$n
+        done
+        ;;
     grade)
-      for n in `seq 1 9` ; do
-        if [ -e $PROBLEMDIR/student$n ] ; then 
-          cd $PROBLEMDIR/student$n
-          for f in `find .` ; do 
-            if [ "$f" != "." ] ; then cp --parents $f $SUBMISSIONDIR ; fi
-          done
-          cd ../..
-        fi
-      done
-
-      if [ -e $PROBLEMDIR/grader ] ; then 
-          cd $PROBLEMDIR/grader
-          for f in `find .` ; do 
-              if [ "$f" != "." ] ; then cp --parents $f $SUBMISSIONDIR ; fi
-          done
-          cd ../..
-      fi
-    ;;
+        for n in `seq 1 9` ; do
+            copyToSubmission student$n
+        done
+        copyToSubmission grader
+        ;;
   esac
 
   if $cygwin; then
@@ -246,5 +236,3 @@ if [ ! -z $SUBMISSIONDIR ] ; then
 
   $BROWSER "$SUBMISSIONDIR/$REPORT" 2> /dev/null 
 fi
-
-  
