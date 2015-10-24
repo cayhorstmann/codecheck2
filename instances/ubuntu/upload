@@ -28,7 +28,7 @@ cp antbuild/codecheck.war $TMPDIR
 
 cd $BASE
 jar uf $TMPDIR/codecheck.war WEB-INF/web.xml
-eval "$RSYNC $TMPDIR/codecheck.war $HOST:$DOMAIN/autodeploy"
+eval "$RSYNC $TMPDIR/codecheck.war $HOST:$DOMAIN/autodeploy/"
 rm $TMPDIR/codecheck.war
 
 cd ../../checker
@@ -41,7 +41,7 @@ cp codecheck.jks $TMPDIR
 [[ -e ../s3.properties ]] && cp ../s3.properties $TMPDIR
 
 cd $TMPDIR
-eval "$RSYNC -az * $HOST:$CODECHECK_HOME"
+eval "$RSYNC -az * $HOST:$CODECHECK_HOME/"
 
 cd $BASE
 rm -rf $TMPDIR

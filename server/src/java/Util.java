@@ -34,6 +34,7 @@ import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -123,6 +124,7 @@ public class Util {
 
 	public static StringBuilder htmlEscape(CharSequence s) {
 		StringBuilder b = new StringBuilder();
+		if (s == null) return b;
 		for (int i = 0; i < s.length(); i++) {
 			char c = s.charAt(i);
 			if (c == '<')
@@ -198,10 +200,10 @@ public class Util {
 		zin.close();
 	}
 
-	public static String runProcess(String command) {
+	public static String runProcess(String command, int millis) {
 		try {
 			Process process = Runtime.getRuntime().exec(command);
-			process.waitFor();
+			boolean completed = process.waitFor(millis, TimeUnit.MILLISECONDS);
 
 			Scanner in = new Scanner(process.getErrorStream(), "UTF-8");
 			StringBuilder result = new StringBuilder();
@@ -221,6 +223,11 @@ public class Util {
 			}
 			in.close();
 
+            if (!completed) {
+            	process.destroyForcibly();
+            	result.append("\nTimeout after " + millis + " milliseconds\n");
+            }
+			
 			// CAUTION: Apparently, one can't just large input from the process
 			// stdout
 			// http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4062587
@@ -228,6 +235,35 @@ public class Util {
 		} catch (Exception ex) {
 			return ex.getMessage();
 		}
+	}
+	
+	public static int runProcess(List<String> cmd, Path directory, StringBuilder output, int millis) {
+	 try {
+            Path out = Files.createTempFile("codecheck", "");
+            Path in = null;
+            try {
+                ProcessBuilder builder = new ProcessBuilder(cmd);
+                builder.directory(directory.toFile());
+                builder.redirectErrorStream(true);
+                builder.redirectOutput(out.toFile());
+                Process process = builder.start();
+                boolean completed = process.waitFor(millis, TimeUnit.MILLISECONDS);
+                int exitValue = process.exitValue();
+                String result = new String(Files.readAllBytes(out), StandardCharsets.UTF_8);
+                if (!completed) {
+                	process.destroyForcibly();
+                	result += "\nTimeout after " + millis + " milliseconds\n";
+                }
+                output.append(result);
+                return exitValue;
+            } finally {
+                if (in != null) Files.delete(in);                
+                Files.deleteIfExists(out);
+            }                
+        } catch (Exception ex) {
+            output.append(getStackTrace(ex));
+            return -1;
+        }
 	}
 
 	public static boolean isOnS3(ServletContext context, String repo) {
@@ -326,20 +362,20 @@ public class Util {
 	}
 
 	public static void runLabrat(ServletContext context, String repo,
-			String problem, String level, String submissionDir, String metaData)
+			String problem, String level, java.nio.file.Path submissionDir, String... metaData)
 			throws IOException {
-		String problemDir;
+		java.nio.file.Path problemDir;
 
 		// If problem is on S3 (eventually all will be)
 		java.nio.file.Path unzipDir = null;
 		if (isOnS3(context, repo)) {
 			Path tempProblemDir = unzipFromS3(repo, problem);
 			unzipDir = tempProblemDir.getParent();
-			problemDir = tempProblemDir.toAbsolutePath().toString();
+			problemDir = tempProblemDir.toAbsolutePath();
 		} else {
-			String repoPath = context
-					.getInitParameter("com.horstmann.codecheck.repo." + repo);
-			problemDir = repoPath + File.separator + problem;
+			java.nio.file.Path repoPath = Paths.get(context
+					.getInitParameter("com.horstmann.codecheck.repo." + repo));
+			problemDir = repoPath.resolve(problem);
 		}
 
 		runLabrat(context, repo, problem, level, problemDir, submissionDir,
@@ -350,8 +386,8 @@ public class Util {
 	}
 
 	public static void runLabrat(ServletContext context, String repo,
-			String problem, String level, String problemDir,
-			String submissionDir, String metaData) throws IOException {
+			String problem, String level, java.nio.file.Path problemDir,
+			java.nio.file.Path submissionDir, String... metaData) throws IOException {
 		// TODO: Obsolete
 		String repoPath = context
 				.getInitParameter("com.horstmann.codecheck.repo." + repo);
@@ -360,11 +396,13 @@ public class Util {
 		if (command == null)
 			command = context
 					.getInitParameter("com.horstmann.codecheck.defaultcommand");
-
+		StringBuilder metas = new StringBuilder();
+		for (String meta : metaData) { if (metas.length() > 0) metas.append(" "); metas.append(meta); }
+		
 		String script = MessageFormat.format(command, level, submissionDir,
-				problemDir, metaData);
-		String result = runProcess(script);
-		Files.write(Paths.get(submissionDir).resolve("codecheck.log"), (script
+				problemDir, metas);
+		String result = runProcess(script, Grade.TIMEOUT);
+		Files.write(submissionDir.resolve("codecheck.log"), (script
 				+ "\n" + result).getBytes("UTF-8"));
 	}
 

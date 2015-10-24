@@ -35,6 +35,7 @@ public class Files {
     private static String fileAreaBefore = "<p>{0}</p><textarea name=\"{0}\" rows=\"{1}\" cols=\"66\">";
     private static String fileAreaAfter = "</textarea>";
     private static String fileUpload = "<p>{0}: <input type=\"file\" name=\"{0}\"/></p>";
+    private static String gitURL = "<p>Git SSH URL (git@github.com/xxx/xxx.git): <input title=\"git@github.com:xxx/xxx.git\" name=\"git\" type=\"text\" size=\"40\"/></p>";
     private static String after = "<p><input type=\"submit\"/><input type=\"hidden\" name=\"repo\" value=\"{0}\"><input type=\"hidden\" name=\"problem\" value=\"{1}\"><input type=\"hidden\" name=\"level\" value=\"{2}\"></p></form>";
     private static String end = "</body></html>";
 
@@ -48,7 +49,7 @@ public class Files {
     @Produces("text/html")
     public String files(@PathParam("problem") String problem)
     		throws IOException {
-    	return files("ext", problem, "check", false);
+    	return files("ext", problem, "check", "form");
     }
 
     @GET
@@ -56,18 +57,18 @@ public class Files {
     @Produces("text/html")
     public String files(@PathParam("problem") String problem, @PathParam("level") String level)
     		throws IOException {
-    	return files("ext", problem, level, false);
+    	return files("ext", problem, level, "form");
     }
     
     @GET
-    @javax.ws.rs.Path("/")    
+    @javax.ws.rs.Path("/") // TODO: http://stackoverflow.com/questions/4333463/what-does-this-strange-jersey-warning-mean   
     @Produces("text/html")
     public String files(@QueryParam("repo") @DefaultValue("ext") String repo,
                         @QueryParam("problem") String problemName,
                         @DefaultValue("check") @QueryParam("level") String level,
-                        @DefaultValue("false") @QueryParam("upload") boolean upload)
+                        @DefaultValue("form") @QueryParam("upload") String upload) // "form", "file", "git"
     throws IOException {
-        StringBuilder result = new StringBuilder();
+    	StringBuilder result = new StringBuilder();
         result.append(start);
 
         Path unzipDir = null;
@@ -84,6 +85,8 @@ public class Files {
 	        problemPath = repoPath.resolve(problemName);
         }
         Problem problem = new Problem(problemPath, level);
+        upload = problem.getStringProperty("upload", upload);
+        
         boolean includeCode = true;
         String description = getDescription(problemPath, "statement.html"); // TODO: Legacy
         if (description == null) {
@@ -98,6 +101,11 @@ public class Files {
 
         Set<Path> requiredFiles = problem.getRequiredFiles();
         Set<Path> useFiles = problem.getUseFiles();
+        
+        if (upload.equals("git")) {
+        	useFiles.removeIf(p -> isTest(p));
+        }        	
+        
         Map<Path, StringBuilder> contents = new HashMap<>();
         Iterator<Path> iter = useFiles.iterator();
         while (iter.hasNext()) {
@@ -127,17 +135,20 @@ public class Files {
         // String url = requestURL.substring(0, requestURL.indexOf("files")) + (upload ? "checkUpload" : "check");
         // String appURL = Util.appURL(request);
         String contextPath = context.getContextPath();
-        String url = contextPath + "/" + (upload ? "checkUpload" : "check");
+        String url = contextPath + "/";
+        if (upload.equals("file")) url += "checkUpload";
+        else if (upload.equals("git")) url += "checkGit";
+        else url += "check";
         result.append(MessageFormat.format(before, url,
-                                           upload ? "encoding=\"multipart/form-data\"" : ""));
+                                           upload.equals("file") ? "encoding=\"multipart/form-data\"" : ""));
         result.append(MessageFormat.format(provideStart, requiredFiles.size()));
 
         // TODO: Remove heuristic for codecomp
-        if (!upload && useFiles.size() == 0 && requiredFiles.size() == 1) includeCode = true;
+        if (upload.equals("form") && useFiles.size() == 0 && requiredFiles.size() == 1) includeCode = true;
 
         for (Path p : requiredFiles) {
             String file = Util.tail(p).toString();
-            if (upload) {
+            if (!upload.equals("form")) { // No text area
                 if (includeCode) {
                     result.append("<p>");
                     result.append(file);
@@ -146,7 +157,8 @@ public class Files {
                     result.append(Util.htmlEscape(Util.read(problemPath, p)));
                     result.append("</pre\n>");
                 }
-                result.append(MessageFormat.format(fileUpload, file));
+                if (upload.equals("file"))
+                	result.append(MessageFormat.format(fileUpload, file)); 
             } else {
                 int lines = 0;
                 String cont = "";
@@ -163,10 +175,19 @@ public class Files {
             }
         }
 
+        if (upload.equals("git")) result.append(gitURL);
         result.append(MessageFormat.format(after, repo, problemName, level));
         result.append(end);
         if (unzipDir != null) Util.deleteDirectory(unzipDir);
         return result.toString();
+    }
+    
+    public static boolean isTest(Path p) {
+    	String name = p.getFileName().toString();
+    	int n = name.lastIndexOf(".");
+    	if (n > 0) name = name.substring(0, n); // Remove extension
+    	n = name.lastIndexOf("Test");
+    	return n >= 0 && name.substring(n).matches("Test(er)?[0-9]*");
     }
 
     public static String getDescription(Path problemDir, String problemFile)

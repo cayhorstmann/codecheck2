@@ -22,6 +22,10 @@ public class Score {
         r.pass(b);
     }
     
+    public int getPassed() {
+        return passed;
+    }
+    
     public void add(int passed, int total, Report r) {
         this.passed += passed;
         this.total += total;

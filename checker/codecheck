@@ -192,6 +192,7 @@ then
     if [ ! -d "$SUBMISSIONDIR" ] ; then echo "submissiondir $SUBMISSIONDIR doesn't exist" ; fi
     if [ ! -d "$PROBLEMDIR" ] ; then echo "problemdir $PROBLEMDIR doesn't exist" ; fi
     echo "Usage: `basename $0` [-pqst] level submissiondir problemdir"
+    exit 1
 fi
 
 if $cygwin; then

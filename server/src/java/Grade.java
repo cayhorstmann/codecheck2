@@ -22,6 +22,7 @@ import org.glassfish.jersey.media.multipart.FormDataParam;
 
 @javax.ws.rs.Path("/grade")
 public class Grade {
+	public static final int TIMEOUT = 2 * 60 * 1000; // 2 minutes; 
     @Context ServletContext context;
 
     @POST
@@ -78,7 +79,7 @@ public class Grade {
                                   problems.replaceAll("[\\s,]+", " "));
             new Thread() {
                 public void run() {
-                    Util.runProcess(script);
+                    Util.runProcess(script, TIMEOUT);
                 }
             } .start();
             String fetchfile = Paths.get(submissionsDir).relativize(archiveDir.resolve("scores.zip")).toString();

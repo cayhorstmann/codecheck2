@@ -25,9 +25,10 @@ case _"$LANG" in
     _Scala)
         ulimit -d 1000 -f 1000 -n 100
         MODULE=`basename $1`
+        CLASSPATH=`dirname $1`
         MODULE=${MODULE/.scala/}
         shift
-        PATH=$PATH:$JAVA_HOME/bin $SCALA_HOME/bin/scala $MODULE $@
+        PATH=$PATH:$JAVA_HOME/bin $SCALA_HOME/bin/scala -classpath "$CLASSPATH" $MODULE $@
         ;;
 
     _)  

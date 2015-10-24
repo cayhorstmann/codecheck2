@@ -86,6 +86,12 @@ public class Problem {
                 }
             }
         }
+        File qProperties = problemPath.resolve("q.properties").toFile();
+        if (qProperties.exists()) {
+            try (InputStream in = new FileInputStream(qProperties)) {
+                props.load(in);
+            }
+        }
         return props;
     }
 

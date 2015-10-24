@@ -1,7 +1,9 @@
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Random;
+import java.util.Set;
 
 import javax.servlet.ServletContext;
 import javax.ws.rs.Consumes;
@@ -13,8 +15,8 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
 
-@javax.ws.rs.Path("/check")
-public class Check {
+@javax.ws.rs.Path("/checkGit")
+public class CheckGit {
     @Context
     ServletContext context;
     static Random random = new Random();
@@ -29,6 +31,7 @@ public class Check {
         String repo = "ext";
         String problem = "";
         String level = "check";
+        String gitURL = "";
         for (String key : formParams.keySet()) {
             String value = formParams.getFirst(key);
             if (key.equals("repo"))
@@ -37,13 +40,37 @@ public class Check {
                 problem = value;
             else if (key.equals("level"))
                 level = value;
-            else
-                Util.write(tempDir, key, value);
+            else if (key.equals("git"))
+                gitURL = value;
         }
+        final String BAD_START = "git@github.com:";
+        final String GOOD_START = "git@github.com/";
+        gitURL = gitURL.trim();
+        if (gitURL.startsWith(BAD_START))
+        	gitURL = GOOD_START + gitURL.substring(BAD_START.length());
+        if (!gitURL.startsWith(GOOD_START))
+        	return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+        			.entity("Git SSH URL must have the form git@github.com/xxx/xxx.git	").build();
+        // Fetch git repo into tempDir
+        StringBuilder gitOutput = new StringBuilder();
+        final int GIT_MILLIS = 10000;
+        int gitResult = Util.runProcess(Arrays.asList("git", "clone", "ssh://" + gitURL, "."), tempDir, gitOutput, GIT_MILLIS);
+        
+        // if result != 0 report error
+        if (gitResult != 0)
+        	return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+        			.entity(gitOutput + "\ntempDir=" + tempDir	).build();
+        
+        // If student uses src directory, move all files to base
+        
+        Set<Path> submittedFiles = Util.getDescendantFiles(tempDir);
+        for (Path p : submittedFiles) 
+        	if (!p.getName(0).toString().equals(".git") && p.getNameCount() > 1)
+        		java.nio.file.Files.move(tempDir.resolve(p), tempDir.resolve(p.getFileName()));
+               
         Path tempDirName = tempDir.getFileName();
         if (ccu == null) ccu = tempDirName.toString();
-        // TODO: Pass on to report
-        Util.runLabrat(context, repo, problem, level, tempDir.toAbsolutePath(), "User=" + ccu);
+        Util.runLabrat(context, repo, problem, level, tempDir.toAbsolutePath(), "User=" + ccu, "git=" + gitURL);
         // Path reportBaseDir = Util.getDir(context, "reports");
         // Path reportDir = reportBaseDir.resolve(tempDirName);
         // Files.createDirectory(reportDir);

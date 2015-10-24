@@ -10,6 +10,7 @@ public class Application extends javax.ws.rs.core.Application {
    public Set<Class<?>> getClasses() {
       return new HashSet<>(Arrays.asList(
             Check.class, 
+            CheckGit.class,
             CheckUpload.class, 
             Fetch.class, 
             UploadProblem.class, 

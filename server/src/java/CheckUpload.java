@@ -8,6 +8,7 @@ import java.util.Date;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
 
 import javax.servlet.ServletContext;
 import javax.ws.rs.Consumes;
@@ -65,7 +66,7 @@ public class CheckUpload {
             String command = repoProps.getProperty("repo.command");
             Process process = Runtime.getRuntime().exec(
                                   MessageFormat.format(command, tempDir, problem));
-            process.waitFor();
+            boolean completed = process.waitFor(Grade.TIMEOUT, TimeUnit.MILLISECONDS);
 
             Scanner in = new Scanner(process.getInputStream(), "UTF-8");
             StringBuilder result = new StringBuilder();
@@ -74,6 +75,10 @@ public class CheckUpload {
                 result.append("\n");
             }
             in.close();
+            if (!completed) {
+            	process.destroyForcibly();
+            	result.append("\nTimeout after " + Grade.TIMEOUT + " milliseconds\n");
+            }
             return result.toString();
         } catch (Exception ex) {
             return ex.getMessage();

@@ -469,6 +469,7 @@ public class Main {
         workDir = new File(".").getAbsoluteFile().toPath().normalize();
         
         String problemId = null;
+        Annotations annotations = null;
                 
         try {
             // Read check.properties in level dirs
@@ -517,7 +518,7 @@ public class Main {
                 }
             }
 
-            Annotations annotations = new Annotations(language);
+            annotations = new Annotations(language);
             annotations.read(problemDir, studentFiles, false);
             annotations.read(problemDir, solutionFiles, true);
 
@@ -540,12 +541,15 @@ public class Main {
         	
             report.comment("ID", problemId);
             
-            // Used to pass in machine instance into report 
+            // Used to pass in machine instance, git url into report 
             for (int iarg = 3; iarg < args.length; iarg++) {
             	String arg = args[iarg];
             	int keyEnd = arg.indexOf("=");
             	if (keyEnd >= 0) {
             	    report.comment(arg.substring(0, keyEnd), arg.substring(keyEnd + 1));
+            	}
+            	else {
+            	    report.comment(arg, "");
             	}
             }
             
@@ -621,9 +625,9 @@ public class Main {
                     else
                         testInputs(inputs, mainmodule, annotations);
                 }
+                
+                runUnitTests();
             }
-            // TODO: Move with previous case
-            runUnitTests();
             
             // Process checkstyle.xml etc.
             for (Path p : studentFiles) {
@@ -638,8 +642,8 @@ public class Main {
 	            for (Path file : requiredFiles)
 	                report.file(submissionDir, file);
 		
-	            printFiles = filterNot(printFiles, "test*.in", "test*.out", "check.properties", "*.png",
-	                    "*.gif", "*.jpg", "*.jpeg", ".DS_Store", "*.jar");
+	            printFiles = filterNot(printFiles, "test*.in", "test*.out", "check.properties", "*.png", "*.PNG",
+	                    "*.gif", "*.GIF", "*.jpg", "*.jpeg", "*.JPG", ".DS_Store", "*.jar");
 
 	            printFiles.removeAll(annotations.findHidden());
 	
@@ -653,7 +657,7 @@ public class Main {
         } catch (Throwable t) {
             report.systemError(t);
         } finally {
-            report.add(score);
+            if (annotations != null && !annotations.has("NOSCORE")) report.add(score);
             report.save(problemId, "report");
         }
         System.exit(0);

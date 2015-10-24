@@ -422,7 +422,8 @@ public class JavaLanguage implements Language {
                     String result = runCheckStyle(dir.resolve(p));
                     report.output(p.getFileName().toString(),
                             result.length() == 0 ? "Ok" : result);
-                    score.pass(result.length() == 0, report);
+                    if (score.getPassed() > 0)
+                        score.pass(result.length() == 0, report);
                 }
             }
             return true;
@@ -447,18 +448,51 @@ public class JavaLanguage implements Language {
             try {
                 try (URLClassLoader loader = buildClassLoader(dir)) {
                     Class<?> c = loader.loadClass(classNameOfModule(module));
-                    org.junit.runner.Result r = org.junit.runner.JUnitCore
-                            .runClasses(c);
+                    final AtomicBoolean done = new AtomicBoolean(false);                    
+                    org.junit.runner.Result resultHolder[] = new org.junit.runner.Result[1];
+                    final ByteArrayOutputStream newOut = new ByteArrayOutputStream();
+                    final PrintStream newOutPrint = new PrintStream(newOut);
 
-                    int pass = r.getRunCount() - r.getFailureCount();
-                    report.output("Pass: " + pass + "\nFail: "
-                            + r.getFailureCount());
-                    for (Failure failure : r.getFailures()) {
-                        report.output(failure.getDescription().getDisplayName()
-                                .trim()
-                                + ": " + failure.getMessage());
+                    final Thread junitThread = new Thread() {
+                        public void run() {
+                            try {
+                                resultHolder[0] = org.junit.runner.JUnitCore.runClasses(c);
+                            } catch (Throwable t) {
+                                if (t instanceof AccessControlException
+                                        && t.getMessage()
+                                                .equals("access denied (\"java.lang.RuntimePermission\" \"exitVM.0\")")) {
+                                    // do nothing
+                                } else 
+                                    t.printStackTrace(newOutPrint);
+                            }
+                            done.set(true);
+                        }
+                    };
+
+                    junitThread.start();
+                    int timeoutMillis = Main.DEFAULT_TIMEOUT_MILLIS;
+                    try {
+                        junitThread.join(timeoutMillis);
+                    } catch (InterruptedException e) {
                     }
-                    score.add(pass, r.getRunCount(), report);
+                    if (!done.get()) {
+                        newOutPrint.append("Timed out after "
+                                + (timeoutMillis >= 2000 ? timeoutMillis / 1000
+                                        + " seconds" : timeoutMillis + " milliseconds"));
+                        junitThread.stop();
+                        report.output(newOut.toString());
+                    } else {                    
+                        org.junit.runner.Result result = resultHolder[0];
+                        int pass = result.getRunCount() - result.getFailureCount();
+                        report.output("Pass: " + pass + "\nFail: "
+                            + result.getFailureCount());
+                        for (Failure failure : result.getFailures()) {
+                            report.output("Failed: " + failure.getDescription().getDisplayName().trim());
+                            report.output(failure.getMessage());
+                            if (failure.getException() != null) report.output(failure.getTrace());
+                        }
+                        score.add(pass, result.getRunCount(), report);
+                    }
                 }
             } catch (Throwable t) {
                 report.systemError(t);

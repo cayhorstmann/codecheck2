@@ -11,9 +11,8 @@ import java.util.regex.Pattern;
 
 
 public class Annotations {
-    private static Set<String> validSolutionAnnotations = new HashSet<>(Arrays.asList(
-            "CALL", "SUB", "ID", "SAMPLE", "ARGS", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "REQUIRED", "FORBIDDEN"));    
-    private static Set<String> validStudentAnnotations = new HashSet<>(Arrays.asList("HIDE", "OUT"));    
+    private static Set<String> validAnnotations = new HashSet<>(Arrays.asList(
+            "HIDE", "CALL", "SUB", "ID", "SAMPLE", "ARGS", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "REQUIRED", "FORBIDDEN", "NOSCORE", "FOR"));    
     
     class Annotation {
         Path path;
@@ -38,7 +37,7 @@ public class Annotations {
 
     private void read(Path dir, Path p, boolean inSolution) {
     	String[] delims = language.pseudoCommentDelimiters();
-        Pattern pattern = Pattern.compile("(.* |)" + delims[0] + "([A-Z]+)( .*|)" + delims[1]);
+        Pattern pattern = Pattern.compile("(.* |)" + delims[0] + "([A-Z\\[\\]]+)( .*|)" + delims[1]);
         List<String> lines =  Util.readLines(dir.resolve(p));
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i).trim();
@@ -63,8 +62,17 @@ public class Annotations {
     }
 
     public void check(Report r) {
+        // Student file annotations only make sense when the file has HIDE
+        Set<Path> hidden = new HashSet<>();
         for (Annotation a : annotations) {
-            if (!(a.inSolution && validSolutionAnnotations.contains(a.key) || !a.inSolution && validStudentAnnotations.contains(a.key))) 
+            if (a.key.equals("HIDE")) hidden.add(a.path);
+        }  
+        
+        for (Annotation a : annotations) {
+            boolean ok = validAnnotations.contains(a.key)
+                    && (a.inSolution && !a.key.equals("HIDE") || 
+                       !a.inSolution && hidden.contains(a.path)); 
+            if (!ok)
                 r.systemError("Unknown pseudocomment " + a.key + " in " + a.path);
         }
     }
