@@ -16,9 +16,6 @@ import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.servlet.ServletContext;
-import javax.servlet.http.HttpServletRequest;
-
 import play.libs.Json;
 import play.mvc.Controller;
 import play.mvc.Result;
@@ -79,13 +76,13 @@ public class Files extends Controller {
 			// TODO: Should this be a part of the script?
 			for (Path p : problem.getRequiredFiles()) {
 				String cont = Util.read(problemPath, p);
-				data.useFiles.put(Util.tail(p).toString(), cont);
+				data.requiredFiles.put(Util.tail(p).toString(), cont);
 			}
 			for (Path p : problem.getUseFiles()) {
 				String cont = Util.read(problemPath, p);
 				if (!Problem.isHidden(cont)) { // TODO: Iffy--how do we know
 												// this on the server?
-					data.requiredFiles.put(Util.tail(p).toString(), cont);
+					data.useFiles.put(Util.tail(p).toString(), cont);
 				}
 			}
 		}
