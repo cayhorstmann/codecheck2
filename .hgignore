@@ -1,0 +1,13 @@
+syntax:glob
+logs
+project/project
+project/target
+target
+tmp
+.classpath
+.gitignore
+.project
+.sbtserver
+.settings
+activator*
+project/.sbtserver.lock
