@@ -9,3 +9,5 @@ GET     /                           controllers.Application.index()
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
 
 GET     /files/data                 controllers.Files.fileData(repo: String ?= "ext", problem: String, level: String ?= "check")
+
+POST    /checkJson					controllers.Check.checkJson()
