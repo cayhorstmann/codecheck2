@@ -9,13 +9,11 @@ import java.util.Set;
 public interface Report
 {
 
-   public abstract Report header(String text);
+   public abstract Report header(String section, String text);
+   
+   public abstract Report run(String caption);
 
    public abstract Report output(CharSequence text);
-
-   public abstract Report output(String caption, CharSequence text);
-
-   public abstract Report error(String caption, String message);
 
    public abstract Report error(String message);
 
@@ -23,15 +21,21 @@ public interface Report
 
    public abstract Report systemError(Throwable t);
 
-   public abstract Report image(String caption, Path file);
+   public abstract Report image(String caption, Path file) throws IOException;
 
-   public abstract Report image(Path file);
+   public abstract Report image(Path file) throws IOException;
 
-   public abstract Report image(String caption, BufferedImage image);
+   public abstract Report image(String caption, BufferedImage image) throws IOException;
 
-   public abstract Report image(BufferedImage image);
+   public abstract Report image(BufferedImage image) throws IOException;
 
-   public abstract Report file(Path dir, Path file);
+   public abstract Report file(Path dir, Path file) throws IOException;
+
+   public abstract Report file(String file, String contents);
+   
+   public abstract Report args(String args);
+   
+   public abstract Report input(String input);
 
    public abstract Report add(Score score);
 

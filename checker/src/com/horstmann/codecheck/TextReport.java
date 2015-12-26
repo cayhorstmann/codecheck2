@@ -42,7 +42,7 @@ public class TextReport implements Report {
 	 * @see com.horstmann.codecheck.Report#header(java.lang.String)
 	 */
 	@Override
-	public TextReport header(String text) {
+	public TextReport header(String type, String text) {
 		if (sections > 0)
 			builder.append("\n");
 		sections++;
@@ -68,8 +68,20 @@ public class TextReport implements Report {
 	 */
 	@Override
 	public TextReport output(CharSequence text) {
-		output(null, text);
-		return this;
+	    output(null, text);
+	    return this;
+	}
+	
+	@Override
+	public TextReport args(String args) {
+	    output("Command line arguments: " + args);
+	    return this;
+	}
+	
+	@Override
+	public TextReport input(String input) {
+	    output("Input", input);
+	    return this;
 	}
 
 	@Override
@@ -77,14 +89,8 @@ public class TextReport implements Report {
 		footnotes.add(text);
 		return this;
 	}
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.horstmann.codecheck.Report#output(java.lang.String,
-	 * java.lang.String)
-	 */
-	@Override
-	public TextReport output(String captionText, CharSequence text) {
+	
+	private TextReport output(String captionText, CharSequence text) {
 		if (text == null || text.equals(""))
 			return this;
 		caption(captionText);
@@ -105,14 +111,7 @@ public class TextReport implements Report {
 		return this;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.horstmann.codecheck.Report#error(java.lang.String,
-	 * java.lang.String)
-	 */
-	@Override
-	public TextReport error(String captionText, String message) {
+	private TextReport error(String captionText, String message) {
 		caption(captionText);
 		output(message);
 		return this;
@@ -231,7 +230,19 @@ public class TextReport implements Report {
 		return this;
 	}
 
+	@Override
+	public TextReport file(String file, String contents) {
+	    caption(file);
+	    output(contents); // TODO: Line numbers?
+	    return this;
+	}
 
+	@Override
+	public TextReport run(String caption) {
+	    caption(caption);
+	    return this;
+	}
+	
 	@Override
 	public TextReport add(Score score) {
 		if (footnotes.size() > 0) {

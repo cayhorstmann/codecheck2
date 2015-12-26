@@ -124,7 +124,7 @@ public class CallMethod {
         URLClassLoader loader = new URLClassLoader(new URL[] { dir.toUri().toURL() });
         loader.setDefaultAssertionStatus(true);
 
-        report.header("Testing method " + getMethodName());
+        report.header("testMethod", "Testing method " + getMethodName());
 
         int n = size();
         String[][] args = new String[n][1];

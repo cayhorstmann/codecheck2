@@ -416,12 +416,12 @@ public class JavaLanguage implements Language {
     public boolean accept(Path file, Path dir, Set<Path> requiredFiles,
             Report report, Score score) {
         if (file.getFileName().toString().equals("checkstyle.xml")) {
-            report.header("CheckStyle");
+            report.header("checkStyle", "CheckStyle");
             for (Path p : requiredFiles) {
                 if (isSource(p)) {
                     String result = runCheckStyle(dir.resolve(p));
-                    report.output(p.getFileName().toString(),
-                            result.length() == 0 ? "Ok" : result);
+                    report.output(p.getFileName().toString() + 
+                            (result.length() == 0 ? ": Ok" : ":\n" + result));
                     if (score.getPassed() > 0)
                         score.pass(result.length() == 0, report);
                 }
@@ -442,7 +442,7 @@ public class JavaLanguage implements Language {
     public void runUnitTest(List<Path> modules, Path dir, Report report,
             Score score) {
         Path module = modules.get(0);
-        report.header("JUnit: " + module);
+        report.run(module.toString());
         String errorReport = compile(Collections.singletonList(module), dir); 
         if (errorReport == null) {
             try {
@@ -500,9 +500,9 @@ public class JavaLanguage implements Language {
         }
         else {
             if (errorReport.trim().equals(""))
-                report.output(null, "Error compiling " + module);
+                report.error("Error compiling " + module);
             else
-                report.error("Compiler error", errorReport);
+                report.error(errorReport);
         }
 
     }

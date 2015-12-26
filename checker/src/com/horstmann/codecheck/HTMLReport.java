@@ -8,6 +8,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Set;
 
@@ -33,13 +34,14 @@ public class HTMLReport implements Report {
         metaOffset = builder.length();
         comment("Version", "0.3");
         builder.append("<style type=\"text/css\">\n");
-        builder.append(".header {font-weight: bold;}\n");
+        builder.append(".header {font-weight: bold; font-size: 1.2em; }\n");
+        builder.append(".item {font-weight: bold;}\n");
         builder.append(".pass {color: green;}\n");
         builder.append(".fail {color: red;}\n");
         builder.append("table.file td {padding-right: 1em; background: #FFF; }\n");
         builder.append(".linenumber {color: gray;}\n");
         builder.append(".footnote {font-size: 0.7em;}\n");
-        builder.append("table {font-size: 0.9em;}\n");        
+        builder.append("table {font-size: 0.9em;}\n");
         builder.append("td, th { background: #EEE; margin: 0.5em; padding: 0.25em;}\n");
         builder.append("table.output td {vertical-align: top;}\n");
         builder.append("div.footnotes { border-top: 1px solid gray; padding-top: 0.5em; }\n");
@@ -55,10 +57,25 @@ public class HTMLReport implements Report {
      * @see com.horstmann.codecheck.Report#header(java.lang.String)
      */
     @Override
-    public HTMLReport header(String text) {
-        builder.append("<p class=\"header\">");
-        escape(text);
-        builder.append("</p>\n");
+    public HTMLReport header(String section, String text) {
+        if (text != null && !text.trim().equals("")) {
+            builder.append("<p class=\"header");        
+            if (section != null) { builder.append(" "); builder.append(section); }
+            builder.append("\">");
+            escape(text);
+            builder.append("</p>\n");
+        }
+        return this;
+    }
+
+
+    @Override
+    public HTMLReport run(String text) {
+        if (text != null && !text.trim().equals("")) {
+            builder.append("<p class=\"item\">");
+            escape(text);
+            builder.append("</p>\n");
+        }
         return this;
     }
 
@@ -78,30 +95,27 @@ public class HTMLReport implements Report {
      */
     @Override
     public HTMLReport output(CharSequence text) {
-        output(null, text);
-        return this;
-    }
-
-    @Override
-    public Report footnote(String text) {
-        footnotes.add(text);
-        return this;
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.horstmann.codecheck.Report#output(java.lang.String,
-     * java.lang.String)
-     */
-    @Override
-    public HTMLReport output(String captionText, CharSequence text) {
         if (text == null || text.equals(""))
             return this;
-        caption(captionText);
         builder.append("<pre class=\"output\">");
         escape(text);
         builder.append("</pre>\n");
+        return this;
+    }
+    
+    public HTMLReport input(String input) {
+        caption("Input");
+        return output(input);
+    }
+    
+    public HTMLReport args(String args) {
+        caption("Command line arguments");
+        return output(args);
+    }
+    
+    @Override
+    public Report footnote(String text) {
+        footnotes.add(text);
         return this;
     }
 
@@ -122,7 +136,7 @@ public class HTMLReport implements Report {
         builder.append("</pre>\n");
         return this;
     }
-
+    
     /*
      * (non-Javadoc)
      * 
@@ -130,20 +144,9 @@ public class HTMLReport implements Report {
      * java.lang.String)
      */
     @Override
-    public HTMLReport error(String captionText, String message) {
-        caption(captionText);
-        output(message);
-        return this;
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.horstmann.codecheck.Report#error(java.lang.String)
-     */
-    @Override
     public HTMLReport error(String message) {
-        error("Error", message);
+        caption("Error");
+        output(message);
         return this;
     }
 
@@ -180,7 +183,7 @@ public class HTMLReport implements Report {
      * java.nio.file.Path)
      */
     @Override
-    public HTMLReport image(String captionText, Path file) {
+    public HTMLReport image(String captionText, Path file) throws IOException {
         caption(captionText);
         image(file);
         return this;
@@ -192,23 +195,20 @@ public class HTMLReport implements Report {
      * @see com.horstmann.codecheck.Report#image(java.nio.file.Path)
      */
     @Override
-    public HTMLReport image(Path file) {
+    public HTMLReport image(Path file) throws IOException {
         builder.append("<p class=\"screencapture\">");
         if ("false".equals(System.getProperty("labrat.img.inline"))) { // TODO:
                                                                        // Legacy
             builder.append("<img src=\"");
             builder.append(file.toUri().toString());
             builder.append("\">");
-        } else
-            try {
-                String data = new sun.misc.BASE64Encoder().encode(Files
-                        .readAllBytes(file));
-                builder.append("<img alt=\"screen capture\" src=\"data:image/png;base64,");
-                builder.append(data);
-                builder.append("\"/>");
-            } catch (IOException ex) {
-                error("No image");
-            }
+        } else {
+            String data = Base64.getEncoder().encodeToString(Files
+                    .readAllBytes(file));
+            builder.append("<img alt=\"screen capture\" src=\"data:image/png;base64,");
+            builder.append(data);
+            builder.append("\"/>");
+        }
         builder.append("</p>\n");
         return this;
     }
@@ -219,8 +219,9 @@ public class HTMLReport implements Report {
      * @see com.horstmann.codecheck.Report#image(java.lang.String, byte[])
      */
     @Override
-    public HTMLReport image(String captionText, BufferedImage img) {
-        if (img == null) return this;
+    public HTMLReport image(String captionText, BufferedImage img) throws IOException {
+        if (img == null)
+            return this;
         caption(captionText);
         image(img);
         return this;
@@ -232,22 +233,19 @@ public class HTMLReport implements Report {
      * @see com.horstmann.codecheck.Report#image(byte[])
      */
     @Override
-    public HTMLReport image(BufferedImage img) {
-        if (img == null) return this;
+    public HTMLReport image(BufferedImage img)  throws IOException {
+        if (img == null)
+            return this;
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try {
-            ImageIO.write(img, "PNG", out);
-            out.close();
-            byte[] pngBytes = out.toByteArray();
-            String data = new sun.misc.BASE64Encoder().encode(pngBytes);
-            builder.append("<p class=\"screencapture\">");
-            builder.append("<img alt=\"screen capture\" src=\"data:image/png;base64,");
-            builder.append(data);
-            builder.append("\"/>");
-            builder.append("</p>\n");
-        } catch (IOException e) {
-            error("No image");
-        }
+        ImageIO.write(img, "PNG", out);
+        out.close();
+        byte[] pngBytes = out.toByteArray();
+        String data = Base64.getEncoder().encodeToString(pngBytes);
+        builder.append("<p class=\"screencapture\">");
+        builder.append("<img alt=\"screen capture\" src=\"data:image/png;base64,");
+        builder.append(data);
+        builder.append("\"/>");
+        builder.append("</p>\n");
         return this;
     }
 
@@ -286,12 +284,19 @@ public class HTMLReport implements Report {
                 }
                 builder.append("\n");
             } catch (IOException e) {
-               systemError(e);
+                systemError(e);
             }
 
         } else {
             error("Not found");
         }
+        return this;
+    }
+    
+    @Override
+    public HTMLReport file(String file, String contents) {
+        caption(file);
+        output(contents); // TODO: Line numbers?
         return this;
     }
 
@@ -334,7 +339,7 @@ public class HTMLReport implements Report {
      */
     @Override
     public HTMLReport add(Score score) {
-        header("Score");
+        header("score", "Score");
         builder.append("<p class=\"score\">");
         builder.append("" + score);
         builder.append("</p>\n");
@@ -367,7 +372,8 @@ public class HTMLReport implements Report {
 
     private HTMLReport tableStart(String klass) {
         builder.append("<table");
-        if (klass != null) builder.append(" class=\"").append(klass).append("\"");
+        if (klass != null)
+            builder.append(" class=\"").append(klass).append("\"");
         builder.append(">\n");
         return this;
     }
@@ -406,16 +412,15 @@ public class HTMLReport implements Report {
         cellEnd();
         return this;
     }
-    
+
     private HTMLReport codeCell(CharSequence text) {
         cellStart();
         builder.append("<pre>");
         escape(text);
-        builder.append("</pre>");       
+        builder.append("</pre>");
         cellEnd();
         return this;
     }
-    
 
     private HTMLReport headerCell(CharSequence text) {
         builder.append("<th>");

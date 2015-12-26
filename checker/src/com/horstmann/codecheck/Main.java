@@ -145,9 +145,9 @@ public class Main {
         String errorReport = language.compile(allModules, workDir);
         if (errorReport == null) return true;        
         if (errorReport.trim().equals(""))
-            report.output(null, "Error compiling " + modules.get(0));
+            report.error("Error compiling " + modules.get(0));
         else
-            report.error("Compiler error", errorReport);
+            report.error(errorReport);
         return false;
     }
 
@@ -193,7 +193,7 @@ public class Main {
     }
 
     private void runTester(Path mainmodule) throws Exception {
-        report.header("Running " + mainmodule);
+        report.run("Running " + mainmodule);
         // TODO: Assume testers always in default package?
         
         // TODO: Scoring doesn't work when outerr contains an exception report because we don't know how many
@@ -213,7 +213,7 @@ public class Main {
          */
         if (inputs.size() == 0)
             inputs.put("", ""); 
-        report.header("Testing " + mainmodule);
+        report.run("Testing " + mainmodule);
         Path solutionDir = null;
         if (!annotations.isSample(mainmodule)) {
             solutionDir = compileSolution(mainmodule, null, 0);
@@ -240,7 +240,7 @@ public class Main {
         
         
         String runNumber = test.replace("test", "").trim();
-        if (runNumber.length() > 0) report.header("Test " + runNumber);
+        report.header(runNumber, runNumber.length() > 0 ? "Test " + runNumber : null);
         
         for (String args : runargs) {
             testInput(mainmodule, solutionDir, test, input, args, outFiles);
@@ -257,9 +257,9 @@ public class Main {
         for (String f : outFiles) Files.deleteIfExists(workDir.resolve(f));           
         copySuppliedFiles(); 
 
-        report.output("Command line arguments", runargs);
+        report.args(runargs);
 
-        if (!language.echoesStdin()) report.output("Input", input);
+        if (!language.echoesStdin()) report.input(input);
 
         // Run student program and capture stdout/err and output files
 
@@ -282,12 +282,12 @@ public class Main {
         }
                 
         if (solutionDir == null) { // Run without testing
-            report.output("Output", outerr);
+            report.output(outerr);
             for (String f : outFiles) {
                 if (CompareImages.isImage(f))          
                     report.image("Image", imageComp.remove(0).first());                    
                 else
-                    report.output(f, contents.remove(0));
+                    report.file(f, contents.remove(0));
             }
             // No score
         } else { // Run solution in the same way 
@@ -348,18 +348,24 @@ public class Main {
     }
     
     private void runUnitTests() {
+        List<Path> unitTests = new ArrayList<>();
         for (Path p : studentFiles) {
-            if (language.isUnitTest(p)) {
+            if (language.isUnitTest(p)) 
+                unitTests.add(p);
+        }
+        if (unitTests.size() > 0) {
+            report.header("unitTest", "Unit Tests");
+            for (Path p: unitTests) {
                 List<Path> modules = new ArrayList<>();
                 modules.add(Util.tail(p));
                 modules.addAll(dependentModules);
-                language.runUnitTest(modules, workDir, report, score);
+                language.runUnitTest(modules, workDir, report, score);            
             }
         }
     }
 
     private void doSubstitutions(Path submissionDir, Substitution sub) throws Exception {
-        report.header("Running program with substitutions");
+        report.header("sub", "Running program with substitutions");
         Path mainmodule = Util.tail(sub.getFile());
         if (compile(mainmodule)) {
         	int n = sub.getSize();
@@ -389,7 +395,7 @@ public class Main {
     }
 
     private void doCalls(Path submissionDir, Calls calls) throws Exception {
-        report.header("Testing method " + calls.getName());
+        report.header("call", "Testing method " + calls.getName());
         List<Path> testModules = calls.writeTester(problemDir, workDir);
         
         String[][] args = new String[calls.getSize()][1];
@@ -434,9 +440,11 @@ public class Main {
         Path submissionDir = FileSystems.getDefault().getPath(args[1]);
         problemDir = FileSystems.getDefault().getPath(args[2]);
         if (System.getProperty("com.horstmann.codecheck.textreport") != null)
-        	report = new TextReport("Report", submissionDir);
+            report = new TextReport("Report", submissionDir);
+        else if (System.getProperty("com.horstmann.codecheck.jsonreport") != null)
+            report = new JSONReport("Report", submissionDir);
         else
-        	report = new HTMLReport("Report", submissionDir);
+            report = new HTMLReport("Report", submissionDir);
         int level = 0;
         try {
             level = Integer.parseInt(mode);
@@ -615,18 +623,36 @@ public class Main {
                         inputs.put("test" + i, in);
                 }
 
+                runUnitTests();
+
+                List<Path> testerModules = new ArrayList<>();
+                List<Path> runModules = new ArrayList<>();
                 for (Path mainmodule : mainModules) {
-                    if (missingModules.contains(mainmodule))
-                        report.error("Missing " + mainmodule);
-                    else if (language.isTester(mainmodule)
+                    if (language.isTester(mainmodule)
                              && !annotations.isSample(mainmodule)
                              && !(containsModule(solutionFiles, mainmodule) && inputs.size() > 0)) // TODO: Legacy
-                        runTester(mainmodule);
+                        testerModules.add(mainmodule);
                     else
-                        testInputs(inputs, mainmodule, annotations);
+                        runModules.add(mainmodule);
                 }
                 
-                runUnitTests();
+                if (testerModules.size() > 0) {
+                    report.header("tester", "Testers");
+                    for (Path mainmodule : testerModules)
+                        if (missingModules.contains(mainmodule))
+                            report.error("Missing " + mainmodule); 
+                        else
+                            runTester(mainmodule);
+                }
+
+                if (runModules.size() > 0) {
+                    report.header("run", "Program runs");
+                    for (Path mainmodule : runModules)
+                        if (missingModules.contains(mainmodule))
+                            report.error("Missing " + mainmodule); 
+                        else
+                            testInputs(inputs, mainmodule, annotations);
+                }
             }
             
             // Process checkstyle.xml etc.
@@ -638,7 +664,7 @@ public class Main {
 
             if (System.getProperty("com.horstmann.codecheck.textreport") == null)
             {
-	            report.header("Student files");
+	            report.header("studentFiles", "Student files");
 	            for (Path file : requiredFiles)
 	                report.file(submissionDir, file);
 		
@@ -649,7 +675,7 @@ public class Main {
 	
 	            if (printFiles.size() > 0) {
 	                copySuppliedFiles(); // Might have been mutated
-	                report.header("Provided files");
+	                report.header("providedFiles", "Provided files");
 	                for (Path file : printFiles)
 	                    report.file(workDir, file);
 	            }
@@ -682,7 +708,7 @@ public class Main {
         call.setIgnoreCase(ignoreCase);
         call.setIgnoreSpace(ignoreSpace);
         if (compile(mainModule)) {
-            report.header("Calling method");
+            report.header("callMethod", "Calling method");
             Path tempDir = compileSolution(mainModule, null, 0); 
             call.prepare(tempDir);
             call.run(workDir, report, score);

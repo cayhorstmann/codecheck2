@@ -24,7 +24,7 @@ public class Comparison {
            matches.add(b);
         }
         if (outcome) 
-           report.output(title, actual.length() == 0 ? "(empty)" : actual); 
+           report.output(title + ": " + (actual.length() == 0 ? "(empty)" : actual)); 
         else 
            report.compareTokens(matches, lines1, lines2);
         return outcome;
