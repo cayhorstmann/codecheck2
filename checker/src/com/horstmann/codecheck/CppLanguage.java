@@ -71,7 +71,7 @@ public class CppLanguage implements Language {
             if (i == lines.size()) done = true;
             else {
                 String line = lines.get(i).trim();
-                if (line.length() == 0 || line.startsWith("#include") || line.startsWith("using ")) i++;
+                if (line.length() == 0 || line.startsWith("#include") || line.startsWith("using ") || line.startsWith("//")) i++;
                 else done = true;
             }                
         }

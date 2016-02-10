@@ -54,11 +54,13 @@ public class Main {
     private Score score = new Score();
     private Comparison comp = new Comparison();
     private Language language = null;
+    // TODO: Use service loader???
     private Language[] languages = {
        new JavaLanguage(),
        new PythonLanguage(),
        new CppLanguage(),
-       new ScalaLanguage()
+       new ScalaLanguage(),
+       new MatlabLanguage()
     };
 
     /**

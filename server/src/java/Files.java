@@ -81,12 +81,12 @@ public class Files {
 			// TODO: Should this be a part of the script?
 			for (Path p : problem.getRequiredFiles()) {
 				String cont = Util.read(problemPath, p);
-				data.useFiles.put(Util.tail(p).toString(), cont);						
+				data.requiredFiles.put(Util.tail(p).toString(), cont);						
 			}
 			for (Path p : problem.getUseFiles()) {
 				String cont = Util.read(problemPath, p);
 				if (!Problem.isHidden(cont)) { // TODO: Iffy--how do we know this on the server?
-					data.requiredFiles.put(Util.tail(p).toString(), cont);						
+					data.useFiles.put(Util.tail(p).toString(), cont);						
 				}
 			}
 		}
