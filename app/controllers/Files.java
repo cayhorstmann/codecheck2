@@ -29,10 +29,9 @@ public class Files extends Controller {
 
 	private static String fileAreaBefore = "<p>{0}</p><textarea name=\"{0}\" rows=\"{1}\" cols=\"66\">";
 	private static String fileAreaAfter = "</textarea>";
-	private static String fileUpload = "<p>{0}: <input type=\"file\" name=\"{0}\"/></p>";
-	private static String gitURL = "<p>Git SSH URL (git@github.com/xxx/xxx.git): <input title=\"git@github.com:xxx/xxx.git\" name=\"git\" type=\"text\" size=\"40\"/></p>";
-	private static String after = "<p><input type=\"submit\"/><input type=\"hidden\" name=\"repo\" value=\"{0}\"><input type=\"hidden\" name=\"problem\" value=\"{1}\"><input type=\"hidden\" name=\"level\" value=\"{2}\"></p></form>";
-	private static String end = "</body></html>";
+	private static String after = "<p><input type=\"submit\"/><input type=\"hidden\" name=\"repo\" value=\"{0}\"><input type=\"hidden\" name=\"problem\" value=\"{1}\"><input type=\"hidden\" name=\"level\" value=\"{2}\"></p>";
+	private static String callbackTemplate = "<p><input type=\"hidden\" name=\"callback\" value=\"{0}\"></p>";
+	private static String end = "</form></body></html>";
 
 	private static String useStart = "<p>Use the following {0,choice,1#file|2#files}:</p>";
 	private static String provideStart = "<p>Complete the following {0,choice,1#file|2#files}:</p>";
@@ -133,17 +132,10 @@ public class Files extends Controller {
 			return pc.data;
 		}
 	}
-
-	@GET
-	@javax.ws.rs.Path("/")
-	// TODO:
-	// http://stackoverflow.com/questions/4333463/what-does-this-strange-jersey-warning-mean
-	@Produces("text/html")
-	public String files(@QueryParam("repo") @DefaultValue("ext") String repo,
-			@QueryParam("problem") String problemName,
-			@DefaultValue("check") @QueryParam("level") String level,
-			@DefaultValue("form") @QueryParam("upload") String upload)
-	// "form", "file", "git"
+*/
+	public Result filesHTML(String repo,
+			String problemName,
+			String level, String callback)
 			throws IOException {
 		try (ProblemContext pc = new ProblemContext(repo, problemName, level)) {
 			StringBuilder result = new StringBuilder();
@@ -163,71 +155,44 @@ public class Files extends Controller {
 					result.append("</pre\n>");
 				}
 			}
-			// TODO: In file upload, must still SHOW the non-empty required
-			// files
-			// String requestURL = request.getRequestURL().toString();
-			// String url = requestURL.substring(0, requestURL.indexOf("files"))
-			// +
-			// (upload ? "checkUpload" : "check");
-			// String appURL = Util.appURL(request);
-			String contextPath = context.getContextPath();
+			String contextPath = ""; // request().host(); // TODO
 			String url = contextPath + "/";
-			if (upload.equals("file"))
-				url += "checkUpload";
-			else if (upload.equals("git"))
-				url += "checkGit";
-			else
-				url += "check";
-			result.append(MessageFormat.format(before, url, upload
-					.equals("file") ? "encoding=\"multipart/form-data\"" : ""));
+			url += "check";
+			result.append(MessageFormat.format(before, url, "")); // TODO
 			result.append(MessageFormat.format(provideStart,
 					pc.data.requiredFiles.size()));
 
 			// TODO: Remove heuristic for codecomp
-			if (upload.equals("form") && pc.data.useFiles.size() == 0
+			if (pc.data.useFiles.size() == 0
 					&& pc.data.requiredFiles.size() == 1)
 				pc.includeCode = true;
-
 			for (Map.Entry<String, String> entry : pc.data.requiredFiles
-					.entrySet()) {
+					.entrySet()) {				
 				String file = entry.getKey();
 				String cont = entry.getValue();
-				if (!upload.equals("form")) { // No text area
-					if (pc.includeCode) {
-						result.append("<p>");
-						result.append(file);
-						result.append("</p>\n");
-						result.append("<pre>");
-						result.append(Util.htmlEscape(cont));
-						result.append("</pre\n>");
-					}
-					if (upload.equals("file"))
-						result.append(MessageFormat.format(fileUpload, file));
-				} else {
-					int lines = 0;
-					if (pc.includeCode) {
-						lines = Util.countLines(cont);
-						if (cont == null)
-							cont = "";
-					}
-					if (lines == 0)
-						lines = 20;
-
-					result.append(MessageFormat.format(fileAreaBefore, file,
-							lines));
-					result.append(Util.htmlEscape(cont));
-					result.append(fileAreaAfter);
+				int lines = 0;
+				if (pc.includeCode) {
+					lines = Util.countLines(cont);
+					if (cont == null)
+						cont = "";
 				}
-			}
+				if (lines == 0)
+					lines = 20;
 
-			if (upload.equals("git"))
-				result.append(gitURL);
+				result.append(MessageFormat.format(fileAreaBefore, file,
+						lines));
+				result.append(Util.htmlEscape(cont));
+				result.append(fileAreaAfter);
+			}
 			result.append(MessageFormat.format(after, repo, problemName, level));
+			if (callback != null && callback.length() > 0)
+				result.append(MessageFormat.format(callbackTemplate, callback));
+
 			result.append(end);
-			return result.toString();
+			return ok(result.toString()).as("text/html");
 		} // pc auto-closed
 	}
-*/
+
 	public static boolean isTest(Path p) {
 		String name = p.getFileName().toString();
 		int n = name.lastIndexOf(".");

@@ -361,7 +361,7 @@ public class Util {
 		return problemDir;
 	}
 
-	public static void runLabrat(Config config, String repo,
+	public static void runLabrat(Config config, String type, String repo,
 			String problem, String level, java.nio.file.Path submissionDir, String... metaData)
 			throws IOException {
 		java.nio.file.Path problemDir;
@@ -377,22 +377,17 @@ public class Util {
 			problemDir = repoPath.resolve(problem);
 		}
 
-		runLabrat(config, repo, problem, level, problemDir, submissionDir,
+		runLabrat(config, type, repo, problem, level, problemDir, submissionDir,
 				metaData);
 
 		if (unzipDir != null)
 			deleteDirectory(unzipDir);
 	}
 
-	public static void runLabrat(Config config, String repo,
+	public static void runLabrat(Config config, String type, String repo,
 			String problem, String level, java.nio.file.Path problemDir,
 			java.nio.file.Path submissionDir, String... metaData) throws IOException {
-		// TODO: Obsolete
-		String repoPath = config.get("com.horstmann.codecheck.repo." + repo);
-		String command = Util.getProperty(repoPath, "repo.properties",
-				"repo.command");
-		if (command == null)
-			command = config.get("com.horstmann.codecheck.defaultcommand");
+		String command = config.get("com.horstmann.codecheck." + type);
 		StringBuilder metas = new StringBuilder();
 		for (String meta : metaData) { if (metas.length() > 0) metas.append(" "); metas.append(meta); }
 		

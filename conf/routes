@@ -11,3 +11,9 @@ GET     /assets/*file               controllers.Assets.versioned(path="/public",
 GET     /files/data                 controllers.Files.fileData(repo: String ?= "ext", problem: String, level: String ?= "check")
 
 POST    /checkJson					controllers.Check.checkJson()
+
+GET	    /files						controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String ?= "check", callback: String ?= null)
+
+POST	/check						controllers.Check.checkHTML()
+
+GET     /echo                        controllers.Echo.echoJson()
