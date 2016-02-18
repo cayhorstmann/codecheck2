@@ -215,7 +215,7 @@ public class Main {
          */
         if (inputs.size() == 0)
             inputs.put("", ""); 
-        report.run("Testing " + mainmodule);
+        report.header("run", "Testing " + mainmodule);
         Path solutionDir = null;
         if (!annotations.isSample(mainmodule)) {
             solutionDir = compileSolution(mainmodule, null, 0);
@@ -242,7 +242,7 @@ public class Main {
         
         
         String runNumber = test.replace("test", "").trim();
-        report.header(runNumber, runNumber.length() > 0 ? "Test " + runNumber : null);
+        report.run(runNumber.length() > 0 ? "Test " + runNumber : null);
         
         for (String args : runargs) {
             testInput(mainmodule, solutionDir, test, input, args, outFiles);
