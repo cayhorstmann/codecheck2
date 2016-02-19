@@ -437,6 +437,7 @@ public class Main {
         
         System.setProperty("java.security.policy", homeDir
                         + "/codecheck.policy");
+        System.setSecurityManager(new SecurityManager()); // Otherwise the security policy doesn't do anything.
     	   	
         String mode = args[0].trim();
         Path submissionDir = FileSystems.getDefault().getPath(args[1]);
