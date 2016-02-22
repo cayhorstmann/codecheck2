@@ -2,6 +2,10 @@ grant codeBase "file:/opt/codecheck/codecheck.jar" {
    permission java.security.AllPermission;
 };
 
+grant codeBase "file:/opt/codecheck/lib/junit.jar" {
+   permission java.lang.RuntimePermission "accessDeclaredMembers";
+};
+
 grant codeBase "file:${java.home}/../lib/tools.jar" {
    permission java.security.AllPermission;
 };
