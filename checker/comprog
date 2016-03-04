@@ -11,6 +11,10 @@ case _"$LANG" in
     _Python)        
         python3 -m py_compile $@
         ;;
+        
+    _C)
+        gcc -std=c99 -g -o prog $@
+        ;;
 
     _Cpp)
         g++ -std=c++11 -g -o prog $@

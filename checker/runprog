@@ -15,6 +15,13 @@ case _"$LANG" in
         python3 $@
         ;;
 
+    _C)
+        ulimit -d 1000 -f 1000 -n 100 -v 100000
+        PROG=`dirname $1`/prog # Ignore module base name--we called it prog in comprog
+        shift 
+        $PROG $@
+        ;;
+        
     _Cpp)
         ulimit -d 1000 -f 1000 -n 100 -v 100000
         PROG=`dirname $1`/prog # Ignore module base name--we called it prog in comprog

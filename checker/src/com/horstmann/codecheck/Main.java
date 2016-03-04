@@ -58,6 +58,7 @@ public class Main {
     private Language[] languages = {
        new JavaLanguage(),
        new PythonLanguage(),
+       new CLanguage(),
        new CppLanguage(),
        new ScalaLanguage(),
        new MatlabLanguage()
