@@ -38,7 +38,6 @@ public class Main {
     public static final String DEFAULT_TOKEN = "line";
     
     private int timeoutMillis;
-    private String homeDir;
     private Path workDir;
     private Properties checkProperties = new Properties();
     private Report report;
@@ -76,12 +75,14 @@ public class Main {
         new Main().run(args);
     }
 
+    // TODO: Should be in Util
     public static boolean matches(Path path, String glob) {
         PathMatcher matcher = FileSystems.getDefault().getPathMatcher(
                                   "glob:" + glob.replace("/", FileSystems.getDefault().getSeparator()));
         return matcher.matches(path);
     }
 
+    // TODO: Should be in Util
     public static Set<Path> filter(Set<Path> paths, String glob) {
         Set<Path> result = new TreeSet<>();
         for (Path p : paths)
@@ -90,6 +91,7 @@ public class Main {
         return result;
     }
 
+    // TODO: Should be in Util
     public static Set<Path> filterNot(Set<Path> paths, String... glob) {
         Set<Path> result = new TreeSet<>();
         PathMatcher[] matcher = new PathMatcher[glob.length];
@@ -121,6 +123,7 @@ public class Main {
         }
     }
 
+    // TODO: Should be in Util
     public void copyAll(Collection<Path> paths, Path fromDir, Path toDir)  throws IOException {
         for (Path p : paths) {
             Path source = fromDir.resolve(p);
@@ -302,7 +305,7 @@ public class Main {
             // Report on results
 
             if (expectedOuterr != null && expectedOuterr.length() > 0) {
-                boolean outcome = comp.execute(outerr, expectedOuterr, report, "Output");
+                boolean outcome = comp.execute(outerr, expectedOuterr, report, null);
                 score.pass(outcome, report);
             }        
         
@@ -433,15 +436,16 @@ public class Main {
     public void run(String[] args) throws IOException {
         // TODO: Adjustable Timeouts
 
-        homeDir = Util.getHomeDir();
-        
-        System.setProperty("java.security.policy", homeDir
-                        + "/codecheck.policy");
-        System.setSecurityManager(new SecurityManager()); // Otherwise the security policy doesn't do anything
-    	   	
         String mode = args[0].trim();
         Path submissionDir = FileSystems.getDefault().getPath(args[1]);
         problemDir = FileSystems.getDefault().getPath(args[2]);
+        
+        Path homeDir = Util.getHomeDir();
+        workDir = new File(".").getAbsoluteFile().toPath().normalize();
+        System.setProperty("java.security.policy", homeDir.resolve("codecheck.policy").toString());
+        
+        System.setSecurityManager(new SecurityManager()); // Otherwise the security policy doesn't do anything
+    	   	
         if (System.getProperty("com.horstmann.codecheck.textreport") != null)
             report = new TextReport("Report", submissionDir);
         else if (System.getProperty("com.horstmann.codecheck.jsonreport") != null)
@@ -477,7 +481,11 @@ public class Main {
             if (Files.exists(problemDir.resolve("solution" + n)))
                 solutionDirectories.add("solution" + n);
 
-        workDir = new File(".").getAbsoluteFile().toPath().normalize();
+        if (studentDirectories.size() + solutionDirectories.size() == 0) {
+            // new-style packaging with no student or solution directories
+            studentDirectories.add(".");
+        }
+        
         
         String problemId = null;
         Annotations annotations = null;
@@ -493,11 +501,11 @@ public class Main {
                 }
             }
 
-            studentFiles = filterNot(Util.getDescendantFiles(problemDir, studentDirectories), "check.properties", ".*", "problem.ch");
+            studentFiles = filterNot(Util.getDescendantFiles(problemDir, studentDirectories), "check.properties", ".*", "problem.ch", "problem.html");
             solutionFiles = filterNot(Util.getDescendantFiles(problemDir, solutionDirectories), "*.txt", ".*", "*.class");
             // TODO: Filtering out rubric
             // TODO: Unify with server/src/Problem.java
-
+            
             // Determine language
             
             String languageName = System.getProperty("com.horstmann.codecheck.language");
@@ -510,29 +518,27 @@ public class Main {
                     report.error("Cannot process language " + languageName);
                 }
             } else {
-                // Guess from solution file
-                if (solutionFiles.size() == 0) {
-                    report.error("No solution files");
-                } else {
-                    Path solutionFile = solutionFiles.iterator().next();
-                    boolean found = false;
-                    int i = 0;
-                    while (!found && i < languages.length) {
-                        if (languages[i].isSource(solutionFile)) {
-                            found = true;
-                        } else {
-                            i++;
-                        }
+                // Guess from solution and student files
+                List<Path> files = new ArrayList<>();
+                files.addAll(solutionFiles);
+                files.addAll(studentFiles);
+                for (int j = 0; language == null && j < files.size(); j++) {
+                    for (int k = 0; language == null && k < languages.length; k++) {
+                        if (languages[k].isSource(files.get(j))) 
+                            language = languages[k];
                     }
-                    if (found) language = languages[i];
-                    else report.error("Cannot find language for " + solutionFile);
                 }
+                if (language == null) throw new RuntimeException("Cannot find language from " + files);
             }
 
             annotations = new Annotations(language);
             annotations.read(problemDir, studentFiles, false);
             annotations.read(problemDir, solutionFiles, true);
-
+            // Any student files with //SOLUTION must be moved to solution files
+            Set<Path> annotatedSolutions = annotations.findSolutions();
+            studentFiles.removeAll(annotatedSolutions);
+            solutionFiles.addAll(annotatedSolutions);
+          
             String uid = problemDir.getFileName().toString();
             report.comment("Submission", submissionDir.getFileName().toString());
             report.comment("Problem", uid);

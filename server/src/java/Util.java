@@ -461,14 +461,26 @@ public class Util {
 		}
 	}
 
-	public static boolean isSource(Path path) {
+	public static String extension(Path path) {
+		return extension(path.toString());
+	}
+	
+	public static String extension(String path) {
 		String name = path.toString();
 		int n = name.lastIndexOf('.');
 		if (n == -1)
-			return false;
-		String extension = name.substring(n + 1).toLowerCase();
-		return Arrays.asList("java", "c", "cpp", "c++", "py", "scala", "m").contains(
-				extension);
+			return "";
+		else
+			return name.substring(n + 1).toLowerCase();
+	}
+
+	public static boolean isSource(Path path) {
+		return isSource(path.toString());
+	}
+	
+	public static boolean isSource(String path) {
+		return Arrays.asList("java", "c", "cpp", "c++", "h", "py", "scala", "m").contains(
+				extension(path));
 	}
 
 	public static String hostURL(HttpServletRequest request) {
@@ -503,5 +515,41 @@ public class Util {
 		StringWriter out = new StringWriter();
 		t.printStackTrace(new PrintWriter(out));
 		return out.toString();
+	}
+	
+	public static CharSequence processHideShow(Path filepath, String contents)
+	{
+		if (!isSource(filepath)) return contents;
+		String start = "//";
+		String end = "";
+		String extension = extension(filepath);
+		if (extension.equals("py")) {
+			start = "##";
+		} else if (extension.equals("c")) {
+			start = "/*"; end = "*/";
+		}
+		String[] lines = contents.split("\n");
+		if (lines.length == 0 || !lines[0].trim().equals(start + "SOLUTION" + end)) return contents;
+		lines[0] = null;
+		for (int i = 1; i < lines.length; i++) {
+			if (lines[i].trim().equals(start + "HIDE" + end)) {
+				boolean done = false;
+				lines[i] = null;
+			    for (int j = i + 1; !done && j < lines.length; j++) {
+			    	if (lines[j].trim().startsWith(start + "SHOW")) { done = true; i = j - 1; }
+			    	else lines[j] = null;
+			    }
+			} else {
+				String showString = start + "SHOW";
+				int n = lines[i].indexOf(showString);
+				if (n >= 0) {
+					int n2 = end.equals("") ? lines[i].length() : lines[i].indexOf(end, n);
+					lines[i] = lines[i].substring(0, n) + lines[i].substring(n + showString.length(), n2) + lines[i].substring(n2 + end.length());
+				}
+			}
+		}
+		StringBuilder result = new StringBuilder();
+		for (String l : lines) if (l != null) { result.append(l); result.append("\n"); }
+		return result;
 	}
 }

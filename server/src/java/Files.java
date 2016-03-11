@@ -85,7 +85,9 @@ public class Files {
 			}
 			for (Path p : problem.getUseFiles()) {
 				String cont = Util.read(problemPath, p);
-				if (!Problem.isHidden(cont)) { // TODO: Iffy--how do we know this on the server?
+				if (Problem.isSolution(cont)) { // TODO: Bad hack--confusing to leave the wrong classification in Problem
+					data.requiredFiles.put(Util.tail(p).toString(), Util.processHideShow(p, cont).toString());
+				} else if (!Problem.isHidden(cont)) { // TODO: Iffy--how do we know this on the server?
 					data.useFiles.put(Util.tail(p).toString(), cont);						
 				}
 			}
@@ -184,7 +186,7 @@ public class Files {
 
 			for (Map.Entry<String, String> entry : pc.data.requiredFiles.entrySet()) {
 				String file = entry.getKey();
-				String cont = entry.getValue();
+				String cont = entry.getValue();				
 				if (!upload.equals("form")) { // No text area
 					if (pc.includeCode) {
 						result.append("<p>");
