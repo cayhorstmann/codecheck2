@@ -186,7 +186,13 @@ if [ -z $2 ] ; then
       done
       if [ -e $PROBLEMDIR/grader ] ; then cp -R $PROBLEMDIR/grader/* $SUBMISSIONDIR ; fi
     ;;
-  esac  
+  esac
+
+  # If SUBMISSIONDIR is empty, then copy all files from base dir
+  if [ ! "$(ls -A $SUBMISSIONDIR)" ]  ; then
+      cp $PROBLEMDIR/* $SUBMISSIONDIR
+  fi
+  
   shift
 else
   SUBMISSIONDIR=$1

@@ -183,10 +183,6 @@ public class UploadProblem {
 			reason = "No student directory";
 			return false;
 		}
-		if (!Files.exists(problemDir.resolve("solution"))) {
-			reason = "No solution directory";
-			return false;
-		}
 
 		int maxLevel = 1;
 		for (int i = 9; i >= 2 && maxLevel == 1; i--)

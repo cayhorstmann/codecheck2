@@ -46,6 +46,10 @@ public class Util {
             return null;
         }
     }
+    
+    public static void write(Path path, String contents) throws IOException {
+        Files.write(path, contents.getBytes(StandardCharsets.UTF_8));
+    }
 
     @SuppressWarnings("unchecked")
     public static List<String> readLines(Path path) {
@@ -170,15 +174,16 @@ public class Util {
         return out.toString();
     }
     
-    public static String getHomeDir() {
+    public static Path getHomeDir() {
         Object obj = new Util();
         for (URL url : ((URLClassLoader) obj.getClass().getClassLoader()).getURLs()) {
             String urlString = url.toString();
             if (urlString.endsWith("codecheck.jar")) {
-                return urlString.substring(urlString.indexOf('/'),
-                        urlString.lastIndexOf('/'));
+                return Paths.get(urlString.substring(urlString.indexOf('/'),
+                        urlString.lastIndexOf('/')));
             }
         }
-        return System.getProperty("com.horstmann.codecheck.home");        
+        String home = System.getProperty("com.horstmann.codecheck.home");
+        return home == null ? null : Paths.get(home);        
     }
 }

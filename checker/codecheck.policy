@@ -2,10 +2,6 @@ grant codeBase "file:/opt/codecheck/codecheck.jar" {
    permission java.security.AllPermission;
 };
 
-grant codeBase "file:/opt/codecheck/lib/junit.jar" {
-   permission java.lang.RuntimePermission "accessDeclaredMembers";
-};
-
 grant codeBase "file:${java.home}/../lib/tools.jar" {
    permission java.security.AllPermission;
 };
@@ -13,5 +9,6 @@ grant codeBase "file:${java.home}/../lib/tools.jar" {
 grant {
   permission java.io.FilePermission "-", "read,write,delete";
   permission java.util.PropertyPermission "com.horstmann.codecheck", "read";
+  permission java.lang.RuntimePermission "accessDeclaredMembers";
 };
 

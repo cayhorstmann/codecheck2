@@ -55,13 +55,20 @@ public class Problem {
         return useFiles;
     }
     
-    private static Pattern hiddenPattern = Pattern.compile("[^\\pL&&[^\\s]]*HIDE[^\\pL]*[\\s]*\\n");
+    private static Pattern hiddenPattern = Pattern.compile("\\s*[^\\pL&&[^\\s]]*HIDE[^\\pL]*\\s*\\n");
     	// No letters or spaces, HIDE, optional no letters, trailing space (e.g. \r), \n
 
     public static boolean isHidden(String cont) {
     	return hiddenPattern.matcher(cont).lookingAt();
     }
     
+    private static Pattern solutionPattern = Pattern.compile("\\s*[^\\pL&&[^\\s]]*SOLUTION[^\\pL]*\\s*\\n");
+	// No letters or spaces, HIDE, optional no letters, trailing space (e.g. \r), \n
+
+    public static boolean isSolution(String cont) {
+    	return solutionPattern.matcher(cont).lookingAt();
+    }
+
     private void getLevelDirectories() {
         if (Files.exists(problemPath.resolve("student")))
             studentDirectories.add("student");
@@ -74,6 +81,12 @@ public class Problem {
         for (int n = 1; n <= level; n++)
             if (Files.exists(problemPath.resolve("solution" + n)))
                 solutionDirectories.add("solution" + n);
+        
+        if (studentDirectories.size() + solutionDirectories.size() == 0) {
+        	// new-style packaging with no student or solution directories
+        	studentDirectories.add(".");
+        }
+        
     }
 
     private Properties gatherProperties() throws IOException {
@@ -176,6 +189,7 @@ public class Problem {
 
         // TODO: We only show students source files, not text or images
         // Would be better to show those as well
+        // But then need to filter out problem.html and the images used inside  
         
         for (Path path : studentFiles)
             if (Util.isSource(path)) {

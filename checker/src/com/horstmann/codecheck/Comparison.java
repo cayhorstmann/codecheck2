@@ -10,7 +10,7 @@ public class Comparison {
     private boolean ignoreCase = true;
     private boolean ignoreSpace = true;
     
-    public boolean execute(String actual, String expected, Report report, String title) throws IOException {
+    public boolean execute(String actual, String expected, Report report, String filename) throws IOException {
         List<String> lines1 = getLines(actual);
         List<String> lines2 = getLines(expected);
 
@@ -23,10 +23,18 @@ public class Comparison {
            outcome &= b;
            matches.add(b);
         }
-        if (outcome) 
-           report.output(title + ": " + (actual.length() == 0 ? "(empty)" : actual)); 
-        else 
+        if (outcome) {
+            if (filename != null) {
+                report.file(filename, actual);
+            }
+            else {
+                report.output(actual);
+            }
+        }
+        else {
+            // TODO: What about file name?
            report.compareTokens(matches, lines1, lines2);
+        }
         return outcome;
     }
 

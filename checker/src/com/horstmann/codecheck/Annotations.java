@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
 
 public class Annotations {
     private static Set<String> validAnnotations = new HashSet<>(Arrays.asList(
-            "HIDE", "CALL", "SUB", "ID", "SAMPLE", "ARGS", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "REQUIRED", "FORBIDDEN", "NOSCORE", "FOR"));    
+            "HIDE", "SHOW", "SOLUTION", "CALL", "SUB", "ID", "SAMPLE", "ARGS", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "REQUIRED", "FORBIDDEN", "NOSCORE", "FOR"));    
     
     class Annotation {
         Path path;
@@ -54,6 +54,7 @@ public class Annotations {
                     if (!pattern.matcher(line).matches())
                         a.next = line.trim();
                 }
+                if (a.key.equals("SOLUTION")) inSolution = true;
                 a.inSolution = inSolution;
                 a.path = p;
                 annotations.add(a);
@@ -70,11 +71,18 @@ public class Annotations {
         
         for (Annotation a : annotations) {
             boolean ok = validAnnotations.contains(a.key)
-                    && (a.inSolution && !a.key.equals("HIDE") || 
-                       !a.inSolution && hidden.contains(a.path)); 
+                    && (a.inSolution || hidden.contains(a.path)); 
             if (!ok)
                 r.systemError("Unknown pseudocomment " + a.key + " in " + a.path);
         }
+    }
+    
+    public Set<Path> findSolutions() {
+        Set<Path> result = new HashSet<>();
+        for (Annotation a : annotations) {
+            if (a.key.equals("SOLUTION")) result.add(a.path);
+        }
+        return result;
     }
     
     public Set<Path> findHidden() {
@@ -84,6 +92,7 @@ public class Annotations {
         }
         return result;
     }
+
 
     public String findUniqueKey(String key) {
         Annotation match = null;
