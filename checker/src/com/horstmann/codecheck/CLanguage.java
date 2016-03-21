@@ -39,7 +39,7 @@ public class CLanguage implements Language {
         String name = path.toString();
         if (!name.endsWith(".c"))
             return null;
-        return name.substring(0, name.length() - 4); // drop .c
+        return name.substring(0, name.length() - 2); // drop .c
     }
 
     private Path pathOf(String moduleName) {

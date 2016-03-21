@@ -144,7 +144,7 @@ public class Util {
             Path in = null;
             try {            
                 ProcessBuilder builder = new ProcessBuilder(cmd);
-                if (input != null) {
+                if (input != null && input.length() > 0) {
                     in = Files.createTempFile("codecheck", "");
                     Files.write(in, input.getBytes(StandardCharsets.UTF_8));
                     builder.redirectInput(in.toFile());

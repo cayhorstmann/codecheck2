@@ -445,7 +445,8 @@ public class Main {
         workDir = new File(".").getAbsoluteFile().toPath().normalize();
         System.setProperty("java.security.policy", homeDir.resolve("codecheck.policy").toString());
         
-        System.setSecurityManager(new SecurityManager()); // Otherwise the security policy doesn't do anything
+        if (System.getProperty("com.horstmann.codecheck.debug") == null) 
+            System.setSecurityManager(new SecurityManager()); 
     	   	
         if (System.getProperty("com.horstmann.codecheck.textreport") != null)
             report = new TextReport("Report", submissionDir);
@@ -656,7 +657,6 @@ public class Main {
                 }
 
                 if (runModules.size() > 0) {
-                    report.header("run", "Program runs");
                     for (Path mainmodule : runModules)
                         if (missingModules.contains(mainmodule))
                             report.error("Missing " + mainmodule); 
@@ -679,7 +679,7 @@ public class Main {
 	                report.file(submissionDir, file);
 		
 	            printFiles = filterNot(printFiles, "test*.in", "test*.out", "check.properties", "*.png", "*.PNG",
-	                    "*.gif", "*.GIF", "*.jpg", "*.jpeg", "*.JPG", ".DS_Store", "*.jar");
+	                    "*.gif", "*.GIF", "*.jpg", "*.jpeg", "*.JPG", ".DS_Store", "*.jar", "*.class");
 
 	            printFiles.removeAll(annotations.findHidden());
 	

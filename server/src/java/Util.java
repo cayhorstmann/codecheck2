@@ -35,6 +35,9 @@ import java.util.Scanner;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -407,6 +410,36 @@ public class Util {
 	}
 
 	/**
+	 * Gets all files contained in a directory but not its subdirectories
+	 * 
+	 * @param dir
+	 *            a directory
+	 * @return the list of files, as Path objects that are relativized against
+	 *         dir
+	 * @throws IOException
+	 */
+	public static Set<Path> getFiles(final Path dir)
+			throws IOException {
+		if (dir == null || !Files.exists(dir) || !Files.isDirectory(dir))
+			return Collections.emptySet();
+		return Files.list(dir).filter(Files::isRegularFile).map(dir::relativize).collect(Collectors.toSet());
+	}
+	
+	@FunctionalInterface
+	public interface EConsumer<T, E extends Throwable> {
+		void accept(T t) throws E;
+	}
+	
+	public static void forEachFile(Path dir, EConsumer<Path, IOException> body) throws IOException {
+		if (dir != null && Files.exists(dir) && Files.isDirectory(dir)) {
+			try (Stream<Path> stream = Files.list(dir)) {
+				for (Path p : stream.filter(Files::isRegularFile).collect(Collectors.toSet()))
+					body.accept(p);
+			}
+		}
+	}
+	
+	/**
 	 * Gets all files contained in a directory and its subdirectories
 	 * 
 	 * @param dir
@@ -531,25 +564,35 @@ public class Util {
 		String[] lines = contents.split("\n");
 		if (lines.length == 0 || !lines[0].trim().equals(start + "SOLUTION" + end)) return contents;
 		lines[0] = null;
+		boolean containsHide = false;
 		for (int i = 1; i < lines.length; i++) {
-			if (lines[i].trim().equals(start + "HIDE" + end)) {
+			String line = lines[i].trim();
+			if (line.equals(start + "HIDE" + end)) {
+				containsHide = true;
 				boolean done = false;
 				lines[i] = null;
 			    for (int j = i + 1; !done && j < lines.length; j++) {
 			    	if (lines[j].trim().startsWith(start + "SHOW")) { done = true; i = j - 1; }
 			    	else lines[j] = null;
 			    }
-			} else {
+			} else if (line.startsWith(start + "CALL ") || line.startsWith(start + "ID ") 
+					|| line.startsWith(start + "ARGS") || line.startsWith(start + "OUT")) {
+				lines[i] = null; // TODO: More cases like that? Student files shouldn't have pseudocomments
+			} else if (line.contains(start + "SUB ")) {
+				int n = lines[i].indexOf(start + "SUB");
+				int n2 = end.equals("") ? lines[i].length() : lines[i].indexOf(end, n) + end.length();
+				lines[i] = lines[i].substring(n, n2);
+			} else if (line.startsWith(start + "SHOW")){
 				String showString = start + "SHOW";
 				int n = lines[i].indexOf(showString);
-				if (n >= 0) {
-					int n2 = end.equals("") ? lines[i].length() : lines[i].indexOf(end, n);
-					lines[i] = lines[i].substring(0, n) + lines[i].substring(n + showString.length(), n2) + lines[i].substring(n2 + end.length());
-				}
-			}
+				int n2 = end.equals("") ? lines[i].length() : lines[i].indexOf(end, n);
+				lines[i] = lines[i].substring(0, n) + lines[i].substring(n + showString.length(), n2).trim() + lines[i].substring(n2 + end.length());
+			}			
 		}
 		StringBuilder result = new StringBuilder();
-		for (String l : lines) if (l != null) { result.append(l); result.append("\n"); }
+		if (containsHide) {
+			for (String l : lines) if (l != null) { result.append(l); result.append("\n"); }
+		} // else hide entire solution so as not to reveal it accidentially
 		return result;
 	}
 }

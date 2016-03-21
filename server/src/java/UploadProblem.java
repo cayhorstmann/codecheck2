@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -129,11 +130,12 @@ public class UploadProblem {
 			}
 		} catch (Exception ex) {
 			return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-					.entity(ex.getClass() + " " + ex.getMessage()).build();
+					.entity(Util.getStackTrace(ex)).build();
 		}
 	}
 	
 	// In case the zip file contains an initial directory
+	// TODO: Crazily wasteful--unzip and then fix
 	 private static void fixZip(Path zipPath) throws IOException {
 	      try (FileSystem zipfs = FileSystems.newFileSystem(zipPath, null)) {
 	          Path root = zipfs.getPath("/");
@@ -141,9 +143,9 @@ public class UploadProblem {
 	              Set<Path> result = rootEntries.filter(Files::isDirectory).collect(Collectors.toSet());
 	              if (result.size() == 1) {
 	                 Path child = result.iterator().next();
-	                 try (Stream<Path> entries = Files.list(child)) {
-	                     result = entries.collect(Collectors.toSet());
-	                     if (result.contains(child.resolve("solution/"))) {
+	                 if (!child.getFileName().equals("student")) { // One subdirectory, not named student 
+	                	 try (Stream<Path> entries = Files.list(child)) {
+	                		result = entries.collect(Collectors.toSet());	                     
 	                        Files.walkFileTree(child, new SimpleFileVisitor<Path>() {
 	                              public FileVisitResult preVisitDirectory(Path dir,
 	                                  BasicFileAttributes attrs) throws IOException {
@@ -177,12 +179,13 @@ public class UploadProblem {
 	         }
 	   }
 	 
+	 private static boolean isSolution(Path p) throws IOException {
+		 try (Scanner in = new Scanner(p)) {
+			 return in.hasNextLine() && in.nextLine().contains("SOLUTION"); // TODO: Check delimiters
+		 }
+	 }
+	 
 	private boolean check() throws IOException {
-		// TODO: Only good for old-style
-		if (!Files.exists(problemDir.resolve("student"))) {
-			reason = "No student directory";
-			return false;
-		}
 
 		int maxLevel = 1;
 		for (int i = 9; i >= 2 && maxLevel == 1; i--)
@@ -193,14 +196,25 @@ public class UploadProblem {
 
 		boolean grade = Files.exists(problemDir.resolve("grader"));
 		Path submissionDir = Util.getDir(context, "submissions");
-		List<String> subdirs = new ArrayList<>();
+		List<String> solutionSubdirs = new ArrayList<>();
+		List<String> studentSubdirs = new ArrayList<>();
 		for (int i = 1; i <= (grade ? maxLevel + 1 : maxLevel); i++) {
 			Path tempDir = Util.createTempDirectory(submissionDir);
 			// Copy solution files up to the current level
-			if (i <= maxLevel)
-				subdirs.add(i == 1 ? "solution" : "solution" + i);
-			for (Path p : Util.getDescendantFiles(problemDir, subdirs))
+			if (i <= maxLevel) 
+				solutionSubdirs.add(i == 1 ? "solution" : "solution" + i);
+			if (i == 1) studentSubdirs.add("student");
+			else if (i == maxLevel + 1) studentSubdirs.add("grader");
+			else studentSubdirs.add("student" + i);
+			for (Path p : Util.getDescendantFiles(problemDir, solutionSubdirs))
 				Files.copy(problemDir.resolve(p), tempDir.resolve(Util.tail(p)));
+			Util.forEachFile(problemDir, p -> { 
+				if (isSolution(p))
+					Files.copy(p, tempDir.resolve(p.getFileName()));
+			});
+			for (Path p : Util.getDescendantFiles(problemDir, studentSubdirs)) 
+				if (isSolution(problemDir.resolve(p)))
+					Files.copy(problemDir.resolve(p), tempDir.resolve(Util.tail(p)));
 
 			String problem = problemDir.getFileName().toString();
 			String levelString = grade && i == maxLevel + 1 ? "grade" : "" + i;
