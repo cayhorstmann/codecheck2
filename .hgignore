@@ -9,5 +9,6 @@ tmp
 .project
 .sbtserver
 .settings
+.idea
 activator*
 project/.sbtserver.lock

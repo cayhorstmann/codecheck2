@@ -110,8 +110,8 @@ public class Check extends Controller {
         Path tempDir = Util.createTempDirectory(submissionDir);
 	    JsonNode json = request().body().asJson();
 	    Iterator<Map.Entry<String,JsonNode>> dirs = json.fields();
-	    String repo = "untitled";
-	    String problem = "untitled";
+	    String repo = "ext";
+	    String problem = null;
 	    String level = "1";
 	    while (dirs.hasNext()) {
 	    	Map.Entry<String, JsonNode> dirEntry = dirs.next();
@@ -130,7 +130,10 @@ public class Check extends Controller {
 	    		}
 	    	}
 	    }
-        Util.runLabrat(config, "json", repo, problem, level, tempDir.toAbsolutePath(), tempDir.resolve("submission").toAbsolutePath());
+	    if (problem == null) // problem was submitted in JSON
+	    	Util.runLabrat(config, "json", repo, problem, level, tempDir.toAbsolutePath(), tempDir.resolve("submission").toAbsolutePath());
+	    else
+	    	Util.runLabrat(config, "json", repo, problem, level, tempDir.resolve("submission").toAbsolutePath());
         return ok(Util.read(tempDir.resolve("submission/report.json"))).as("application/json");
         // TODO: Delete tempDir	    
 	}
