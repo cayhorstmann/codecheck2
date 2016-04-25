@@ -113,6 +113,7 @@ public class Check extends Controller {
 	    String repo = "ext";
 	    String problem = null;
 	    String level = "1";
+	    String type = "json";
 	    while (dirs.hasNext()) {
 	    	Map.Entry<String, JsonNode> dirEntry = dirs.next();
 	    	String key = dirEntry.getKey();
@@ -120,6 +121,7 @@ public class Check extends Controller {
 	    	if ("repo".equals(key)) repo = value.textValue();
 	    	else if ("problem".equals(key)) problem = value.textValue();
 	    	else if ("level".equals(key)) level = value.textValue();
+	    	else if ("type".equals(key)) type = value.textValue(); 
 	    	else { 
 	    		Path dir = tempDir.resolve(key);
 	    		java.nio.file.Files.createDirectory(dir);
@@ -131,10 +133,15 @@ public class Check extends Controller {
 	    	}
 	    }
 	    if (problem == null) // problem was submitted in JSON
-	    	Util.runLabrat(config, "json", repo, problem, level, tempDir.toAbsolutePath(), tempDir.resolve("submission").toAbsolutePath());
+	    	Util.runLabrat(config, type, repo, problem, level, tempDir.toAbsolutePath(), tempDir.resolve("submission").toAbsolutePath());
 	    else
-	    	Util.runLabrat(config, "json", repo, problem, level, tempDir.resolve("submission").toAbsolutePath());
-        return ok(Util.read(tempDir.resolve("submission/report.json"))).as("application/json");
+	    	Util.runLabrat(config, type, repo, problem, level, tempDir.resolve("submission").toAbsolutePath());
+	    if ("html".equals(type))
+	    	return ok(Util.read(tempDir.resolve("submission/report.html"))).as("text/html");
+	    else if ("text".equals(type))
+	    	return ok(Util.read(tempDir.resolve("submission/report.txt"))).as("text/plain");
+	    else
+	    	return ok(Util.read(tempDir.resolve("submission/report.json"))).as("application/json");
         // TODO: Delete tempDir	    
 	}
 }
