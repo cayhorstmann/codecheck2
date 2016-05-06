@@ -8,7 +8,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 public class CppLanguage implements Language {
@@ -53,7 +55,7 @@ public class CppLanguage implements Language {
 
     @Override
     public List<Path> writeTester(Path sourceDir, Path targetDir, Path file,
-            List<String> modifiers, String name, List<String> argsList)
+            List<Calls.Call> calls)
             throws IOException {
         
         // function in solution needs to be in separate namespace
@@ -78,16 +80,23 @@ public class CppLanguage implements Language {
         
         lines.add(i++, "#include \"codecheck.h\"");
         
-        lines.add(i++, modifiers.get(0) + " " + modifiers.get(1) + ";"); // extern function from student
-        lines.add(i++, "namespace solution {");
-        lines.add(i++, modifiers.get(0) + " " + modifiers.get(1) + ";");
-        lines.add(i++, "}");
+        Set<String> externs = new LinkedHashSet<>();
+        for (Calls.Call c : calls) 
+           externs.add(c.modifiers.get(0) + " " + c.modifiers.get(1) + ";"); 
+        for (String extern : externs) {        
+            lines.add(i++, extern); // extern function from student
+            lines.add(i++, "namespace solution {");
+            lines.add(i++, extern);
+            lines.add(i++, "}");
+        }
         lines.add(i++, "main(int argc, char *argv[]) {");
-        for (int k = 0; k < argsList.size(); k++) {
+        for (int k = 0; k < calls.size(); k++) {
+            Calls.Call call = calls.get(k);
             lines.add(i++, 
                     "    if (codecheck::eq(argv[1], \"" + (k + 1) + "\")) {");
-            lines.add(i++, 
-                    "        codecheck::compare(" + name + "(" + argsList.get(k) + "), solution::" + name + "(" + argsList.get(k) + "));");
+            lines.add(i++,                    
+                    "        codecheck::compare(solution::" + call.name + "(" + call.args + "), " + call.name + "(" + call.args + "));");
+                // compare expected and actual
             lines.add(i++, "}");
         }
         lines.add(i++, "}");

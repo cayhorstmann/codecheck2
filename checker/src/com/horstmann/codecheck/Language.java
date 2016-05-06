@@ -110,7 +110,7 @@ public interface Language {
      * @throws IOException
      */
     List<Path> writeTester(Path sourceDir, Path targetDir, Path file,
-            List<String> modifiers, String name, List<String> argsList)
+            List<Calls.Call> calls)
             throws IOException;
 
     default String[] pseudoCommentDelimiters() { return new String[] { "//", "" }; }

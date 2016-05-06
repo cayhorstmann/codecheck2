@@ -246,12 +246,13 @@ public class JSONReport implements Report {
     }
 
     @Override
-    public Report runTable(String[] argNames, String[][] args, String[] actual,
+    public Report runTable(String[] methodNames, String[] argNames, String[][] args, String[] actual,
             String[] expected, boolean[] outcomes) {
         if (section.runs == null) section.runs = new ArrayList<>();
         for (int i = 0; i < actual.length; i++)
         {
             Run run = new Run();
+            if (methodNames != null) run.caption = methodNames[i];
             section.runs.add(run);
             run.matchedOutput = new ArrayList<>();
             Match m = new Match();

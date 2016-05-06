@@ -240,10 +240,9 @@ public class JavaLanguage implements Language {
      */
     @Override
     public List<Path> writeTester(Path sourceDir, Path targetDir, Path file,
-            List<String> modifiers, String name, List<String> argsList)
+            List<Calls.Call> calls)
             throws IOException {
         String className = moduleOf(Util.tail(file));
-        boolean isStatic = modifiers.contains("static");
         List<String> lines = Util.readLines(sourceDir.resolve(file));
         int i = 0;
         while (i < lines.size() && !lines.get(i).contains(className))
@@ -264,23 +263,23 @@ public class JavaLanguage implements Language {
         // Insert main here
         lines.add(i++, "    public static void main(String[] args) throws Exception");
         lines.add(i++, "    {");
-        if (!isStatic) {
-            lines.add(i++, "        " + className + " obj1 = new " + className
-                    + "();");
-            lines.add(i++, "        " + className + "CodeCheck obj2 = new "
-                    + className + "CodeCheck();");
-        }
-        for (int k = 0; k < argsList.size(); k++) {
+        lines.add(i++, "        " + className + " obj1 = new " + className
+                + "();");
+        lines.add(i++, "        " + className + "CodeCheck obj2 = new "
+                + className + "CodeCheck();");
+        for (int k = 0; k < calls.size(); k++) {
+            Calls.Call call = calls.get(k);
+            boolean isStatic = call.modifiers.contains("static");
             lines.add(i++, "        if (args[0].equals(\"" + (k + 1) + "\"))");
             lines.add(i++, "        {");
             lines.add(i++, "            Object expected = "
-                    + (isStatic ? "" : "obj2.") + name + "(" + argsList.get(k)
+                    + (isStatic ? className + "CodeCheck." : "obj2.") + call.name + "(" + call.args
                     + ");");
             lines.add(i++,
                     "            System.out.println(_toString(expected));");
             lines.add(i++, "            Object actual = "
-                    + (isStatic ? className : "obj1") + "." + name + "("
-                    + argsList.get(k) + ");");
+                    + (isStatic ? className : "obj1") + "." + call.name + "("
+                    + call.args + ");");
             lines.add(i++, "            System.out.println(_toString(actual));");
             lines.add(
                     i++,
@@ -446,13 +445,18 @@ public class JavaLanguage implements Language {
         String errorReport = compile(Collections.singletonList(module), dir); 
         if (errorReport == null) {
             try {
+                PrintStream oldOut = System.out;
+                PrintStream oldErr = System.err;
                 try (URLClassLoader loader = buildClassLoader(dir)) {
+                    loader.setDefaultAssertionStatus(true);
                     Class<?> c = loader.loadClass(classNameOfModule(module));
                     final AtomicBoolean done = new AtomicBoolean(false);                    
                     org.junit.runner.Result resultHolder[] = new org.junit.runner.Result[1];
                     final ByteArrayOutputStream newOut = new ByteArrayOutputStream();
                     final PrintStream newOutPrint = new PrintStream(newOut);
-
+                    System.setOut(newOutPrint);
+                    System.setErr(newOutPrint);
+                    
                     final Thread junitThread = new Thread() {
                         public void run() {
                             try {
@@ -480,11 +484,13 @@ public class JavaLanguage implements Language {
                                 + (timeoutMillis >= 2000 ? timeoutMillis / 1000
                                         + " seconds" : timeoutMillis + " milliseconds"));
                         junitThread.stop();
-                        report.output(newOut.toString());
+                        report.output(newOut.toString("UTF-8"));
                     } else {                    
                         org.junit.runner.Result result = resultHolder[0];
                         int pass = result.getRunCount() - result.getFailureCount();
-                        report.output("Pass: " + pass + "\nFail: "
+                        String output = newOut.toString("UTF-8");
+                        if (output.length() > 0 && !output.endsWith("\n")) output += "\n";
+                        report.output(output + "Pass: " + pass + "\nFail: "
                             + result.getFailureCount());
                         for (Failure failure : result.getFailures()) {
                             report.output("Failed: " + failure.getDescription().getDisplayName().trim());
@@ -493,6 +499,9 @@ public class JavaLanguage implements Language {
                         }
                         score.add(pass, result.getRunCount(), report);
                     }
+                } finally {
+                    System.setOut(oldOut);
+                    System.setErr(oldErr);                
                 }
             } catch (Throwable t) {
                 report.systemError(t);

@@ -32,7 +32,7 @@ public class ScalaLanguage implements Language {
 
     @Override
     public List<Path> writeTester(Path sourceDir, Path targetDir, Path file,
-            List<String> modifiers, String name, List<String> argsList)
+            List<Calls.Call> calls)
             throws IOException {
         List<String> lines = Util.readLines(sourceDir.resolve(file));
         
@@ -53,13 +53,13 @@ public class ScalaLanguage implements Language {
         lines.add(1, "object Solution {");
         lines.add("}}");
         i = 0;
-        for (int k = 0; k < argsList.size(); k++) {
-            String callargs = argsList.get(k);
-            String submissionFun = objectName + "." + name;
+        for (int k = 0; k < calls.size(); k++) {
+            Calls.Call call = calls.get(k);
+            String submissionFun = objectName + "." + call.name;
             String solutionFun = "Solution." + submissionFun;
             lines.add(++i, "if (args(0) == \"" + (k + 1) + "\") {");
-            lines.add(++i, "val actual = " + submissionFun + "(" + callargs + ")");
-            lines.add(++i, "val expected = " + solutionFun + "(" + callargs + ")");
+            lines.add(++i, "val actual = " + submissionFun + "(" + call.args + ")");
+            lines.add(++i, "val expected = " + solutionFun + "(" + call.args + ")");
             lines.add(++i, "println(runtime.ScalaRunTime.stringOf(expected))");
             lines.add(++i, "println(runtime.ScalaRunTime.stringOf(actual))");
             lines.add(++i, "println(actual == expected) }");

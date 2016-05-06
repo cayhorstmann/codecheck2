@@ -22,4 +22,5 @@
   /bin/uname ix,
   /usr/bin/dirname ix,
   /usr/bin/basename ix,
+  /usr/local/lib/python3*/dist-packages/** rix,
 }

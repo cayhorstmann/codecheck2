@@ -54,7 +54,7 @@ public class CLanguage implements Language {
     // TODO: Implement this
     @Override
     public List<Path> writeTester(Path sourceDir, Path targetDir, Path file,
-            List<String> modifiers, String name, List<String> argsList)
+            List<Calls.Call> calls)
             throws IOException {
         
         String moduleName = moduleOf(Util.tail(file));

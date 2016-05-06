@@ -573,15 +573,21 @@ public class Util {
 				lines[i] = null;
 			    for (int j = i + 1; !done && j < lines.length; j++) {
 			    	if (lines[j].trim().startsWith(start + "SHOW")) { done = true; i = j - 1; }
-			    	else lines[j] = null;
-			    }
+			    	else { lines[j] = null; if (j == lines.length - 1) i = lines.length; }
+			    }			    
 			} else if (line.startsWith(start + "CALL ") || line.startsWith(start + "ID ") 
 					|| line.startsWith(start + "ARGS") || line.startsWith(start + "OUT")) {
 				lines[i] = null; // TODO: More cases like that? Student files shouldn't have pseudocomments
-			} else if (line.contains(start + "SUB ")) {
+			} else if (line.startsWith(start + "REQUIRED") || line.startsWith(start + "FORBIDDEN")) {
+				lines[i] = null;
+				if (lines[i + 1].startsWith(start) && lines[i + 1].endsWith(end)) {
+					lines[i + 1] = null;
+					i++;
+				}					
+			} else if (line.contains(start + "SUB ")) {			
 				int n = lines[i].indexOf(start + "SUB");
 				int n2 = end.equals("") ? lines[i].length() : lines[i].indexOf(end, n) + end.length();
-				lines[i] = lines[i].substring(n, n2);
+				lines[i] = lines[i].substring(0, n) + lines[i].substring(n2);
 			} else if (line.startsWith(start + "SHOW")){
 				String showString = start + "SHOW";
 				int n = lines[i].indexOf(showString);

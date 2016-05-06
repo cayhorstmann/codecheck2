@@ -147,6 +147,8 @@ if [ "$1" == "-q" ] ; then BROWSER=echo ; shift ; fi
 
 if [ "$1" == "-d" ] ; then DEBUG=true ; shift ; fi
 
+if [ "$1" == "-o" ] ; then ONLY_SOLUTION=true ; shift ; fi
+
 if [ "$1" == "-t" ] ; then 
     BROWSER=cat 
     REPORT=report.txt 
@@ -222,6 +224,8 @@ WORKDIR=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
 grade $@
 
 $BROWSER "$SUBMISSIONDIR/$REPORT" 2> /dev/null 
+
+if [ -n "$ONLY_SOLUTION" ] ; then exit ; fi
 
 # Checking student files
 cd "$STARTDIR"

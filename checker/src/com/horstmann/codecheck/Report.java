@@ -45,7 +45,7 @@ public interface Report
    
    Report compareTokens(List<Boolean> matches, List<String> actual, List<String> expected);
    Report output(List<String> lines, Set<Integer> matches, Set<Integer> mismatches);
-   Report runTable(String[] argNames, String[][] args, String[] actual, String[] expected, boolean[] outcomes);
+   Report runTable(String[] functionNames, String[] argNames, String[][] args, String[] actual, String[] expected, boolean[] outcomes);
    
    Report comment(String key, String value);
    

@@ -6,18 +6,20 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Calls {
+    
+    public class Call {
+        String name;
+        String args;
+        List<String> modifiers;
+    }
+    
     private Language language;
-    private List<String> argsList = new ArrayList<>();
+    private List<Call> calls = new ArrayList<>();
     private Path file;
-    private String name;
-    private List<String> modifiers;
+    private int lastGroup = -1;
 
     public Calls(Language language) {
         this.language = language;
-    }
-
-    public String getName() {
-        return name;
     }
 
     public Path getFile() {
@@ -25,11 +27,11 @@ public class Calls {
     }
 
     public int getSize() {
-        return argsList.size();
+        return calls.size();
     }
 
-    public String getArgs(int i) {
-        return argsList.get(i);
+    public Call getCall(int i) {
+        return calls.get(i);
     }
 
     public void addCall(Path file, String args, String next) {
@@ -37,24 +39,27 @@ public class Calls {
             this.file = file;
         else if (!this.file.equals(file))
             throw new RuntimeException("CALL in " + this.file + " and " + file);
-        argsList.add(args);
+        Call c = new Call();
+        c.args = args;
+        calls.add(c);
         if (next.length() > 0) {
-            if (name != null)
-                throw new RuntimeException("Multiple functions tagged CALL in "
-                        + file);
-            
-            name = language.functionName(next);
+            String name = language.functionName(next);
             
             if (name == null)
                 throw new RuntimeException("No function below CALL in " + file + "\n" + next);
-            modifiers = language.modifiers(next);
+            List<String> modifiers = language.modifiers(next);
+            for (int i = lastGroup + 1; i < calls.size(); i++) {
+                Call callInGroup = calls.get(i);
+                callInGroup.name = name;
+                callInGroup.modifiers = modifiers;
+            }
+            lastGroup = calls.size() - 1;            
         } 
     }
 
     public List<Path> writeTester(Path sourceDir, Path targetDir) throws IOException {
-       if (modifiers == null) 
-           throw new RuntimeException("No function directly below CALL in " + file);
-        return language.writeTester(sourceDir, targetDir, file, modifiers, name,
-                argsList);
+        if (lastGroup < calls.size() - 1)
+            throw new RuntimeException("No function below CALL in " + file + "\n");
+        return language.writeTester(sourceDir, targetDir, file, calls);
     }
 }

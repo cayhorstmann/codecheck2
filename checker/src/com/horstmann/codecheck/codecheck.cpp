@@ -19,8 +19,8 @@ namespace codecheck {
 
    bool eq(int x, int y) { return x == y; }
    bool eq(char x, char y) { return x == y; }
-   bool eq(double x, double y) { return fabs(x - y) < 1E12; }
-   bool eq(float x, float y) { return fabs(x - y) < 1E12; }
+   bool eq(double x, double y) { return fabs(x - y) < 1E-12; }
+   bool eq(float x, float y) { return fabs(x - y) < 1E-12; }
    bool eq(bool x, bool y) { return x == y; }
    bool eq(string x, string y) { return x == y; }
    bool eq(const char* x, const char* y) { return strcmp(x, y) == 0; }

@@ -396,14 +396,15 @@ public class Main {
                     score.pass(outcomes[i]);
                 }
             }
-            report.runTable(argNames, args, actual, expected, outcomes);
+            report.runTable(null, argNames, args, actual, expected, outcomes);
         }
     }
 
     private void doCalls(Path submissionDir, Calls calls) throws Exception {
-        report.header("call", "Testing method " + calls.getName());
+        report.header("call", "Calling with Arguments");
         List<Path> testModules = calls.writeTester(problemDir, workDir);
         
+        String[] names = new String[calls.getSize()];
         String[][] args = new String[calls.getSize()][1];
         String[] actual = new String[calls.getSize()];
         String[] expected = new String[calls.getSize()];
@@ -418,7 +419,9 @@ public class Main {
                 List<String> lines = new ArrayList<>();
                 while (in.hasNextLine()) lines.add(in.nextLine());
                 in.close();
-            	args[i][0] = calls.getArgs(i);
+                Calls.Call call = calls.getCall(i);
+                names[i] = call.name;
+            	args[i][0] = call.args;
                 if (lines.size() == 3 && Arrays.asList("true", "false").contains(lines.get(2))) {
                 	expected[i] = lines.get(0);
                 	actual[i] = lines.get(1);
@@ -430,7 +433,7 @@ public class Main {
                 }
             	score.pass(outcomes[i]);
             }
-            report.runTable(new String[] { "Arguments" }, args, actual, expected, outcomes);
+            report.runTable(names, new String[] { "Arguments" }, args, actual, expected, outcomes);
         }
     }
 
@@ -679,7 +682,7 @@ public class Main {
 	                report.file(submissionDir, file);
 		
 	            printFiles = filterNot(printFiles, "test*.in", "test*.out", "check.properties", "*.png", "*.PNG",
-	                    "*.gif", "*.GIF", "*.jpg", "*.jpeg", "*.JPG", ".DS_Store", "*.jar", "*.class");
+	                    "*.gif", "*.GIF", "*.jpg", "*.jpeg", "*.JPG", ".DS_Store", "*.jar", "*.class", "problem.ch", "problem.html");
 
 	            printFiles.removeAll(annotations.findHidden());
 	

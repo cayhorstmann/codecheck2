@@ -482,16 +482,21 @@ public class HTMLReport implements Report {
     }
 
     @Override
-    public HTMLReport runTable(String[] argNames, String[][] args,
+    public HTMLReport runTable(String[] methodNames, String[] argNames, String[][] args,
             String[] actual, String[] expected, boolean[] outcomes) {
         tableStart("run").rowStart();
         headerCell("");
+        if (methodNames != null)
+            headerCell("Name");
+        
         for (String n : argNames)
             headerCell(n);
         headerCell("Actual").headerCell("Expected").rowEnd();
         for (int i = 0; i < args.length; i++) {
             rowStart();
             cellStart().pass(outcomes[i]).cellEnd();
+            if (methodNames != null)
+                codeCell(methodNames[i]);
             for (String a : args[i])
                 codeCell(a.trim());
             codeCell(actual[i]);

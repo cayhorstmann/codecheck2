@@ -61,7 +61,7 @@ public class MatlabLanguage implements Language {
     // TODO: Implement correctly
     @Override
     public List<Path> writeTester(Path sourceDir, Path targetDir, Path file,
-            List<String> modifiers, String name, List<String> argsList)
+            List<Calls.Call> calls)
             throws IOException {
         String moduleName = moduleOf(Util.tail(file));
         List<String> lines = Util.readLines(sourceDir.resolve(file));
@@ -69,19 +69,20 @@ public class MatlabLanguage implements Language {
         lines.add(i++, "from sys import argv");
         lines.add(i++, "import " + moduleName);        
         lines.add(i++, "def main() :");
-        for (int k = 0; k < argsList.size(); k++) {
+        for (int k = 0; k < calls.size(); k++) {
+            Calls.Call call = calls.get(k);
             lines.add(i++, 
                     "    if argv[1] == \"" + (k + 1) + "\" :");
             lines.add(i++, 
                     "        expected = "
-                     + name + "(" + argsList.get(k)
+                     + call.name + "(" + call.args
                     + ")");
             lines.add(i++,
                     "        print(expected)");
             lines.add(i++, 
                     "        actual = "
-                    + moduleName + "." + name + "("
-                    + argsList.get(k) + ")");
+                    + moduleName + "." + call.name + "("
+                    + call.args + ")");
             lines.add(i++, 
                     "        print(actual)");
             lines.add(
