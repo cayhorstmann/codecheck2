@@ -1,5 +1,6 @@
 package controllers;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import models.Config;
 import models.PlayConfig;
 import models.Util;
@@ -13,6 +14,8 @@ import java.util.Map;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
+import play.libs.Json;
+import play.libs.Jsonp;
 import play.mvc.Controller;
 import play.mvc.Result;
 import play.mvc.BodyParser;
@@ -143,5 +146,39 @@ public class Check extends Controller {
 	    else
 	    	return ok(Util.read(tempDir.resolve("submission/report.json"))).as("application/json");
         // TODO: Delete tempDir	    
+	}
+
+	public Result checkJsonp() throws IOException  {
+		Path submissionDir = Util.getDir(config, "submissions");
+		Path tempDir = Util.createTempDirectory(submissionDir);
+		Map<String, String[]> queryParams = request().queryString();
+		String repo = "ext";
+		String problem = null;
+		String level = "1";
+		String type = "json";
+		String callback = "";
+		Path dir = tempDir.resolve("submission");
+		java.nio.file.Files.createDirectory(dir);
+		for (String key : queryParams.keySet()) {
+			String value = queryParams.get(key)[0];
+			if ("repo".equals(key)) repo = value;
+			else if ("problem".equals(key)) problem = value;
+			else if ("level".equals(key)) level = value;
+			else if ("type".equals(key)) type = value;
+			else if ("callback".equals(key)) callback = value;
+			else
+				Util.write(dir, key, value);
+		}
+		if (problem == null) // problem was submitted in JSON
+			Util.runLabrat(config, type, repo, problem, level, tempDir.toAbsolutePath(), tempDir.resolve("submission").toAbsolutePath());
+		else
+			Util.runLabrat(config, type, repo, problem, level, tempDir.resolve("submission").toAbsolutePath());
+		ObjectNode result = Json.newObject();
+		result.put("report", Util.read(tempDir.resolve("submission/report.html")));
+		if (callback == null)
+			return ok(result.asText());
+		else
+			return ok(Jsonp.jsonp(callback, result));
+		// TODO: Delete tempDir
 	}
 }
