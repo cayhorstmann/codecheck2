@@ -35,7 +35,30 @@ public class Files extends Controller {
 
 	private static String useStart = "<p>Use the following {0,choice,1#file|2#files}:</p>";
 	private static String provideStart = "<p>Complete the following {0,choice,1#file|2#files}:</p>";
-	
+
+	private static String jqueryScript = "<script src=\"https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js\"></script>";
+	private static String jsonpAjaxSubmissionScript = "<script>$(function () {\n" +
+			"  $('form').on('submit', function (e) {\n" +
+			"    e.preventDefault();\n" +
+			"    if ($('.codecheck-submit-response').length == 0)\n" +
+			"      $('form').after('<div class=\"codecheck-submit-response\"></div>');\n" +
+			"    $('.codecheck-submit-response').text('Submitting...');\n" +
+			"    var values = $(this).serializeArray();\n" +
+			"    values.push({name: 'type', value: 'html'});\n" +
+			"    $.ajax({\n" +
+			"      url: '/checkJsonp',\n" +
+			"      dataType: 'jsonp',\n" +
+			"      contentType: 'application/json',\n" +
+			"      jsonp: \"callback\",\n" +
+			"      data: values,\n" +
+			"      success: function (data) {\n" +
+			"        $('.codecheck-submit-response').text('');\n" +
+			"        $('.codecheck-submit-response').append(data['report']);\n" +
+			"      }\n" +
+			"    });\n" +
+			"  });\n" +
+			"});</script>";
+
 	private static Config config = PlayConfig.INSTANCE;
 
 	class ProblemContext implements AutoCloseable {
@@ -135,7 +158,7 @@ public class Files extends Controller {
 */
 	public Result filesHTML(String repo,
 			String problemName,
-			String level, String callback)
+			String level, String callback, String type)
 			throws IOException {
 		try (ProblemContext pc = new ProblemContext(repo, problemName, level)) {
 			StringBuilder result = new StringBuilder();
@@ -188,7 +211,12 @@ public class Files extends Controller {
 			if (callback != null && callback.length() > 0)
 				result.append(MessageFormat.format(callbackTemplate, callback));
 
-			result.append(end);
+			if (type == null || type.equals("")) {
+				result.append(end);
+			} else if (type.equals("jsonp")) {
+				String endWithJavaScript = "</form>" + jqueryScript + jsonpAjaxSubmissionScript + "</body></html>";
+				result.append(endWithJavaScript);
+			}
 			return ok(result.toString()).as("text/html");
 		} // pc auto-closed
 	}

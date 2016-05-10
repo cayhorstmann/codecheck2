@@ -13,7 +13,7 @@ GET     /files/data                 controllers.Files.fileData(repo: String ?= "
 POST    /checkJson					controllers.Check.checkJson()
 GET     /checkJsonp					controllers.Check.checkJsonp()
 
-GET	    /files						controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String ?= "check", callback: String ?= null)
+GET	    /files						controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String ?= "check", callback: String ?= null, type: String ?= null)
 
 POST	/check						controllers.Check.checkHTML()
 
