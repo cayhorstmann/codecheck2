@@ -24,10 +24,10 @@ public class Files extends Controller {
 	private static final Pattern IMG_PATTERN = Pattern
 			.compile("[<]\\s*[iI][mM][gG]\\s*[sS][rR][cC]\\s*[=]\\s*['\"]([^'\"]*)['\"][^>]*[>]");
 
-	private static String start = "<html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\" /></head><body style=\"font-family: sans;\">";
+	private static String start = "<html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\" /><style type=\"text/css\" media=\"screen\">.ace_editor { border: 3px solid lightgray; margin: auto; height: auto; width: 80%; }</style></head><body style=\"font-family: sans;\">";
 	private static String before = "<form method=\"post\" action=\"{0}\" {1}>";
 
-	private static String fileAreaBefore = "<p>{0}</p><textarea name=\"{0}\" rows=\"{1}\" cols=\"66\">";
+	private static String fileAreaBefore = "\n<p><h3>{0}</h3><textarea id=\"{0}\" name=\"{0}\" rows=\"{1}\" cols=\"80\" class=\"{2}\">";
 	private static String fileAreaAfter = "</textarea>";
 	private static String after = "<p><input type=\"submit\"/><input type=\"hidden\" name=\"repo\" value=\"{0}\"><input type=\"hidden\" name=\"problem\" value=\"{1}\"><input type=\"hidden\" name=\"level\" value=\"{2}\"></p>";
 	private static String callbackTemplate = "<p><input type=\"hidden\" name=\"callback\" value=\"{0}\"></p>";
@@ -36,7 +36,6 @@ public class Files extends Controller {
 	private static String useStart = "<p>Use the following {0,choice,1#file|2#files}:</p>";
 	private static String provideStart = "<p>Complete the following {0,choice,1#file|2#files}:</p>";
 
-	private static String jqueryScript = "<script src=\"https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js\"></script>";
 	private static String jsonpAjaxSubmissionScript = "<script>$(function () {\n" +
 			"  $('form').on('submit', function (e) {\n" +
 			"    e.preventDefault();\n" +
@@ -58,6 +57,15 @@ public class Files extends Controller {
 			"    });\n" +
 			"  });\n" +
 			"});</script>";
+
+	private static String acePath = "/assets/ace";
+	private static String aceScript = "\n<script src=\"{0}/ace.js\"></script>\n<script src=\"{0}/mode-java.js\"></script>\n<script src=\"{0}/mode-c_cpp.js\"></script>\n<script src=\"{0}/mode-plain_text.js\"></script>\n<script src=\"{0}/mode-html.js\"></script>\n<script src=\"{0}/mode-text.js\"></script>\n<script src=\"{0}/ext-language_tools.js\"></script>";
+	private static String jqueryPath = "/assets";
+	private static String jqueryScript = "\n<script src=\"{0}/jquery.js\"></script>";
+	private static String jqueryAceScript = "\n<script src=\"{0}/jquery-ace.js\"></script>";
+	private static String myPath = "/assets";
+	private static String myButtonScript = "\n<script src=\"{0}/myButton.js\"></script>";
+	private static String myAceScript = "\n<script src=\"{0}/myAce.js\"></script>";
 
 	private static Config config = PlayConfig.INSTANCE;
 
@@ -203,18 +211,26 @@ public class Files extends Controller {
 					lines = 20;
 
 				result.append(MessageFormat.format(fileAreaBefore, file,
-						lines));
+						lines, "java")); // TODO support more than "java" in ace editor format
 				result.append(Util.htmlEscape(cont));
 				result.append(fileAreaAfter);
 			}
 			result.append(MessageFormat.format(after, repo, problemName, level));
+
+			// Include javascripts
+			result.append(MessageFormat.format(aceScript, acePath));
+			result.append(MessageFormat.format(jqueryScript, jqueryPath));
+			result.append(MessageFormat.format(jqueryAceScript, jqueryPath));
+			result.append(MessageFormat.format(myButtonScript, myPath));
+			result.append(MessageFormat.format(myAceScript, myPath));
+
 			if (callback != null && callback.length() > 0)
 				result.append(MessageFormat.format(callbackTemplate, callback));
 
 			if (type == null || type.equals("")) {
 				result.append(end);
 			} else if (type.equals("jsonp")) {
-				String endWithJavaScript = "</form>" + jqueryScript + jsonpAjaxSubmissionScript + "</body></html>";
+				String endWithJavaScript = "</form>" + jsonpAjaxSubmissionScript + "</body></html>";
 				result.append(endWithJavaScript);
 			}
 			return ok(result.toString()).as("text/html");
