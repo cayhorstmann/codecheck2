@@ -10,7 +10,7 @@ function receiveMessage(event) {
     var scoreText = $('p.score').last().text();
     var correct = 0;
     var maxscore = 1; // default maxscore. not 0 to avoid divide by zero
-    if (scoreText != '0' && scoreText.length > 0) {
+    if (scoreText !== '0' && scoreText.length > 0) {
         correct = scoreText.split('/')[0];
         maxscore = scoreText.split('/')[1];
     }
