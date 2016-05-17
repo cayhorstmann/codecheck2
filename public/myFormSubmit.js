@@ -16,6 +16,7 @@ $(function () {
             success: function (data) {
                 $('.codecheck-submit-response').text('');
                 $('.codecheck-submit-response').append(data['report']);
+                $('.codecheck-submit-response').data('score', data['score']);
 
                 // ace editor
                 // clear any existing annotations

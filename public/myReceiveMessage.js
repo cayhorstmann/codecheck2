@@ -7,10 +7,10 @@ function receiveMessage(event) {
 
     var repo = $('input[name=repo]').attr('value');
     var problem = $('input[name=problem]').attr('value');
-    var scoreText = $('p.score').last().text();
+    var scoreText = $('.codecheck-submit-response').data('score');
     var correct = 0;
     var maxscore = 1; // default maxscore. not 0 to avoid divide by zero
-    if (scoreText !== '0' && scoreText.length > 0) {
+    if (scoreText !== undefined && scoreText !== '0' && scoreText.length > 0) {
         correct = scoreText.split('/')[0];
         maxscore = scoreText.split('/')[1];
     }
