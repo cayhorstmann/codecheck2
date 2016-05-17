@@ -1,4 +1,4 @@
-$('.java').ace({ theme: 'vibrant_ink', lang: 'java' }).each(function(idx, editor) {
+$('.java').ace({ theme: 'eclipse', lang: 'java' }).each(function(idx, editor) {
   var ace = $(editor).data('ace').editor.ace;
   ace.setOption("autoScrollEditorIntoView", "true");
   ace.setOption("displayIndentGuides", "true");
@@ -6,7 +6,7 @@ $('.java').ace({ theme: 'vibrant_ink', lang: 'java' }).each(function(idx, editor
   ace.setOption("enableLiveAutocompletion", "false");
   ace.setOption("enableSnippets", "true");
   ace.setOption("maxLines", 30);
-  ace.setOption("showInvisibles", "true");
+  ace.setOption("showInvisibles", false);
   ace.setOption("tabSize", 2);
   ace.setOption("useWorker", "true");
 });

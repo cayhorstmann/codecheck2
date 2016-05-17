@@ -24,7 +24,7 @@ public class Files extends Controller {
 	private static final Pattern IMG_PATTERN = Pattern
 			.compile("[<]\\s*[iI][mM][gG]\\s*[sS][rR][cC]\\s*[=]\\s*['\"]([^'\"]*)['\"][^>]*[>]");
 
-	private static String start = "<html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\" /><style type=\"text/css\" media=\"screen\">.ace_editor { border: 3px solid lightgray; margin: auto; height: auto; width: 80%; }</style></head><body style=\"font-family: sans;\">";
+	private static String start = "<html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\" /><style type=\"text/css\" media=\"screen\">.ace_editor { border: 3px solid lightgray; height: auto; min-width: 700px; }</style></head><body style=\"font-family: sans;\">";
 	private static String before = "<form method=\"post\" action=\"{0}\" {1}>";
 
 	private static String fileAreaBefore = "\n<p><h3>{0}</h3><textarea id=\"{0}\" name=\"{0}\" rows=\"{1}\" cols=\"80\" class=\"{2}\">";
