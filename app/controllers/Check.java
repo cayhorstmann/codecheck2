@@ -173,8 +173,7 @@ public class Check extends Controller {
 			Util.runLabrat(config, type, repo, problem, level, tempDir.toAbsolutePath(), tempDir.resolve("submission").toAbsolutePath());
 		else
 			Util.runLabrat(config, type, repo, problem, level, tempDir.resolve("submission").toAbsolutePath());
-		ObjectNode result = Json.newObject();
-		result.put("report", Util.read(tempDir.resolve("submission/report.html")));
+		JsonNode result = Json.parse(Util.read(tempDir.resolve("submission/report.json")));
 		if (callback == null)
 			return ok(result.asText());
 		else

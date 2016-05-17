@@ -38,27 +38,7 @@ public class Files extends Controller {
 	private static String useStart = "<p>Use the following {0,choice,1#file|2#files}:</p>";
 	private static String provideStart = "<p>Complete the following {0,choice,1#file|2#files}:</p>";
 
-	private static String jsonpAjaxSubmissionScript = "<script>$(function () {\n" +
-			"  $('form').on('submit', function (e) {\n" +
-			"    e.preventDefault();\n" +
-			"    if ($('.codecheck-submit-response').length == 0)\n" +
-			"      $('form').after('<div class=\"codecheck-submit-response\"></div>');\n" +
-			"    $('.codecheck-submit-response').text('Submitting...');\n" +
-			"    var values = $(this).serializeArray();\n" +
-			"    values.push({name: 'type', value: 'html'});\n" +
-			"    $.ajax({\n" +
-			"      url: '/checkJsonp',\n" +
-			"      dataType: 'jsonp',\n" +
-			"      contentType: 'application/json',\n" +
-			"      jsonp: \"callback\",\n" +
-			"      data: values,\n" +
-			"      success: function (data) {\n" +
-			"        $('.codecheck-submit-response').text('');\n" +
-			"        $('.codecheck-submit-response').append(data['report']);\n" +
-			"      }\n" +
-			"    });\n" +
-			"  });\n" +
-			"});</script>";
+	private static String jsonpAjaxSubmissionScript = "<script src=\"/assets/myFormSubmit.js\"></script>";
 
 	private static String acePath = "/assets/ace";
 	private static String aceScript = "\n<script src=\"{0}/ace.js\"></script>\n<script src=\"{0}/mode-java.js\"></script>\n<script src=\"{0}/mode-c_cpp.js\"></script>\n<script src=\"{0}/mode-plain_text.js\"></script>\n<script src=\"{0}/mode-html.js\"></script>\n<script src=\"{0}/mode-text.js\"></script>\n<script src=\"{0}/ext-language_tools.js\"></script>";
