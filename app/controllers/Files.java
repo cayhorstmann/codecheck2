@@ -27,6 +27,8 @@ public class Files extends Controller {
 	private static String start = "<html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\" /><style type=\"text/css\" media=\"screen\">.ace_editor { border: 3px solid lightgray; height: auto; min-width: 700px; }</style></head><body style=\"font-family: sans;\">";
 	private static String before = "<form method=\"post\" action=\"{0}\" {1}>";
 
+	private static String messageScript = "<script src=\"/assets/myReceiveMessage.js\"></script>";
+
 	private static String fileAreaBefore = "\n<p><h3>{0}</h3><textarea id=\"{0}\" name=\"{0}\" rows=\"{1}\" cols=\"80\" class=\"{2}\">";
 	private static String fileAreaAfter = "</textarea>";
 	private static String after = "<p><input type=\"submit\"/><input type=\"hidden\" name=\"repo\" value=\"{0}\"><input type=\"hidden\" name=\"problem\" value=\"{1}\"><input type=\"hidden\" name=\"level\" value=\"{2}\"></p>";
@@ -171,6 +173,7 @@ public class Files extends Controller {
 		try (ProblemContext pc = new ProblemContext(repo, problemName, level)) {
 			StringBuilder result = new StringBuilder();
 			result.append(start);
+			result.append(messageScript);
 			if (pc.data.description != null)
 				result.append(pc.data.description);
 			int nusefiles = pc.data.useFiles.size();
