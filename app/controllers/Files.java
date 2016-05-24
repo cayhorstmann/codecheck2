@@ -1,11 +1,5 @@
 package controllers;
 
-import models.PlayConfig;
-import models.Problem;
-import models.ProblemData;
-import models.Util;
-import models.Config;
-
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -13,9 +7,16 @@ import java.nio.file.Paths;
 import java.text.MessageFormat;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import models.Config;
+import models.PlayConfig;
+import models.Problem;
+import models.ProblemData;
+import models.Util;
 import play.libs.Json;
 import play.mvc.Controller;
 import play.mvc.Result;
@@ -133,10 +134,18 @@ public class Files extends Controller {
 		}
 	}
 */
-	public Result filesHTML(String repo,
+	public CompletionStage<Result> filesHTML(String repo,
 			String problemName,
 			String level, String callback)
 			throws IOException {
+		return CompletableFuture.supplyAsync(() -> doFilesHTML(repo, problemName, level, callback))
+				.thenApply(r -> ok(r).as("text/html"));
+	}
+
+	private String doFilesHTML(String repo,
+			String problemName,
+			String level, String callback)
+			{
 		try (ProblemContext pc = new ProblemContext(repo, problemName, level)) {
 			StringBuilder result = new StringBuilder();
 			result.append(start);
@@ -189,8 +198,10 @@ public class Files extends Controller {
 				result.append(MessageFormat.format(callbackTemplate, callback));
 
 			result.append(end);
-			return ok(result.toString()).as("text/html");
-		} // pc auto-closed
+			return result.toString();
+		} catch (Exception ex) {
+			return Util.getStackTrace(ex);
+		}
 	}
 
 	public static boolean isTest(Path p) {

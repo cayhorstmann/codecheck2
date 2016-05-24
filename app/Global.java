@@ -1,8 +1,9 @@
 import java.io.IOException;
 
-import play.*;
 import models.PlayConfig;
 import models.Util;
+import play.Application;
+import play.GlobalSettings;
 
 public class Global extends GlobalSettings {
 	@Override
