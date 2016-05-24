@@ -1,11 +1,5 @@
 package controllers;
 
-import models.PlayConfig;
-import models.Problem;
-import models.ProblemData;
-import models.Util;
-import models.Config;
-
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -16,6 +10,11 @@ import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import models.Config;
+import models.PlayConfig;
+import models.Problem;
+import models.ProblemData;
+import models.Util;
 import play.libs.Json;
 import play.mvc.Controller;
 import play.mvc.Result;
