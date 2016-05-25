@@ -2,6 +2,8 @@
 $(function () {
     $('form').on('submit', function(e) {
         e.preventDefault();
+        clearErrorAnnotations();
+
         if ($('.codecheck-submit-response').length == 0)
             $('form').after('<div class="codecheck-submit-response"></div>');
         $('.codecheck-submit-response').text('Submitting...');
@@ -20,19 +22,18 @@ $(function () {
 
                 // ace editor
                 // clear any existing annotations
-                $(document).find('textarea')
-                    .filter(function(i,e) {
-                        // ignore textareas made by ace
-                        return $(e).attr('class') === undefined || $(e).attr('class').indexOf("ace_") === -1;
-                    })
-                    .each(function(idx, textarea) {
-                        var aceEditor = $(textarea).data('ace').editor.ace;
-                        aceEditor.getSession().clearAnnotations();
-                    });
+                clearErrorAnnotations();
+
                 // show error annotations
                 if ('errors' in data) {
                     var error = data['errors'][0]; // only display first error for sanity
-                    highlightLine(error['file'], error['line'], error['message'])
+                    highlightLine(error['file'], error['line'], error['message']);
+
+                    var editor = document.getElementById(error['file']);
+                    var aceEditor = $(editor).data('ace').editor.ace;
+                    aceEditor.getSession().on('change', function() {
+                        clearErrorAnnotations();
+                    });
                 }
             }
         });
@@ -47,4 +48,16 @@ var highlightLine = function(file, line, message) {
         text: message,
         type: "error"
     }]);
+};
+
+var clearErrorAnnotations = function() {
+    $(document).find('textarea')
+        .filter(function(i,e) {
+            // ignore textareas made by ace
+            return $(e).attr('class') === undefined || $(e).attr('class').indexOf("ace_") === -1;
+        })
+        .each(function(idx, textarea) {
+            var aceEditor = $(textarea).data('ace').editor.ace;
+            aceEditor.getSession().clearAnnotations();
+        });
 };
