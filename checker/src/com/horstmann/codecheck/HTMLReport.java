@@ -15,8 +15,8 @@ import java.util.Set;
 import javax.imageio.ImageIO;
 
 public class HTMLReport implements Report {
-    private StringBuilder builder;
-    private Path dir;
+    protected StringBuilder builder;
+    protected Path dir;
     private List<String> footnotes = new ArrayList<>();
     private int metaOffset;
 

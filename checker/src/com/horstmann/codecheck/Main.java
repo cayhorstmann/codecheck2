@@ -152,8 +152,10 @@ public class Main {
         if (errorReport == null) return true;        
         if (errorReport.trim().equals(""))
             report.error("Error compiling " + modules.get(0));
-        else
+        else {
             report.error(errorReport);
+            report.errors(language.errors(errorReport, true));
+        }
         return false;
     }
 
@@ -210,7 +212,8 @@ public class Main {
             String outerr = language.run(mainmodule, workDir, "", null, timeoutMillis);
             AsExpected cond = new AsExpected(comp);
             cond.eval(outerr, report, score, workDir.resolve(mainmodule));
-        }
+        } else
+            score.setInvalid();
     }
 
     private void testInputs(Map<String, String> inputs, Path mainmodule, Annotations annotations) throws Exception {
@@ -231,7 +234,8 @@ public class Main {
                 String input = inputs.get(test);
                 testInput(mainmodule, annotations, solutionDir, test, input);
             }
-        }
+        } else
+            score.setInvalid();
         
         Util.deleteDirectory(solutionDir);
     }
@@ -397,6 +401,8 @@ public class Main {
                 }
             }
             report.runTable(null, argNames, args, actual, expected, outcomes);
+        } else {
+            score.setInvalid();
         }
     }
 
@@ -434,12 +440,14 @@ public class Main {
             	score.pass(outcomes[i]);
             }
             report.runTable(names, new String[] { "Arguments" }, args, actual, expected, outcomes);
+        } else {
+            score.setInvalid();
         }
     }
 
     public void run(String[] args) throws IOException {
         // TODO: Adjustable Timeouts
-
+        long startTime = System.currentTimeMillis();
         String mode = args[0].trim();
         Path submissionDir = FileSystems.getDefault().getPath(args[1]);
         problemDir = FileSystems.getDefault().getPath(args[2]);
@@ -455,6 +463,8 @@ public class Main {
             report = new TextReport("Report", submissionDir);
         else if (System.getProperty("com.horstmann.codecheck.jsonreport") != null)
             report = new JSONReport("Report", submissionDir);
+        else if (System.getProperty("com.horstmann.codecheck.njsreport") != null)
+            report = new NJSReport("Report", submissionDir);
         else
             report = new HTMLReport("Report", submissionDir);
         int level = 0;
@@ -636,6 +646,9 @@ public class Main {
                     if (in != null)
                         inputs.put("test" + i, in);
                 }
+                int inIndex = inputs.size();
+                for (String s : annotations.findKeys("IN")) 
+                    inputs.put("test" + ++inIndex, Util.unescapeJava(s));
 
                 runUnitTests();
 
@@ -653,16 +666,20 @@ public class Main {
                 if (testerModules.size() > 0) {
                     report.header("tester", "Testers");
                     for (Path mainmodule : testerModules)
-                        if (missingModules.contains(mainmodule))
-                            report.error("Missing " + mainmodule); 
+                        if (missingModules.contains(mainmodule)) {
+                            report.error("Missing " + mainmodule);
+                            score.setInvalid();
+                        }
                         else
                             runTester(mainmodule);
                 }
 
                 if (runModules.size() > 0) {
                     for (Path mainmodule : runModules)
-                        if (missingModules.contains(mainmodule))
-                            report.error("Missing " + mainmodule); 
+                        if (missingModules.contains(mainmodule)) {
+                            report.error("Missing " + mainmodule);
+                            score.setInvalid();
+                        }
                         else
                             testInputs(inputs, mainmodule, annotations);
                 }
@@ -697,6 +714,8 @@ public class Main {
             report.systemError(t);
         } finally {
             if (annotations != null && !annotations.has("NOSCORE")) report.add(score);
+            long endTime = System.currentTimeMillis();
+            report.comment("Elapsed", (endTime - startTime) + " ms");
             report.save(problemId, "report");
         }
         System.exit(0);
@@ -726,6 +745,7 @@ public class Main {
             call.prepare(tempDir);
             call.run(workDir, report, score);
             Util.deleteDirectory(tempDir);
-        }
+        } else
+            score.setInvalid();
     }
 }

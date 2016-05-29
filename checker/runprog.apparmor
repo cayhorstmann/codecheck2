@@ -18,6 +18,7 @@
   /usr/bin/python3.4 mrix,
   /opt/scala*/** mrix,
   /opt/jdk*/** mrix,
+  /usr/lib/jvm/java-8-openjdk-amd64/** mrix,
   /bin/grep ix,
   /bin/uname ix,
   /usr/bin/dirname ix,

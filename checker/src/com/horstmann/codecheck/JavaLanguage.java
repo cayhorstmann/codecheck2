@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.tools.JavaCompiler;
@@ -421,8 +422,7 @@ public class JavaLanguage implements Language {
                     String result = runCheckStyle(dir.resolve(p));
                     report.output(p.getFileName().toString() + 
                             (result.length() == 0 ? ": Ok" : ":\n" + result));
-                    if (score.getPassed() > 0)
-                        score.pass(result.length() == 0, report);
+                    score.pass(result.length() == 0, report);
                 }
             }
             return true;
@@ -438,6 +438,7 @@ public class JavaLanguage implements Language {
     }
     
     @Override
+    @SuppressWarnings("deprecation")
     public void runUnitTest(List<Path> modules, Path dir, Report report,
             Score score) {
         Path module = modules.get(0);
@@ -512,6 +513,7 @@ public class JavaLanguage implements Language {
                 report.error("Error compiling " + module);
             else
                 report.error(errorReport);
+            score.setInvalid();
         }
 
     }
@@ -586,4 +588,24 @@ public class JavaLanguage implements Language {
     }
     
     public boolean echoesStdin() { return true; }
+    
+    @Override
+    public List<Error> errors(String report, boolean compileTime) {
+        if (compileTime) {
+            List<Error> result = new ArrayList<>();
+            String[] lines = report.split("\n");
+            Pattern pattern = Pattern.compile(".+/([^/]+\\.java):([0-9]+): error: (.+)");
+            int i = 0;
+            while (i < lines.length) {
+                Matcher matcher = pattern.matcher(lines[i]);
+                
+                if (matcher.matches()) {
+                    result.add(new Error(matcher.group(1), Integer.parseInt(matcher.group(2)), 0, matcher.group(3)));
+                }
+                i++;
+            }
+            return result;
+        }
+        else return Collections.emptyList();
+    }
 }

@@ -82,6 +82,7 @@
            <include name="comprog"/>
            <include name="runprog"/>
            <include name="runprog.apparmor"/>
+           <include name="killold"/>
            <include name="lib/**"/>
         </fileset>
     </copy>

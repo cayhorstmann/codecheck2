@@ -575,8 +575,11 @@ public class Util {
 			    	if (lines[j].trim().startsWith(start + "SHOW")) { done = true; i = j - 1; }
 			    	else { lines[j] = null; if (j == lines.length - 1) i = lines.length; }
 			    }			    
-			} else if (line.startsWith(start + "CALL ") || line.startsWith(start + "ID ") 
-					|| line.startsWith(start + "ARGS") || line.startsWith(start + "OUT")) {
+			} else if (line.startsWith(start + "CALL ") 
+					|| line.startsWith(start + "ID ") 
+					|| line.startsWith(start + "ARGS") 
+					|| line.startsWith(start + "IN ")
+					|| line.startsWith(start + "OUT")) {
 				lines[i] = null; // TODO: More cases like that? Student files shouldn't have pseudocomments
 			} else if (line.startsWith(start + "REQUIRED") || line.startsWith(start + "FORBIDDEN")) {
 				lines[i] = null;

@@ -186,4 +186,46 @@ public class Util {
         String home = System.getProperty("com.horstmann.codecheck.home");
         return home == null ? null : Paths.get(home);        
     }
+    
+    public static String unescapeJava(String s) {
+        StringBuilder out = new StringBuilder();
+        StringBuilder unicode = new StringBuilder(4);
+        boolean hadSlash = false;
+        boolean inUnicode = false;
+        int sz = s.length();
+        for (int i = 0; i < sz; i++) {
+           char ch = s.charAt(i);
+           if (inUnicode) {
+               unicode.append(ch);
+               if (unicode.length() == 4) {
+                   out.append((char) Integer.parseInt(unicode.toString(), 16));
+                   unicode.setLength(0);
+                   inUnicode = false;
+                   hadSlash = false;
+               }
+           }
+           else if (hadSlash) {
+               hadSlash = false;
+               if (ch == 'u') inUnicode = true;
+               else {
+                  String from = "'\"\\rftnb";
+                  String to = "'\"\\\r\f\t\n\b";
+                 
+                  boolean found = false;
+                  for (int j = 0; !found && j < from.length(); j++) {
+                      if (ch == from.charAt(j)) {
+                          out.append(to.charAt(j));
+                          found = true;
+                      }
+                  }
+                  if (!found) out.append(ch);
+               }
+            } else if (ch == '\\') 
+               hadSlash = true;
+            else 
+                out.append(ch);
+        }
+        if (hadSlash) out.append('\\'); 
+        return out.toString();
+    }
 }

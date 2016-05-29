@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
 
 public class Annotations {
     private static Set<String> validAnnotations = new HashSet<>(Arrays.asList(
-            "HIDE", "SHOW", "SOLUTION", "CALL", "SUB", "ID", "SAMPLE", "ARGS", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "REQUIRED", "FORBIDDEN", "NOSCORE", "FOR"));    
+            "HIDE", "SHOW", "SOLUTION", "CALL", "SUB", "ID", "SAMPLE", "ARGS", "IN", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "REQUIRED", "FORBIDDEN", "NOSCORE", "FOR"));    
     
     class Annotation {
         Path path;

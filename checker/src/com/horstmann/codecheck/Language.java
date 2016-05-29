@@ -188,4 +188,9 @@ public interface Language {
      * @return true if stdin is echoed 
      */
     default boolean echoesStdin() { return false; }
+    
+    default List<Error> errors(String report, boolean compileTime)
+    {
+        return Collections.emptyList();
+    }
 }

@@ -50,4 +50,6 @@ public interface Report
    Report comment(String key, String value);
    
    Report footnote(String text);
+   
+   default Report errors(List<Error> errors) { return this; }
 }
