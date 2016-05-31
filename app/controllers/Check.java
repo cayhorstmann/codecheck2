@@ -24,6 +24,7 @@ public class Check extends Controller {
 	
 	private static Config config = PlayConfig.INSTANCE;
 	
+	// Classic HTML report, with optional callback for Sunita
 	public CompletableFuture<Result> checkHTML() throws IOException {
 		Map<String, String[]> formParams = request().body().asFormUrlEncoded();
 		return CompletableFuture.supplyAsync(() -> {

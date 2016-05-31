@@ -91,7 +91,10 @@ public class Files extends Controller {
 			}
 			for (Path p : problem.getUseFiles()) {
 				String cont = Util.read(problemPath, p);
-				if (!Problem.isHidden(cont)) { // TODO: Iffy--how do we know
+				if (Problem.isSolution(cont)) { // TODO: Bad hack--confusing to leave the wrong classification in Problem
+					data.requiredFiles.put(Util.tail(p).toString(), Util.processHideShow(p, cont).toString());
+				} 
+				else if (!Problem.isHidden(cont)) { // TODO: Iffy--how do we know
 												// this on the server?
 					data.useFiles.put(Util.tail(p).toString(), cont);
 				}
