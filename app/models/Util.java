@@ -485,14 +485,26 @@ public class Util {
 		}
 	}
 
-	public static boolean isSource(Path path) {
+	public static String extension(Path path) {
+		return extension(path.toString());
+	}
+	
+	public static String extension(String path) {
 		String name = path.toString();
 		int n = name.lastIndexOf('.');
 		if (n == -1)
-			return false;
-		String extension = name.substring(n + 1).toLowerCase();
-		return Arrays.asList("java", "c", "cpp", "c++", "py", "scala").contains(
-				extension);
+			return "";
+		else
+			return name.substring(n + 1).toLowerCase();
+	}
+	
+	public static boolean isSource(Path path) {
+		return isSource(path.toString());
+	}
+	
+	public static boolean isSource(String path) {
+		return Arrays.asList("java", "c", "cpp", "c++", "h", "py", "scala", "m").contains(
+				extension(path));
 	}
 
 	public static String hostURL(HttpServletRequest request) {
