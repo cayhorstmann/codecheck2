@@ -14,11 +14,11 @@ import play.libs.Json;
 import play.libs.Jsonp;
 import play.mvc.BodyParser;
 import play.mvc.Controller;
+import play.mvc.Http;
 import play.mvc.Result;
 
 import com.fasterxml.jackson.databind.JsonNode;
-
-// TODO: Cookies?
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class Check extends Controller {
 	
@@ -29,8 +29,12 @@ public class Check extends Controller {
 		Map<String, String[]> formParams = request().body().asFormUrlEncoded();
 		return CompletableFuture.supplyAsync(() -> {
 			try {
-				Path submissionDir = Util.getDir(config, "submissions");
+		        Http.Cookie ccuCookie = request().cookie("ccu");
+				String ccu = ccuCookie == null ? Util.createUID() : ccuCookie.value();					        
+
+				Path submissionDir = Util.getDir(config, "submissions");				
 		        Path tempDir = Util.createTempDirectory(submissionDir);
+		        
 		        String repo = "ext";
 		        String problem = "";
 		        String level = "check";
@@ -48,7 +52,7 @@ public class Check extends Controller {
 		            else
 		                Util.write(tempDir, key, value);
 		        }
-		        Util.runLabrat(config, "html", repo, problem, level, tempDir.toAbsolutePath());
+		        Util.runLabrat(config, "html", repo, problem, level, tempDir.toAbsolutePath(), "User=" + ccu);
 		        String report = Util.read(tempDir.resolve("report.html"));
 		        if (callback != null) {
 		        	// Replace download link with Save Score button
@@ -77,7 +81,10 @@ public class Check extends Controller {
 		        	n = report.indexOf("<title>");
 		        	report = report.substring(0, n) + buttonScript + report.substring(n);        	
 		        }
-		        return ok(report).as("text/html");
+		        
+		        int age = 180 * 24 * 60 * 60;
+		        Http.Cookie newCookie = Http.Cookie.builder("ccu", ccu).withMaxAge(age).build();
+		        return ok(report).withCookies(newCookie).as("text/html");
 			}
 			catch (Exception ex) {
 				return internalServerError(Util.getStackTrace(ex));
@@ -87,31 +94,7 @@ public class Check extends Controller {
         
         // TODO: Delete tempDir
 	}
-	
-	public Result check() throws IOException { // Where is this used?
-		Map<String, String[]> formParams = request().body().asFormUrlEncoded();
-		Path submissionDir = Util.getDir(config, "submissions");
-        Path tempDir = Util.createTempDirectory(submissionDir);
-        String repo = "ext";
-        String problem = "";
-        String level = "check";
-        for (String key : formParams.keySet()) {
-            String value = formParams.get(key)[0];
-            if (key.equals("repo"))
-                repo = value;
-            else if (key.equals("problem"))
-                problem = value;
-            else if (key.equals("level"))
-                level = value;
-            else
-                Util.write(tempDir, key, value);
-        }
-        Util.runLabrat(config, "json", repo, problem, level, tempDir.toAbsolutePath());
-        return ok(Util.read(tempDir.resolve("report.json"))).as("application/json");
-        
-        // TODO: Delete tempDir
-	}
-	
+		
 	@BodyParser.Of(BodyParser.Json.class)
 	public Result checkJson() throws IOException  {
 		Path submissionDir = Util.getDir(config, "submissions");
@@ -152,7 +135,8 @@ public class Check extends Controller {
 	    	return ok(Util.read(tempDir.resolve("submission/report.json"))).as("application/json");
         // TODO: Delete tempDir	    
 	}
-
+	
+	// From JS UI 	
 	public CompletableFuture<Result> checkJsonp() throws IOException  {
 		Map<String, String[]> queryParams = request().queryString();
 		return CompletableFuture.supplyAsync(() -> {
@@ -163,7 +147,7 @@ public class Check extends Controller {
 				String problem = null;
 				String level = "1";
 				String type = "json";
-				String callback = "";
+				String callback = null;
 				Path dir = tempDir.resolve("submission");
 				java.nio.file.Files.createDirectory(dir);
 				for (String key : queryParams.keySet()) {
@@ -180,9 +164,12 @@ public class Check extends Controller {
 					Util.runLabrat(config, type, repo, problem, level, tempDir.toAbsolutePath(), tempDir.resolve("submission").toAbsolutePath());
 				else
 					Util.runLabrat(config, type, repo, problem, level, tempDir.resolve("submission").toAbsolutePath());
-				JsonNode result = Json.parse(Util.read(tempDir.resolve("submission/report.json")));
+				ObjectNode result = (ObjectNode) Json.parse(Util.read(tempDir.resolve("submission/report.json")));
+				String reportZip = Util.base64(tempDir.resolve("submission"), "report.signed.zip");
+				result.put("zip", reportZip);					
+				
 				if (callback == null)
-					return ok(result.asText());
+					return ok(result);
 				else
 					return ok(Jsonp.jsonp(callback, result));
 			} catch (Exception ex) {

@@ -17,3 +17,6 @@ libraryDependencies ++= Seq(
 routesGenerator := InjectedRoutesGenerator
 
 libraryDependencies += "com.amazonaws" % "aws-java-sdk" % "1.10.35"
+
+// no api docs in dist
+doc in Compile <<= target.map(_ / "none")

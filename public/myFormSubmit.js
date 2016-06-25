@@ -16,14 +16,19 @@ $(function () {
             jsonp: "callback",
             data: values,
             success: function (data) {
-                $('.codecheck-submit-response').text('');
-                $('.codecheck-submit-response').append(data['report']);
-                $('.codecheck-submit-response').data('score', data['score']);
+                $('.codecheck-submit-response').text('')
+                $('.codecheck-submit-response').append(data['report'])
+                $('.codecheck-submit-response').append(
+                		'<div class="download"><a download="'
+                		+ data.metadata.ID
+                		+ '.signed.zip" href="data:application/zip;base64,' 
+                		+ data.zip 
+                		+ '">Download</a></div>')
+                $('.codecheck-submit-response').data('score', data['score'])
 
                 // ace editor
                 // clear any existing annotations
-                clearErrorAnnotations();
-
+                clearErrorAnnotations();                
                 // show error annotations
                 if ('errors' in data) {
                     var error = data['errors'][0]; // only display first error for sanity

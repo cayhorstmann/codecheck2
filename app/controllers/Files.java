@@ -17,6 +17,7 @@ import models.ProblemData;
 import models.Util;
 import play.libs.Json;
 import play.mvc.Controller;
+import play.mvc.Http;
 import play.mvc.Result;
 
 public class Files extends Controller {
@@ -113,41 +114,7 @@ public class Files extends Controller {
 			return ok(Json.toJson(pc.data));
 		}
 	}
-/*
-	// TODO: Localize
-	// TODO: Separate out empty and nonempty files, with "provide" and
-	// "complete"
 
-	@GET
-	@javax.ws.rs.Path("/{problem}")
-	@Produces("text/html")
-	public String files(@PathParam("problem") String problem)
-			throws IOException {
-		return files("ext", problem, "check", "form");
-	}
-
-	@GET
-	@javax.ws.rs.Path("/{problem}/{level}")
-	@Produces("text/html")
-	public String files(@PathParam("problem") String problem,
-			@PathParam("level") String level) throws IOException {
-		return files("ext", problem, level, "form");
-	}
-
-	@GET
-	@javax.ws.rs.Path("/data")
-	// TODO:
-	@Produces({ "application/json", "application/xml" })
-	public ProblemData fileData(
-			@QueryParam("repo") @DefaultValue("ext") String repo,
-			@QueryParam("problem") String problemName,
-			@DefaultValue("check") @QueryParam("level") String level)
-			throws IOException {
-		try (ProblemContext pc = new ProblemContext(repo, problemName, level)) {
-			return pc.data;
-		}
-	}
-*/
 	public Result filesHTML(String repo,
 			String problemName,
 			String level, String callback, String type)
@@ -218,7 +185,12 @@ public class Files extends Controller {
 				String endWithJavaScript = "</form>" + jsonpAjaxSubmissionScript + "</body></html>";
 				result.append(endWithJavaScript);
 			}
-			return ok(result.toString()).as("text/html");
+			
+	        Http.Cookie ccuCookie = request().cookie("ccu");
+			String ccu = ccuCookie == null ? Util.createUID() : ccuCookie.value();					        
+	        int age = 180 * 24 * 60 * 60;
+	        Http.Cookie newCookie = Http.Cookie.builder("ccu", ccu).withMaxAge(age).build();
+			return ok(result.toString()).withCookies(newCookie).as("text/html");
 		} // pc auto-closed
 	}
 

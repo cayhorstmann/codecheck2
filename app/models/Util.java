@@ -44,6 +44,8 @@ import java.util.zip.ZipInputStream;
 
 import javax.servlet.http.HttpServletRequest;
 
+import play.Logger;
+
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
 import com.amazonaws.auth.AWSCredentials;
@@ -396,6 +398,9 @@ public class Util {
 		String script = MessageFormat.format(command, level, submissionDir,
 				problemDir, metas);
 		String result = runProcess(script, TIMEOUT);
+		
+		Logger.of("com.horstmann.codecheck").info("Script: " + script + " Result:" + result);
+		
 		Files.write(submissionDir.resolve("codecheck.log"), (script
 				+ "\n" + result).getBytes("UTF-8"));
 	}
