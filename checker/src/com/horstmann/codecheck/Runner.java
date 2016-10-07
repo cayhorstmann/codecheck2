@@ -82,7 +82,7 @@ public class Runner {
                             reportOutput.append(solutiondir + " not found.");
                             return;
                         }
-                        File submissiondir = Files.createTempDirectory("codecheck").toFile();
+                        File submissiondir = Util.createTempDirectory().toFile();
                         String level = (String) levelCombo.getSelectedItem();
                         if (mode.equals("solution")) {
                            copy(basedir, "solution", submissiondir);

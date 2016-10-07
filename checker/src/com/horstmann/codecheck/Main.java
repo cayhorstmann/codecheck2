@@ -36,7 +36,8 @@ public class Main {
     public static final double DEFAULT_TOLERANCE = 1.0E-6;
     public static final int DEFAULT_TIMEOUT_MILLIS = 30000;
     public static final String DEFAULT_TOKEN = "line";
-    
+    public static final int MUCH_LONGER = 1000; // if longer than the expected by this amount, truncate 
+        
     private int timeoutMillis;
     private Path workDir;
     private Properties checkProperties = new Properties();
@@ -60,7 +61,8 @@ public class Main {
        new CLanguage(),
        new CppLanguage(),
        new ScalaLanguage(),
-       new MatlabLanguage()
+       new MatlabLanguage(),
+       new RacketLanguage()
     };
 
     /**
@@ -160,7 +162,7 @@ public class Main {
     }
 
     public Path compileSolution(Path mainModule, Substitution sub, int n) throws IOException {
-        Path tempDir = Files.createTempDirectory("codecheck");
+        Path tempDir = Util.createTempDirectory();
         for (Path p : studentFiles) {
             Path source = problemDir.resolve(p);
             Path target = tempDir.resolve(Util.tail(p));
@@ -200,7 +202,7 @@ public class Main {
             return null;
     }
 
-    private void runTester(Path mainmodule) throws Exception {
+    private void runTester(Path mainmodule, int timeout) throws Exception {
         report.run("Running " + mainmodule);
         // TODO: Assume testers always in default package?
         
@@ -209,7 +211,7 @@ public class Main {
         // May need to count the number of expected cases in the 
         
         if (compile(mainmodule)) {
-            String outerr = language.run(mainmodule, workDir, "", null, timeoutMillis);
+            String outerr = language.run(mainmodule, workDir, "", null, timeout);
             AsExpected cond = new AsExpected(comp);
             cond.eval(outerr, report, score, workDir.resolve(mainmodule));
         } else
@@ -232,7 +234,7 @@ public class Main {
         if (compile(mainmodule)) {
             for (String test : inputs.keySet()) {
                 String input = inputs.get(test);
-                testInput(mainmodule, annotations, solutionDir, test, input);
+                testInput(mainmodule, annotations, solutionDir, test, input, timeoutMillis / inputs.size());
             }
         } else
             score.setInvalid();
@@ -241,7 +243,7 @@ public class Main {
     }
 
     private void testInput(Path mainmodule, Annotations annotations,
-            Path solutionDir, String test, String input)
+            Path solutionDir, String test, String input, int timeout)
             throws Exception {
         List<String> runargs = annotations.findKeys("ARGS");
         if (runargs.size() == 0) runargs.add("");
@@ -253,12 +255,12 @@ public class Main {
         report.run(runNumber.length() > 0 ? "Test " + runNumber : null);
         
         for (String args : runargs) {
-            testInput(mainmodule, solutionDir, test, input, args, outFiles);
+            testInput(mainmodule, solutionDir, test, input, args, outFiles, timeout / runargs.size());
         }
     }
     
     private void testInput(Path mainmodule,
-            Path solutionDir, String test, String input, String runargs, String[] outFiles)
+            Path solutionDir, String test, String input, String runargs, String[] outFiles, int timeout)
             throws Exception {
         
         // Before the run, clear any output files in case they existed, 
@@ -273,7 +275,7 @@ public class Main {
 
         // Run student program and capture stdout/err and output files
 
-        String outerr = language.run(mainmodule, workDir, runargs, input, timeoutMillis);
+        String outerr = language.run(mainmodule, workDir, runargs, input, timeout);
         List<String> contents = new ArrayList<>();
         List<CompareImages> imageComp = new ArrayList<>();
         
@@ -305,7 +307,7 @@ public class Main {
             for (String f : outFiles) Files.deleteIfExists(workDir.resolve(f));           
             copySuppliedFiles(); // Might have been deleted or mutated
         
-            String expectedOuterr = language.run(mainmodule, solutionDir, runargs, input, timeoutMillis);
+            String expectedOuterr = language.run(mainmodule, solutionDir, runargs, input, timeout);
         
             // Report on results
 
@@ -369,7 +371,7 @@ public class Main {
                 List<Path> modules = new ArrayList<>();
                 modules.add(Util.tail(p));
                 modules.addAll(dependentModules);
-                language.runUnitTest(modules, workDir, report, score);            
+                language.runUnitTest(modules, workDir, report, score, timeoutMillis / unitTests.size());            
             }
         }
     }
@@ -397,7 +399,8 @@ public class Main {
                     int j = 0;
                     for (String v : sub.values(i)) { args[i][j] = v; j++; }                      
                     outcomes[i] = comp.compare(actual[i], expected[i]);
-                    score.pass(outcomes[i]);
+                    actual[i] = Util.truncate(actual[i], expected[i].length() + MUCH_LONGER);
+                    score.pass(outcomes[i], report);
                 }
             }
             report.runTable(null, argNames, args, actual, expected, outcomes);
@@ -407,6 +410,7 @@ public class Main {
     }
 
     private void doCalls(Path submissionDir, Calls calls) throws Exception {
+        
         report.header("call", "Calling with Arguments");
         List<Path> testModules = calls.writeTester(problemDir, workDir);
         
@@ -430,14 +434,20 @@ public class Main {
             	args[i][0] = call.args;
                 if (lines.size() == 3 && Arrays.asList("true", "false").contains(lines.get(2))) {
                 	expected[i] = lines.get(0);
-                	actual[i] = lines.get(1);
+                	actual[i] = Util.truncate(lines.get(1), expected[i].length() + MUCH_LONGER);
                 	outcomes[i] = lines.get(2).equals("true");                
                 } else {
-                	expected[i] = lines.size() > 0 ? lines.get(0) : "???";  
-                	actual[i] = lines.size() > 1 ? lines.get(1) : "???";
+                    // Error in compilation or execution
+                        StringBuilder msg = new StringBuilder();
+                        for (String line : lines) { msg.append(line); msg.append('\n'); }
+                        String message = msg.toString(); 
+                        report.errors(language.errors(message, true));
+                                        
+                	expected[i] = "";  
+                	actual[i] = message;
                 	outcomes[i] = false;
                 }
-            	score.pass(outcomes[i]);
+            	score.pass(outcomes[i], report);
             }
             report.runTable(names, new String[] { "Arguments" }, args, actual, expected, outcomes);
         } else {
@@ -455,6 +465,7 @@ public class Main {
         Path homeDir = Util.getHomeDir();
         workDir = new File(".").getAbsoluteFile().toPath().normalize();
         System.setProperty("java.security.policy", homeDir.resolve("codecheck.policy").toString());
+        System.setProperty("com.horstmann.codecheck.home", homeDir.toString());
         
         if (System.getProperty("com.horstmann.codecheck.debug") == null) 
             System.setSecurityManager(new SecurityManager()); 
@@ -537,11 +548,9 @@ public class Main {
                 List<Path> files = new ArrayList<>();
                 files.addAll(solutionFiles);
                 files.addAll(studentFiles);
-                for (int j = 0; language == null && j < files.size(); j++) {
-                    for (int k = 0; language == null && k < languages.length; k++) {
-                        if (languages[k].isSource(files.get(j))) 
-                            language = languages[k];
-                    }
+                for (int k = 0; language == null && k < languages.length; k++) {
+                    if (languages[k].isLanguage(files)) 
+                        language = languages[k];
                 }
                 if (language == null) throw new RuntimeException("Cannot find language from " + files);
             }
@@ -647,8 +656,10 @@ public class Main {
                         inputs.put("test" + i, in);
                 }
                 int inIndex = inputs.size();
-                for (String s : annotations.findKeys("IN")) 
+                for (String s : annotations.findKeys("IN")) {
+                    if (!s.endsWith("\n")) s += "\n";
                     inputs.put("test" + ++inIndex, Util.unescapeJava(s));
+                }
 
                 runUnitTests();
 
@@ -671,7 +682,7 @@ public class Main {
                             score.setInvalid();
                         }
                         else
-                            runTester(mainmodule);
+                            runTester(mainmodule, timeoutMillis / testerModules.size());
                 }
 
                 if (runModules.size() > 0) {
@@ -698,8 +709,8 @@ public class Main {
 	            for (Path file : requiredFiles)
 	                report.file(submissionDir, file);
 		
-	            printFiles = filterNot(printFiles, "test*.in", "test*.out", "check.properties", "*.png", "*.PNG",
-	                    "*.gif", "*.GIF", "*.jpg", "*.jpeg", "*.JPG", ".DS_Store", "*.jar", "*.class", "problem.ch", "problem.html");
+	            printFiles = filterNot(printFiles, "test*.in", "test*.out", "check.properties", "q.properties", "*.png", "*.PNG",
+	                    "*.gif", "*.GIF", "*.jpg", "*.jpeg", "*.JPG", ".DS_Store", "*.jar", "*.class", "problem.ch", "problem.html");      
 
 	            printFiles.removeAll(annotations.findHidden());
 	

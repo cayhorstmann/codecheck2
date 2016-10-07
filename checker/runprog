@@ -42,6 +42,13 @@ case _"$LANG" in
         NO_AT_BRIDGE=1 octave --no-gui $@
         ;;
 
+    _Racket)
+        if grep -qE '\(define\s+\(\s*main\s+' $1 ; then
+            racket -tm $@
+        else
+            racket -t $@
+        fi 
+        ;;
     _)  
         echo Unknown language $LANG
         ;;          

@@ -3,6 +3,8 @@ package com.horstmann.codecheck;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
@@ -38,6 +40,16 @@ public class Util {
         if (n >= 0) result = result.substring(0, n);
         return result;
     }
+    
+    public static Path createTempDirectory() throws IOException {
+        return Files.createTempDirectory("codecheck");
+        // Don't do it in /tmp, or the Java tools will fail on Cygwin 
+    }
+    
+    public static Path createTempFile() throws IOException {
+        return Files.createTempFile("codecheck", "");
+    }
+    
 
     public static String read(Path path) {
         try {
@@ -140,12 +152,12 @@ public class Util {
 
     public static int runProcess(List<String> cmd, String input, int millis, StringBuilder output) {
         try {
-            Path out = Files.createTempFile("codecheck", "");
+            Path out = Util.createTempFile();
             Path in = null;
             try {            
                 ProcessBuilder builder = new ProcessBuilder(cmd);
                 if (input != null && input.length() > 0) {
-                    in = Files.createTempFile("codecheck", "");
+                    in = Util.createTempFile();
                     Files.write(in, input.getBytes(StandardCharsets.UTF_8));
                     builder.redirectInput(in.toFile());
                 }
@@ -178,9 +190,13 @@ public class Util {
         Object obj = new Util();
         for (URL url : ((URLClassLoader) obj.getClass().getClassLoader()).getURLs()) {
             String urlString = url.toString();
-            if (urlString.endsWith("codecheck.jar")) {
-                return Paths.get(urlString.substring(urlString.indexOf('/'),
-                        urlString.lastIndexOf('/')));
+            if (urlString.startsWith("file:") && urlString.endsWith("codecheck.jar")) {
+                try {
+                    return Paths.get(new URL(urlString).toURI()).getParent();
+                    // This works with file:///C:/... URLs in Windows
+                } catch (MalformedURLException | URISyntaxException e) {
+                    // We tried
+                }
             }
         }
         String home = System.getProperty("com.horstmann.codecheck.home");
@@ -227,5 +243,10 @@ public class Util {
         }
         if (hadSlash) out.append('\\'); 
         return out.toString();
+    }
+    
+    public static String truncate(String str, int maxlen) {
+        if (str.length() > maxlen) return str.substring(0, maxlen - 3) + "...";
+        else return str;
     }
 }

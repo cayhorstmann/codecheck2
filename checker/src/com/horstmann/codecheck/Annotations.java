@@ -147,8 +147,13 @@ public class Annotations {
                 }
                 boolean found = Pattern.compile(a.args).matcher(contents).find();
                 if (found == forbidden) { // found && forbidden || !found && required
-                    String message = a.next.startsWith("//") ? a.next.substring(2).trim() :
-                                     ((forbidden ? "Found " : "Did not find ") + a.args);
+                    String nextLine = a.next;
+                    String[] delims = language.pseudoCommentDelimiters();
+                    String message;
+                    if (nextLine.startsWith(delims[0]) && nextLine.endsWith(delims[1]))
+                        message = nextLine.substring(delims[0].length(), nextLine.length() - delims[1].length()).trim();
+                    else 
+                        message = (forbidden ? "Found " : "Did not find ") + a.args;
                     report.error(p + ": " + message);
                     return false;
                 }

@@ -1,13 +1,11 @@
 package com.horstmann.codecheck;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -15,7 +13,15 @@ public class CLanguage implements Language {
 
     @Override
     public boolean isSource(Path p) {
-        return p.toString().endsWith(".c");
+        String name = p.toString();
+        return name.endsWith(".c") || name.endsWith(".h");
+    }
+    
+    @Override
+    public boolean isLanguage(Collection<Path> files) {
+        for (Path p : files)
+            if (p.toString().endsWith(".c")) return true;
+        return false;
     }
 
     private static Pattern mainPattern = Pattern.compile("\\s*((int|void)\\s+)?main\\s*\\([^)]*\\)\\s*(\\{\\s*)?");
@@ -89,4 +95,7 @@ public class CLanguage implements Language {
         
         return Arrays.asList(declaration.substring(0, n + 1).trim(), declaration.substring(n + 1));
     }
+    
+    private static Pattern ERROR_PATTERN = Pattern.compile(".+/(?<file>[^/]+\\.cpp):(?<line>[0-9]+):(?<col>[0-9]+): error: (?<msg>.+)");
+    @Override public Pattern errorPattern() { return ERROR_PATTERN; }    
 }

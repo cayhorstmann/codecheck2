@@ -109,6 +109,7 @@ public class HTMLReport implements Report {
     }
     
     public HTMLReport args(String args) {
+        if (args == null || args.trim().length() == 0) return this; 
         caption("Command line arguments");
         return output(args);
     }
@@ -315,7 +316,23 @@ public class HTMLReport implements Report {
         return this;
     }
 
-    private StringBuilder attrEscape(CharSequence s) {
+    public static StringBuilder htmlEscape(CharSequence s) {
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '<')
+                builder.append("&lt;");
+            else if (c == '>') // Not strictly necessary
+                builder.append("&gt;");
+            else if (c == '&')
+                builder.append("&amp;");
+            else
+                builder.append(c);
+        }
+        return builder;
+    }
+    
+    public static StringBuilder attrEscape(CharSequence s) {
         StringBuilder result = new StringBuilder();
         for (int i = 0; i < s.length(); i++) {
             char c = s.charAt(i);
@@ -449,9 +466,9 @@ public class HTMLReport implements Report {
     @Override
     public HTMLReport pass(boolean b) {
         if (b)
-            passSpan("pass");
+            passSpan("pass ");
         else
-            failSpan("fail");
+            failSpan("fail ");
         return this;
     }
 

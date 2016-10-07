@@ -9,6 +9,8 @@ public class Comparison {
     private double tolerance = 1.0E-6;
     private boolean ignoreCase = true;
     private boolean ignoreSpace = true;
+    private static final int MANY_MORE_LINES = 10;
+        // If actual lines > expected + MANY_MORE_LINES, truncate actual output
     
     public boolean execute(String actual, String expected, Report report, String filename) throws IOException {
         List<String> lines1 = getLines(actual);
@@ -33,7 +35,12 @@ public class Comparison {
         }
         else {
             // TODO: What about file name?
-           report.compareTokens(matches, lines1, lines2);
+            if (lines1.size() > lines2.size() + MANY_MORE_LINES) {
+                lines1.set(lines2.size() + MANY_MORE_LINES, ". . .");
+                report.compareTokens(matches, lines1.subList(0, lines2.size() + MANY_MORE_LINES + 1), lines2);
+            } 
+            else
+                report.compareTokens(matches, lines1, lines2);
         }
         return outcome;
     }
@@ -51,6 +58,9 @@ public class Comparison {
         	else r.add(in.nextLine());
         }
         in.close();
+        // Trim blank lines from end
+        int i = r.size() - 1;
+        while (i >= 0 && r.get(i).trim().isEmpty()) { r.remove(i); i--; }
         return r;
     }
 

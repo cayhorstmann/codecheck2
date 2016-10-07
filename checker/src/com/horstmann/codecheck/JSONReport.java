@@ -42,12 +42,16 @@ public class JSONReport implements Report {
         public List<Match> matchedOutput;
         public List<Item> files = new ArrayList<>();
         public List<Item> images = new ArrayList<>();
-        public String errors; // TODO: Parse errors
+        public String errors; 
+        public List<Error> errorData = new ArrayList<>();
+        public String html;
+        public Boolean passed;
     }
     
     public static class Section {
         public String type;
         public String errors;
+        public List<Error> errorData = new ArrayList<>();
         public List<Run> runs;
     }
     
@@ -88,6 +92,7 @@ public class JSONReport implements Report {
     @Override
     public Report run(String caption) { 
         run = new Run();
+        run.passed = true;
         if (section.runs == null) section.runs = new ArrayList<>();
         section.runs.add(run);
         run.caption = caption; 
@@ -99,14 +104,32 @@ public class JSONReport implements Report {
     public Report output(CharSequence text) {
         if (run.output == null) run.output = text.toString();
         else run.output += "\n" + text;
+        
+        StringBuilder builder = new StringBuilder();
+        if (run.html != null) builder.append(run.html);
+        builder.append("<p><b>Output:</b></p>");
+        builder.append("<pre>");
+        builder.append(HTMLReport.htmlEscape(text));
+        builder.append("</pre>");
+        run.html = builder.toString();                    
+
         return this;
     }
 
     @Override
     public Report error(String message) {
+        if (message == null) return this;
         if (run != null) {
+            run.passed = false;
             if (run.errors == null) run.errors = message;
             else run.errors += "\n" + message;
+            StringBuilder builder = new StringBuilder();
+            if (run.html != null) builder.append(run.html);
+            builder.append("<p><b>Error:</b></p>");
+            builder.append("<pre>");
+            builder.append(HTMLReport.htmlEscape(message));
+            builder.append("</pre>");
+            run.html = builder.toString();
         } else if (section != null) {
             if (section.errors == null) section.errors = message;
             else section.errors += "\n" + message;
@@ -118,9 +141,7 @@ public class JSONReport implements Report {
 
     @Override
     public Report systemError(String message) {
-        if (data.errors == null) data.errors = message;
-        else run.errors += "\n" + message;
-        return this;
+        return error(message);
     }
 
     @Override
@@ -131,6 +152,8 @@ public class JSONReport implements Report {
 
     @Override
     public Report args(String args) {
+        // TODO: Would like to skip if no args
+        // if (args == null || args.trim().length() == 0) return this;
         run.args = new ArrayList<>();
         run.args.add(new Item("Command line arguments", args));
         return this;
@@ -139,6 +162,14 @@ public class JSONReport implements Report {
     @Override
     public Report input(String input) {
         run.input = input;
+        StringBuilder builder = new StringBuilder();
+        if (run.html != null) builder.append(run.html);           
+        if (run.input != null) {
+            builder.append("<p><b>Input:</b></p><pre>");
+            builder.append(HTMLReport.htmlEscape(run.input));
+            builder.append("</pre>");
+        }
+        run.html = builder.toString();
         return this;
     }
     
@@ -182,15 +213,18 @@ public class JSONReport implements Report {
     @Override
     public JSONReport file(String file, String contents) {
         Item item = new Item(file, contents);
-        /*
-        if ("studentFiles".equals(section.type))
-            data.studentFiles.add(item);
-        else if ("providedFiles".equals(section.type))
-            data.providedFiles.add(item);
-                    
-        else */
-        if (!"studentFiles".equals(section.type) && !"providedFiles".equals(section.type)) 
+        if (!"studentFiles".equals(section.type) && !"providedFiles".equals(section.type)) { 
             run.files.add(item);
+            
+            StringBuilder builder = new StringBuilder();
+            if (run.html != null) builder.append(run.html);
+            builder.append("<p><b>");
+            builder.append(HTMLReport.htmlEscape(file));
+            builder.append("</b></p><pre>");
+            builder.append(HTMLReport.htmlEscape(contents));
+            builder.append("</pre>");
+            run.html = builder.toString();                    
+        }
         return this;
     }
 
@@ -212,7 +246,9 @@ public class JSONReport implements Report {
 
     @Override
     public Report pass(boolean b) {
-        // TODO Auto-generated method stub
+        if (run != null) {
+            if (!b) run.passed = false;
+        }
         return this;
     }
 
@@ -228,6 +264,30 @@ public class JSONReport implements Report {
             if (i < expected.size()) m.expected = expected.get(i);
             if (i < matches.size()) m.matches = matches.get(i);
         }
+        StringBuilder builder = new StringBuilder();
+        if (run.html != null) builder.append(run.html);
+        builder.append("<table border='1' style='border-collapse: collapse;'>");
+        builder.append("<tr><th>Actual output</th><th>Expected output</th></tr>");
+        builder.append("<tr><td><pre>");
+        for (int i = 0; i < actual.size(); i++) {
+            StringBuilder row = HTMLReport.htmlEscape(actual.get(i));
+            if (i < matches.size() && matches.get(i))
+                builder.append(row);
+            else {
+                builder.append("<em style='color: red;'>"); 
+                builder.append(row);
+                builder.append("</em>");
+            }        
+            builder.append("\n");
+        }
+        builder.append("</pre></td><td><pre>");
+        for (int i = 0; i < expected.size(); i++) {
+            builder.append(HTMLReport.htmlEscape(expected.get(i)));
+            builder.append("\n");
+        }
+        builder.append("</pre></td></tr></table>");
+        run.html = builder.toString();
+        
         return this;
     }
 
@@ -242,6 +302,29 @@ public class JSONReport implements Report {
             if (matches.contains(i)) m.matches = true;
             else if (mismatches.contains(i)) m.matches = false;
         }
+        
+        StringBuilder builder = new StringBuilder();
+        if (run.html != null) builder.append(run.html);
+        builder.append("<pre>");
+        for (int i = 0; i < lines.size(); i++) {
+            StringBuilder line = HTMLReport.htmlEscape(lines.get(i));
+            if (matches.contains(i)) {
+                builder.append("<span style='color: green;'>");
+                builder.append(line);
+                builder.append("</span>");
+            }
+            else if (mismatches.contains(i)) {
+                builder.append("<span style='color: red;'>");
+                builder.append(line);
+                builder.append("</span>");                
+            }
+            else
+                builder.append(line);
+            builder.append("\n");
+        }
+        builder.append("</pre>\n");
+        run.html = builder.toString();                    
+        
         return this;
     }
 
@@ -252,6 +335,7 @@ public class JSONReport implements Report {
         for (int i = 0; i < actual.length; i++)
         {
             Run run = new Run();
+            run.passed = true;
             if (methodNames != null) run.caption = methodNames[i];
             section.runs.add(run);
             run.matchedOutput = new ArrayList<>();
@@ -264,6 +348,38 @@ public class JSONReport implements Report {
             for (int j = 0; j < argNames.length; j++) {
                 run.args.add(new Item(argNames[j], args[i][j]));
             }
+            
+            StringBuilder builder = new StringBuilder();
+            if (run.html != null) builder.append(run.html);
+            builder.append("<table border='1' style='border-collapse: collapse;'><tr><th>&nbsp;</th>");
+            if (methodNames != null) builder.append("<th>Name</th>");
+            for (String n : argNames) { 
+                builder.append("<th>"); 
+                builder.append(HTMLReport.htmlEscape(n)); 
+                builder.append("</th>"); 
+            }
+            builder.append("<th>Actual</th><th>Expected</th></tr>");
+            builder.append("<tr><td>");
+            if (outcomes[i]) builder.append("<span style='color: green'>Pass");
+            else builder.append("<span style='color: red'>Fail");
+            builder.append("</span></td><td>");
+            if (methodNames != null) { 
+                builder.append("<code>"); 
+                builder.append(HTMLReport.htmlEscape(methodNames[i]));
+                builder.append("</code></td><td>");
+            }
+            for (String a : args[i]) { 
+                builder.append("<code>"); 
+                builder.append(HTMLReport.htmlEscape(a.trim()));
+                builder.append("</code></td><td>");
+            }
+            builder.append("<code>"); 
+            builder.append(HTMLReport.htmlEscape(actual[i].trim()));
+            builder.append("</code></td><td><code>"); 
+            builder.append(HTMLReport.htmlEscape(expected[i].trim()));
+            builder.append("</code></td></tr>");
+            builder.append("</table>");  
+            run.html = builder.toString();
         }
         return this;
     }
@@ -277,5 +393,13 @@ public class JSONReport implements Report {
     @Override
     public Report footnote(String text) {        
         return this;
-    }  
+    }
+    
+    @Override
+    public Report errors(List<Error> errorData) 
+    {
+        if (section != null && !section.errorData.contains(errorData))
+            section.errorData = errorData;
+        return this; 
+    } 
 }

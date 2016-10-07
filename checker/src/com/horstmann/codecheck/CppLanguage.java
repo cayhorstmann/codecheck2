@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -17,7 +18,15 @@ public class CppLanguage implements Language {
 
     @Override
     public boolean isSource(Path p) {
-        return p.toString().endsWith(".cpp");
+        String name = p.toString();
+        return name.endsWith(".cpp") || name.endsWith(".h");
+    }
+    
+    @Override
+    public boolean isLanguage(Collection<Path> files) {
+        for (Path p : files)
+            if (p.toString().endsWith(".cpp")) return true;
+        return false;
     }
 
     private static Pattern mainPattern = Pattern.compile("\\s*((int|void)\\s+)?main\\s*\\([^)]*\\)\\s*(\\{\\s*)?");
@@ -136,4 +145,7 @@ public class CppLanguage implements Language {
         
         return Arrays.asList(declaration.substring(0, n + 1).trim(), declaration.substring(n + 1));
     }
+    
+    private static Pattern ERROR_PATTERN = Pattern.compile(".+/(?<file>[^/]+\\.cpp):(?<line>[0-9]+):(?<col>[0-9]+): error: (?<msg>.+)");
+    @Override public Pattern errorPattern() { return ERROR_PATTERN; }
 }

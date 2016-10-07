@@ -27,6 +27,9 @@ case _"$LANG" in
     _Matlab)
         ;;
 
+    _Racket)
+        ;;
+
     _)  
         echo Unknown language $LANG 
         ;;          

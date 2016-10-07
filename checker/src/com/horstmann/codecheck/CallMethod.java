@@ -166,7 +166,7 @@ public class CallMethod {
                 else
                     actual[i] = thrown.getClass().getName();
                 expected[i] = toString(expectedRet);
-                score.pass(pass);
+                score.pass(pass, report);
                 outcomes[i] = pass;
                 if (!pass)
                     outcome = false;

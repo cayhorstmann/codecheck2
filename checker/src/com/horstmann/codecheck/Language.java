@@ -4,9 +4,11 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public interface Language {
@@ -17,6 +19,21 @@ public interface Language {
      * @return true if it is a source file
      */
     boolean isSource(Path p);
+    
+    /**
+     * Tests if this collection of files contains source files
+     * of this language. For example, for C++, there would have to be 
+     * at least one .cpp file. A .file is source, but not an indication for C++
+     * The default implementation, which works for Java etc., just checks 
+     * that there is at least one source file.
+     * @param files
+     * @return
+     */
+    default boolean isLanguage(Collection<Path> files) {
+        for (Path p : files)
+            if (isSource(p)) return true;
+        return false;                    
+    }
 
     /**
      * Tests if a file is an "Expected" style unit test file in this language.
@@ -52,7 +69,10 @@ public interface Language {
      */
     default String compile(List<Path> modules, Path dir) {
         List<String> cmd = new ArrayList<>();
-        cmd.add(Util.getHomeDir() + "/comprog");
+        if (System.getProperty("os.name").toLowerCase().contains("win")) // We lose
+            cmd.add(Util.getHomeDir() + "\\comprog.bat");
+        else
+            cmd.add(Util.getHomeDir() + "/comprog");
         cmd.add(getLanguage());
         for (Path p : modules)
             cmd.add(dir.resolve(p).toString());
@@ -76,7 +96,10 @@ public interface Language {
     default String run(Path mainModule, Path dir, String args,
             String input, int timeoutMillis) throws Exception {
         List<String> cmd = new ArrayList<>();
-        cmd.add(Util.getHomeDir() + "/runprog");
+        if (System.getProperty("os.name").toLowerCase().contains("win")) // We lose
+            cmd.add(Util.getHomeDir() + "\\runprog.bat");
+        else
+            cmd.add(Util.getHomeDir() + "/runprog");
         cmd.add(getLanguage());
         String programName = dir.resolve(mainModule).toString();
         cmd.add(programName);
@@ -123,7 +146,7 @@ public interface Language {
      */
     default String substitutionSeparator() { return ";"; }
     
-    default void runUnitTest(List<Path> modules, Path workdir, Report report, Score score) {        
+    default void runUnitTest(List<Path> modules, Path workdir, Report report, Score score,  int timeoutMillis) {        
     }
 
     /**
@@ -189,8 +212,24 @@ public interface Language {
      */
     default boolean echoesStdin() { return false; }
     
-    default List<Error> errors(String report, boolean compileTime)
-    {
-        return Collections.emptyList();
+    default Pattern errorPattern() { return null; }
+    
+    default List<Error> errors(String report, boolean compileTime) {
+        Pattern pattern = errorPattern();
+        if (compileTime && pattern != null) {
+            List<Error> result = new ArrayList<>();
+            String[] lines = report.split("\n");
+            int i = 0;
+            while (i < lines.length) {
+                Matcher matcher = pattern.matcher(lines[i]);
+                
+                if (matcher.matches()) {
+                    result.add(new Error(matcher.group("file"), Integer.parseInt(matcher.group("line")), 0, matcher.group("msg")));
+                }
+                i++;
+            }
+            return result;
+        }
+        else return Collections.emptyList();
     }
 }

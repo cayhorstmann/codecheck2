@@ -55,22 +55,33 @@ function grade {
     if [ "${WORKDIR/#\//}" == "$WORKDIR" ] ; then WORKDIR="$STARTDIR"/"$WORKDIR" ; fi
 
     cd "$SUBMISSIONDIR"
-    REPORT_JAR=`basename $PROBLEMDIR`.signed.zip
-    $JAVA_HOME/bin/jar cf $REPORT_JAR . 
+    REPORT_JAR=report.signed.zip
+    "$JAVA_HOME"/bin/jar cf $REPORT_JAR . 
 
     cd "$WORKDIR"
 
+    if $cygwin; then
+      SDIR=`cygpath -w $SUBMISSIONDIR`
+      PDIR=`cygpath -w $PROBLEMDIR`
+      CPATH=`cygpath -wp $CLASSPATH`
+    else
+      SDIR="$SUBMISSIONDIR"
+      PDIR="$PROBLEMDIR"
+      CPATH="$CLASSPATH"
+    fi
+    
+    JOPTS="-Duser.language=en -Duser.country=US -Dcom.horstmann.codecheck $JAVA_OPTS"
+
     if [ ! -z "$DEBUG" ] ; then
-        echo LC_ALL=en_US.UTF-8 $JAVA_HOME/bin/java $JAVA_OPTS -Dcom.horstmann.codecheck -classpath $CLASSPATH com.horstmann.codecheck.Main $LEVEL "$SUBMISSIONDIR" "$PROBLEMDIR" $@
+        echo LC_ALL=en_US.UTF-8 "$JAVA_HOME"/bin/java $JOPTS -classpath $CPATH com.horstmann.codecheck.Main $LEVEL "$SDIR" "$PDIR" $@
     fi
 
-    JAVA_OPTS="-Duser.language=en -Duser.country=US $JAVA_OPTS"
-    LC_ALL=en_US.UTF-8 $JAVA_HOME/bin/java $JAVA_OPTS -Dcom.horstmann.codecheck -classpath $CLASSPATH com.horstmann.codecheck.Main $LEVEL "$SUBMISSIONDIR" "$PROBLEMDIR" $@
+    LC_ALL=en_US.UTF-8 "$JAVA_HOME"/bin/java $JOPTS -classpath $CPATH com.horstmann.codecheck.Main $LEVEL "$SDIR" "$PDIR" $@
 
     cd "$SUBMISSIONDIR"
 
     if [ -e report.html ] ; then
-        $JAVA_HOME/bin/jar uf $REPORT_JAR report.html
+        "$JAVA_HOME"/bin/jar uf $REPORT_JAR report.html
         MATCH=`grep --text -o '^[<]meta name="ID" content="\(.*\)"/>$' report.html`
         if [[ -n $MATCH ]] ; then
             MATCH=${MATCH##*\=\"}
@@ -80,7 +91,9 @@ function grade {
         fi
     fi
 
-    $JAVA_HOME/bin/jarsigner -keystore "$BASEDIR/codecheck.jks" -storepass secret $REPORT_JAR codecheck > /dev/null
+    if [ ! -z '$STOREPASS' -a -e "$BASEDIR/codecheck.jks" ] ; then
+        "$JAVA_HOME"/bin/jarsigner -keystore "$BASEDIR/codecheck.jks" -storepass '$STOREPASS' $REPORT_JAR codecheck > /dev/null
+    fi
 }
 
 # Script start
@@ -88,11 +101,47 @@ function grade {
 STARTDIR=`pwd`
 BASEDIR=`dirname $0`
 
-# Pick up JAVA_HOME, maybe JAVA_OPTS
+# Detect OS
+
+cygwin=false;
+linux=false
+mac=false
+
+case "`uname`" in
+    CYGWIN*)
+        cygwin=true
+        ;;
+    Linux)
+        linux=true
+        ;;
+    Darwin)
+        mac=true
+        ;;
+esac
+
+# Pick up env settings and set JAVA_HOME
 
 if [ -e $BASEDIR/codecheck.env ] ; then
     source $BASEDIR/codecheck.env
 fi    
+
+if [ -z "$JAVA_HOME" ] ; then
+    echo JAVA_HOME not set
+    exit
+fi    
+
+if [ ! -e "$JAVA_HOME"/lib/tools.jar ] ; then
+    echo JAVA_HOME does not point to JDK--no "$JAVA_HOME"/lib/tools.jar
+    if $cygwin; then
+        echo Try export JAVA_HOME=/cygdrive/c/Program\\ Files/Java/jdk-version
+    elif $linux; then
+        echo Try export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+    elif $mac; then
+        echo Try export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-version/Contents/Home
+    fi
+
+    exit
+fi
 
 # Set classpath
 
@@ -128,17 +177,6 @@ fi
 
 # From here on, client execution
 
-# Detect Cygwin
-cygwin=false;
-case "`uname`" in
-  CYGWIN*) cygwin=true;
-esac
-
-linux=false
-if [[ `uname` == 'Linux' ]]; then
-   linux=true
-fi
-
 if [ -z "$BROWSER" ] ; then
   if $cygwin; then
     BROWSER=cygstart
@@ -149,32 +187,40 @@ if [ -z "$BROWSER" ] ; then
   fi
 fi
 
-if [ "$1" == "-p" ] ; then BROWSER=cat ; shift ; fi
+REPORT=report.html
 
-if [ "$1" == "-q" ] ; then BROWSER=echo ; shift ; fi
-
-if [ "$1" == "-d" ] ; then DEBUG=true ; shift ; fi
-
-if [ "$1" == "-u" ] ; then CHECK_STUDENT_DIR=true ; shift ; fi
-
-if [ "$1" == "-t" ] ; then 
-    BROWSER=cat 
-    REPORT=report.txt 
-    JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck.textreport"
-    shift 
-elif [ "$1" == "-j" ] ; then 
-    BROWSER="python -mjson.tool"
-    REPORT=report.json
-    JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck.jsonreport"
-    shift 
-elif [ "$1" == "-n" ] ; then 
-    BROWSER="python -mjson.tool"
-    REPORT=report.json
-    JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck.njsreport"
-    shift 
-else
-    REPORT=report.html
-fi
+while getopts “pqdutjn” OPTION
+do
+     case $OPTION in
+         p)
+             BROWSER=cat
+             ;;
+         q)
+             BROWSER=echo
+             ;;
+         d)
+             DEBUG=true
+             ;;
+         u)
+             CHECK_STUDENT_DIR=true
+             ;;
+         t)
+             BROWSER=cat 
+             REPORT=report.txt 
+             JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck.textreport"
+             ;;
+         j)
+             BROWSER="python -mjson.tool"
+             REPORT=report.json
+             JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck.jsonreport"
+             ;;
+         n)
+             BROWSER="python -mjson.tool"
+             REPORT=report.json
+             JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck.njsreport"
+             ;;
+     esac
+done
 
 if [ -z $2 ] ; then
   LEVEL=1
@@ -226,12 +272,6 @@ then
     exit 1
 fi
 
-if $cygwin; then
-    SUBMISSIONDIR=`cygpath -w $SUBMISSIONDIR`
-    PROBLEMDIR=`cygpath -w $PROBLEMDIR`
-    CLASSPATH=`cygpath -w $CLASSPATH`
-fi
-
 WORKDIR=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
 
 grade $@
@@ -239,7 +279,6 @@ grade $@
 $BROWSER "$SUBMISSIONDIR/$REPORT" 2> /dev/null 
 
 if [ -z "$CHECK_STUDENT_DIR" ] ; then exit ; fi
-echo "Still here"
 
 # Checking student files
 cd "$STARTDIR"
@@ -262,9 +301,6 @@ if [ ! -z $SUBMISSIONDIR ] ; then
         ;;
   esac
 
-  if $cygwin; then
-      SUBMISSIONDIR=`cygpath -w $SUBMISSIONDIR`
-  fi
   WORKDIR=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
 
   grade $@

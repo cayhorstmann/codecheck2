@@ -1,8 +1,8 @@
-grant codeBase "file:/opt/codecheck/codecheck.jar" {
+grant codeBase "file:${com.horstmann.codecheck.home}/codecheck.jar" {
    permission java.security.AllPermission;
 };
 
-grant codeBase "file:/opt/codecheck/lib/-" {
+grant codeBase "file:${com.horstmann.codecheck.home}/lib/-" {
    permission java.security.AllPermission;
 };
 

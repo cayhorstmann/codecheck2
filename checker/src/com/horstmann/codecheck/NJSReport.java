@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -72,6 +71,8 @@ public class NJSReport extends HTMLReport {
         ObjectMapper mapper = new ObjectMapper();
         mapper.setSerializationInclusion(Include.NON_DEFAULT);
         mapper.writeValue(outPath.toFile(), data);
+        outPath = dir.resolve(out + ".html");
+        Util.write(outPath, data.report);
         return this;
     }
     

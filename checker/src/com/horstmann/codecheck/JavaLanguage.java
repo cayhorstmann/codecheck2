@@ -12,6 +12,7 @@ import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
@@ -343,6 +344,8 @@ public class JavaLanguage implements Language {
      * @param dir
      *            Path in which to search for jars.
      * @return The appropriate classpath argument.
+     * @throws URISyntaxException 
+     * @throws MalformedURLException 
      */
     private String buildClasspath(Path dir) {
         StringBuilder classPath = new StringBuilder();
@@ -360,14 +363,19 @@ public class JavaLanguage implements Language {
         for (URL url : ((URLClassLoader) getClass().getClassLoader()).getURLs()) {
             String urlString = url.toString();
             if (urlString.startsWith("file:") && urlString.endsWith(".jar")) {
-                Path p = Paths.get(urlString.substring(5));
-
-                if (isFirst) {
-                    isFirst = false;
-                } else {
-                    classPath.append(File.pathSeparatorChar);
+                try {
+                    Path p = Paths.get(new URL(urlString).toURI());
+                    // This works with file:///C:/... URLs in Windows
+    
+                    if (isFirst) {
+                        isFirst = false;
+                    } else {
+                        classPath.append(File.pathSeparatorChar);
+                    }
+                    classPath.append(dir.resolve(p).toString());
+                } catch (MalformedURLException | URISyntaxException e) {
+                    // We tried...
                 }
-                classPath.append(dir.resolve(p).toString());
             }
         }
 
@@ -440,7 +448,7 @@ public class JavaLanguage implements Language {
     @Override
     @SuppressWarnings("deprecation")
     public void runUnitTest(List<Path> modules, Path dir, Report report,
-            Score score) {
+            Score score,  int timeoutMillis) {
         Path module = modules.get(0);
         report.run(module.toString());
         String errorReport = compile(Collections.singletonList(module), dir); 
@@ -475,7 +483,6 @@ public class JavaLanguage implements Language {
                     };
 
                     junitThread.start();
-                    int timeoutMillis = Main.DEFAULT_TIMEOUT_MILLIS;
                     try {
                         junitThread.join(timeoutMillis);
                     } catch (InterruptedException e) {
@@ -588,24 +595,7 @@ public class JavaLanguage implements Language {
     }
     
     public boolean echoesStdin() { return true; }
-    
-    @Override
-    public List<Error> errors(String report, boolean compileTime) {
-        if (compileTime) {
-            List<Error> result = new ArrayList<>();
-            String[] lines = report.split("\n");
-            Pattern pattern = Pattern.compile(".+/([^/]+\\.java):([0-9]+): error: (.+)");
-            int i = 0;
-            while (i < lines.length) {
-                Matcher matcher = pattern.matcher(lines[i]);
-                
-                if (matcher.matches()) {
-                    result.add(new Error(matcher.group(1), Integer.parseInt(matcher.group(2)), 0, matcher.group(3)));
-                }
-                i++;
-            }
-            return result;
-        }
-        else return Collections.emptyList();
-    }
+
+    private static Pattern ERROR_PATTERN = Pattern.compile(".+/(?<file>[^/]+\\.java):(?<line>[0-9]+): error: (?<msg>.+)");
+    @Override public Pattern errorPattern() { return ERROR_PATTERN; }        
 }

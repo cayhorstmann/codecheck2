@@ -41,7 +41,7 @@ public class AsExpected {
                 	if (i == 0) {
                         report.error("No actual value for \"Expected: ...\" in line 1\n");
                         mismatches.add(0);
-                        score.fail();                		
+                        score.pass(false, report);                		
                 	} else {
                     	String expected = lines.get(i);
                 		String actual = lines.get(i - 1);	                
@@ -49,12 +49,12 @@ public class AsExpected {
 	                    // but a colon
 	                    if (comp.compare(getSuffix(actual), getSuffix(expected)) 
 	                    		|| comp.compare(actual, getSuffix(expected))) {
-	                        score.pass();
+	                        score.pass(true, report);
 	                    	matches.add(i);
 	                    }
 	                    else {
 	                    	mismatches.add(i);
-	                    	score.fail();
+	                    	score.pass(false, report);
 	                    }
                 	}
                 }
@@ -71,7 +71,7 @@ public class AsExpected {
             if (actualTests < expectedTests) {
             	int diff = expectedTests - actualTests;
             	report.error("Program exited before all expected values were printed.");
-            	for (int i = 1; i <= diff; i++) score.fail();
+            	for (int i = 1; i <= diff; i++) score.pass(false, report);
             }
         }
     }

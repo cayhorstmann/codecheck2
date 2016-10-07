@@ -224,41 +224,6 @@ Shorten timeout, user selectable
 
 Limit stdout size, user selectable
 
-------------------------------------------------------------------
-
-When looking for the main class, it currently looks for the string 
-
-public static void main(String[] args)
-
-It will miss
-
-public static void main (String[] args)
-
-Instead, compile the solution and use reflection.
-
-This might be done once when the problem is first submitted. The other metadata worth saving is the total number of points.
-
----------------------------------------------------------------
-
-The issue I am currently running into with the system:
-> I am providing a check.properties file, with 4 different args settings:
-> test1.args-inputFile1.txt
-> test2.args-too many arguments
-> test3.args-
-> test4.args-thisFileNameIsMissingSoItCannotBeFound.txt
-
-That's a reasonable expectation. But to make it true, you need to add 
-
-test1.in-
-test2.in-
-test3.in-
-test4.in-
-
-to check.properties or supply four blank files test1.in ... test4.in. Right now, it doesn't look at testn.args if there isn't a testn.in or testn.out. 
-
-TODO: Support multiple //ARGS lines
-
-
 ----------------------------------------
 
 "About codecheck" disclaimer	 	
@@ -269,9 +234,47 @@ Graphics capture not threadsafe
 
 When a Tester dies with a stack overflow, the error message is not added to the report.
 
+==============================================
 
-Server
-======
+Scheme
+
+racket -t filename
+
+Input/output--support it but is it important?
+
+Functions CALL 
 
 
-Are we running as root in aws? How to change?
+
+(equal? ...)
+Name spaces: http://stackoverflow.com/questions/14994153/using-namespaces-to-work-with-shadowed-identifiers   
+
+Testers with RackUnit
+
+Unit testing:
+http://docs.racket-lang.org/rackunit/api.html#%28part._.Overview_of_.Rack.Unit%29
+
+Is SUB useful???
+
+;;MAIN
+
+
+Can have
+
+#lang racket
+(provide (all-defined-out))
+
+as first two lines and then use
+
+(require "file.rkt")
+
+or neither of the two and then
+
+(include "file.rkt")
+
+
+Problem with main
+
+Don't want main for regular work, but then how to recognize main file?
+Need main for CALL to feed arg 1 2 3 etc.
+Don't want main for test-engine/racket-tests

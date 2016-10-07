@@ -4,18 +4,8 @@ public class Score {
     private int total;
     private int passed;
     private boolean invalid;
-
-    public void pass() {
-        if (invalid) return;
-        total++;
-        passed++;
-    }
-    public void fail() {
-        if (invalid) return;
-        total++;
-    }
     
-    public void pass(boolean b) {
+    private void pass(boolean b) {
         if (invalid) return;
         total++;
         if (b) passed++;
@@ -31,7 +21,7 @@ public class Score {
         if (invalid) return;
         this.passed += passed;
         this.total += total;
-        pass(passed == total, r);
+        r.pass(passed == total);
     }
     
     public void setInvalid() {
