@@ -30,6 +30,13 @@ case _"$LANG" in
     _Racket)
         ;;
 
+    _JavaScript)
+        ;;
+
+    _CSharp)
+        mcs -o Prog.exe $@
+        ;;
+    
     _)  
         echo Unknown language $LANG 
         ;;          

@@ -11,11 +11,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ScalaLanguage implements Language {
+    
     @Override
-    public boolean isSource(Path p) {
-        return p.toString().endsWith(".scala");
+    public String getExtension() {
+        return "scala";
     }
-
+    
     private static Pattern mainPattern1 = Pattern
             .compile("def\\s+main\\s*\\(\\s*\\S+\\s*:\\s*Array\\[\\s*String\\s*\\]\\s*\\)");
     private static Pattern mainPattern2 = Pattern

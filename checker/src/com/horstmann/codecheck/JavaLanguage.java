@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.tools.JavaCompiler;
@@ -41,11 +40,9 @@ public class JavaLanguage implements Language {
      * 
      * @see com.horstmann.codecheck.Language#isSource(java.nio.file.Path)
      */
-    @Override
-    public boolean isSource(Path p) {
-        return p.toString().endsWith(".java");
-    }
-
+    
+    public String getExtension() { return "java"; };
+    
     @Override
     public boolean isUnitTest(Path modulename) {
         return modulename != null && modulename.toString().matches(".*Test[0-9]*.java");
@@ -68,12 +65,12 @@ public class JavaLanguage implements Language {
         return contents != null && mainPattern.matcher(contents).find();
     }
 
-    private String moduleOf(Path path) {
+    public String moduleOf(Path path) {
         String name = Util.removeExtension(path); // drop .java
         return name.replace(FileSystems.getDefault().getSeparator(), ".");
     }
 
-    private Path pathOf(String moduleName) {
+    public Path pathOf(String moduleName) {
         Path p = FileSystems.getDefault().getPath("", moduleName.split("[.]"));
         Path parent = p.getParent();
         if (parent == null)
@@ -115,7 +112,7 @@ public class JavaLanguage implements Language {
      */
     @Override
     @SuppressWarnings("deprecation")
-    public String run(final Path mainModule, final Path classpathDir,
+    public String run(final Path mainModule, Set<Path> dependentModules, final Path classpathDir,
             String args, String input, int timeoutMillis) throws IOException,
             ReflectiveOperationException {
         InputStream oldIn = System.in;
@@ -447,18 +444,17 @@ public class JavaLanguage implements Language {
     
     @Override
     @SuppressWarnings("deprecation")
-    public void runUnitTest(List<Path> modules, Path dir, Report report,
+    public void runUnitTest(Path mainModule, Set<Path> dependentModules, Path dir, Report report,
             Score score,  int timeoutMillis) {
-        Path module = modules.get(0);
-        report.run(module.toString());
-        String errorReport = compile(Collections.singletonList(module), dir); 
+        report.run(mainModule.toString());
+        String errorReport = compile(Collections.singletonList(mainModule), dir); 
         if (errorReport == null) {
             try {
                 PrintStream oldOut = System.out;
                 PrintStream oldErr = System.err;
                 try (URLClassLoader loader = buildClassLoader(dir)) {
                     loader.setDefaultAssertionStatus(true);
-                    Class<?> c = loader.loadClass(classNameOfModule(module));
+                    Class<?> c = loader.loadClass(classNameOfModule(mainModule));
                     final AtomicBoolean done = new AtomicBoolean(false);                    
                     org.junit.runner.Result resultHolder[] = new org.junit.runner.Result[1];
                     final ByteArrayOutputStream newOut = new ByteArrayOutputStream();
@@ -517,7 +513,7 @@ public class JavaLanguage implements Language {
         }
         else {
             if (errorReport.trim().equals(""))
-                report.error("Error compiling " + module);
+                report.error("Error compiling " + mainModule);
             else
                 report.error(errorReport);
             score.setInvalid();

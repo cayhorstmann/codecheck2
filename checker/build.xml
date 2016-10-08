@@ -52,10 +52,7 @@
     </javac>
     <copy todir="${build.dir}" preservelastmodified="true">
       <fileset dir="${src.dir}">
-        <include name="**/*.xml" />
-        <include name="**/*.properties" />
-        <include name="**/*.cpp" />
-        <include name="**/*.h" />
+        <include name="**/codecheck.*" />
       </fileset>
     </copy>
     <replaceregexp file="${build.dir}/${app.resources}" byline="true">

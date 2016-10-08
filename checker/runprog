@@ -43,12 +43,24 @@ case _"$LANG" in
         ;;
 
     _Racket)
+        # ulimit -d 1000 -f 1000 -n 100 -v 100000
         if grep -qE '\(define\s+\(\s*main\s+' $1 ; then
             racket -tm $@
         else
             racket -t $@
         fi 
         ;;
+
+    _JavaScript)
+        # ulimit -d 1000 -f 1000 -n 100 -v 100000
+        jjs -scripting $@
+        ;;
+
+    _CSharp)
+        ulimit -d 1000 -f 1000 -n 100 -v 100000
+        mono `dirname $1`/Prog.exe $@
+        ;;
+    
     _)  
         echo Unknown language $LANG
         ;;          

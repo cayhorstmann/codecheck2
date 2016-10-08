@@ -62,7 +62,9 @@ public class Main {
        new CppLanguage(),
        new ScalaLanguage(),
        new MatlabLanguage(),
-       new RacketLanguage()
+       new RacketLanguage(),
+       new JavaScriptLanguage(),
+       new CSharpLanguage()
     };
 
     /**
@@ -146,6 +148,11 @@ public class Main {
         return compile(Collections.singletonList(mainModule));
     }
 
+    /**
+     * Runs the compiler
+     * @param modules a list of paths, starting with the path to the main module
+     * @return true if compilation succeeds
+     */
     public boolean compile(List<Path> modules) {
         List<Path> allModules = new ArrayList<>();
         allModules.addAll(modules);
@@ -211,7 +218,7 @@ public class Main {
         // May need to count the number of expected cases in the 
         
         if (compile(mainmodule)) {
-            String outerr = language.run(mainmodule, workDir, "", null, timeout);
+            String outerr = language.run(mainmodule, dependentModules, workDir, "", null, timeout);
             AsExpected cond = new AsExpected(comp);
             cond.eval(outerr, report, score, workDir.resolve(mainmodule));
         } else
@@ -275,7 +282,7 @@ public class Main {
 
         // Run student program and capture stdout/err and output files
 
-        String outerr = language.run(mainmodule, workDir, runargs, input, timeout);
+        String outerr = language.run(mainmodule, dependentModules, workDir, runargs, input, timeout);
         List<String> contents = new ArrayList<>();
         List<CompareImages> imageComp = new ArrayList<>();
         
@@ -307,7 +314,7 @@ public class Main {
             for (String f : outFiles) Files.deleteIfExists(workDir.resolve(f));           
             copySuppliedFiles(); // Might have been deleted or mutated
         
-            String expectedOuterr = language.run(mainmodule, solutionDir, runargs, input, timeout);
+            String expectedOuterr = language.run(mainmodule, dependentModules, solutionDir, runargs, input, timeout);
         
             // Report on results
 
@@ -368,10 +375,7 @@ public class Main {
         if (unitTests.size() > 0) {
             report.header("unitTest", "Unit Tests");
             for (Path p: unitTests) {
-                List<Path> modules = new ArrayList<>();
-                modules.add(Util.tail(p));
-                modules.addAll(dependentModules);
-                language.runUnitTest(modules, workDir, report, score, timeoutMillis / unitTests.size());            
+                language.runUnitTest(Util.tail(p), dependentModules, workDir, report, score, timeoutMillis / unitTests.size());            
             }
         }
     }
@@ -392,9 +396,9 @@ public class Main {
                 sub.substitute(submissionDir.resolve(mainmodule),
                                workDir.resolve(mainmodule), i);
                 if (compile(mainmodule)) {
-                    actual[i] = language.run(mainmodule, workDir, null, null, timeout);
+                    actual[i] = language.run(mainmodule, dependentModules, workDir, null, null, timeout);
                     Path tempDir = compileSolution(mainmodule, sub, i);
-                    expected[i] = language.run(mainmodule, tempDir, null, null, timeout);                    
+                    expected[i] = language.run(mainmodule, dependentModules, tempDir, null, null, timeout);                    
                     Util.deleteDirectory(tempDir);
                     int j = 0;
                     for (String v : sub.values(i)) { args[i][j] = v; j++; }                      
@@ -424,7 +428,10 @@ public class Main {
         
         if (compile(testModules)) {
             for (int i = 0; i < calls.getSize(); i++) {
-            	String result = language.run(testModules.get(0), workDir, "" + (i + 1), null, timeout);
+                Path mainModule = testModules.get(0);
+                Set<Path> otherModules = new TreeSet<>(dependentModules);
+                for (int j = 1; j < testModules.size(); j++) otherModules.add(testModules.get(j));
+            	String result = language.run(mainModule, otherModules, workDir, "" + (i + 1), null, timeout);
             	Scanner in = new Scanner(result);
                 List<String> lines = new ArrayList<>();
                 while (in.hasNextLine()) lines.add(in.nextLine());

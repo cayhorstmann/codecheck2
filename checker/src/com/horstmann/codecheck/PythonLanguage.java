@@ -2,7 +2,6 @@ package com.horstmann.codecheck;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -16,8 +15,8 @@ public class PythonLanguage implements Language {
     }
 
     @Override
-    public boolean isSource(Path p) {
-        return p.toString().endsWith(".py");
+    public String getExtension() {
+        return "py";
     }
 
     private static Pattern mainPattern = Pattern.compile("def\\s+main\\s*\\(\\s*\\)\\s*:");
@@ -38,22 +37,6 @@ public class PythonLanguage implements Language {
         if (mainPattern.matcher(contents).find()) return true;
         if (fundefPattern.matcher(contents).find()) return false;
         return true;
-    }
-
-    private String moduleOf(Path path) {
-        String name = path.toString();
-        if (!name.endsWith(".py"))
-            return null;
-        return name.substring(0, name.length() - 3); // drop .py
-    }
-
-    private Path pathOf(String moduleName) {
-        Path p = FileSystems.getDefault().getPath("", moduleName);
-        Path parent = p.getParent();
-        if (parent == null)
-            return FileSystems.getDefault().getPath(moduleName + ".py");
-        else
-            return parent.resolve(p.getFileName().toString() + ".py");
     }
 
     @Override

@@ -1,29 +1,25 @@
 package com.horstmann.codecheck;
 
 import java.io.IOException;
-import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.regex.Pattern;
 
 public class CLanguage implements Language {
 
     @Override
+    public String getExtension() {
+        return "c";
+    }
+    
+    @Override
     public boolean isSource(Path p) {
         String name = p.toString();
         return name.endsWith(".c") || name.endsWith(".h");
     }
     
-    @Override
-    public boolean isLanguage(Collection<Path> files) {
-        for (Path p : files)
-            if (p.toString().endsWith(".c")) return true;
-        return false;
-    }
-
     private static Pattern mainPattern = Pattern.compile("\\s*((int|void)\\s+)?main\\s*\\([^)]*\\)\\s*(\\{\\s*)?");
 
     /*
@@ -39,22 +35,6 @@ public class CLanguage implements Language {
         String contents = Util.read(p);
         if (contents == null) return false;
         return mainPattern.matcher(contents).find();
-    }
-
-    private String moduleOf(Path path) {
-        String name = path.toString();
-        if (!name.endsWith(".c"))
-            return null;
-        return name.substring(0, name.length() - 2); // drop .c
-    }
-
-    private Path pathOf(String moduleName) {
-        Path p = FileSystems.getDefault().getPath("", moduleName);
-        Path parent = p.getParent();
-        if (parent == null)
-            return FileSystems.getDefault().getPath(moduleName + ".c");
-        else
-            return parent.resolve(p.getFileName().toString() + ".c");
     }
 
     // TODO: Implement this

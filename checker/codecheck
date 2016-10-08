@@ -140,7 +140,8 @@ if [ ! -e "$JAVA_HOME"/lib/tools.jar ] ; then
         echo Try export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-version/Contents/Home
     fi
 
-    exit
+    # TODO: Check for JDK9
+    # exit
 fi
 
 # Set classpath

@@ -1,6 +1,7 @@
 package com.horstmann.codecheck;
 
 import java.io.IOException;
+import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,24 +15,70 @@ import java.util.regex.Pattern;
 public interface Language {
 
     /**
+     * Gets the extension required for source files in this language. 
+     * @return the extension (without a period), or null if there 
+     * is no one such extension.
+     */
+    String getExtension(); 
+    
+    /**
      * Tests if a file is a source file in this language.
      * @param p the path to the file
      * @return true if it is a source file
      */
-    boolean isSource(Path p);
+    default boolean isSource(Path p) {
+        String extension = getExtension();
+        return extension != null && p.toString().endsWith("." + extension);
+    }
+
+    /**
+     * Derives a "module" name from a source file. For example, in Java, the module of
+     * foo/bar/Baz.java would be foo.bar.Baz. By default, the source extension is removed.
+     * @param path the path of a source file
+     * @return the module name, or null if this file doesn't represent a module 
+     */
+    default String moduleOf(Path path) {
+        String name = path.toString();
+        String extension = getExtension();        
+        if (extension == null || !name.endsWith("." + extension))
+            return null;
+        return name.substring(0, name.length() - extension.length() - 1); // drop .extension
+    }
+    
+    /**
+     * Turns a "module" name into a source file. For example, in Java, the module foo.bar.Baz
+     * is turned into foo/bar/Baz.java. By default, the extension is added.
+     * @param moduleName a module name
+     * @return a path to a file representing this module
+     */
+    default Path pathOf(String moduleName) {
+        String extension = getExtension();
+        if (extension == null) extension = "";
+        else extension = "." + extension;
+        Path p = FileSystems.getDefault().getPath("", moduleName);
+        Path parent = p.getParent();
+        if (parent == null)
+            return FileSystems.getDefault().getPath(moduleName + extension);
+        else
+            return parent.resolve(p.getFileName().toString() + extension);
+    }
+
     
     /**
      * Tests if this collection of files contains source files
      * of this language. For example, for C++, there would have to be 
-     * at least one .cpp file. A .file is source, but not an indication for C++
+     * at least one .cpp file. A .h file is source, but not an indication for C++
      * The default implementation, which works for Java etc., just checks 
-     * that there is at least one source file.
+     * that there is at least one file with the source extension
      * @param files
      * @return
      */
     default boolean isLanguage(Collection<Path> files) {
+        String extension = getExtension();
+        // Don't call isSource because that may have been overridden to classify 
+        // header files as source
         for (Path p : files)
-            if (isSource(p)) return true;
+            if (extension != null && p.toString().endsWith("." + extension)) return true;
         return false;                    
     }
 
@@ -53,11 +100,16 @@ public interface Language {
     default boolean isUnitTest(Path modulename) { return false; }
 
     /**
-     * Tests if a file is a "main" file, i.e. an entry point for execution.
+     * Tests if a file is a "main" file, i.e. an entry point for execution. By default,
+     * a file whose module name ends in Runner or Tester, optionally followed by a number, matches.
+     * Many languages instead check whether the file contains something such as "public 
+     * static void main"
      * @param p the path to the file
      * @return true if it is a "main" file
      */
-    boolean isMain(Path p);
+    default boolean isMain(Path p) { 
+        return moduleOf(p).matches(".*(Runn|Test)er[0-9]*"); 
+    }
 
     // TODO: Why wire in the report? Maybe needs to return a compilation result with success, messages, name of executable?
     /**
@@ -93,7 +145,7 @@ public interface Language {
      * @param input the input to pass to stdin  
      * @return the combined stdout/stderr of the run 
      */
-    default String run(Path mainModule, Path dir, String args,
+    default String run(Path mainModule, Set<Path> dependentModules, Path dir, String args,
             String input, int timeoutMillis) throws Exception {
         List<String> cmd = new ArrayList<>();
         if (System.getProperty("os.name").toLowerCase().contains("win")) // We lose
@@ -129,7 +181,8 @@ public interface Language {
      * @param modifiers any modifiers for the test generation
      * @param name the name of the method being tested
      * @param argsList the args to pass to the calls
-     * @return the Path to the written tester relative to the target directory, and any helper modules
+     * @return a list containing the Path to the tester (with the main method or its equivalent),
+     * relative to the target directory, followed by the paths to any helper modules
      * @throws IOException
      */
     List<Path> writeTester(Path sourceDir, Path targetDir, Path file,
@@ -138,6 +191,10 @@ public interface Language {
 
     default String[] pseudoCommentDelimiters() { return new String[] { "//", "" }; }
 
+    /**
+     * The regex for recognizing a variable declaration in the language.
+     * @return the regex
+     */
     Pattern variablePattern();
 
     /**
@@ -146,7 +203,7 @@ public interface Language {
      */
     default String substitutionSeparator() { return ";"; }
     
-    default void runUnitTest(List<Path> modules, Path workdir, Report report, Score score,  int timeoutMillis) {        
+    default void runUnitTest(Path mainModule, Set<Path> dependentModules, Path workdir, Report report, Score score,  int timeoutMillis) {        
     }
 
     /**
