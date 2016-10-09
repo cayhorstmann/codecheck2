@@ -14,6 +14,13 @@ import java.util.regex.Pattern;
 
 import com.horstmann.codecheck.Calls.Call;
 
+/*
+ * If we want to use Nashorn instead of running jjs, 
+ * 1. need to set scripting flag: https://wiki.openjdk.java.net/display/Nashorn/Nashorn+jsr223+engine+notes
+ * 2. runs by default in sandbox: https://wiki.openjdk.java.net/display/Nashorn/Nashorn+script+security+permissions
+ * 3. Use ScriptContext to set stdin, stdout, stderr
+ */
+
 public class JavaScriptLanguage implements Language {
 
     @Override

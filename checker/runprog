@@ -53,7 +53,7 @@ case _"$LANG" in
 
     _JavaScript)
         # ulimit -d 1000 -f 1000 -n 100 -v 100000
-        jjs -scripting $@
+        jjs --language=es6 -scripting $@
         ;;
 
     _CSharp)
