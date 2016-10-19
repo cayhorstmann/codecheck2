@@ -14,7 +14,7 @@ function receiveMessage(event) {
         correct = scoreText.split('/')[0];
         maxscore = scoreText.split('/')[1];
     }
-    var response = {correct: correct, errors: 0, maxscore: maxscore, repo: repo, problem: problem}
+    var response = {correct: correct, errors: 0, maxscore: maxscore, repo: repo, problem: problem, request: event.data }
     event.source.postMessage(response, '*');
 }
 

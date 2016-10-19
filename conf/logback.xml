@@ -27,11 +27,13 @@
    </appender>
    
    <logger name="play" level="INFO" />
-   <logger name="application" level="DEBUG" />
-   <logger name="com.horstmann.codecheck" level="DEBUG" />
-   <root level="WARN">
-      <appender-ref ref="ASYNCFILE" />
+   <logger name="application" level="INFO" />
+   <logger name="com.horstmann.codecheck" level="INFO" />
+   <root level="INFO">
       <appender-ref ref="STDOUT" />
+   </root>
+   <root level="INFO">
+      <appender-ref ref="ASYNCFILE" />
    </root>
 
 </configuration>

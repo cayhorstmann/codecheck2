@@ -34,7 +34,7 @@ public class Upload  extends Controller {
 	
 	private static Config config = PlayConfig.INSTANCE;
 	
-	final Logger.ALogger logger = Logger.of("com.horstmann");
+   final Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
 
 	public Result uploadProblem() {
 		try {

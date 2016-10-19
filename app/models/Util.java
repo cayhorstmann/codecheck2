@@ -399,7 +399,7 @@ public class Util {
 				problemDir, metas);
 		String result = runProcess(script, TIMEOUT);
 		
-		Logger.of("com.horstmann.codecheck").info("Script: " + script + " Result:" + result);
+		Logger.of("com.horstmann.codecheck").debug("Script: " + script + " Result:" + result);
 		
 		Files.write(submissionDir.resolve("codecheck.log"), (script
 				+ "\n" + result).getBytes("UTF-8"));
@@ -508,7 +508,7 @@ public class Util {
 	}
 	
 	public static boolean isSource(String path) {
-		return Arrays.asList("java", "c", "cpp", "c++", "h", "py", "scala", "m").contains(
+		return Arrays.asList("java", "c", "cpp", "c++", "h", "py", "scala", "m", "rkt").contains(
 				extension(path));
 	}
 
@@ -553,10 +553,12 @@ public class Util {
 		String end = "";
 		String extension = extension(filepath);
 		if (extension.equals("py")) {
-			start = "##";
+                   start = "##";
 		} else if (extension.equals("c")) {
-			start = "/*"; end = "*/";
-		}
+                   start = "/*"; end = "*/";
+		} else if (extension.equals("rkt")) {
+                   start = ";;";
+                }
 		String[] lines = contents.split("\n");
 		if (lines.length == 0 || !lines[0].trim().equals(start + "SOLUTION" + end)) return contents;
 		lines[0] = null;

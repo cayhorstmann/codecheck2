@@ -15,6 +15,7 @@ $(function () {
             contentType: 'application/json',
             jsonp: "callback",
             data: values,
+            timeout: 300000, // 5 minutes            
             success: function (data) {
                 $('.codecheck-submit-response').text('')
                 $('.codecheck-submit-response').append(data['report'])
@@ -40,6 +41,11 @@ $(function () {
                         clearErrorAnnotations();
                     });
                 }
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+            	$('.codecheck-submit-response').text('')
+                $('.codecheck-submit-response').append($("<div>").text(textStatus))
+                $('.codecheck-submit-response').append($("<div>").text(errorThrown))
             }
         });
     });

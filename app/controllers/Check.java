@@ -3,19 +3,24 @@ package controllers;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.text.MessageFormat;
+import java.util.Base64;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+
+import javax.inject.Inject;
 
 import models.Config;
 import models.PlayConfig;
 import models.Util;
 import play.libs.Json;
 import play.libs.Jsonp;
+import play.libs.concurrent.HttpExecutionContext;
 import play.mvc.BodyParser;
 import play.mvc.Controller;
 import play.mvc.Http;
 import play.mvc.Result;
+import play.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -23,6 +28,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 public class Check extends Controller {
 	
 	private static Config config = PlayConfig.INSTANCE;
+	@Inject HttpExecutionContext ec;
 	
 	// Classic HTML report, with optional callback for Sunita
 	public CompletableFuture<Result> checkHTML() throws IOException {
@@ -53,8 +59,11 @@ public class Check extends Controller {
 		                Util.write(tempDir, key, value);
 		        }
 		        Util.runLabrat(config, "html", repo, problem, level, tempDir.toAbsolutePath(), "User=" + ccu);
-		        String report = Util.read(tempDir.resolve("report.html"));
+		        int age = 180 * 24 * 60 * 60;
+		        Http.Cookie newCookie = Http.Cookie.builder("ccu", ccu).withMaxAge(age).build();
+
 		        if (callback != null) {
+			        String report = Util.read(tempDir.resolve("report.html"));
 		        	// Replace download link with Save Score button
 		        	String target = "<p class=\"score\">";
 		        	int n = report.indexOf(target) + target.length();
@@ -80,16 +89,15 @@ public class Check extends Controller {
 		        	String buttonScript = MessageFormat.format(buttonScriptTemplate, callback, score);
 		        	n = report.indexOf("<title>");
 		        	report = report.substring(0, n) + buttonScript + report.substring(n);        	
-		        }
-		        
-		        int age = 180 * 24 * 60 * 60;
-		        Http.Cookie newCookie = Http.Cookie.builder("ccu", ccu).withMaxAge(age).build();
-		        return ok(report).withCookies(newCookie).as("text/html");
+			        return ok(report).withCookies(newCookie).as("text/html");
+		        } 
+		        else
+		        	return redirect("fetch/" + tempDir.getFileName() + "/report.html").withCookies(newCookie);
 			}
 			catch (Exception ex) {
 				return internalServerError(Util.getStackTrace(ex));
 			}
-		});        
+		}, ec.current());        
         
         
         // TODO: Delete tempDir
@@ -105,6 +113,7 @@ public class Check extends Controller {
 	    String problem = null;
 	    String level = "1";
 	    String type = "json";
+    	String uid = null;
 	    while (dirs.hasNext()) {
 	    	Map.Entry<String, JsonNode> dirEntry = dirs.next();
 	    	String key = dirEntry.getKey();
@@ -112,27 +121,41 @@ public class Check extends Controller {
 	    	if ("repo".equals(key)) repo = value.textValue();
 	    	else if ("problem".equals(key)) problem = value.textValue();
 	    	else if ("level".equals(key)) level = value.textValue();
-	    	else if ("type".equals(key)) type = value.textValue(); 
-	    	else { 
-	    		Path dir = tempDir.resolve(key);
+	    	else if ("type".equals(key)) type = value.textValue();
+	    	else if ("uid".equals(key)) uid = value.textValue();
+	    	else {
+	    		boolean encodeSolution = key.equals("c29sdXRpb24=");	    			
+	    		Path dir = tempDir.resolve(encodeSolution ? "solution" : key);
 	    		java.nio.file.Files.createDirectory(dir);
 	    		Iterator<Map.Entry<String,JsonNode>> files = value.fields();
 	    		while (files.hasNext()) {
-	    			Map.Entry<String, JsonNode> fileEntry = files.next();	    		
-	    			Util.write(dir, fileEntry.getKey(), fileEntry.getValue().textValue());
+	    			Map.Entry<String, JsonNode> fileEntry = files.next();
+	    			String contents = fileEntry.getValue().textValue();
+	    			if (encodeSolution) 
+	    				contents = new String(Base64.getDecoder().decode(contents), "UTF-8");
+	    			Util.write(dir, fileEntry.getKey(), contents);
 	    		}
 	    	}
 	    }
-	    if (problem == null) // problem was submitted in JSON
-	    	Util.runLabrat(config, type, repo, problem, level, tempDir.toAbsolutePath(), tempDir.resolve("submission").toAbsolutePath());
+	    if (problem == null) { // problem was submitted in JSON
+               Logger.of("com.horstmann.codecheck.json").info("Request: " + json);
+               if (uid == null)
+            	   Util.runLabrat(config, type, repo, problem, level, tempDir.toAbsolutePath(), tempDir.resolve("submission").toAbsolutePath());
+               else
+            	   Util.runLabrat(config, type, repo, problem, level, tempDir.toAbsolutePath(), tempDir.resolve("submission").toAbsolutePath(), "uid=" + uid);
+	    }
 	    else
 	    	Util.runLabrat(config, type, repo, problem, level, tempDir.resolve("submission").toAbsolutePath());
 	    if ("html".equals(type))
 	    	return ok(Util.read(tempDir.resolve("submission/report.html"))).as("text/html");
 	    else if ("text".equals(type))
 	    	return ok(Util.read(tempDir.resolve("submission/report.txt"))).as("text/plain");
-	    else
-	    	return ok(Util.read(tempDir.resolve("submission/report.json"))).as("application/json");
+	    else {
+               String result = Util.read(tempDir.resolve("submission/report.json"));
+               Logger.of("com.horstmann.codecheck.json").info("Response: " + result);
+
+               return ok(result).as("application/json");
+            }
         // TODO: Delete tempDir	    
 	}
 	
@@ -176,7 +199,7 @@ public class Check extends Controller {
 				return internalServerError(Util.getStackTrace(ex));
 			}
 			// TODO: Delete tempDir		
-		});		
+		}, ec.current());		
 	
 	}
 }

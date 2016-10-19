@@ -64,7 +64,7 @@ public class Problem {
     }
     
     private static Pattern solutionPattern = Pattern.compile("\\s*[^\\pL&&[^\\s]]*SOLUTION[^\\pL]*\\s*\\n");
-	// No letters or spaces, HIDE, optional no letters, trailing space (e.g. \r), \n
+	// No letters or spaces, SOLUTION, optional no letters, trailing space (e.g. \r), \n
 
     public static boolean isSolution(String cont) {
     	return solutionPattern.matcher(cont).lookingAt();

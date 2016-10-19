@@ -120,6 +120,8 @@ public class Files extends Controller {
 			String level, String callback, String type)
 			throws IOException {
 		try (ProblemContext pc = new ProblemContext(repo, problemName, level)) {
+			if (type == null || type.equals("")) type = "jsonp";
+			
 			StringBuilder result = new StringBuilder();
 			result.append(start);
 			result.append(messageScript);
@@ -179,7 +181,7 @@ public class Files extends Controller {
 			if (callback != null && callback.length() > 0)
 				result.append(MessageFormat.format(callbackTemplate, callback));
 
-			if (type == null || type.equals("")) {
+			if (type.equals("plain")) {
 				result.append(end);
 			} else if (type.equals("jsonp")) {
 				String endWithJavaScript = "</form>" + jsonpAjaxSubmissionScript + "</body></html>";
