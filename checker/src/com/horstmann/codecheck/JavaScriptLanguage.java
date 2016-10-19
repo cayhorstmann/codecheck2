@@ -75,7 +75,7 @@ public class JavaScriptLanguage implements Language {
     }
     
     public String run(Path mainModule, Set<Path> dependentModules, Path dir, String args,
-            String input, int timeoutMillis) throws Exception {
+            String input, int timeoutMillis, int maxOutputLen) throws Exception {
         List<String> cmd = new ArrayList<>();
         if (System.getProperty("os.name").toLowerCase().contains("win")) // We lose
             cmd.add(Util.getHomeDir() + "\\runprog.bat");
@@ -89,7 +89,7 @@ public class JavaScriptLanguage implements Language {
         cmd.add(programName);
         if (args != null) { cmd.add("--"); cmd.addAll(Arrays.asList(args.split("\\s+"))); }
         StringBuilder output = new StringBuilder();        
-        Util.runProcess(cmd, input, timeoutMillis, output);
+        Util.runProcess(cmd, input, timeoutMillis, output, maxOutputLen);
         return output.toString();
     }          
 }

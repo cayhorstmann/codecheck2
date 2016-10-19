@@ -35,10 +35,12 @@ import java.util.TreeSet;
 public class Main { 
     public static final double DEFAULT_TOLERANCE = 1.0E-6;
     public static final int DEFAULT_TIMEOUT_MILLIS = 30000;
+    public static final int DEFAULT_MAX_OUTPUT_LEN = 100_000;
     public static final String DEFAULT_TOKEN = "line";
     public static final int MUCH_LONGER = 1000; // if longer than the expected by this amount, truncate 
         
     private int timeoutMillis;
+    private int maxOutputLen;
     private Path workDir;
     private Properties checkProperties = new Properties();
     private Report report;
@@ -209,7 +211,7 @@ public class Main {
             return null;
     }
 
-    private void runTester(Path mainmodule, int timeout) throws Exception {
+    private void runTester(Path mainmodule, int timeout, int maxOutputLen) throws Exception {
         report.run("Running " + mainmodule);
         // TODO: Assume testers always in default package?
         
@@ -218,7 +220,7 @@ public class Main {
         // May need to count the number of expected cases in the 
         
         if (compile(mainmodule)) {
-            String outerr = language.run(mainmodule, dependentModules, workDir, "", null, timeout);
+            String outerr = language.run(mainmodule, dependentModules, workDir, "", null, timeout, maxOutputLen);
             AsExpected cond = new AsExpected(comp);
             cond.eval(outerr, report, score, workDir.resolve(mainmodule));
         } else
@@ -241,7 +243,7 @@ public class Main {
         if (compile(mainmodule)) {
             for (String test : inputs.keySet()) {
                 String input = inputs.get(test);
-                testInput(mainmodule, annotations, solutionDir, test, input, timeoutMillis / inputs.size());
+                testInput(mainmodule, annotations, solutionDir, test, input, timeoutMillis / inputs.size(), maxOutputLen / inputs.size());
             }
         } else
             score.setInvalid();
@@ -250,7 +252,7 @@ public class Main {
     }
 
     private void testInput(Path mainmodule, Annotations annotations,
-            Path solutionDir, String test, String input, int timeout)
+            Path solutionDir, String test, String input, int timeout, int maxOutput)
             throws Exception {
         List<String> runargs = annotations.findKeys("ARGS");
         if (runargs.size() == 0) runargs.add("");
@@ -262,12 +264,12 @@ public class Main {
         report.run(runNumber.length() > 0 ? "Test " + runNumber : null);
         
         for (String args : runargs) {
-            testInput(mainmodule, solutionDir, test, input, args, outFiles, timeout / runargs.size());
+            testInput(mainmodule, solutionDir, test, input, args, outFiles, timeout / runargs.size(), maxOutput / runargs.size());
         }
     }
     
     private void testInput(Path mainmodule,
-            Path solutionDir, String test, String input, String runargs, String[] outFiles, int timeout)
+            Path solutionDir, String test, String input, String runargs, String[] outFiles, int timeout, int maxOutput)
             throws Exception {
         
         // Before the run, clear any output files in case they existed, 
@@ -282,7 +284,7 @@ public class Main {
 
         // Run student program and capture stdout/err and output files
 
-        String outerr = language.run(mainmodule, dependentModules, workDir, runargs, input, timeout);
+        String outerr = language.run(mainmodule, dependentModules, workDir, runargs, input, timeout, maxOutput);
         List<String> contents = new ArrayList<>();
         List<CompareImages> imageComp = new ArrayList<>();
         
@@ -314,7 +316,7 @@ public class Main {
             for (String f : outFiles) Files.deleteIfExists(workDir.resolve(f));           
             copySuppliedFiles(); // Might have been deleted or mutated
         
-            String expectedOuterr = language.run(mainmodule, dependentModules, solutionDir, runargs, input, timeout);
+            String expectedOuterr = language.run(mainmodule, dependentModules, solutionDir, runargs, input, timeout, maxOutput);
         
             // Report on results
 
@@ -375,7 +377,7 @@ public class Main {
         if (unitTests.size() > 0) {
             report.header("unitTest", "Unit Tests");
             for (Path p: unitTests) {
-                language.runUnitTest(Util.tail(p), dependentModules, workDir, report, score, timeoutMillis / unitTests.size());            
+                language.runUnitTest(Util.tail(p), dependentModules, workDir, report, score, timeoutMillis / unitTests.size(), maxOutputLen / unitTests.size());            
             }
         }
     }
@@ -391,14 +393,15 @@ public class Main {
             String[] expected = new String[n];
             boolean[] outcomes = new boolean[n];
 
-            int timeout = timeoutMillis / Math.max(1, sub.getSize()); 
+            int timeout = timeoutMillis / Math.max(1, sub.getSize());
+            int maxOutput = maxOutputLen / Math.max(1, sub.getSize());
             for (int i = 0; i < sub.getSize(); i++) {
                 sub.substitute(submissionDir.resolve(mainmodule),
                                workDir.resolve(mainmodule), i);
                 if (compile(mainmodule)) {
-                    actual[i] = language.run(mainmodule, dependentModules, workDir, null, null, timeout);
+                    actual[i] = language.run(mainmodule, dependentModules, workDir, null, null, timeout, maxOutput);
                     Path tempDir = compileSolution(mainmodule, sub, i);
-                    expected[i] = language.run(mainmodule, dependentModules, tempDir, null, null, timeout);                    
+                    expected[i] = language.run(mainmodule, dependentModules, tempDir, null, null, timeout, maxOutput);                    
                     Util.deleteDirectory(tempDir);
                     int j = 0;
                     for (String v : sub.values(i)) { args[i][j] = v; j++; }                      
@@ -425,13 +428,14 @@ public class Main {
         boolean[] outcomes = new boolean[calls.getSize()];
 
         int timeout = timeoutMillis / calls.getSize();
+        int maxOutput = maxOutputLen  / calls.getSize();
         
         if (compile(testModules)) {
             for (int i = 0; i < calls.getSize(); i++) {
                 Path mainModule = testModules.get(0);
                 Set<Path> otherModules = new TreeSet<>(dependentModules);
                 for (int j = 1; j < testModules.size(); j++) otherModules.add(testModules.get(j));
-            	String result = language.run(mainModule, otherModules, workDir, "" + (i + 1), null, timeout);
+            	String result = language.run(mainModule, otherModules, workDir, "" + (i + 1), null, timeout, maxOutput);
             	Scanner in = new Scanner(result);
                 List<String> lines = new ArrayList<>();
                 while (in.hasNextLine()) lines.add(in.nextLine());
@@ -609,6 +613,12 @@ public class Main {
             	timeoutMillis = Integer.parseInt(timeoutProperty);
             timeoutMillis = (int) annotations.findUniqueDoubleKey("TIMEOUT", timeoutMillis);
             
+            maxOutputLen = DEFAULT_MAX_OUTPUT_LEN;
+            String maxOutputLenProperty = System.getProperty("com.horstmann.codecheck.maxoutputlen");
+            if (maxOutputLenProperty != null)
+                maxOutputLen = Integer.parseInt(maxOutputLenProperty);
+            maxOutputLen = (int) annotations.findUniqueDoubleKey("MAXOUTPUTLEN", maxOutputLen);
+            
             double tolerance = annotations.findUniqueDoubleKey("TOLERANCE", DEFAULT_TOLERANCE);
             boolean ignoreCase = !"false".equals(annotations.findUniqueKey("IGNORECASE"));
             boolean ignoreSpace = !"false".equals(annotations.findUniqueKey("IGNORESPACE"));
@@ -689,7 +699,7 @@ public class Main {
                             score.setInvalid();
                         }
                         else
-                            runTester(mainmodule, timeoutMillis / testerModules.size());
+                            runTester(mainmodule, timeoutMillis / testerModules.size(), maxOutputLen / testerModules.size());
                 }
 
                 if (runModules.size() > 0) {

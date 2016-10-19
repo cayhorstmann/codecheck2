@@ -150,7 +150,7 @@ public class Util {
         });
     }
 
-    public static int runProcess(List<String> cmd, String input, int millis, StringBuilder output) {
+    public static int runProcess(List<String> cmd, String input, int millis, StringBuilder output, int maxOutputLength) {
         try {
             Path out = Util.createTempFile();
             Path in = null;
@@ -165,8 +165,14 @@ public class Util {
                 builder.redirectOutput(out.toFile());
                 Process process = builder.start();
                 boolean completed = process.waitFor(millis, TimeUnit.MILLISECONDS);
-                int exitValue = process.exitValue();
-                String result = new String(Files.readAllBytes(out), StandardCharsets.UTF_8);
+                int exitValue = completed ? process.exitValue() : -1;
+                String result;
+                if (Files.size(out) > maxOutputLength) {
+                    char[] chars = new char[maxOutputLength];
+                    int n = Files.newBufferedReader(out).read(chars);
+                    result = new String(chars, 0, n) + "\n...\nRemainder truncated\n";
+                }
+                else result = new String(Files.readAllBytes(out), StandardCharsets.UTF_8);
                 if (!completed) result += "\nTimeout after " + millis + " milliseconds\n";
                 output.append(result);
                 return exitValue;

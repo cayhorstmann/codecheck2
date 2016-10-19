@@ -120,9 +120,9 @@ public class RacketLanguage implements Language {
    private static final Pattern failurePattern = Pattern.compile("Ran [0-9]+ checks.\\s+([0-9]+) of the ([0-9]+) checks failed");
    
    public @Override void runUnitTest(Path mainModule, Set<Path> dependentModules, Path dir, Report report,
-            Score score, int timeout) {
+            Score score, int timeout, int maxOutput) {
       try {
-         String result = run(mainModule, dependentModules, dir, "", "", timeout); 
+         String result = run(mainModule, dependentModules, dir, "", "", timeout, maxOutput); 
          Matcher matcher = successPattern.matcher(result);
          int runs = 0;
          int failures = 0;

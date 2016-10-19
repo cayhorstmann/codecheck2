@@ -129,7 +129,8 @@ public interface Language {
         for (Path p : modules)
             cmd.add(dir.resolve(p).toString());
         StringBuilder output = new StringBuilder();
-        int exitValue = Util.runProcess(cmd, null, Integer.MAX_VALUE, output);
+        final int MAX_OUTPUT_LEN = 10_000;
+        int exitValue = Util.runProcess(cmd, null, Integer.MAX_VALUE, output, MAX_OUTPUT_LEN);
         if (exitValue != 0) {
             return output.toString();
         } else
@@ -146,7 +147,7 @@ public interface Language {
      * @return the combined stdout/stderr of the run 
      */
     default String run(Path mainModule, Set<Path> dependentModules, Path dir, String args,
-            String input, int timeoutMillis) throws Exception {
+            String input, int timeoutMillis, int maxOutputLen) throws Exception {
         List<String> cmd = new ArrayList<>();
         if (System.getProperty("os.name").toLowerCase().contains("win")) // We lose
             cmd.add(Util.getHomeDir() + "\\runprog.bat");
@@ -157,7 +158,7 @@ public interface Language {
         cmd.add(programName);
         if (args != null) cmd.addAll(Arrays.asList(args.split("\\s+")));
         StringBuilder output = new StringBuilder();        
-        Util.runProcess(cmd, input, timeoutMillis, output);
+        Util.runProcess(cmd, input, timeoutMillis, output, maxOutputLen);
         return output.toString();
     }
 
@@ -203,7 +204,7 @@ public interface Language {
      */
     default String substitutionSeparator() { return ";"; }
     
-    default void runUnitTest(Path mainModule, Set<Path> dependentModules, Path workdir, Report report, Score score,  int timeoutMillis) {        
+    default void runUnitTest(Path mainModule, Set<Path> dependentModules, Path workdir, Report report, Score score,  int timeoutMillis, int maxOutputLen) {        
     }
 
     /**

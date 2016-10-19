@@ -1,8 +1,0 @@
-#!/bin/bash
-
-unzip $1
-rm $1
-
-rm *.html
-rm -rf student
-rm -rf student[1-9]

@@ -113,7 +113,7 @@ public class JavaLanguage implements Language {
     @Override
     @SuppressWarnings("deprecation")
     public String run(final Path mainModule, Set<Path> dependentModules, final Path classpathDir,
-            String args, String input, int timeoutMillis) throws IOException,
+            String args, String input, int timeoutMillis, int maxOutputLen) throws IOException,
             ReflectiveOperationException {
         InputStream oldIn = System.in;
         PrintStream oldOut = System.out;
@@ -212,6 +212,7 @@ public class JavaLanguage implements Language {
             } catch (InterruptedException e) {
             }
             result = newOut.toString("UTF-8");
+            if (result.length() > maxOutputLen) result = result.substring(0, maxOutputLen) + "\n...\nRemainder truncated\n";
             if (!done.get()) {
                 if (!result.endsWith("\n"))
                     result += "\n";
@@ -445,7 +446,7 @@ public class JavaLanguage implements Language {
     @Override
     @SuppressWarnings("deprecation")
     public void runUnitTest(Path mainModule, Set<Path> dependentModules, Path dir, Report report,
-            Score score,  int timeoutMillis) {
+            Score score,  int timeoutMillis, int maxOutputLen) {
         report.run(mainModule.toString());
         String errorReport = compile(Collections.singletonList(mainModule), dir); 
         if (errorReport == null) {
@@ -488,7 +489,10 @@ public class JavaLanguage implements Language {
                                 + (timeoutMillis >= 2000 ? timeoutMillis / 1000
                                         + " seconds" : timeoutMillis + " milliseconds"));
                         junitThread.stop();
-                        report.output(newOut.toString("UTF-8"));
+                        String output = newOut.toString("UTF-8");
+                        if (output.length() > maxOutputLen)
+                            output = output.substring(0, maxOutputLen) + "\n...\nRemainder truncated\n";
+                        report.output(output);
                     } else {                    
                         org.junit.runner.Result result = resultHolder[0];
                         int pass = result.getRunCount() - result.getFailureCount();
