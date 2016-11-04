@@ -44,8 +44,10 @@ $(function () {
             },
             error: function(jqXHR, textStatus, errorThrown) {
             	$('.codecheck-submit-response').text('')
-                $('.codecheck-submit-response').append($("<div>").text(textStatus))
-                $('.codecheck-submit-response').append($("<div>").text(errorThrown))
+            	
+                $('.codecheck-submit-response').append($("<div>").text('Error Status: ' + textStatus))
+                $('.codecheck-submit-response').append($("<div>").text('Error Thrown: ' + errorThrown))
+                $('.codecheck-submit-response').append($("<div>").text('Error Response: ' + jQuery.parseJSON(jqXHR.responseText)))
             }
         });
     });
@@ -55,7 +57,7 @@ var highlightLine = function(file, line, message) {
     var editor = document.getElementById(file);
     var aceEditor = $(editor).data('ace').editor.ace;
     aceEditor.getSession().setAnnotations([{
-        row: line - 1, // ace editor lines are 0-indexed
+        row: row - 1, // ace editor lines are 0-indexed
         text: message,
         type: "error"
     }]);

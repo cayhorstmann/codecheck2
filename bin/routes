@@ -1,0 +1,37 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# ~~~~
+
+# Home page
+GET /    controllers.Default.redirect(to = "http://horstmann.com/codecheck/index.html")
+
+# Health check
+GET     /health                           controllers.Application.health()
+
+# Map static resources from the /public folder to the /assets URL path
+GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
+
+GET	    /files						controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String ?= "check", callback: String ?= null, type: String ?= null)
+
+# For Hien 
+GET     /files/data                 controllers.Files.fileData(repo: String ?= "ext", problem: String, level: String ?= "check")
+POST    /checkJson					controllers.Check.checkJson()
+
+GET		/files/:problem				controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String ?= "check", callback: String ?= null, type: String ?= null)
+
+# NJS report, called from interactive element
+GET     /checkJsonp					controllers.Check.checkJsonp()
+
+# Classic HTML with optional callback for Sunita
+POST	/check						controllers.Check.checkHTML()
+
+POST	/uploadProblem				controllers.Upload.uploadProblem()
+GET		/fetch/:dir/*name			controllers.Upload.fetch(dir: String, name: String)
+
+# For compatibility
+
+GET     /codecheck/static/*file               controllers.Assets.versioned(path="/public", file: Asset)
+POST	/codecheck/uploadProblem				controllers.Upload.uploadProblem()
+GET	    /codecheck/files						controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String ?= "check", callback: String ?= null, type: String ?= "plain")
+GET		/codecheck/files/:problem				controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String ?= "check", callback: String ?= null, type: String ?= "plain")
+POST	/codecheck/check						controllers.Check.checkHTML()
