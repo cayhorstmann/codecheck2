@@ -37,6 +37,8 @@ public class Files extends Controller {
 
 	private static String useStart = "<p>Use the following {0,choice,1#file|2#files}:</p>";
 	private static String provideStart = "<p>Complete the following {0,choice,1#file|2#files}:</p>";
+	
+	private static String submissionCompScript = "<script src=\"/assets/download.js\"></script>";
 
 	private static String jsonpAjaxSubmissionScript = "<script src=\"/assets/myFormSubmit.js\"></script>";
 
@@ -166,12 +168,15 @@ public class Files extends Controller {
 
 				result.append(MessageFormat.format(fileAreaBefore, file,
 						lines, "java")); // TODO support more than "java" in ace editor format
+				result.append(MessageFormat.format(fileAreaBefore, file,
+						lines, "python"));
 				result.append(Util.htmlEscape(cont));
 				result.append(fileAreaAfter);
 			}
 			result.append(MessageFormat.format(after, repo, problemName, level));
 
 			// Include javascripts
+			result.append(MessageFormat.format(submissionCompScript, myPath));
 			result.append(MessageFormat.format(aceScript, acePath));
 			result.append(MessageFormat.format(jqueryScript, jqueryPath));
 			result.append(MessageFormat.format(jqueryAceScript, jqueryPath));

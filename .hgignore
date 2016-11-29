@@ -11,4 +11,7 @@ tmp
 .settings
 .idea
 activator*
+bin/*
+application-log
 project/.sbtserver.lock
+*.gz
