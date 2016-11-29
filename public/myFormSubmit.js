@@ -20,11 +20,7 @@ $(function () {
                 $('.codecheck-submit-response').text('')
                 $('.codecheck-submit-response').append(data['report'])
                 $('.codecheck-submit-response').append(
-                		'<div class="download">' //<a download="'
-                		//+ data.metadata.ID
-                		//+ '.signed.zip" href="data:application/zip;base64,' 
-                		//+ data.zip 
-                		//+ '">Download</a></div>' // download("data:image/gif;base64,
+                		'<div class="download">'
                 		+ '<button onclick="download(\'data:application/octet-stream;base64,' + data.zip + '\', \'homework.zip\', \'application/octet-stream\')">Download Test</button></div>')
                 $('.codecheck-submit-response').data('score', data['score'])
 

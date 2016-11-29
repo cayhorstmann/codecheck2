@@ -168,8 +168,6 @@ public class Files extends Controller {
 
 				result.append(MessageFormat.format(fileAreaBefore, file,
 						lines, "java")); // TODO support more than "java" in ace editor format
-				result.append(MessageFormat.format(fileAreaBefore, file,
-						lines, "python"));
 				result.append(Util.htmlEscape(cont));
 				result.append(fileAreaAfter);
 			}
