@@ -25,7 +25,6 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
@@ -183,15 +182,14 @@ public class Util {
 	}
 
 	public static void unzip(InputStream in, Path dir) throws IOException {
-		// TODO: Check for containing dir whose name equals zip file
 		ZipInputStream zin = new ZipInputStream(in);
 		ZipEntry entry;
 		while ((entry = zin.getNextEntry()) != null) {
 			String name = entry.getName();
 			Path outputPath = dir.resolve(name);
-			if (entry.isDirectory()) {
-				java.nio.file.Files.createDirectories(outputPath);
-			} else {
+			if (!entry.isDirectory() 
+					&& !name.startsWith("__MACOSX/") 
+					&& !outputPath.getFileName().toString().startsWith(".")) {
 				Path parent = outputPath.getParent();
 				java.nio.file.Files.createDirectories(parent);
 				OutputStream out = new FileOutputStream(outputPath.toFile());
@@ -350,13 +348,13 @@ public class Util {
 	}
 
 	// Delete returnedPath.getParent() when done
-	public static Path unzipFromS3(String repo, String problem)
+	public static Path unzipFromS3(Config config, String repo, String problem)
 			throws IOException {
 		Path unzipDir = java.nio.file.Files.createTempDirectory("problem");
 		String id = problem.replaceAll("/", "_"); // No / in dir name
 		Path problemDir = unzipDir.resolve(id);
 		Files.createDirectory(problemDir);
-		String bucket = repo + ".code-check.org";
+		String bucket = repo + "." + config.get("com.horstmann.codecheck.s3bucketsuffix");
 
 		InputStream in = getS3Connection().getObject(bucket, problem)
 				.getObjectContent();
@@ -373,7 +371,7 @@ public class Util {
 		// If problem is on S3 (eventually all will be)
 		java.nio.file.Path unzipDir = null;
 		if (isOnS3(config, repo)) {
-			Path tempProblemDir = unzipFromS3(repo, problem);
+			Path tempProblemDir = unzipFromS3(config, repo, problem);
 			unzipDir = tempProblemDir.getParent();
 			problemDir = tempProblemDir.toAbsolutePath();
 		} else {
@@ -503,15 +501,6 @@ public class Util {
 			return name.substring(n + 1).toLowerCase();
 	}
 	
-	public static boolean isSource(Path path) {
-		return isSource(path.toString());
-	}
-	
-	public static boolean isSource(String path) {
-		return Arrays.asList("java", "c", "cpp", "c++", "h", "py", "scala", "m", "rkt").contains(
-				extension(path));
-	}
-
 	public static String hostURL(HttpServletRequest request) {
 		String requestUrl = request.getRequestURL().toString();
 		// If that doesn't work, try request.getHeader("referer")) --Referer:
@@ -544,62 +533,5 @@ public class Util {
 		StringWriter out = new StringWriter();
 		t.printStackTrace(new PrintWriter(out));
 		return out.toString();
-	}
-	
-	public static CharSequence processHideShow(Path filepath, String contents)
-	{
-		if (!isSource(filepath)) return contents;
-		String start = "//";
-		String end = "";
-		String extension = extension(filepath);
-		if (extension.equals("py")) {
-                   start = "##";
-		} else if (extension.equals("c")) {
-                   start = "/*"; end = "*/";
-		} else if (extension.equals("rkt")) {
-                   start = ";;";
-                }
-		String[] lines = contents.split("\n");
-		if (lines.length == 0 || !lines[0].trim().equals(start + "SOLUTION" + end)) return contents;
-		lines[0] = null;
-		boolean containsHide = false;
-		for (int i = 1; i < lines.length; i++) {
-			String line = lines[i].trim();
-			if (line.equals(start + "HIDE" + end)) {
-				containsHide = true;
-				boolean done = false;
-				lines[i] = null;
-			    for (int j = i + 1; !done && j < lines.length; j++) {
-			    	if (lines[j].trim().startsWith(start + "SHOW")) { done = true; i = j - 1; }
-			    	else { lines[j] = null; if (j == lines.length - 1) i = lines.length; }
-			    }			    
-			} else if (line.startsWith(start + "CALL ") 
-					|| line.startsWith(start + "ID ") 
-					|| line.startsWith(start + "ARGS") 
-					|| line.startsWith(start + "IN ")
-					|| line.startsWith(start + "OUT")) {
-				lines[i] = null; // TODO: More cases like that? Student files shouldn't have pseudocomments
-			} else if (line.startsWith(start + "REQUIRED") || line.startsWith(start + "FORBIDDEN")) {
-				lines[i] = null;
-				if (lines[i + 1].startsWith(start) && lines[i + 1].endsWith(end)) {
-					lines[i + 1] = null;
-					i++;
-				}					
-			} else if (line.contains(start + "SUB ")) {			
-				int n = lines[i].indexOf(start + "SUB");
-				int n2 = end.equals("") ? lines[i].length() : lines[i].indexOf(end, n) + end.length();
-				lines[i] = lines[i].substring(0, n) + lines[i].substring(n2);
-			} else if (line.startsWith(start + "SHOW")){
-				String showString = start + "SHOW";
-				int n = lines[i].indexOf(showString);
-				int n2 = end.equals("") ? lines[i].length() : lines[i].indexOf(end, n);
-				lines[i] = lines[i].substring(0, n) + lines[i].substring(n + showString.length(), n2).trim() + lines[i].substring(n2 + end.length());
-			}			
-		}
-		StringBuilder result = new StringBuilder();
-		if (containsHide) {
-			for (String l : lines) if (l != null) { result.append(l); result.append("\n"); }
-		} // else hide entire solution so as not to reveal it accidentially
-		return result;
 	}	
 }

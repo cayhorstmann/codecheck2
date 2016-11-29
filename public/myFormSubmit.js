@@ -1,4 +1,4 @@
-/* For ajax/jsonp codecheck submission report within single page */
+/* For json/jsonp codecheck submission report within single page */
 $(function () {
     $('form').on('submit', function(e) {
         e.preventDefault();
@@ -11,7 +11,7 @@ $(function () {
         values.push({name: 'type', value: 'jsonp'});
         $.ajax({
             url: '/checkJsonp',
-            dataType: 'jsonp',
+            dataType: ajaxSubmissionType, // 'jsonp' or 'json' 
             contentType: 'application/json',
             jsonp: "callback",
             data: values,

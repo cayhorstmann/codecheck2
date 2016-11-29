@@ -56,17 +56,11 @@ public class Problem {
         return useFiles;
     }
     
-    private static Pattern hiddenPattern = Pattern.compile("\\s*[^\\pL&&[^\\s]]*HIDE[^\\pL]*\\s*\\n");
-    	// No letters or spaces, HIDE, optional no letters, trailing space (e.g. \r), \n
-
-    public static boolean isHidden(String cont) {
-    	return hiddenPattern.matcher(cont).lookingAt();
-    }
-    
     private static Pattern solutionPattern = Pattern.compile("\\s*[^\\pL&&[^\\s]]*SOLUTION[^\\pL]*\\s*\\n");
 	// No letters or spaces, SOLUTION, optional no letters, trailing space (e.g. \r), \n
 
-    public static boolean isSolution(String cont) {
+    public boolean isSolution(Path p) {
+    	String cont = Util.read(problemPath, p);
     	return solutionPattern.matcher(cont).lookingAt();
     }
 
@@ -86,8 +80,7 @@ public class Problem {
         if (studentDirectories.size() + solutionDirectories.size() == 0) {
         	// new-style packaging with no student or solution directories
         	studentDirectories.add(".");
-        }
-        
+        }        
     }
 
     private Properties gatherProperties() throws IOException {
@@ -155,6 +148,8 @@ public class Problem {
    // TODO: Unify with client identification code
     private void classifyFiles() throws IOException {
         Set<Path> solutionFiles = Util.getDescendantFiles(problemPath, solutionDirectories);
+        solutionFiles = Util.filterNot(solutionFiles, ".*", "*.class");
+
         // TODO: Remove rubrics
         Iterator<Path> iter = solutionFiles.iterator();
         while (iter.hasNext()) if (iter.next().toString().endsWith(".txt")) iter.remove();
@@ -165,10 +160,9 @@ public class Problem {
         if (requiredclasses != null)
             for (String cl : requiredclasses.trim().split("\\s*,\\s*"))
                 requiredFiles.add(findClass(cl));
-        else       // TODO: Maybe always
-            for (Path p : solutionFiles)
-               if (!p.toString().endsWith(".class") && !p.getFileName().toString().startsWith("."))
-                    requiredFiles.add(find(Util.tail(p)));
+        else    
+            for (Path p : solutionFiles)               
+            	requiredFiles.add(find(Util.tail(p)));
 
         String editclass = getStringProperty("editclass");
         // Ask to complete editclass (if exists--for codecomp) or mainclass
@@ -186,19 +180,90 @@ public class Problem {
             nodocCl.addAll(Arrays.asList(nodoc.trim().split("\\s*,\\s*")));
 
         Set<Path> studentFiles = Util.getDescendantFiles(problemPath, studentDirectories);
-        studentFiles = Util.filterNot(studentFiles, ".*");
+        studentFiles = Util.filterNot(studentFiles, ".*", "*.class");
 
         // TODO: We only show students source files, not text or images
         // Would be better to show those as well
         // But then need to filter out problem.html and the images used inside  
         
         for (Path path : studentFiles)
-            if (Util.isSource(path)) {
+        	if (isSolution(path))
+        		requiredFiles.add(path);
+			else if (isSource(path)) {
                 String cl = Util.moduleOf(Util.tail(path));
                 if (!requiredFiles.contains(path) && !nodocCl.contains(cl))
                     useFiles.add(path);
             }
         if (editclass != null) 
-            useFiles.remove(findClass(mainclass));
+            useFiles.remove(findClass(editclass));
     }
+    
+	public static boolean isSource(Path path) {
+		return isSource(path.toString());
+	}
+	
+	public static boolean isSource(String path) {
+		return Arrays.asList("java", "c", "cpp", "c++", "h", "py", "scala", "m", "rkt", "js", "cs").contains(
+				Util.extension(path));
+	}
+
+	public static String processHideShow(Path filepath, String contents)
+	{
+		if (contents == null) return "";
+		if (!isSource(filepath)) return contents;
+		String start = "//";
+		String end = "";
+		String extension = Util.extension(filepath);
+		if (extension.equals("py")) {
+                   start = "##";
+		} else if (extension.equals("c")) {
+                   start = "/*"; end = "*/";
+		} else if (extension.equals("rkt")) {
+                   start = ";;";
+                }
+		String[] lines = contents.split("\n");
+		boolean hiding = false;
+		boolean isSolution = false;
+		boolean somethingHidden = false;
+		for (int i = 0; i < lines.length; i++) {
+			String line = lines[i].trim();
+			if (line.equals(start + "HIDDEN" + end)) return "";
+			else if (line.equals(start + "SOLUTION" + end)) {
+				isSolution = true;
+				lines[i] = null;						
+			} else if (line.equals(start + "HIDE" + end)) {
+				hiding = true;
+				somethingHidden = true;
+				lines[i] = null;
+			} else if (line.startsWith(start + "SHOW")){
+				hiding = false;
+				String showString = start + "SHOW";
+				int n = lines[i].indexOf(showString);
+				int n2 = end.equals("") ? lines[i].length() : lines[i].indexOf(end, n);
+				lines[i] = lines[i].substring(0, n) + lines[i].substring(n + showString.length(), n2).trim() + lines[i].substring(n2 + end.length());
+			} else if (hiding) { 
+				lines[i] = null;
+			} else if (line.startsWith(start + "CALL ") 
+					|| line.startsWith(start + "ID ") 
+					|| line.startsWith(start + "ARGS") 
+					|| line.startsWith(start + "IN ")
+					|| line.startsWith(start + "OUT")) {
+				lines[i] = null; // TODO: More cases like that? Student files shouldn't have pseudocomments
+			} else if (line.startsWith(start + "REQUIRED") || line.startsWith(start + "FORBIDDEN")) {
+				lines[i] = null;
+				if (lines[i + 1].startsWith(start) && lines[i + 1].endsWith(end)) {
+					lines[i + 1] = null;
+					i++;
+				}					
+			} else if (line.contains(start + "SUB ")) {			
+				int n = lines[i].indexOf(start + "SUB");
+				int n2 = end.equals("") ? lines[i].length() : lines[i].indexOf(end, n) + end.length();
+				lines[i] = lines[i].substring(0, n) + lines[i].substring(n2);
+			}			
+		}
+		if (isSolution && !somethingHidden) return "";
+		StringBuilder result = new StringBuilder();
+		for (String l : lines) if (l != null) { result.append(l); result.append("\n"); }
+		return result.toString();
+	}	    
 }

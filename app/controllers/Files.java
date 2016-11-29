@@ -24,7 +24,7 @@ public class Files extends Controller {
 	private static final Pattern IMG_PATTERN = Pattern
 			.compile("[<]\\s*[iI][mM][gG]\\s*[sS][rR][cC]\\s*[=]\\s*['\"]([^'\"]*)['\"][^>]*[>]");
 
-	private static String start = "<html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\" /><style type=\"text/css\" media=\"screen\">.ace_editor { border: 3px solid lightgray; height: auto; min-width: 700px; }</style></head><body style=\"font-family: sans;\">";
+	private static String start = "<html><head><meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\" /><style type=\"text/css\" media=\"screen\">.studentFiles, .providedFiles { display: none; }\n .ace_editor { border: 3px solid lightgray; height: auto; min-width: 700px; }</style></head><body style=\"font-family: sans;\">";
 	private static String before = "<form method=\"post\" action=\"{0}\" {1}>";
 
 	private static String messageScript = "<script src=\"/assets/myReceiveMessage.js\"></script>";
@@ -63,7 +63,7 @@ public class Files extends Controller {
 		ProblemContext(String repo, String problemName, String level)
 				throws IOException {
 			if (Util.isOnS3(config, repo)) {
-				problemPath = Util.unzipFromS3(repo, problemName);
+				problemPath = Util.unzipFromS3(config, repo, problemName);
 				unzipDir = problemPath.getParent();
 			} else {
 				Path repoPath = Paths.get(config.get("com.horstmann.codecheck.repo."
@@ -86,21 +86,15 @@ public class Files extends Controller {
 					includeCode = false; // code already shown in statement.html
 			}
 
-			// TODO: Indicate whether it is ok to add more classes
-			// TODO: Should this be a part of the script?
 			for (Path p : problem.getRequiredFiles()) {
 				String cont = Util.read(problemPath, p);
-				data.requiredFiles.put(Util.tail(p).toString(), cont);
+				data.requiredFiles.put(Util.tail(p).toString(), Problem.processHideShow(p, cont));
 			}
 			for (Path p : problem.getUseFiles()) {
 				String cont = Util.read(problemPath, p);
-				if (Problem.isSolution(cont)) { // TODO: Bad hack--confusing to leave the wrong classification in Problem
-					data.requiredFiles.put(Util.tail(p).toString(), Util.processHideShow(p, cont).toString());
-				} 
-				else if (!Problem.isHidden(cont)) { // TODO: Iffy--how do we know
-												// this on the server?
+				cont = Problem.processHideShow(p, cont);
+				if (cont.length() > 0) // If it's entirely hidden, don't show its name--this happens with //HIDDEN
 					data.useFiles.put(Util.tail(p).toString(), cont);
-				}
 			}
 		}
 
@@ -122,7 +116,7 @@ public class Files extends Controller {
 			String level, String callback, String type)
 			throws IOException {
 		try (ProblemContext pc = new ProblemContext(repo, problemName, level)) {
-			if (type == null || type.equals("")) type = "jsonp";
+			if (type == null || type.equals("")) type = "json";
 			
 			StringBuilder result = new StringBuilder();
 			result.append(start);
@@ -186,8 +180,8 @@ public class Files extends Controller {
 
 			if (type.equals("plain")) {
 				result.append(end);
-			} else if (type.equals("jsonp")) {
-				String endWithJavaScript = "</form>" + jsonpAjaxSubmissionScript + "</body></html>";
+			} else if (type.equals("json") || type.equals("jsonp")) {
+				String endWithJavaScript = "</form>\n<script>var ajaxSubmissionType = " + type + "</script>\n" + jsonpAjaxSubmissionScript + "</body></html>";
 				result.append(endWithJavaScript);
 			}
 			

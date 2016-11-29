@@ -12,12 +12,13 @@ GET     /health                           controllers.Application.health()
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
 
 GET	    /files						controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String ?= "check", callback: String ?= null, type: String ?= null)
+GET		/files/:problem				controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String ?= "check", callback: String ?= null, type: String ?= null)
+GET		/files/:problem/:level		controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String, callback: String ?= null, type: String ?= null)
 
 # For Hien 
 GET     /files/data                 controllers.Files.fileData(repo: String ?= "ext", problem: String, level: String ?= "check")
 POST    /checkJson					controllers.Check.checkJson()
 
-GET		/files/:problem				controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String ?= "check", callback: String ?= null, type: String ?= null)
 
 # NJS report, called from interactive element
 GET     /checkJsonp					controllers.Check.checkJsonp()
@@ -34,4 +35,5 @@ GET     /codecheck/static/*file               controllers.Assets.versioned(path=
 POST	/codecheck/uploadProblem				controllers.Upload.uploadProblem()
 GET	    /codecheck/files						controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String ?= "check", callback: String ?= null, type: String ?= "plain")
 GET		/codecheck/files/:problem				controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String ?= "check", callback: String ?= null, type: String ?= "plain")
+GET		/codecheck/files/:problem/:level		controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String, callback: String ?= null, type: String ?= "plain")
 POST	/codecheck/check						controllers.Check.checkHTML()

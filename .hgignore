@@ -12,6 +12,10 @@ tmp
 .idea
 activator*
 bin/**
-application-log
 project/.sbtserver.lock
+bin/**
+application-log*
+aws/**
+gcloud/**
+ssl_cert/**
 *.gz

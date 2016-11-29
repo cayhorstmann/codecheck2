@@ -1,12 +1,5 @@
 package controllers;
 
-import models.Config;
-import models.PlayConfig;
-import models.Util;
-import play.Logger;
-import play.mvc.Controller;
-import play.mvc.Result;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,17 +19,20 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class Upload  extends Controller {
-	private Path problemDir;
-	private String reason;
-	private String repo = "ext";
-	private Map<String, String> runs = new LinkedHashMap<>();
-	
+import models.Config;
+import models.PlayConfig;
+import models.Util;
+import play.Logger;
+import play.mvc.Controller;
+import play.mvc.Result;
+
+public class Upload  extends Controller {	
 	private static Config config = PlayConfig.INSTANCE;
 	
-   final Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
+	final Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
+	final String repo = "ext";
 
-	public Result uploadProblem() {
+	public Result uploadProblem() {		
 		try {
 			play.mvc.Http.MultipartFormData<File> body = request().body().asMultipartFormData();	
 			String problem = Util.createUID();
@@ -51,7 +47,7 @@ public class Upload  extends Controller {
 			}
 			Path problemZip = unzipDir.resolve(problem + ".zip");
 			try {
-				problemDir = unzipDir.resolve(problem);			
+				Path problemDir = unzipDir.resolve(problem);			
 				Files.createDirectory(problemDir);
 				File file = body.getFile("file").getFile();
 				logger.debug("file=" + file);
@@ -64,45 +60,42 @@ public class Upload  extends Controller {
 				Util.unzip(in, problemDir);
 				in.close();
 	
-				if (isOnS3) Util.putToS3(problemZip, repo + ".code-check.org", problem);
-				if (check()) {
-					boolean grade = runs.keySet().contains("grade");
-					boolean multipleLevels = runs.keySet().size() > (grade ? 2
-							: 1);
-					String url =  "files/" + problem; 
-					
-					StringBuilder response = new StringBuilder();
-					response.append("<html><body style=\"font-family: sans\"><ul style=\"list-style: square\">");
-					for (String k : runs.keySet()) {
-						response.append("<li>");
-						String reportUrl = "fetch/" + runs.get(k);
-						if (k.equals("grade")) {
-							response.append("<a href=\"");
-							response.append(reportUrl);
-							response.append("\" target=\"_blank\">Grader report</a>");
-						} else {
-							String problemUrl = (request().secure() ? "https://" : "http://" ) + request().host() + "/" + url;
-							if (multipleLevels) {
-								response.append("Level " + k + " ");
-								problemUrl += "/" + k;
-							}
-							response.append("URL: <code>");
-							response.append(problemUrl); // TODO: Fix
-							response.append("</code> | <a href=\"");
-							response.append(problemUrl);
-							response.append("\" target=\"_blank\">Preview</a>");
-							response.append(" | <a href=\"");
-							response.append(reportUrl);
-							response.append("\" target=\"_blank\">Report</a>");
+				if (isOnS3) Util.putToS3(problemZip, repo + "." + config.get("com.horstmann.codecheck.s3bucketsuffix"), problem);
+				Map<String, String> runs = check(problemDir);
+				boolean grade = runs.keySet().contains("grade");
+				boolean multipleLevels = runs.keySet().size() > (grade ? 2
+						: 1);
+				String url =  "files/" + problem; 
+				
+				StringBuilder response = new StringBuilder();
+				response.append("<html><body style=\"font-family: sans\"><ul style=\"list-style: square\">");
+				for (String k : runs.keySet()) {
+					response.append("<li>");
+					String reportUrl = "fetch/" + runs.get(k);
+					if (k.equals("grade")) {
+						response.append("<a href=\"");
+						response.append(reportUrl);
+						response.append("\" target=\"_blank\">Grader report</a>");
+					} else {
+						String problemUrl = (request().secure() ? "https://" : "http://" ) + request().host() + "/" + url;
+						if (multipleLevels) {
+							response.append("Level " + k + " ");
+							problemUrl += "/" + k;
 						}
-						response.append("</li>\n");
+						response.append("URL: <code>");
+						response.append(problemUrl); // TODO: Fix
+						response.append("</code> | <a href=\"");
+						response.append(problemUrl);
+						response.append("\" target=\"_blank\">Preview</a>");
+						response.append(" | <a href=\"");
+						response.append(reportUrl);
+						response.append("\" target=\"_blank\">Report</a>");
 					}
-					
-					response.append("</ul></body></html>\n");
-					return ok(response.toString()).as("text/html");
-				} else
-					if (isOnS3) Util.deleteFromS3(repo + ".code-check.org", problem);
-					return badRequest(reason + "\n");
+					response.append("</li>\n");
+				}
+				
+				response.append("</ul></body></html>\n");
+				return ok(response.toString()).as("text/html");
 			} finally {
 				if (isOnS3) Util.deleteDirectory(unzipDir); else Files.delete(problemZip);
 			}
@@ -119,9 +112,10 @@ public class Upload  extends Controller {
 	          Path root = zipfs.getPath("/");
 	          try (Stream<Path> rootEntries = Files.list(root)) {
 	              Set<Path> result = rootEntries.filter(Files::isDirectory).collect(Collectors.toSet());
+	              result.remove(zipfs.getPath("/__MACOSX/")); // Zip directory paths end in /
 	              if (result.size() == 1) {
 	                 Path child = result.iterator().next();
-	                 if (!child.getFileName().equals("student")) { // One subdirectory, not named student 
+	                 if (!child.toString().equals("/student/")) { // One subdirectory, not named student 
 	                	 try (Stream<Path> entries = Files.list(child)) {
 	                		result = entries.collect(Collectors.toSet());	                     
 	                        Files.walkFileTree(child, new SimpleFileVisitor<Path>() {
@@ -163,8 +157,8 @@ public class Upload  extends Controller {
 		 }
 	 }
 	 
-	private boolean check() throws IOException {
-
+	private Map<String, String> check(Path problemDir) throws IOException {
+		Map<String, String> runs = new LinkedHashMap<>();
 		int maxLevel = 1;
 		for (int i = 9; i >= 2 && maxLevel == 1; i--)
 			// Find highest level
@@ -207,7 +201,7 @@ public class Upload  extends Controller {
 			runs.put(levelString, tempDir.getFileName().toString()
 					+ "/report.html");
 		}
-		return true;
+		return runs;
 	}
 	
     public Result fetch(String dir, String file) throws IOException {
