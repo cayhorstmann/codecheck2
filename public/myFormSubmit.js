@@ -21,7 +21,7 @@ $(function () {
                 $('.codecheck-submit-response').append(data['report'])
                 $('.codecheck-submit-response').append(
                 		'<div class="download">'
-                		+ '<button onclick="download(\'data:application/octet-stream;base64,' + data.zip + '\', \'homework.zip\', \'application/octet-stream\')">Download Test</button></div>')
+                		+ '<button onclick="download(\'data:application/octet-stream;base64,' + data.zip + '\', \'' + data.metadata.ID + '.zip\', \'application/octet-stream\')">Download Report</button></div>')
                 $('.codecheck-submit-response').data('score', data['score'])
 
                 // ace editor
