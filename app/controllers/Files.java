@@ -181,7 +181,7 @@ public class Files extends Controller {
 			if (type.equals("plain")) {
 				result.append(end);
 			} else if (type.equals("json") || type.equals("jsonp")) {
-				String endWithJavaScript = "</form>\n<script>var ajaxSubmissionType = '" + type + "'</script>\n" + jsonpAjaxSubmissionScript + "</body></html>";
+				String endWithJavaScript = "</form>\n<script>var ajaxResponseType = '" + type + "'</script>\n" + jsonpAjaxSubmissionScript + "</body></html>";
 				result.append(endWithJavaScript);
 			}
 			

@@ -363,7 +363,7 @@ public class Util {
 		return problemDir;
 	}
 
-	public static void runLabrat(Config config, String type, String repo,
+	public static void runLabrat(Config config, String reportType, String repo,
 			String problem, String level, java.nio.file.Path submissionDir, String... metaData)
 			throws IOException {
 		java.nio.file.Path problemDir;
@@ -379,17 +379,17 @@ public class Util {
 			problemDir = repoPath.resolve(problem);
 		}
 
-		runLabrat(config, type, repo, problem, level, problemDir, submissionDir,
+		runLabrat(config, reportType, repo, problem, level, problemDir, submissionDir,
 				metaData);
 
 		if (unzipDir != null)
 			deleteDirectory(unzipDir);
 	}
 
-	public static void runLabrat(Config config, String type, String repo,
+	public static void runLabrat(Config config, String reportType, String repo,
 			String problem, String level, java.nio.file.Path problemDir,
 			java.nio.file.Path submissionDir, String... metaData) throws IOException {
-		String command = config.get("com.horstmann.codecheck." + type);
+		String command = config.get("com.horstmann.codecheck." + reportType);
 		StringBuilder metas = new StringBuilder();
 		for (String meta : metaData) { if (metas.length() > 0) metas.append(" "); metas.append(meta); }
 		

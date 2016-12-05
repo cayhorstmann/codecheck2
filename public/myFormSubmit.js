@@ -8,20 +8,26 @@ $(function () {
             $('form').after('<div class="codecheck-submit-response"></div>');
         $('.codecheck-submit-response').text('Submitting...');
         var values = $(this).serializeArray();
-        values.push({name: 'type', value: 'jsonp'});
         $.ajax({
-            url: '/checkJsonp',
-            dataType: ajaxSubmissionType, // 'jsonp' or 'json' 
-            contentType: 'application/json',
+            url: '/checkNJS',
+            dataType: ajaxResponseType, // 'jsonp' or 'json' 
+            method: ajaxResponseType == 'jsonp' ? 'GET' : 'POST',
             jsonp: "callback",
             data: values,
             timeout: 300000, // 5 minutes            
             success: function (data) {
                 $('.codecheck-submit-response').text('')
                 $('.codecheck-submit-response').append(data['report'])
-                $('.codecheck-submit-response').append(
-                		'<div class="download">'
-                		+ '<button onclick="download(\'data:application/octet-stream;base64,' + data.zip + '\', \'' + data.metadata.ID + '.zip\', \'application/octet-stream\')">Download Report</button></div>')
+                if (ajaxResponseType == 'json') { // No download in interactive elements (jsonp)
+	                if(/(Version)\/(\d+)\.(\d+)(?:\.(\d+))?.*Safari\//.test(navigator.userAgent)) {
+	                	$('.codecheck-submit-response').append("<div>Download not supported on Safari. Use Firefox or Chrome!</div>")			
+	                }
+	                else {
+	                	$('.codecheck-submit-response').append(
+	                		'<div class="download">'
+	                		+ '<button onclick="download(\'data:application/octet-stream;base64,' + data.zip + '\', \'' + data.metadata.ID + '.zip\', \'application/octet-stream\')">Download Report</button></div>')
+	                }
+                }
                 $('.codecheck-submit-response').data('score', data['score'])
 
                 // ace editor
@@ -50,15 +56,11 @@ $(function () {
     });
 });
 
-var downloadZip = function(data) {
-	download(data.metadata.ID + '.signed.zip', 'report.zip', 'application/octet-stream');
-}
-
 var highlightLine = function(file, line, message) {
     var editor = document.getElementById(file);
     var aceEditor = $(editor).data('ace').editor.ace;
     aceEditor.getSession().setAnnotations([{
-        row: row - 1, // ace editor lines are 0-indexed
+        row: line - 1, // ace editor lines are 0-indexed
         text: message,
         type: "error"
     }]);
