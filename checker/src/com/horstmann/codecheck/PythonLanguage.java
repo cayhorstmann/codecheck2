@@ -6,6 +6,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class PythonLanguage implements Language {
@@ -101,4 +103,41 @@ public class PythonLanguage implements Language {
     public Pattern variablePattern() {
         return pattern;
     }
+
+    // TODO: Same as Racket. 
+    
+    public boolean isUnitTest(Path modulename) { return modulename != null && modulename.toString().matches(".*Test[0-9]*.py"); }
+    
+    private static final Pattern successPattern = Pattern.compile("Ran ([0-9]+) tests in [0-9.]+s\\s+OK");
+    private static final Pattern failurePattern = Pattern.compile("Ran (?<runs>[0-9]+) tests in [0-9.]+s\\s+FAILED \\([^=]+=(?<failures>[0-9]+)\\)");
+    
+    public @Override void runUnitTest(Path mainModule, Set<Path> dependentModules, Path dir, Report report,
+             Score score, int timeout, int maxOutput) {
+       try {
+          String result = run(mainModule, dependentModules, dir, "", "", timeout, maxOutput); 
+          Matcher matcher = successPattern.matcher(result);
+          int runs = 0;
+          int failures = 0;
+          if (matcher.find())
+          {
+             runs = Integer.parseInt(matcher.group(1));
+          }
+          else
+          {
+             matcher = failurePattern.matcher(result);
+             if (matcher.find())
+             {
+                failures = Integer.parseInt(matcher.group("failures"));
+                runs = Integer.parseInt(matcher.group("runs"));
+             }
+          }
+          report.run("Unit test");
+          report.output(result + "\nRuns:" + runs + " Failures: " + failures);
+          report.pass(failures == 0);
+          score.add(runs - failures, runs, report);
+       } catch (Throwable t) {
+          report.systemError(t);
+       }
+    }
+
 }

@@ -104,7 +104,7 @@ public class HTMLReport implements Report {
     }
     
     public HTMLReport input(String input) {
-        caption("Input");
+        if (input != null && input.trim().length() > 0) caption("Input");
         return output(input);
     }
     

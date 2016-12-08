@@ -3,7 +3,7 @@
 # (crontab -l ; echo "*/10 * * * * /opt/codecheck/killold") 2>&1 | sed "s/no crontab for $(whoami)//" | sort | uniq | crontab -
 
 # Get all PIDs for process name
-procs=`ps -C codecheck,runprog,prog,racket -o pid=`
+procs=`ps -C codecheck,runprog,prog,racket,jjs -o pid=`
 
 # for each PID 
 for pid in $procs; do
@@ -11,8 +11,12 @@ for pid in $procs; do
     sec=`ps --pid $pid -o etimes=`
      
     # if process runs 5 minutes then kill it
-    if [ -n "$sec" ] && [ "$sec" -gt "300" ]; then
+    if [[ -n $sec ]] && [[ $sec -gt 300 ]] ; then
         systemd-cat -t killold echo Killing `ps --pid=$pid -o comm=` after $sec seconds
         kill -9 $pid
     fi
 done;
+
+# Delete all temp files that are older than 24h
+
+find /tmp/codecheck -maxdepth 1 -type d -mmin +1440 -exec rm -rf {} +

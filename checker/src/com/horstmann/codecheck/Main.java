@@ -573,6 +573,8 @@ public class Main {
             Set<Path> annotatedSolutions = annotations.findSolutions();
             studentFiles.removeAll(annotatedSolutions);
             solutionFiles.addAll(annotatedSolutions);
+            if (solutionFiles.size() == 0) 
+                throw new RuntimeException("No solution file.");
           
             String uid = problemDir.getFileName().toString();
             report.comment("Submission", submissionDir.getFileName().toString());
@@ -626,12 +628,11 @@ public class Main {
             comp.setIgnoreCase(ignoreCase);
             comp.setIgnoreSpace(ignoreSpace);            
             
-            annotations.check(report);
-            
             getRequiredModules();
             getMainAndDependentModules();            
             
-            
+            annotations.check(report, requiredFiles);
+                        
             for (String dir : studentDirectories) {
                 for (Path p : Util.getDescendantFiles(problemDir.resolve(dir))) {
                     if (!requiredFiles.contains(p)) 

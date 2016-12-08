@@ -13,7 +13,7 @@ namespace codecheck {
    void print(char x) { cout << x; }
    void print(double x) { cout << x; }
    void print(float x) { cout << x; }
-   void print(bool x) { cout << x; }
+   void print(bool x) { cout << (x ? "true" : "false"); }
    void print(string x) { cout << x; }
    void print(const char* x) { cout << x; }
 

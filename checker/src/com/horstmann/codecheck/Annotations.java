@@ -62,16 +62,13 @@ public class Annotations {
         }
     }
 
-    public void check(Report r) {
-        // Student file annotations only make sense when the file has HIDE
-        Set<Path> hidden = new HashSet<>();
-        for (Annotation a : annotations) {
-            if (a.key.equals("HIDE")) hidden.add(a.path);
-        }  
-        
+    public void check(Report r, Set<Path> requiredFiles) {
+        // Annotations in solution files are ok. Student file annotations only make sense 
+        // when the student can't change the file. 
+
         for (Annotation a : annotations) {
             boolean ok = validAnnotations.contains(a.key)
-                    && (a.inSolution || hidden.contains(a.path)); 
+                    && (a.inSolution || !requiredFiles.contains(Util.tail(a.path))); 
             if (!ok)
                 r.systemError("Unknown pseudocomment " + a.key + " in " + a.path);
         }

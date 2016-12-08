@@ -51,7 +51,7 @@ public class Runner {
         JScrollPane reportScroll = new JScrollPane(reportOutput);
         frame.add(reportScroll);
         try {
-            JComboBox levelCombo = new JComboBox(new String[] 
+            JComboBox<String> levelCombo = new JComboBox<>(new String[] 
                { "1", "2", "3", "4", "5", "6", "7", "8", "9", "grade" });
                                                            
 

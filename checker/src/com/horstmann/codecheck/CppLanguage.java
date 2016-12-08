@@ -35,7 +35,7 @@ public class CppLanguage implements Language {
      */
     @Override
     public boolean isMain(Path p) {
-        if (!isSource(p))
+        if (!p.toString().endsWith(".cpp")) // lodepng.h has main pattern in comment :-(
             return false;
         String contents = Util.read(p);
         if (contents == null) return false;

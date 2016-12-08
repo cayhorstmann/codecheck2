@@ -12,7 +12,11 @@ shift
 case _"$LANG" in
     _Python)        
         ulimit -d 1000 -f 1000 -n 100 -v 100000
-        python3 $@
+        if [[ $1 =~ .*Test[0-9]*[.]py ]] ; then
+            python3 -m unittest $@
+        else
+            python3 $@
+        fi
         ;;
 
     _C)

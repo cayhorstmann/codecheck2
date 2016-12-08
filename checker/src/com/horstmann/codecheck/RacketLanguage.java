@@ -147,6 +147,7 @@ public class RacketLanguage implements Language {
          report.systemError(t);
       }
    }
+
    private static Pattern ERROR_PATTERN = Pattern.compile("(?<file>[^/]+\\.rkt):(?<line>[0-9]+):(?<col>[0-9]+): (?<msg>.+)");
    @Override public Pattern errorPattern() { return ERROR_PATTERN; }     
 }

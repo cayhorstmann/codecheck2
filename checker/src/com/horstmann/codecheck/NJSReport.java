@@ -36,22 +36,24 @@ public class NJSReport extends HTMLReport {
     
     @Override
     public NJSReport header(String sectionType, String text) {
-        if (!"studentFiles".equals(sectionType) && !"providedFiles".equals(sectionType)) 
+        if (this.sectionType != null) builder.append("</div>\n");
+        //if (!"studentFiles".equals(sectionType) && !"providedFiles".equals(sectionType)) 
             super.header(sectionType, text);
+        builder.append("<div class=\"" + sectionType + "\">\n");
         this.sectionType = sectionType;
         return this;
     }
     
     @Override
     public NJSReport file(Path dir, Path file) {
-        if (!"studentFiles".equals(sectionType) && !"providedFiles".equals(sectionType)) 
+        //if (!"studentFiles".equals(sectionType) && !"providedFiles".equals(sectionType)) 
             super.file(dir, file);
         return this;
     }
     
     @Override
     public NJSReport file(String file, String contents) {
-         if (!"studentFiles".equals(sectionType) && !"providedFiles".equals(sectionType)) 
+         //if (!"studentFiles".equals(sectionType) && !"providedFiles".equals(sectionType)) 
              super.file(file, contents);
         return this;
     }
@@ -65,6 +67,8 @@ public class NJSReport extends HTMLReport {
     @Override
     public NJSReport save(String problemId, String out) throws IOException {
         // TODO Horrific Hack
+        if (sectionType != null) builder.append("</div>\n");
+        
         builder.append("</body></html>\n");
         data.report = builder.toString();
         Path outPath = dir.resolve(out + ".json");
