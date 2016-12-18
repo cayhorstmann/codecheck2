@@ -82,12 +82,14 @@ function grade {
 
     if [ -e report.html ] ; then
         "$JAVA_HOME"/bin/jar uf $REPORT_JAR report.html
-        MATCH=`grep --text -o '^[<]meta name="ID" content="\(.*\)"/>$' report.html`
-        if [[ -n $MATCH ]] ; then
-            MATCH=${MATCH##*\=\"}
-            ID=${MATCH%\"*}
-            mv $REPORT_JAR $ID.signed.zip
-            REPORT_JAR=$ID.signed.zip
+        if [[ $REPORT_TYPE == "html" ]] ; then
+            MATCH=`grep --text -o '^[<]meta name="ID" content="\(.*\)"/>$' report.html`
+            if [[ -n $MATCH ]] ; then
+                MATCH=${MATCH##*\=\"}
+                ID=${MATCH%\"*}
+                mv $REPORT_JAR $ID.signed.zip
+                REPORT_JAR=$ID.signed.zip
+            fi
         fi
     fi
 
@@ -151,13 +153,17 @@ CLASSPATH="$BASEDIR"/codecheck.jar:"$BASEDIR"/lib/\*
 
 # Get server execution out of the way
 
+REPORT_TYPE="html"
+
 if [ "$1" == "-s" ] ; then
     shift
-    if [ "$1" == "-j" ] ; then 
+    if [ "$1" == "-j" ] ; then
+      REPORT_TYPE="json"
       JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck.jsonreport"
       shift 
     fi
     if [ "$1" == "-n" ] ; then 
+      REPORT_TYPE="njs"
       JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck.njsreport"
       shift 
     fi
@@ -212,11 +218,13 @@ do
              ;;
          j)
              BROWSER="python -mjson.tool"
+             REPORT_TYPE="json"
              REPORT=report.json
              JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck.jsonreport"
              ;;
          n)
              BROWSER="python -mjson.tool"
+             REPORT_TYPE="njs"
              REPORT=report.json
              JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck.njsreport"
              ;;
