@@ -30,6 +30,7 @@ public class NJSReport extends HTMLReport {
     @Override
     public NJSReport comment(String key, String value) {
         if (data == null || data.metadata == null) return this; // Superclass constructor calls comment
+        super.comment(key, value);
         data.metadata.put(key, value);
         return this;
     }
