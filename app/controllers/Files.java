@@ -233,8 +233,8 @@ public class Files extends Controller {
 		while (matcher.find(start)) {
 			start = matcher.start(1);
 			end = matcher.end(1);
-			String src = result.substring(start, end);
-			if (!src.trim().startsWith("http://")) {
+			String src = result.substring(start, end).trim();
+			if (!(src.startsWith("http://") || src.startsWith("https://"))) {
 				String replacement = "data:image/png;base64,"
 						+ Util.base64(problemDir, src);
 				result.replace(start, end, replacement);
