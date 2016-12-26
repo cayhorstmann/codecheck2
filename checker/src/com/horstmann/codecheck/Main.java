@@ -622,8 +622,8 @@ public class Main {
             maxOutputLen = (int) annotations.findUniqueDoubleKey("MAXOUTPUTLEN", maxOutputLen);
             
             double tolerance = annotations.findUniqueDoubleKey("TOLERANCE", DEFAULT_TOLERANCE);
-            boolean ignoreCase = !"false".equals(annotations.findUniqueKey("IGNORECASE"));
-            boolean ignoreSpace = !"false".equals(annotations.findUniqueKey("IGNORESPACE"));
+            boolean ignoreCase = !"false".equalsIgnoreCase(annotations.findUniqueKey("IGNORECASE"));
+            boolean ignoreSpace = !"false".equalsIgnoreCase(annotations.findUniqueKey("IGNORESPACE"));
             comp.setTolerance(tolerance);
             comp.setIgnoreCase(ignoreCase);
             comp.setIgnoreSpace(ignoreSpace);            

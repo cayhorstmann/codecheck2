@@ -18,7 +18,7 @@ public class AsExpected {
 	
 	public static int expectedTests(Path tester) {
 		String contents = Util.read(tester);
-		Pattern expecteds = Pattern.compile("System\\s*.\\s*out\\s*.\\s*print(ln)?\\s*\\(\\s*\"Expected: ");
+		Pattern expecteds = Pattern.compile("Expected: ");
 		Matcher matcher = expecteds.matcher(contents);
 		int count = 0;
 		while (matcher.find())
@@ -87,8 +87,10 @@ public class AsExpected {
     private static String getSuffix(String s) {
         int n = s.indexOf(':');
         if (n == -1)
-            return s.trim().toLowerCase();
-        else
-            return s.substring(n + 1).trim().toLowerCase();
+            return s;
+        else {
+            if (n + 1 < s.length() && s.charAt(n + 1) == ' ') n++;        
+            return s.substring(n + 1);
+        }
     }
 }
