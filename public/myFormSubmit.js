@@ -8,6 +8,7 @@ $(function () {
             $('form').after('<div class="codecheck-submit-response"></div>');
         $('.codecheck-submit-response').text('Submitting...');
         var values = $(this).serializeArray();
+        
         $.ajax({
             url: '/checkNJS',
             dataType: ajaxResponseType, // 'jsonp' or 'json' 
@@ -18,14 +19,14 @@ $(function () {
             success: function (data) {
                 $('.codecheck-submit-response').text('')
                 $('.codecheck-submit-response').append(data['report'])
-                if (ajaxResponseType == 'json') { // No download in interactive elements (jsonp)
+                if (ajaxDownloadButton) { 
 	                if(/(Version)\/(\d+)\.(\d+)(?:\.(\d+))?.*Safari\//.test(navigator.userAgent)) {
 	                	$('.codecheck-submit-response').append("<div>Download not supported on Safari. Use Firefox or Chrome!</div>")			
 	                }
 	                else {
 	                	$('.codecheck-submit-response').append(
 	                		'<div class="download">'
-	                		+ '<button onclick="download(\'data:application/octet-stream;base64,' + data.zip + '\', \'' + data.metadata.ID + '.zip\', \'application/octet-stream\')">Download Report</button></div>')
+	                		+ '<button onclick="download(\'data:application/octet-stream;base64,' + data.zip + '\', \'' + data.metadata.ID + '.signed.zip\', \'application/octet-stream\')">Download Report</button></div>')
 	                }
                 }
                 $('.codecheck-submit-response').data('score', data['score'])

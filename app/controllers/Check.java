@@ -30,20 +30,20 @@ public class Check extends Controller {
 	private static Config config = PlayConfig.INSTANCE;
 	@Inject HttpExecutionContext ec;
 	
-	// Classic HTML report, with optional callback for Sunita
-	public CompletableFuture<Result> checkHTML() throws IOException {
+	// Classic HTML report, with optional score callback for Sunita
+	public CompletableFuture<Result> checkHTML() throws IOException, InterruptedException {
 		Map<String, String[]> params = request().body().asFormUrlEncoded();
 		return CompletableFuture.supplyAsync(() -> {
 			try {
 		        Http.Cookie ccuCookie = request().cookie("ccu");
 				String ccu = ccuCookie == null ? Util.createUID() : ccuCookie.value();					        
 
+		        String repo = "ext";
+		        String problem = "";
+		        String level = "1";
 				Path submissionDir = Util.getDir(config, "submissions");				
 		        Path tempDir = Util.createTempDirectory(submissionDir);
 		        
-		        String repo = "ext";
-		        String problem = "";
-		        String level = "check";
 		        String callback = null;
 		        for (String key : params.keySet()) {
 		            String value = params.get(key)[0];
@@ -62,7 +62,7 @@ public class Check extends Controller {
 		        int age = 180 * 24 * 60 * 60;
 		        Http.Cookie newCookie = Http.Cookie.builder("ccu", ccu).withMaxAge(age).build();
 
-		        if (callback != null) {
+				if (callback != null) {
 			        String report = Util.read(tempDir.resolve("report.html"));
 		        	// Replace download link with Save Score button
 		        	String target = "<p class=\"score\">";
@@ -105,7 +105,7 @@ public class Check extends Controller {
 		
 	// Request JSON, report html, txt, json
 	@BodyParser.Of(BodyParser.Json.class)
-	public Result checkJson() throws IOException  {
+	public Result checkJson() throws IOException, InterruptedException  {
 		Path submissionDir = Util.getDir(config, "submissions");
         Path tempDir = Util.createTempDirectory(submissionDir);
 	    JsonNode json = request().body().asJson();
@@ -160,8 +160,9 @@ public class Check extends Controller {
         // TODO: Delete tempDir	    
 	}
 	
-	// From JS UI -- rename to checkNJS 	
-	public CompletableFuture<Result> checkNJS() throws IOException  {
+	// From JS UI
+	// TODO: Set cookie from files and pass it on as param?
+	public CompletableFuture<Result> checkNJS() throws IOException, InterruptedException  {
 		Map<String, String[]> params;
 		if ("application/x-www-form-urlencoded".equals(request().contentType().orElse(""))) 
 			params = request().body().asFormUrlEncoded();
@@ -170,40 +171,65 @@ public class Check extends Controller {
 		
 		return CompletableFuture.supplyAsync(() -> {
 			try {
-				Path submissionDir = Util.getDir(config, "submissions");
-				Path tempDir = Util.createTempDirectory(submissionDir);
 				String repo = "ext";
 				String problem = null;
 				String level = "1";
+				Path submissionDir = Util.getDir(config, "submissions");
+				Path tempDir = Util.createTempDirectory(submissionDir);
 				String reportType = "njs";
 				String callback = null;
+				String scoreCallback = null;
 				Path dir = tempDir.resolve("submission");
 				java.nio.file.Files.createDirectory(dir);
+				StringBuilder requestParams = new StringBuilder();
 				for (String key : params.keySet()) {
 					String value = params.get(key)[0];
+					
+					if (requestParams.length() > 0) requestParams.append(", ");
+					requestParams.append(key);
+					requestParams.append("=");
+					int nl = value.indexOf('\n');
+					if (nl >= 0) {
+						requestParams.append(value.substring(0, nl));  
+						requestParams.append("...");
+					}
+					else requestParams.append(value);
+					
 					if ("repo".equals(key)) repo = value;
 					else if ("problem".equals(key)) problem = value;
 					else if ("level".equals(key)) level = value;
 					else if ("callback".equals(key)) callback = value;
+					else if ("scoreCallback".equals(key)) scoreCallback = value;
 					else
 						Util.write(dir, key, value);
 				}
+				Logger.of("com.horstmann.codecheck.check").info("checkNJS: " + requestParams);
+				
 				if (problem == null) // problem was submitted in JSON
 					Util.runLabrat(config, reportType, repo, problem, level, tempDir.toAbsolutePath(), tempDir.resolve("submission").toAbsolutePath());
 				else
 					Util.runLabrat(config, reportType, repo, problem, level, tempDir.resolve("submission").toAbsolutePath());
 				ObjectNode result = (ObjectNode) Json.parse(Util.read(tempDir.resolve("submission/report.json")));
 				String reportZip = Util.base64(tempDir.resolve("submission"), "report.signed.zip");
-				result.put("zip", reportZip);					
 				
+				if (scoreCallback != null) {
+					if (scoreCallback.startsWith("https://")) 
+						scoreCallback = "http://" + scoreCallback.substring("https://".length()); // TODO: Fix
+					String resultText = Json.stringify(result);
+					Logger.of("com.horstmann.codecheck.lti").info("Request: " + scoreCallback + " " + resultText);
+					String response = Util.httpPost(scoreCallback, resultText, "application/json");
+					Logger.of("com.horstmann.codecheck.lti").info("Response: " + response);
+				}
+				
+				result.put("zip", reportZip);
 				if (callback == null)
 					return ok(result);
 				else
-					return ok(Jsonp.jsonp(callback, result));
+					return ok(Jsonp.jsonp(callback, result)); // TODO: Include "zip" here?
 			} catch (Exception ex) {
 				return internalServerError(Util.getStackTrace(ex));
 			}
-			// TODO: Delete tempDir		
+			// TODO: Delete tempDir	unless flag is set to keep it?	
 		}, ec.current());		
 	
 	}

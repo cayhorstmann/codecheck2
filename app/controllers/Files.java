@@ -15,6 +15,7 @@ import models.PlayConfig;
 import models.Problem;
 import models.ProblemData;
 import models.Util;
+import play.Logger;
 import play.libs.Json;
 import play.mvc.Controller;
 import play.mvc.Http;
@@ -32,8 +33,10 @@ public class Files extends Controller {
 	private static String fileAreaBefore = "\n<p><h3>{0}</h3><textarea id=\"{0}\" name=\"{0}\" rows=\"{1}\" cols=\"80\" class=\"{2}\">";
 	private static String fileAreaAfter = "</textarea>";
 	private static String after = "<p><input type=\"submit\"/><input type=\"hidden\" name=\"repo\" value=\"{0}\"><input type=\"hidden\" name=\"problem\" value=\"{1}\"><input type=\"hidden\" name=\"level\" value=\"{2}\"></p>";
-	private static String callbackTemplate = "<p><input type=\"hidden\" name=\"callback\" value=\"{0}\"></p>";
-	private static String end = "</form></body></html>";
+	private static String callbackTemplate = "<p><input type=\"hidden\" name=\"scoreCallback\" id=\"scoreCallback\" value=\"{0}\"></p>";
+	private static String formEnd = "</form>";
+	private static String ajaxScriptVariables = "<script>var ajaxResponseType = \"{0}\"; var ajaxDownloadButton = \"{1}\";</script>\n";
+	private static String bodyEnd = "</body></html>";
 
 	private static String useStart = "<p>Use the following {0,choice,1#file|2#files}:</p>";
 	private static String provideStart = "<p>Complete the following {0,choice,1#file|2#files}:</p>";
@@ -113,10 +116,14 @@ public class Files extends Controller {
 
 	public Result filesHTML(String repo,
 			String problemName,
-			String level, String callback, String type)
+			String level, String scoreCallback, String type)
 			throws IOException {
 		try (ProblemContext pc = new ProblemContext(repo, problemName, level)) {
 			if (type == null || type.equals("")) type = "json";
+			// Safari can't handle download--don't use type json
+			String userAgent = request().getHeader("User-Agent");
+			Logger.of("com.horstmann.codecheck.files").info("User-Agent: " + userAgent);
+			// if (userAgent.contains("Safari") && type.equals("json")) type = "plain";
 			
 			StringBuilder result = new StringBuilder();
 			result.append(start);
@@ -137,8 +144,7 @@ public class Files extends Controller {
 				}
 			}
 			String contextPath = ""; // request().host(); // TODO
-			String url = contextPath + "/";
-			url += "check";
+			String url = contextPath + "/check";
 			result.append(MessageFormat.format(before, url, "")); // TODO
 			result.append(MessageFormat.format(provideStart,
 					pc.data.requiredFiles.size()));
@@ -175,15 +181,20 @@ public class Files extends Controller {
 			result.append(MessageFormat.format(myButtonScript, myPath));
 			result.append(MessageFormat.format(myAceScript, myPath));
 
-			if (callback != null && callback.length() > 0)
-				result.append(MessageFormat.format(callbackTemplate, callback));
-
-			if (type.equals("plain")) {
-				result.append(end);
-			} else if (type.equals("json") || type.equals("jsonp")) {
-				String endWithJavaScript = "</form>\n<script>var ajaxResponseType = '" + type + "'</script>\n" + jsonpAjaxSubmissionScript + "</body></html>";
-				result.append(endWithJavaScript);
+			boolean downloadButton = type.equals("json");
+			// No AJAX download in interactive elements (jsonp, in Engage)
+			
+			if (!Util.isEmpty(scoreCallback)) {
+				result.append(MessageFormat.format(callbackTemplate, scoreCallback));
+				downloadButton = false; // No download with score callback (Sunita's elements)
 			}
+
+			result.append(formEnd);
+			if (type.equals("json") || type.equals("jsonp")) {
+				result.append(MessageFormat.format(ajaxScriptVariables, type, downloadButton));
+				result.append(jsonpAjaxSubmissionScript);
+			}
+			result.append(bodyEnd);
 			
 	        Http.Cookie ccuCookie = request().cookie("ccu");
 			String ccu = ccuCookie == null ? Util.createUID() : ccuCookie.value();					        

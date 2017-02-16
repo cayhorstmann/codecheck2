@@ -157,7 +157,7 @@ public class Upload  extends Controller {
 		 }
 	 }
 	 
-	private Map<String, String> check(Path problemDir) throws IOException {
+	private Map<String, String> check(Path problemDir) throws IOException, InterruptedException {
 		Map<String, String> runs = new LinkedHashMap<>();
 		int maxLevel = 1;
 		for (int i = 9; i >= 2 && maxLevel == 1; i--)

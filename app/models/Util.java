@@ -9,8 +9,10 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.math.BigInteger;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
@@ -57,6 +59,8 @@ public class Util {
 	public static final int TIMEOUT = 2 * 60 * 1000; // 2 minutes; 
 	private static Random generator = new Random();
 
+	public static boolean isEmpty(String str) { return str == null || str.isEmpty(); }
+	
 	public static Path getDir(Config config, String key)
 			throws IOException {
 		String dirName = config.get("com.horstmann.codecheck."
@@ -365,7 +369,7 @@ public class Util {
 
 	public static void runLabrat(Config config, String reportType, String repo,
 			String problem, String level, java.nio.file.Path submissionDir, String... metaData)
-			throws IOException {
+			throws IOException, InterruptedException {
 		java.nio.file.Path problemDir;
 
 		// If problem is on S3 (eventually all will be)
@@ -388,19 +392,36 @@ public class Util {
 
 	public static void runLabrat(Config config, String reportType, String repo,
 			String problem, String level, java.nio.file.Path problemDir,
-			java.nio.file.Path submissionDir, String... metaData) throws IOException {
+			java.nio.file.Path submissionDir, String... metaData) throws IOException, InterruptedException {
 		String command = config.get("com.horstmann.codecheck." + reportType);
 		StringBuilder metas = new StringBuilder();
 		for (String meta : metaData) { if (metas.length() > 0) metas.append(" "); metas.append(meta); }
 		
 		String script = MessageFormat.format(command, level, submissionDir,
 				problemDir, metas);
-		String result = runProcess(script, TIMEOUT);
 		
-		Logger.of("com.horstmann.codecheck").debug("Script: " + script + " Result:" + result);
+		long startTime = System.nanoTime();
+		Files.write(submissionDir.resolve("codecheck.log"), script.getBytes("UTF-8"));
+		ProcessBuilder builder = new ProcessBuilder(script.split(" "));
+        builder.redirectErrorStream(true);        
+        builder.redirectOutput(submissionDir.resolve("codecheck.out").toFile());
+        Process process = builder.start();
+        boolean completed = process.waitFor(TIMEOUT, TimeUnit.MILLISECONDS);
+        if (!completed) process.destroyForcibly();
+
+        // String result = runProcess(script, TIMEOUT);
 		
-		Files.write(submissionDir.resolve("codecheck.log"), (script
-				+ "\n" + result).getBytes("UTF-8"));
+		double elapsed = (System.nanoTime() - startTime) / 1000000.0;
+		String logString = String.format("%5.0f ms %s %s",
+				elapsed,
+				repo + "/" + problem + ("1".equals(level) ? "" : "/" + level),
+				submissionDir);
+		Logger.of("com.horstmann.codecheck.labrat").info(logString);
+		
+		// Logger.of("com.horstmann.codecheck.labrat").debug("Script: " + script + " Result:" + result);
+		
+		//Files.write(submissionDir.resolve("codecheck.log"), (script
+		//		+ "\n" + result).getBytes("UTF-8"));
 	}
 
 	/**
@@ -534,4 +555,37 @@ public class Util {
 		t.printStackTrace(new PrintWriter(out));
 		return out.toString();
 	}	
+	
+	public static String httpPost(String urlString, String content, String contentType) {
+		StringBuilder result = new StringBuilder();
+		try {
+			URL url = new URL(urlString);
+			HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+			connection.setRequestProperty("Content-Type", contentType);
+			connection.setDoOutput(true);
+			try (OutputStream out = connection.getOutputStream()) {
+				out.write(content.getBytes("UTF-8"));
+			}
+			int response = connection.getResponseCode();
+			result.append(response);
+			result.append("\n");
+			try (Scanner in = new Scanner(connection.getInputStream(), "UTF-8")) {
+				while (in.hasNextLine()) {
+					result.append(in.nextLine());
+					result.append("\n");
+				}
+			}
+			catch (IOException e) {
+			    InputStream err = connection.getErrorStream();
+			    if (err == null) throw e;
+			    try (Scanner in = new Scanner(err, "UTF-8")) {
+			        result.append(in.nextLine());
+			        result.append("\n");
+			    }
+			}			
+		} catch (Throwable ex) {
+			result.append(getStackTrace(ex));
+		}
+		return result.toString();		
+	}
 }

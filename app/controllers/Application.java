@@ -1,7 +1,9 @@
 package controllers;
 
 import java.util.regex.*;
+
 import play.mvc.Controller;
+import play.mvc.Http.RequestBody;
 import play.mvc.Result;
 import models.Util;
 
@@ -26,4 +28,9 @@ public class Application extends Controller {
           return internalServerError(Util.getStackTrace(ex));
        }
     }   
+    
+    public Result echo() {
+    	RequestBody body = request().body();
+    	return ok("Received: " + body.asJson());
+    }
 }
