@@ -101,7 +101,7 @@ public class CppLanguage implements Language {
         return paths;
     }
 
-    private static String patternString = ".*\\S\\s+([A-Za-z][A-Za-z0-9]*)\\s*=\\s*([^;]+);.*";
+    private static String patternString = ".*\\S\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*=\\s*([^;]+);.*";
     private static Pattern pattern = Pattern.compile(patternString);
 
     /*

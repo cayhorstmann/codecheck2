@@ -17,6 +17,8 @@
   /tmp/submissions/** rwix,
   /usr/bin/python3.5 mrix,
   /usr/bin/racket mrix,
+  /usr/bin/nice mrix,
+  /usr/bin/timeout mrix,
   /usr/share/racket/** mrix,
   /etc/racket/** mrix,
   /opt/scala*/** mrix,

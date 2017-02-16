@@ -77,8 +77,9 @@ public class Main {
      *            check/grade for compatibility) args[1] = submission dir,
      *            args[2] = problem dir args[3] etc = metadata key=value pairs (optional)
      * @throws IOException
+     * @throws ReflectiveOperationException 
      */
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, ReflectiveOperationException {
         new Main().run(args);
     }
 
@@ -466,7 +467,7 @@ public class Main {
         }
     }
 
-    public void run(String[] args) throws IOException {
+    public void run(String[] args) throws IOException, ReflectiveOperationException {
         // TODO: Adjustable Timeouts
         long startTime = System.currentTimeMillis();
         String mode = args[0].trim();
@@ -480,13 +481,20 @@ public class Main {
         
         if (System.getProperty("com.horstmann.codecheck.debug") == null) 
             System.setSecurityManager(new SecurityManager()); 
-    	   	
-        if (System.getProperty("com.horstmann.codecheck.textreport") != null)
+
+        String reportType = System.getProperty("com.horstmann.codecheck.report");
+        if (reportType != null) {
+            Class<?> reportClass = Class.forName("com.horstmann.codecheck." + reportType + "Report");
+            report = (Report) reportClass.getConstructor(String.class, Path.class).newInstance("Report", submissionDir);            
+        }
+        else if (System.getProperty("com.horstmann.codecheck.textreport") != null) // TODO: Legacy
             report = new TextReport("Report", submissionDir);
         else if (System.getProperty("com.horstmann.codecheck.jsonreport") != null)
             report = new JSONReport("Report", submissionDir);
         else if (System.getProperty("com.horstmann.codecheck.njsreport") != null)
             report = new NJSReport("Report", submissionDir);
+        else if (System.getProperty("com.horstmann.codecheck.codioreport") != null)
+            report = new CodioReport("Report", submissionDir);
         else
             report = new HTMLReport("Report", submissionDir);
         int level = 0;
@@ -495,9 +503,9 @@ public class Main {
         } catch (NumberFormatException ex) {
         }
 
-        if (mode.equals("check"))
+        if (mode.equals("check")) // TODO: Legacy
             level = 1;
-        else if (mode.equals("grade"))
+        else if (mode.equals("grade")) // TODO: Legacy
             level = 9; // to pick up all
         if (Files.exists(problemDir.resolve("student")))
             studentDirectories.add("student");
@@ -505,6 +513,7 @@ public class Main {
             if (Files.exists(problemDir.resolve("student" + n)))
                 studentDirectories.add("student" + n);
 
+        // TODO: Legacy
         if (mode.equals("grade")) { // mode grade will be rejected by web app
             if (Files.exists(problemDir.resolve("grader"))) {
                 studentDirectories.add("grader");
@@ -577,7 +586,7 @@ public class Main {
                 throw new RuntimeException("No solution file.");
           
             String uid = problemDir.getFileName().toString();
-            report.comment("Submission", submissionDir.getFileName().toString());
+            report.comment("Submission", submissionDir.toString());
             report.comment("Problem", uid);
             report.comment("Level", "" + level);
             DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
@@ -721,23 +730,20 @@ public class Main {
                 }
             }
 
-            if (System.getProperty("com.horstmann.codecheck.textreport") == null)
-            {
-	            report.header("studentFiles", "Student files");
-	            for (Path file : requiredFiles)
-	                report.file(submissionDir, file);
+            report.header("studentFiles", "Student files");
+            for (Path file : requiredFiles)
+                report.file(submissionDir, file);
 		
-	            printFiles = filterNot(printFiles, "test*.in", "test*.out", "check.properties", "q.properties", "*.png", "*.PNG",
-	                    "*.gif", "*.GIF", "*.jpg", "*.jpeg", "*.JPG", ".DS_Store", "*.jar", "*.class", "problem.ch", "problem.html");      
+            printFiles = filterNot(printFiles, "test*.in", "test*.out", "check.properties", "q.properties", "*.png", "*.PNG",
+                "*.gif", "*.GIF", "*.jpg", "*.jpeg", "*.JPG", ".DS_Store", "*.jar", "*.class", "problem.ch", "problem.html");      
 
-	            printFiles.removeAll(annotations.findHidden());
+            printFiles.removeAll(annotations.findHidden());
 	
-	            if (printFiles.size() > 0) {
-	                copySuppliedFiles(); // Might have been mutated
-	                report.header("providedFiles", "Provided files");
-	                for (Path file : printFiles)
-	                    report.file(workDir, file);
-	            }
+            if (printFiles.size() > 0) {
+                copySuppliedFiles(); // Might have been mutated
+                report.header("providedFiles", "Provided files");
+                for (Path file : printFiles)
+                    report.file(workDir, file);
             }
         } catch (Throwable t) {
             report.systemError(t);

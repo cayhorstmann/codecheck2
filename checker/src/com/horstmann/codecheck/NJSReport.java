@@ -70,6 +70,7 @@ public class NJSReport extends HTMLReport {
         // TODO Horrific Hack
         if (sectionType != null) builder.append("</div>\n");
         
+        addFootnotes();
         builder.append("</body></html>\n");
         data.report = builder.toString();
         Path outPath = dir.resolve(out + ".json");

@@ -1,6 +1,10 @@
 #!/bin/bash
 
-source `dirname $0`/codecheck.env
+if [ -e `dirname $0`/codecheck.env ] ; then
+    set -o allexport
+    source `dirname $0`/codecheck.env
+    set +o allexport
+fi
 
 LANG=$1
 shift

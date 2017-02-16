@@ -363,6 +363,18 @@ public class HTMLReport implements Report {
         return this;
     }
 
+    protected void addFootnotes() {
+        if (footnotes.size() > 0) {
+            builder.append("<div class=\"footnotes\">");
+            for (String footnote : footnotes) {
+                builder.append("<div class=\"footnote\">");
+                escape(footnote);
+                builder.append("</div>\n");
+            }
+            builder.append("</div>\n");
+        }
+    }
+   
     /*
      * (non-Javadoc)
      * 
@@ -373,15 +385,7 @@ public class HTMLReport implements Report {
         Path outPath = dir.resolve(out + ".html");
         builder.append("<p class=\"download\"><a href=\"" + problemId
                 + ".signed.zip\">Download</a></p>\n");
-        if (footnotes.size() > 0) {
-            builder.append("<div class=\"footnotes\">");
-            for (String footnote : footnotes) {
-                builder.append("<div class=\"footnote\">");
-                escape(footnote);
-                builder.append("</div>\n");
-            }
-            builder.append("</div>\n");
-        }
+        addFootnotes();
         builder.append("</body></html>\n");
         Files.write(outPath, builder.toString().getBytes());
         return this;

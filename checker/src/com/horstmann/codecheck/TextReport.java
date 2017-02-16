@@ -20,6 +20,7 @@ public class TextReport implements Report {
     private Path dir;
     private int imageCount;
     private int sections;
+    private String section;
     private List<String> footnotes = new ArrayList<>();
 
     // TODO: Directory
@@ -47,7 +48,10 @@ public class TextReport implements Report {
      * @see com.horstmann.codecheck.Report#header(java.lang.String)
      */
     @Override
-    public TextReport header(String type, String text) {
+    public TextReport header(String section, String text) {
+        this.section = section;
+        if ("studentFiles".equals(section) || "providedFiles".equals(section)) return this;
+
         if (sections > 0)
             builder.append("\n");
         sections++;
@@ -214,6 +218,7 @@ public class TextReport implements Report {
 
     @Override
     public TextReport file(Path dir, Path file) {
+        if ("studentFiles".equals(section) || "providedFiles".equals(section)) return this;
         caption(file.toString());
         Path source = dir.resolve(file);
         boolean lineNumbers = file.toString().endsWith(".java"); // TODO:
@@ -241,6 +246,7 @@ public class TextReport implements Report {
 
     @Override
     public TextReport file(String file, String contents) {
+        if ("studentFiles".equals(section) || "providedFiles".equals(section)) return this;
         caption(file);
         output(contents); // TODO: Line numbers?
         return this;

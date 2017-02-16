@@ -173,7 +173,10 @@ public class Util {
                     result = new String(chars, 0, n) + "\n...\nRemainder truncated\n";
                 }
                 else result = new String(Files.readAllBytes(out), StandardCharsets.UTF_8);
-                if (!completed) result += "\nTimeout after " + millis + " milliseconds\n";
+                if (!completed) {
+                    process.destroyForcibly();
+                    result += "\nTimeout after " + millis + " milliseconds\n";
+                }
                 output.append(result);
                 return exitValue;
             } finally {

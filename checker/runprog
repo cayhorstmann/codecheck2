@@ -3,7 +3,9 @@
 # args: language module arg1 arg2 ...
 
 if [ -e `dirname $0`/codecheck.env ] ; then
+    set -o allexport
     source `dirname $0`/codecheck.env
+    set +o allexport
 fi    
 
 LANG=$1
@@ -11,58 +13,58 @@ shift
 
 case _"$LANG" in
     _Python)        
-        ulimit -d 1000 -f 1000 -n 100 -v 100000
+        ulimit -d 10000 -f 1000 -n 100 -v 100000
         if [[ $1 =~ .*Test[0-9]*[.]py ]] ; then
-            python3 -m unittest $@
+            nice python3 -m unittest $@
         else
-            python3 $@
+            nice python3 $@
         fi
         ;;
 
     _C)
-        ulimit -d 1000 -f 1000 -n 100 -v 100000
+        ulimit -d 10000 -f 1000 -n 100 -v 100000
         PROG=`dirname $1`/prog # Ignore module base name--we called it prog in comprog
         shift 
-        $PROG $@
+        nice $PROG $@
         ;;
         
     _Cpp)
-        ulimit -d 1000 -f 1000 -n 100 -v 100000
+        ulimit -d 10000 -f 1000 -n 100 -v 100000
         PROG=`dirname $1`/prog # Ignore module base name--we called it prog in comprog
         shift 
-        $PROG $@
+        timeout 60s nice $PROG $@
         ;;
 
     _Scala)
-        ulimit -d 1000 -f 1000 -n 100
+        ulimit -d 10000 -f 1000 -n 100 -v 10000000
         MODULE=`basename $1`
         CLASSPATH=`dirname $1`
         MODULE=${MODULE/.scala/}
         shift
-        PATH=$PATH:$JAVA_HOME/bin $SCALA_HOME/bin/scala -classpath "$CLASSPATH" $MODULE $@
+        PATH=$PATH:$JAVA_HOME/bin nice $SCALA_HOME/bin/scala -classpath "$CLASSPATH" $MODULE $@
         ;;
 
     _Matlab)
-        NO_AT_BRIDGE=1 octave --no-gui $@
+        NO_AT_BRIDGE=1 nice octave --no-gui $@
         ;;
 
     _Racket)
-        # ulimit -d 1000 -f 1000 -n 100 -v 100000
+        ulimit -d 10000 -f 1000 -n 100 -v 1000000
         if grep -qE '\(define\s+\(\s*main\s+' $1 ; then
-            racket -tm $@
+            nice racket -tm $@
         else
-            racket -t $@
+            nice racket -t $@
         fi 
         ;;
 
     _JavaScript)
-        # ulimit -d 1000 -f 1000 -n 100 -v 100000
-        jjs --language=es6 -scripting $@
+        ulimit -d 10000 -f 1000 -n 100 -v 100000
+        nice jjs --language=es6 -scripting $@
         ;;
 
     _CSharp)
-        ulimit -d 1000 -f 1000 -n 100 -v 100000
-        mono `dirname $1`/Prog.exe $@
+        ulimit -d 10000 -f 1000 -n 100 -v 100000
+        nice mono `dirname $1`/Prog.exe $@
         ;;
     
     _)  
