@@ -30,10 +30,10 @@ public class Files extends Controller {
 
 	private static String messageScript = "<script src=\"/assets/myReceiveMessage.js\"></script>";
 
-	private static String fileAreaBefore = "\n<p><h3>{0}</h3><textarea id=\"{0}\" name=\"{0}\" rows=\"{1}\" cols=\"80\" class=\"{2}\">";
-	private static String fileAreaAfter = "</textarea>";
-	private static String after = "<p><input type=\"submit\"/><input type=\"hidden\" name=\"repo\" value=\"{0}\"><input type=\"hidden\" name=\"problem\" value=\"{1}\"><input type=\"hidden\" name=\"level\" value=\"{2}\"></p>";
-	private static String callbackTemplate = "<p><input type=\"hidden\" name=\"scoreCallback\" id=\"scoreCallback\" value=\"{0}\"></p>";
+	private static String fileAreaBefore = "\n<div><h3>{0}</h3><textarea id=\"{0}\" name=\"{0}\" rows=\"{1}\" cols=\"80\" class=\"{2}\">";
+	private static String fileAreaAfter = "</textarea></div>";
+	private static String after = "<div><input type=\"submit\"/><input type=\"hidden\" name=\"repo\" value=\"{0}\"><input type=\"hidden\" name=\"problem\" value=\"{1}\"/><input type=\"hidden\" name=\"level\" value=\"{2}\"/></div>";
+	private static String callbackTemplate = "<div><input type=\"hidden\" name=\"scoreCallback\" id=\"scoreCallback\" value=\"{0}\"></div>";
 	private static String formEnd = "</form>";
 	private static String ajaxScriptVariables = "<script>var ajaxResponseType = \"{0}\"; var ajaxDownloadButton = \"{1}\";</script>\n";
 	private static String bodyEnd = "</body></html>";
@@ -78,15 +78,18 @@ public class Files extends Controller {
 			}
 			problem = new Problem(problemPath, level);
 			data = new ProblemData();
-			data.description = getDescription(problemPath, "problem.html");
-			// TODO: Legacy
+			data.description = getDescription(problemPath, "index.html");
 			if (data.description == null) {
-				data.description = getDescription(problemPath, "statement.html");
-				if (data.description == null)
-					data.description = getDescription(problemPath,
+				// TODO: Legacy
+				data.description = getDescription(problemPath, "problem.html");
+				if (data.description == null) {
+					data.description = getDescription(problemPath, "statement.html");
+					if (data.description == null)
+						data.description = getDescription(problemPath,
 							"original-statement.html"); // TODO: legacy
-				else
-					includeCode = false; // code already shown in statement.html
+					else
+						includeCode = false; // code already shown in statement.html
+				}
 			}
 
 			for (Path p : problem.getRequiredFiles()) {
@@ -130,19 +133,6 @@ public class Files extends Controller {
 			result.append(messageScript);
 			if (pc.data.description != null)
 				result.append(pc.data.description);
-			int nusefiles = pc.data.useFiles.size();
-			if (pc.includeCode && nusefiles > 0) {
-				result.append(MessageFormat.format(useStart, nusefiles));
-				for (Map.Entry<String, String> entry : pc.data.useFiles
-						.entrySet()) {
-					result.append("<p>");
-					result.append(entry.getKey());
-					result.append("</p>\n");
-					result.append("<pre>");
-					result.append(Util.htmlEscape(entry.getValue()));
-					result.append("</pre\n>");
-				}
-			}
 			String contextPath = ""; // request().host(); // TODO
 			String url = contextPath + "/check";
 			result.append(MessageFormat.format(before, url, "")); // TODO
@@ -172,7 +162,7 @@ public class Files extends Controller {
 				result.append(fileAreaAfter);
 			}
 			result.append(MessageFormat.format(after, repo, problemName, level));
-
+			
 			// Include javascripts
 			result.append(MessageFormat.format(submissionCompScript, myPath));
 			result.append(MessageFormat.format(aceScript, acePath));
@@ -190,6 +180,21 @@ public class Files extends Controller {
 			}
 
 			result.append(formEnd);
+			
+			int nusefiles = pc.data.useFiles.size();
+			if (pc.includeCode && nusefiles > 0) {
+				result.append(MessageFormat.format(useStart, nusefiles));
+				for (Map.Entry<String, String> entry : pc.data.useFiles
+						.entrySet()) {
+					result.append("<p>");
+					result.append(entry.getKey());
+					result.append("</p>\n");
+					result.append("<pre>");
+					result.append(Util.htmlEscape(entry.getValue()));
+					result.append("</pre\n>");
+				}
+			}
+
 			if (type.equals("json") || type.equals("jsonp")) {
 				result.append(MessageFormat.format(ajaxScriptVariables, type, downloadButton));
 				result.append(jsonpAjaxSubmissionScript);
