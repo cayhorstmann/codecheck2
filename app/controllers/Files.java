@@ -10,11 +10,13 @@ import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import models.Config;
-import models.PlayConfig;
+import javax.inject.Inject;
+
 import models.Problem;
 import models.ProblemData;
+import models.S3Connection;
 import models.Util;
+import play.Configuration;
 import play.Logger;
 import play.libs.Json;
 import play.mvc.Controller;
@@ -54,7 +56,8 @@ public class Files extends Controller {
 	private static String myButtonScript = "\n<script src=\"{0}/myButton.js\"></script>";
 	private static String myAceScript = "\n<script src=\"{0}/myAce.js\"></script>";
 
-	private static Config config = PlayConfig.INSTANCE;
+	@Inject S3Connection s3conn;
+	@Inject Configuration config;
 
 	class ProblemContext implements AutoCloseable {
 		Path unzipDir;
@@ -65,11 +68,11 @@ public class Files extends Controller {
 
 		ProblemContext(String repo, String problemName, String level)
 				throws IOException {
-			if (Util.isOnS3(config, repo)) {
-				problemPath = Util.unzipFromS3(config, repo, problemName);
+			if (s3conn.isOnS3(repo)) {
+				problemPath = s3conn.unzipFromS3(repo, problemName);
 				unzipDir = problemPath.getParent();
 			} else {
-				Path repoPath = Paths.get(config.get("com.horstmann.codecheck.repo."
+				Path repoPath = Paths.get(config.getString("com.horstmann.codecheck.repo."
 								+ repo));
 				// TODO: That comes from Problems.java--fix it there
 				if (problemName.startsWith("/"))

@@ -43,27 +43,23 @@ import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 
 import play.Logger;
-
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.Protocol;
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.ObjectMetadata;
+import play.Configuration;
 
 public class Util {
 	public static final int TIMEOUT = 2 * 60 * 1000; // 2 minutes; 
 	private static Random generator = new Random();
+	@Inject private static S3Connection s3conn;
+	@Inject private static Configuration config;
 
 	public static boolean isEmpty(String str) { return str == null || str.isEmpty(); }
 	
-	public static Path getDir(Config config, String key)
+	public static Path getDir(String key)
 			throws IOException {
-		String dirName = config.get("com.horstmann.codecheck."
+		String dirName = config.getString("com.horstmann.codecheck."
 				+ key);
 		Path dir = Paths.get(dirName);
 		if (!Files.exists(dir))
@@ -274,38 +270,7 @@ public class Util {
         }
 	}
 
-	public static boolean isOnS3(Config config, String repo) {
-		String repoPath = config.get("com.horstmann.codecheck.repo." + repo);
-		return repoPath == null;
-	}
-
-	private static String s3AccessKey = null;
-	private static String s3SecretKey = null;
-
-	public static void loadS3Credentials(Config config)
-			throws IOException {
-		String s3CredentialsPath = config.get("com.horstmann.codecheck.s3credentials");
-		if (s3CredentialsPath == null)
-			throw new IOException(
-					"No init parameter com.horstmann.codecheck.s3credentials");
-		Properties props = new Properties();
-		props.load(Files.newBufferedReader(Paths.get(s3CredentialsPath),
-				StandardCharsets.UTF_8));
-		s3AccessKey = props.getProperty("accessKey");
-		s3SecretKey = props.getProperty("secretKey");
-	}
-
-	private static AmazonS3 getS3Connection() {
-		AWSCredentials credentials = new BasicAWSCredentials(s3AccessKey,
-				s3SecretKey);
-
-		ClientConfiguration clientConfig = new ClientConfiguration();
-		clientConfig.setProtocol(Protocol.HTTP);
-
-		return new AmazonS3Client(credentials, clientConfig);
-	}
-
-	public static void zip(Path source, Path zipPath) throws IOException {
+		public static void zip(Path source, Path zipPath) throws IOException {
 		URI uri;
 		try {
 			uri = new URI("jar", zipPath.toUri().toString(), null);
@@ -336,64 +301,33 @@ public class Util {
 		}
 	}
 
-	public static void putToS3(Path file, String bucket, String key)
-			throws IOException {
-		InputStream in = Files.newInputStream(file);
-		try {
-			getS3Connection().putObject(bucket, key, in, new ObjectMetadata());
-		} finally {
-			in.close();
-		}
-	}
-
-	public static void deleteFromS3(String bucket, String key)
-			throws IOException {
-		getS3Connection().deleteObject(bucket, key);
-	}
-
-	// Delete returnedPath.getParent() when done
-	public static Path unzipFromS3(Config config, String repo, String problem)
-			throws IOException {
-		Path unzipDir = java.nio.file.Files.createTempDirectory("problem");
-		String id = problem.replaceAll("/", "_"); // No / in dir name
-		Path problemDir = unzipDir.resolve(id);
-		Files.createDirectory(problemDir);
-		String bucket = repo + "." + config.get("com.horstmann.codecheck.s3bucketsuffix");
-
-		InputStream in = getS3Connection().getObject(bucket, problem)
-				.getObjectContent();
-		unzip(in, problemDir);
-		in.close();
-		return problemDir;
-	}
-
-	public static void runLabrat(Config config, String reportType, String repo,
+	public static void runLabrat(String reportType, String repo,
 			String problem, String level, java.nio.file.Path submissionDir, String... metaData)
 			throws IOException, InterruptedException {
 		java.nio.file.Path problemDir;
 
 		// If problem is on S3 (eventually all will be)
 		java.nio.file.Path unzipDir = null;
-		if (isOnS3(config, repo)) {
-			Path tempProblemDir = unzipFromS3(config, repo, problem);
+		if (s3conn.isOnS3(repo)) {
+			Path tempProblemDir = s3conn.unzipFromS3(repo, problem);
 			unzipDir = tempProblemDir.getParent();
 			problemDir = tempProblemDir.toAbsolutePath();
 		} else {
-			java.nio.file.Path repoPath = Paths.get(config.get("com.horstmann.codecheck.repo." + repo));
+			java.nio.file.Path repoPath = Paths.get(config.getString("com.horstmann.codecheck.repo." + repo));
 			problemDir = repoPath.resolve(problem);
 		}
 
-		runLabrat(config, reportType, repo, problem, level, problemDir, submissionDir,
+		runLabrat(reportType, repo, problem, level, problemDir, submissionDir,
 				metaData);
 
 		if (unzipDir != null)
 			deleteDirectory(unzipDir);
 	}
 
-	public static void runLabrat(Config config, String reportType, String repo,
+	public static void runLabrat(String reportType, String repo,
 			String problem, String level, java.nio.file.Path problemDir,
 			java.nio.file.Path submissionDir, String... metaData) throws IOException, InterruptedException {
-		String command = config.get("com.horstmann.codecheck." + reportType);
+		String command = config.getString("com.horstmann.codecheck." + reportType);
 		StringBuilder metas = new StringBuilder();
 		for (String meta : metaData) { if (metas.length() > 0) metas.append(" "); metas.append(meta); }
 		

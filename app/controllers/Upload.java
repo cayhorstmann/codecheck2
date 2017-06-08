@@ -19,30 +19,32 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import models.Config;
-import models.PlayConfig;
+import javax.inject.Inject;
+
+import models.S3Connection;
 import models.Util;
+import play.Configuration;
 import play.Logger;
 import play.mvc.Controller;
 import play.mvc.Result;
 
 public class Upload  extends Controller {	
-	private static Config config = PlayConfig.INSTANCE;
-	
 	final Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
 	final String repo = "ext";
+	@Inject S3Connection s3conn;
+	@Inject Configuration config;
 
 	public Result uploadProblem() {		
 		try {
 			play.mvc.Http.MultipartFormData<File> body = request().body().asMultipartFormData();	
 			String problem = Util.createUID();
 			Path unzipDir;
-			boolean isOnS3 = Util.isOnS3(config, "ext"); 
+			boolean isOnS3 = s3conn.isOnS3("ext"); 
 			if (isOnS3) {
 				unzipDir = Files.createTempDirectory("problem");				
 			} else {
 				unzipDir = java.nio.file.Paths.get(config
-						.get("com.horstmann.codecheck.repo.ext"));
+						.getString("com.horstmann.codecheck.repo.ext"));
 				if (!Files.exists(unzipDir)) Files.createDirectory(unzipDir);
 			}
 			Path problemZip = unzipDir.resolve(problem + ".zip");
@@ -60,7 +62,7 @@ public class Upload  extends Controller {
 				Util.unzip(in, problemDir);
 				in.close();
 	
-				if (isOnS3) Util.putToS3(problemZip, repo + "." + config.get("com.horstmann.codecheck.s3bucketsuffix"), problem);
+				if (isOnS3) s3conn.putToS3(problemZip, repo + "." + config.getString("com.horstmann.codecheck.s3bucketsuffix"), problem);
 				Map<String, String> runs = check(problemDir);
 				boolean grade = runs.keySet().contains("grade");
 				boolean multipleLevels = runs.keySet().size() > (grade ? 2
@@ -167,7 +169,7 @@ public class Upload  extends Controller {
 				maxLevel = i;
 
 		boolean grade = Files.exists(problemDir.resolve("grader"));
-		Path submissionDir = Util.getDir(config, "submissions");
+		Path submissionDir = Util.getDir("submissions");
 		List<String> solutionSubdirs = new ArrayList<>();
 		List<String> studentSubdirs = new ArrayList<>();
 		for (int i = 1; i <= (grade ? maxLevel + 1 : maxLevel); i++) {
@@ -190,7 +192,7 @@ public class Upload  extends Controller {
 
 			String problem = problemDir.getFileName().toString();
 			String levelString = grade && i == maxLevel + 1 ? "grade" : "" + i;
-			Util.runLabrat(config, "html", repo, problem, levelString,
+			Util.runLabrat("html", repo, problem, levelString,
 					tempDir.toAbsolutePath(), "");
 			// Path reportDir = Util.getDir(context,
 			// "reports").resolve(tempDir.getFileName());
@@ -205,7 +207,7 @@ public class Upload  extends Controller {
 	}
 	
     public Result fetch(String dir, String file) throws IOException {
-        Path submissionDir = Util.getDir(config, "submissions");
+        Path submissionDir = Util.getDir("submissions");
         File data = submissionDir.resolve(dir).resolve(file).toFile();
         if (file.endsWith(".html")) { 
         return ok(data).as("text/html");

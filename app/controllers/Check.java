@@ -10,9 +10,8 @@ import java.util.concurrent.CompletableFuture;
 
 import javax.inject.Inject;
 
-import models.Config;
-import models.PlayConfig;
 import models.Util;
+import play.Logger;
 import play.libs.Json;
 import play.libs.Jsonp;
 import play.libs.concurrent.HttpExecutionContext;
@@ -20,14 +19,11 @@ import play.mvc.BodyParser;
 import play.mvc.Controller;
 import play.mvc.Http;
 import play.mvc.Result;
-import play.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class Check extends Controller {
-	
-	private static Config config = PlayConfig.INSTANCE;
 	@Inject HttpExecutionContext ec;
 	
 	// Classic HTML report, with optional score callback for Sunita
@@ -41,7 +37,7 @@ public class Check extends Controller {
 		        String repo = "ext";
 		        String problem = "";
 		        String level = "1";
-				Path submissionDir = Util.getDir(config, "submissions");				
+				Path submissionDir = Util.getDir("submissions");				
 		        Path tempDir = Util.createTempDirectory(submissionDir);
 		        
 		        String callback = null;
@@ -58,7 +54,7 @@ public class Check extends Controller {
 		            else
 		                Util.write(tempDir, key, value);
 		        }
-		        Util.runLabrat(config, "html", repo, problem, level, tempDir.toAbsolutePath(), "User=" + ccu);
+		        Util.runLabrat("html", repo, problem, level, tempDir.toAbsolutePath(), "User=" + ccu);
 		        int age = 180 * 24 * 60 * 60;
 		        Http.Cookie newCookie = Http.Cookie.builder("ccu", ccu).withMaxAge(age).build();
 
@@ -106,7 +102,7 @@ public class Check extends Controller {
 	// Request JSON, report html, txt, json
 	@BodyParser.Of(BodyParser.Json.class)
 	public Result checkJson() throws IOException, InterruptedException  {
-		Path submissionDir = Util.getDir(config, "submissions");
+		Path submissionDir = Util.getDir("submissions");
         Path tempDir = Util.createTempDirectory(submissionDir);
 	    JsonNode json = request().body().asJson();
 	    Iterator<Map.Entry<String,JsonNode>> dirs = json.fields();
@@ -141,12 +137,12 @@ public class Check extends Controller {
 	    if (problem == null) { // problem was submitted in JSON
                Logger.of("com.horstmann.codecheck.json").info("Request: " + json);
                if (uid == null)
-            	   Util.runLabrat(config, reportType, repo, problem, level, tempDir.toAbsolutePath(), tempDir.resolve("submission").toAbsolutePath());
+            	   Util.runLabrat(reportType, repo, problem, level, tempDir.toAbsolutePath(), tempDir.resolve("submission").toAbsolutePath());
                else
-            	   Util.runLabrat(config, reportType, repo, problem, level, tempDir.toAbsolutePath(), tempDir.resolve("submission").toAbsolutePath(), "uid=" + uid);
+            	   Util.runLabrat(reportType, repo, problem, level, tempDir.toAbsolutePath(), tempDir.resolve("submission").toAbsolutePath(), "uid=" + uid);
 	    }
 	    else
-	    	Util.runLabrat(config, reportType, repo, problem, level, tempDir.resolve("submission").toAbsolutePath());
+	    	Util.runLabrat(reportType, repo, problem, level, tempDir.resolve("submission").toAbsolutePath());
 	    if ("html".equals(reportType))
 	    	return ok(Util.read(tempDir.resolve("submission/report.html"))).as("text/html");
 	    else if ("text".equals(reportType))
@@ -174,7 +170,7 @@ public class Check extends Controller {
 				String repo = "ext";
 				String problem = null;
 				String level = "1";
-				Path submissionDir = Util.getDir(config, "submissions");
+				Path submissionDir = Util.getDir("submissions");
 				Path tempDir = Util.createTempDirectory(submissionDir);
 				String reportType = "njs";
 				String callback = null;
@@ -206,9 +202,9 @@ public class Check extends Controller {
 				Logger.of("com.horstmann.codecheck.check").info("checkNJS: " + requestParams);
 				
 				if (problem == null) // problem was submitted in JSON
-					Util.runLabrat(config, reportType, repo, problem, level, tempDir.toAbsolutePath(), tempDir.resolve("submission").toAbsolutePath());
+					Util.runLabrat(reportType, repo, problem, level, tempDir.toAbsolutePath(), tempDir.resolve("submission").toAbsolutePath());
 				else
-					Util.runLabrat(config, reportType, repo, problem, level, tempDir.resolve("submission").toAbsolutePath());
+					Util.runLabrat(reportType, repo, problem, level, tempDir.resolve("submission").toAbsolutePath());
 				ObjectNode result = (ObjectNode) Json.parse(Util.read(tempDir.resolve("submission/report.json")));
 				String reportZip = Util.base64(tempDir.resolve("submission"), "report.signed.zip");
 				
