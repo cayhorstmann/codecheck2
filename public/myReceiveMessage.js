@@ -12,6 +12,12 @@ function receiveMessage(event) {
                 html.clientHeight, html.scrollHeight, html.offsetHeight ) + fudge;
         event.source.postMessage({docHeight: height, request: event.data }, '*' );
         return;
+    } else if (event.data.query === 'populateAceEditor') {
+        var editorDiv = document.getElementsByClassName('ace_editor')[0];
+        var editor = ace.edit(editorDiv);
+        editor.setValue(event.data.studentCode);
+        event.source.postMessage({request: event.data}, '*');
+        return;
     }
     // default action is to report score
     
