@@ -44,20 +44,22 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import javax.inject.Inject;
+import javax.inject.Singleton;
 import javax.servlet.http.HttpServletRequest;
 
 import play.Logger;
 import play.Configuration;
 
+@Singleton
 public class Util {
 	public static final int TIMEOUT = 2 * 60 * 1000; // 2 minutes; 
 	private static Random generator = new Random();
-	@Inject private static S3Connection s3conn;
-	@Inject private static Configuration config;
+	@Inject private S3Connection s3conn;
+	@Inject private Configuration config;
 
 	public static boolean isEmpty(String str) { return str == null || str.isEmpty(); }
 	
-	public static Path getDir(String key)
+	public Path getDir(String key)
 			throws IOException {
 		String dirName = config.getString("com.horstmann.codecheck."
 				+ key);
@@ -301,7 +303,7 @@ public class Util {
 		}
 	}
 
-	public static void runLabrat(String reportType, String repo,
+	public void runLabrat(String reportType, String repo,
 			String problem, String level, java.nio.file.Path submissionDir, String... metaData)
 			throws IOException, InterruptedException {
 		java.nio.file.Path problemDir;
@@ -324,7 +326,7 @@ public class Util {
 			deleteDirectory(unzipDir);
 	}
 
-	public static void runLabrat(String reportType, String repo,
+	public void runLabrat(String reportType, String repo,
 			String problem, String level, java.nio.file.Path problemDir,
 			java.nio.file.Path submissionDir, String... metaData) throws IOException, InterruptedException {
 		String command = config.getString("com.horstmann.codecheck." + reportType);

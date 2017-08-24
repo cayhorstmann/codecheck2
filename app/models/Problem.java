@@ -281,8 +281,10 @@ public class Problem {
 					|| isPseudocomment(line, "ARGS", start, end)
 					|| isPseudocomment(line, "IN", start, end)
 					|| isPseudocomment(line, "OUT", start, end)) {
-				lines[i] = null; // TODO: More cases like that? Student files
-									// shouldn't have pseudocomments
+				lines[i] = null; 
+
+// TODO: filter out IGNORExxx directives
+                                
 			} else if (isPseudocomment(line, "REQUIRED", start, end)
 					|| isPseudocomment(line, "FORBIDDEN", start, end)) {
 				lines[i] = null;

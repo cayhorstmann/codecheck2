@@ -33,6 +33,7 @@ public class Upload  extends Controller {
 	final String repo = "ext";
 	@Inject S3Connection s3conn;
 	@Inject Configuration config;
+	@Inject Util util;
 
 	public Result uploadProblem() {		
 		try {
@@ -169,7 +170,7 @@ public class Upload  extends Controller {
 				maxLevel = i;
 
 		boolean grade = Files.exists(problemDir.resolve("grader"));
-		Path submissionDir = Util.getDir("submissions");
+		Path submissionDir = util.getDir("submissions");
 		List<String> solutionSubdirs = new ArrayList<>();
 		List<String> studentSubdirs = new ArrayList<>();
 		for (int i = 1; i <= (grade ? maxLevel + 1 : maxLevel); i++) {
@@ -192,7 +193,7 @@ public class Upload  extends Controller {
 
 			String problem = problemDir.getFileName().toString();
 			String levelString = grade && i == maxLevel + 1 ? "grade" : "" + i;
-			Util.runLabrat("html", repo, problem, levelString,
+			util.runLabrat("html", repo, problem, levelString,
 					tempDir.toAbsolutePath(), "");
 			// Path reportDir = Util.getDir(context,
 			// "reports").resolve(tempDir.getFileName());
@@ -207,7 +208,7 @@ public class Upload  extends Controller {
 	}
 	
     public Result fetch(String dir, String file) throws IOException {
-        Path submissionDir = Util.getDir("submissions");
+        Path submissionDir = util.getDir("submissions");
         File data = submissionDir.resolve(dir).resolve(file).toFile();
         if (file.endsWith(".html")) { 
         return ok(data).as("text/html");
