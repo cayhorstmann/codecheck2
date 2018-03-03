@@ -38,7 +38,7 @@ public class Calls {
         if (this.file == null)
             this.file = file;
         else if (!this.file.equals(file))
-            throw new RuntimeException("CALL in " + this.file + " and " + file);
+            throw new CodeCheckException("CALL in " + this.file + " and " + file);
         Call c = new Call();
         c.args = args;
         calls.add(c);
@@ -46,7 +46,7 @@ public class Calls {
             String name = language.functionName(next);
             
             if (name == null)
-                throw new RuntimeException("No function below CALL in " + file + "\n" + next);
+                throw new CodeCheckException("No function below CALL in " + file + "\n" + next);
             List<String> modifiers = language.modifiers(next);
             for (int i = lastGroup + 1; i < calls.size(); i++) {
                 Call callInGroup = calls.get(i);
@@ -59,7 +59,7 @@ public class Calls {
 
     public List<Path> writeTester(Path sourceDir, Path targetDir) throws IOException {
         if (lastGroup < calls.size() - 1)
-            throw new RuntimeException("No function below CALL in " + file + "\n");
+            throw new CodeCheckException("No function below CALL in " + file + "\n");
         return language.writeTester(sourceDir, targetDir, file, calls);
     }
 }

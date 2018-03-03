@@ -44,6 +44,10 @@ case _"$LANG" in
         mcs -o Prog.exe $@
         ;;
     
+    _Haskell)
+        ghc -o prog $@
+        ;;
+    
     _)  
         echo Unknown language $LANG 
         ;;          

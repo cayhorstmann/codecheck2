@@ -19,9 +19,9 @@ public class CallMethod {
     private Properties props;
     private String className;
     private double tolerance = 1.0E-6;
-    private int timeoutMillis;
     private boolean ignoreCase = true;
     private boolean ignoreSpace = true;    
+    private int timeoutMillis;
 
     public CallMethod(String className, Properties props, int timeoutMillis) {
         this.className = className;
@@ -68,7 +68,7 @@ public class CallMethod {
                 if (paramValues == null) return;
                 Object ret = null;
                 try {
-                    ret = callMethod(cl, i, paramValues);
+                    ret = callMethod(cl, i, paramValues, timeoutMillis);
                 } catch (Throwable t) {
                 }
                 expectedRets.add(ret);
@@ -80,7 +80,7 @@ public class CallMethod {
     }
 
     @SuppressWarnings("deprecation")
-    private Object callMethod(Class<?> cl, int i, List<String> paramValues) throws Throwable {
+    private Object callMethod(Class<?> cl, int i, List<String> paramValues, int timeout) throws Throwable {
         final Method method = getMethod(cl, i);
         final Object obj = (method.getModifiers() & Modifier.STATIC) == 0 ? cl.newInstance() : null;
 
@@ -106,14 +106,14 @@ public class CallMethod {
         mainmethodThread.start();
 
         try {
-            mainmethodThread.join(timeoutMillis);
+            mainmethodThread.join(timeout);
         } catch (InterruptedException e) {
         }
         if (!done.get()) {
             mainmethodThread.stop();        
-            throw new RuntimeException("Timed out after " 
-            		+ (timeoutMillis >= 2000 ? timeoutMillis / 1000 + " seconds" 
-            				: timeoutMillis + " milliseconds"));
+            return "Timed out after " 
+            		+ (timeout >= 2000 ? timeout / 1000 + " seconds" 
+            				: timeout + " milliseconds");
         }
         
         if (result[0] instanceof Throwable) throw (Throwable) result[0]; // TODO: Really? Do this upstream?
@@ -141,7 +141,7 @@ public class CallMethod {
                 Object actualRet = null;
                 Throwable thrown = null;
                 try {
-                    actualRet = callMethod(cl, i + 1, paramValues);
+                    actualRet = callMethod(cl, i + 1, paramValues, timeoutMillis / n);
                 } catch (InvocationTargetException ex) {
                     thrown = ex.getCause();
                 } catch (Throwable t) {

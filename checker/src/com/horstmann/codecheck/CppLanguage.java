@@ -72,13 +72,17 @@ public class CppLanguage implements Language {
         Set<String> externs = new LinkedHashSet<>();
         for (Calls.Call c : calls) 
            externs.add(c.modifiers.get(0) + " " + c.modifiers.get(1) + ";"); 
+        lines.add(i++, "namespace solution {");
         for (String extern : externs) {        
-            lines.add(i++, extern); // extern function from student
-            lines.add(i++, "namespace solution {");
-            lines.add(i++, extern);
-            lines.add(i++, "}");
+            lines.add(i++, extern); // extern function from solution
         }
+        lines.add(i++, "}");
         lines.add(i++, "main(int argc, char *argv[]) {");
+        // We declare the student functions locally in main so that they don't conflict with
+        // solution functions
+        for (String extern : externs) {        
+            lines.add(i++, extern); // extern function from student            
+        }
         for (int k = 0; k < calls.size(); k++) {
             Calls.Call call = calls.get(k);
             lines.add(i++, 
@@ -101,7 +105,7 @@ public class CppLanguage implements Language {
         return paths;
     }
 
-    private static String patternString = ".*\\S\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*=\\s*([^;]+);.*";
+    private static String patternString = ".*\\S\\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)(\\s*[*\\[\\]]+)?\\s*=\\s*(?<rhs>[^;]+);.*";
     private static Pattern pattern = Pattern.compile(patternString);
 
     /*

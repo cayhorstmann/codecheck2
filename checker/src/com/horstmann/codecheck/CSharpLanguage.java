@@ -13,7 +13,7 @@ public class CSharpLanguage implements Language {
         return "cs";
     }
     
-    private static String patternString = ".*\\S\\s+(\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*([^;]+);.*";
+    private static String patternString = ".*\\S\\s+(\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*(?<rhs>[^;]+);.*";
     private static Pattern pattern = Pattern.compile(patternString);
     
     @Override

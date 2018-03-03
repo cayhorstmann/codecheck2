@@ -34,7 +34,7 @@ import java.util.TreeSet;
 
 public class Main { 
     public static final double DEFAULT_TOLERANCE = 1.0E-6;
-    public static final int DEFAULT_TIMEOUT_MILLIS = 30000;
+    public static final int DEFAULT_TIMEOUT_MILLIS = 15000;
     public static final int DEFAULT_MAX_OUTPUT_LEN = 100_000;
     public static final String DEFAULT_TOKEN = "line";
     public static final int MUCH_LONGER = 1000; // if longer than the expected by this amount, truncate 
@@ -66,7 +66,8 @@ public class Main {
        new MatlabLanguage(),
        new RacketLanguage(),
        new JavaScriptLanguage(),
-       new CSharpLanguage()
+       new CSharpLanguage(),
+       new HaskellLanguage()
     };
 
     /**
@@ -172,6 +173,11 @@ public class Main {
     }
 
     public Path compileSolution(Path mainModule, Substitution sub, int n) throws IOException {
+        // Delete any class files in the work directory
+        // Otherwise they won't be generated in the solution directory
+        for (Path p : Files.list(workDir).filter(p -> p.getFileName().toString().endsWith(".class")).toArray(Path[]::new))
+            Files.deleteIfExists(p);
+        
         Path tempDir = Util.createTempDirectory();
         for (Path p : studentFiles) {
             Path source = problemDir.resolve(p);
@@ -244,6 +250,8 @@ public class Main {
         if (compile(mainmodule)) {
             for (String test : inputs.keySet()) {
                 String input = inputs.get(test);
+                if (!input.endsWith("\n")) input += "\n";
+
                 testInput(mainmodule, annotations, solutionDir, test, input, timeoutMillis / inputs.size(), maxOutputLen / inputs.size());
             }
         } else
@@ -405,8 +413,8 @@ public class Main {
                     expected[i] = language.run(mainmodule, dependentModules, tempDir, null, null, timeout, maxOutput);                    
                     Util.deleteDirectory(tempDir);
                     int j = 0;
-                    for (String v : sub.values(i)) { args[i][j] = v; j++; }                      
-                    outcomes[i] = comp.compare(actual[i], expected[i]);
+                    for (String v : sub.values(i)) { args[i][j] = v; j++; }
+                    outcomes[i] = comp.compare(actual[i], expected[i]).matches;
                     actual[i] = Util.truncate(actual[i], expected[i].length() + MUCH_LONGER);
                     score.pass(outcomes[i], report);
                 }
@@ -558,7 +566,7 @@ public class Main {
             if (languageName != null) {
                 try {
                     language = (Language) Class.forName(
-                            languageName + "Language").newInstance();
+                            languageName + "Language").getConstructor().newInstance();
                 } catch (InstantiationException | IllegalAccessException
                         | ClassNotFoundException e) {
                     report.error("Cannot process language " + languageName);
@@ -572,7 +580,7 @@ public class Main {
                     if (languages[k].isLanguage(files)) 
                         language = languages[k];
                 }
-                if (language == null) throw new RuntimeException("Cannot find language from " + files);
+                if (language == null) throw new CodeCheckException("Cannot find language from " + files);
             }
 
             annotations = new Annotations(language);
@@ -582,12 +590,19 @@ public class Main {
             Set<Path> annotatedSolutions = annotations.findSolutions();
             studentFiles.removeAll(annotatedSolutions);
             solutionFiles.addAll(annotatedSolutions);
-            if (solutionFiles.size() == 0) 
-                throw new RuntimeException("No solution file.");
+            if (solutionFiles.size() == 0) {
+                if (studentFiles.size() == 1) { 
+                    // Assume that's the solution
+                    solutionFiles.addAll(studentFiles);
+                    studentFiles.clear();
+                } else {
+                    String[] delimiters = language.pseudoCommentDelimiters();
+                    throw new CodeCheckException("Mark one or more files as " + delimiters[0] + "SOLUTION" + delimiters[1]);
+                }
+            }
           
-            String uid = problemDir.getFileName().toString();
             report.comment("Submission", submissionDir.toString());
-            report.comment("Problem", uid);
+               // This is just a unique ID, can be used to check against cheating
             report.comment("Level", "" + level);
             DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
             df.setTimeZone(TimeZone.getTimeZone("UTC"));
@@ -615,8 +630,6 @@ public class Main {
             	    report.comment(arg, "");
             	}
             }
-            
-            
             
             timeoutMillis = DEFAULT_TIMEOUT_MILLIS;
             String timeoutProperty = System.getProperty("com.horstmann.codecheck.timeout");
@@ -662,15 +675,17 @@ public class Main {
                 }
             }
 
-            if (!annotations.checkConditions(workDir, report)) {
-                // Do nothing
-            } else if (getStringProperty("test.method") != null) { // Legacy
-                callMethod(tolerance, ignoreCase, ignoreSpace);
-            } else if (annotations.has("CALL"))
-                doCalls(submissionDir, annotations.findCalls());
-            else if (annotations.has("SUB"))
-                doSubstitutions(submissionDir, annotations.findSubstitution());
-            else {
+            if (annotations.checkConditions(workDir, report)) {
+                if (getStringProperty("test.method") != null) // Legacy
+                    callMethod(tolerance, ignoreCase, ignoreSpace);
+                if (annotations.has("CALL"))
+                    doCalls(submissionDir, annotations.findCalls());
+                if (annotations.has("SUB")) {
+                    Substitution sub = annotations.findSubstitution();
+                    doSubstitutions(submissionDir, sub);
+                    mainModules.remove(Util.tail(sub.getFile()));
+                }
+                
                 Map<String, String> inputs = new TreeMap<>();
                 for (String i : new String[] { "", "1", "2", "3", "4", "5", "6", "7", "8", "9" }) {
                     String key = "test" + i + ".in";
@@ -684,12 +699,11 @@ public class Main {
                 }
                 int inIndex = inputs.size();
                 for (String s : annotations.findKeys("IN")) {
-                    if (!s.endsWith("\n")) s += "\n";
                     inputs.put("test" + ++inIndex, Util.unescapeJava(s));
                 }
 
                 runUnitTests();
-
+    
                 List<Path> testerModules = new ArrayList<>();
                 List<Path> runModules = new ArrayList<>();
                 for (Path mainmodule : mainModules) {
@@ -721,15 +735,14 @@ public class Main {
                         else
                             testInputs(inputs, mainmodule, annotations);
                 }
-            }
-            
-            // Process checkstyle.xml etc.
-            for (Path p : studentFiles) {
-                if (language.accept(p, submissionDir, requiredFiles, report, score)) {
-                    printFiles = filterNot(printFiles, p.getFileName().toString());
+                // Process checkstyle.xml etc.
+                for (Path p : studentFiles) {
+                    if (language.accept(p, submissionDir, requiredFiles, report, score)) {
+                        printFiles = filterNot(printFiles, p.getFileName().toString());
+                    }
                 }
             }
-
+            
             report.header("studentFiles", "Student files");
             for (Path file : requiredFiles)
                 report.file(submissionDir, file);

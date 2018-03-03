@@ -294,13 +294,6 @@ public class TextReport implements Report {
         return this;
     }
 
-    private int longestLine(List<String> lines) {
-        int longest = 0;
-        for (String l : lines)
-            longest = Math.max(longest, l.length());
-        return longest;
-    }
-
     private int longest(String header, String[][] entries, int col) {
         int longest = header.length();
         for (int i = 0; i < entries.length; i++)
@@ -327,14 +320,17 @@ public class TextReport implements Report {
     }
 
     @Override
-    public TextReport compareTokens(List<Boolean> matches, List<String> actual,
-            List<String> expected) {
-
+    public TextReport compareTokens(String filename, List<Match> matchData) {
+        caption(filename);
         String caption1 = "Actual output";
         String caption2 = "Expected output";
 
-        int col1 = Math.max(longestLine(actual), caption1.length()) + 3;
-        int col2 = Math.max(longestLine(expected), caption2.length());
+        int col1 = caption1.length() + 3;
+        int col2 = caption2.length();
+        for (Match m : matchData) {
+            col1 = Math.max(col1, m.actual.length());
+            col2 = Math.max(col2, m.expected.length());
+        }
 
         builder.append("  ");
         pad(caption1, col1);
@@ -342,24 +338,14 @@ public class TextReport implements Report {
         builder.append("  ");
         repeat('-', col1 + col2);
         builder.append("\n");
-        int i = 0;
-        while (i < actual.size()) {
-            if (i < matches.size() && matches.get(i))
+        for (Match m : matchData) {
+            if (m.matches)
                 builder.append("  ");
             else
                 builder.append("- ");
 
-            if (i < expected.size()) {
-                pad(actual.get(i), col1);
-                add(expected.get(i));
-            } else
-                add(actual.get(i));
-            i++;
-        }
-        while (i < expected.size()) {
-            repeat(' ', col1 + 2);
-            add(expected.get(i));
-            i++;
+            pad(m.actual, col1);
+            add(m.expected);
         }
         return this;
     }

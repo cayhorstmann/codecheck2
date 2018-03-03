@@ -19,7 +19,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.AccessControlException;
 import java.security.Permission;
 import java.util.ArrayList;
@@ -40,6 +39,7 @@ public class JavaLanguage implements Language {
      * 
      * @see com.horstmann.codecheck.Language#isSource(java.nio.file.Path)
      */
+    private static String appClassPath = System.getProperty("java.class.path");
     
     public String getExtension() { return "java"; };
     
@@ -98,6 +98,7 @@ public class JavaLanguage implements Language {
                     dir.resolve(mainModule).toString(), "-cp",
                     classPath.toString());
         }
+        
         if (result != 0) {
             return errStream.toString();
         }
@@ -248,7 +249,7 @@ public class JavaLanguage implements Language {
         while (i < lines.size() && !lines.get(i).contains(className))
             i++;
         if (i == lines.size())
-            throw new RuntimeException("Can't find class " + className
+            throw new CodeCheckException("Can't find class " + className
                     + " for inserting CALL in " + file);
         lines.set(
                 i,
@@ -258,7 +259,7 @@ public class JavaLanguage implements Language {
         while (i >= 0 && !lines.get(i).trim().equals("}"))
             i--;
         if (i == -1)
-            throw new RuntimeException("Can't find } for inserting CALL in "
+            throw new CodeCheckException("Can't find } for inserting CALL in "
                     + file);
         // Insert main here
         lines.add(i++, "    public static void main(String[] args) throws Exception");
@@ -313,7 +314,7 @@ public class JavaLanguage implements Language {
         return testModules;
     }
     
-    private static String patternString = ".*\\S\\s+(\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*([^;]+);.*";
+    private static String patternString = ".*\\S\\s+(?<name>\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*(?<rhs>[^;]+);.*";
     private static Pattern pattern = Pattern.compile(patternString);
 
     /*
@@ -356,8 +357,14 @@ public class JavaLanguage implements Language {
             }
             classPath.append(currentFile.getAbsolutePath());
         }
+        if (appClassPath.length() > 0) {
+            classPath.append(File.pathSeparatorChar);
+            classPath.append(appClassPath);
+        }
+            
         // Add the JAR files on the class path with which the checker was
         // launched (JUnit etc.)
+        /*
         for (URL url : ((URLClassLoader) getClass().getClassLoader()).getURLs()) {
             String urlString = url.toString();
             if (urlString.startsWith("file:") && urlString.endsWith(".jar")) {
@@ -376,6 +383,7 @@ public class JavaLanguage implements Language {
                 }
             }
         }
+        */
 
         return classPath.toString();
     }

@@ -16,14 +16,15 @@ public class Comparison {
         List<String> lines1 = getLines(actual);
         List<String> lines2 = getLines(expected);
 
-        List<Boolean> matches = new ArrayList<Boolean>();
+        List<Report.Match> matches = new ArrayList<>();
         boolean outcome = lines1.size() == lines2.size();
-        for (int i = 0; i < lines1.size() && i < lines2.size(); i++) {
+        int i;
+        for (i = 0; i < lines1.size() && i < lines2.size(); i++) {
            String line1 = lines1.get(i);
            String line2 = lines2.get(i);
-           boolean b = compare(line1, line2);
-           outcome &= b;
-           matches.add(b);
+           Report.Match m = compare(line1, line2);
+           outcome &= m.matches;
+           matches.add(m);
         }
         if (outcome) {
             if (filename != null) {
@@ -34,13 +35,33 @@ public class Comparison {
             }
         }
         else {
-            // TODO: What about file name?
-            if (lines1.size() > lines2.size() + MANY_MORE_LINES) {
-                lines1.set(lines2.size() + MANY_MORE_LINES, ". . .");
-                report.compareTokens(matches, lines1.subList(0, lines2.size() + MANY_MORE_LINES + 1), lines2);
-            } 
-            else
-                report.compareTokens(matches, lines1, lines2);
+            while (i < lines2.size()) {
+                Report.Match m = new Report.Match();
+                m.actual = "";
+                m.expected = lines2.get(i);
+                m.matches = false;
+                m.explanation = null;
+                matches.add(m);
+                i++;
+            }
+            while (i < lines1.size() && i < lines2.size() + MANY_MORE_LINES) {
+                Report.Match m = new Report.Match();
+                m.actual = lines1.get(i);
+                m.expected = "";
+                m.matches = false;
+                m.explanation = null;
+                matches.add(m);
+                i++;
+            }
+            if (i < lines1.size()) {
+                Report.Match m = new Report.Match();
+                m.actual = ". . .";
+                m.expected = "";
+                m.matches = false;
+                m.explanation = null;
+                matches.add(m);
+            }
+            report.compareTokens(filename, matches);
         }
         return outcome;
     }
@@ -73,22 +94,40 @@ public class Comparison {
     	return r.toArray(new String[r.size()]);
     }
     
-    public boolean compare(String a, String b) {
+    private static String normalizeWS(String s) { return s.trim().replaceAll("\\s+", " "); }
+    
+    public Report.Match compare(String a, String b) {
+        Report.Match m = new Report.Match();
+        m.actual = a;
+        m.expected = b;
+        m.matches = false;
+        m.explanation = null;
+        
         String[] as = getTokens(a);
         String[] bs = getTokens(b);
         if (as.length != bs.length)
-            return false;
+            return m;
         for (int i = 0; i < as.length; i++)
             if (!compareAsNumbers(as[i], bs[i])) {
                 if (ignoreCase) {
-                    if (!as[i].equalsIgnoreCase(bs[i]))
-                        return false;
+                    if (!as[i].equalsIgnoreCase(bs[i])) {
+                        if (!ignoreSpace && normalizeWS(as[i]).equalsIgnoreCase(normalizeWS(bs[i])))
+                            m.explanation = "Check white space";
+                        return m;
+                    }
                 } else {
-                    if (!as[i].equals(bs[i]))
-                        return false;
+                    if (!as[i].equals(bs[i])) {
+                        if (as[i].equalsIgnoreCase(bs[i])) {
+                            m.explanation = "Check letter case";
+                        }
+                        else if (!ignoreSpace && normalizeWS(as[i]).equals(normalizeWS(bs[i])))
+                            m.explanation = "Check white space";
+                        return m;
+                    }
                 }
             }
-        return true;
+        m.matches = true;
+        return m;
     }
 
     public boolean compareAsNumbers(String a, String b) {

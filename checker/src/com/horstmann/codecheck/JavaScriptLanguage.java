@@ -60,7 +60,7 @@ public class JavaScriptLanguage implements Language {
         return paths;
     }
 
-    private static String patternString = "var\\s+([A-Za-z][A-Za-z0-9]*)\\s*=([^;]+);?";
+    private static String patternString = "var\\s+(?<name>[A-Za-z][A-Za-z0-9]*)\\s*=(?<rhs>[^;]+);?";
     private static Pattern pattern = Pattern.compile(patternString);
 
     @Override
@@ -81,8 +81,10 @@ public class JavaScriptLanguage implements Language {
             cmd.add(Util.getHomeDir() + "\\runprog.bat");
         else
             cmd.add(Util.getHomeDir() + "/runprog");
+        int timeoutSeconds = (timeoutMillis + 500) / 1000;
+        cmd.add("" + timeoutSeconds);        
         cmd.add(getLanguage());
-        for (Path p : dependentModules) 
+        for (Path p : dependentModules)  
             cmd.add(dir.resolve(p).toString());
                 
         String programName = dir.resolve(mainModule).toString();
@@ -91,5 +93,15 @@ public class JavaScriptLanguage implements Language {
         StringBuilder output = new StringBuilder();        
         Util.runProcess(cmd, input, timeoutMillis, output, maxOutputLen);
         return output.toString();
-    }          
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 }

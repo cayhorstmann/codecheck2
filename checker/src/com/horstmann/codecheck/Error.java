@@ -1,6 +1,6 @@
 package com.horstmann.codecheck;
 
-import com.google.common.base.Objects;
+import java.util.Objects;
 
 public class Error {
     public String file;
@@ -22,8 +22,12 @@ public class Error {
         if (otherObject == null) return false;
         if (getClass() != otherObject.getClass()) return false;
         Error other = (Error) otherObject;
-        return Objects.equal(file, other.file) 
+        return Objects.equals(file, other.file) 
                 && line == other.line && column == other.column
-                && Objects.equal(message, other.message);         
+                && Objects.equals(message, other.message);         
     }
+
+   @Override public int hashCode() {
+      return Objects.hash(file, line, column, message);
+   }
 }

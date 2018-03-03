@@ -44,14 +44,14 @@ public class CLanguage implements Language {
             throws IOException {
         
         String moduleName = moduleOf(Util.tail(file));
-        List<String> lines = Util.readLines(sourceDir.resolve(file));
+        //List<String> lines = Util.readLines(sourceDir.resolve(file));
         
         List<Path> paths = new ArrayList<>();
         paths.add(pathOf(moduleName + "CodeCheck"));
         return paths;
     }
 
-    private static String patternString = ".*\\S\\s+([A-Za-z][A-Za-z0-9]*)\\s*=\\s*([^;]+);.*";
+    private static String patternString = ".*\\S\\s+(?<name>[A-Za-z][A-Za-z0-9]*)(\\s*[*\\[\\]]+)?\\s*=\\s*(?<rhs>[^;]+);.*";
     private static Pattern pattern = Pattern.compile(patternString);
 
     /*

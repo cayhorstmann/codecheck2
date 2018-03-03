@@ -3,29 +3,31 @@ package com.horstmann.codecheck;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 
 public class Annotations {
     private static Set<String> validAnnotations = new HashSet<>(Arrays.asList(
-            "HIDE", "SHOW", "SOLUTION", "CALL", "SUB", "ID", "SAMPLE", "ARGS", "IN", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "REQUIRED", "FORBIDDEN", "NOSCORE", "FOR"));    
+            "HIDE", "SHOW", "SOLUTION", "CALL", "SUB", "ID", "SAMPLE", "ARGS", "IN", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "REQUIRED", "FORBIDDEN", "NOSCORE", "FOR", "EDIT"));    
     
-    class Annotation {
+    private class Annotation {
         Path path;
         String key;
         String args;
         String before;
         String next;
-        boolean inSolution;
     }
 
     private Language language;
     private List<Annotation> annotations = new ArrayList<>();
     private Set<String> keys = new HashSet<>();
+    private Set<Path> solutions = new TreeSet<>();
     
     public Annotations(Language language) {
         this.language = language;
@@ -37,8 +39,9 @@ public class Annotations {
 
     private void read(Path dir, Path p, boolean inSolution) {
     	String[] delims = language.pseudoCommentDelimiters();
-        Pattern pattern = Pattern.compile("(.* |)" + delims[0] + "([A-Z\\[\\]]+)( .*|)" + delims[1]);
+        Pattern pattern = Pattern.compile("(.*\\s|)" + delims[0] + "([A-Z\\[\\]]+)(\\s.*|)" + delims[1]);
         List<String> lines =  Util.readLines(dir.resolve(p));
+        if (inSolution) solutions.add(p);
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i).trim();
             Matcher matcher = pattern.matcher(line);
@@ -54,8 +57,8 @@ public class Annotations {
                     if (!pattern.matcher(line).matches())
                         a.next = line.trim();
                 }
-                if (a.key.equals("SOLUTION")) inSolution = true;
-                a.inSolution = inSolution;
+                if (Arrays.asList("SOLUTION", "SHOW", "EDIT").contains(a.key)) 
+                    solutions.add(p);
                 a.path = p;
                 annotations.add(a);
             }
@@ -68,35 +71,30 @@ public class Annotations {
 
         for (Annotation a : annotations) {
             boolean ok = validAnnotations.contains(a.key)
-                    && (a.inSolution || !requiredFiles.contains(Util.tail(a.path))); 
+                    && (solutions.contains(a.path) || !requiredFiles.contains(Util.tail(a.path)));   
             if (!ok)
                 r.systemError("Unknown pseudocomment " + a.key + " in " + a.path);
         }
     }
     
-    public Set<Path> findSolutions() {
-        Set<Path> result = new HashSet<>();
-        for (Annotation a : annotations) {
-            if (a.key.equals("SOLUTION")) result.add(a.path);
-        }
-        return result;
+    public Set<Path> findSolutions() {        
+        return Collections.unmodifiableSet(solutions);
     }
     
     public Set<Path> findHidden() {
         Set<Path> result = new HashSet<>();
         for (Annotation a : annotations) {
-            if (a.key.equals("HIDE")) result.add(Util.tail(a.path));
+            if (a.key.equals("HIDE") && !solutions.contains(a.path)) result.add(Util.tail(a.path));
         }
         return result;
     }
-
 
     public String findUniqueKey(String key) {
         Annotation match = null;
         for (Annotation a : annotations) {
             if (a.key.equals(key)) {
                 if (match == null) match = a;
-                else if (!match.args.equals(a.args)) throw new RuntimeException("Duplicate " + key + " in " + a.path + " and " + match.path);
+                else if (!match.args.equals(a.args)) throw new CodeCheckException("Duplicate " + key + " in " + a.path + " and " + match.path);
             }
         }
         return match == null ? null : match.args;
@@ -121,9 +119,9 @@ public class Annotations {
                         result = Double.parseDouble(a.args);
                         match = a;
                     } catch (NumberFormatException ex) {
-                        throw new RuntimeException(key + " has bad double argument " + a.args + " in " + a.path);
+                        throw new CodeCheckException(key + " has bad double argument " + a.args + " in " + a.path);
                     }
-                } else if (!match.args.equals(a.args)) throw new RuntimeException("Duplicate " + key + " in " + a.path + " and " + match.path);
+                } else if (!match.args.equals(a.args)) throw new CodeCheckException("Duplicate " + key + " in " + a.path + " and " + match.path);
             }
         }
         return match == null ? defaultValue : result;
@@ -183,7 +181,6 @@ public class Annotations {
         }
         return false;
     }
-
 
     public Calls findCalls() {
         Calls calls = new Calls(language);

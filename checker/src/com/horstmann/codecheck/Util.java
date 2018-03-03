@@ -26,8 +26,7 @@ public class Util {
     public static boolean sameContents(Path p1, Path p2) throws IOException {
         return Files.exists(p1)
                 && Files.exists(p2)
-                && Arrays
-                        .equals(Files.readAllBytes(p1), Files.readAllBytes(p2));
+                && Arrays.equals(Files.readAllBytes(p1), Files.readAllBytes(p2));
     }
 
     public static Path tail(Path p) {
@@ -196,20 +195,34 @@ public class Util {
     }
     
     public static Path getHomeDir() {
+        String home = System.getProperty("com.horstmann.codecheck.home");
+        if (home != null) return Paths.get(home);
+        home = System.getenv("CODECHECK_HOME");
+        if (home != null) return Paths.get(home);
+        for (String p : System.getProperty("java.class.path").split(System.getProperty("path.separator"))) {
+            if (p.endsWith("codecheck.jar")) {
+                return Paths.get(p).getParent();
+            }
+            // TODO: If p ends with *, enumerate all JAR files?
+            // TODO: What if we make a module? 
+        }
+        
         Object obj = new Util();
-        for (URL url : ((URLClassLoader) obj.getClass().getClassLoader()).getURLs()) {
-            String urlString = url.toString();
-            if (urlString.startsWith("file:") && urlString.endsWith("codecheck.jar")) {
-                try {
-                    return Paths.get(new URL(urlString).toURI()).getParent();
-                    // This works with file:///C:/... URLs in Windows
-                } catch (MalformedURLException | URISyntaxException e) {
-                    // We tried
+        ClassLoader loader = obj.getClass().getClassLoader();
+        if (loader instanceof URLClassLoader) { // TODO: Not true in Java 9. Retire this fallback when Java 8 is EOL
+            for (URL url : ((URLClassLoader) loader).getURLs()) {
+                String urlString = url.toString();
+                if (urlString.startsWith("file:") && urlString.endsWith("codecheck.jar")) {
+                    try {
+                        return Paths.get(new URL(urlString).toURI()).getParent();
+                        // This works with file:///C:/... URLs in Windows
+                    } catch (MalformedURLException | URISyntaxException e) {
+                        // We tried
+                    }
                 }
             }
         }
-        String home = System.getProperty("com.horstmann.codecheck.home");
-        return home == null ? null : Paths.get(home);        
+        throw new CodeCheckException("Cannot find codecheck home. Set CODECHECK_HOME.");        
     }
     
     public static String unescapeJava(String s) {

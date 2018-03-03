@@ -90,7 +90,7 @@ public class MatlabLanguage implements Language {
         return new String[] { "%%", "" };
     }
 
-    private static String patternString = "\\s*([A-Za-z][A-Za-z0-9]*)\\s*=\\s*(.+)";
+    private static String patternString = "\\s*(?<name>[A-Za-z][A-Za-z0-9]*)\\s*=\\s*(?<rhs>.+)";
     private static Pattern pattern = Pattern.compile(patternString);
 
     /*

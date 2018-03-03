@@ -28,6 +28,9 @@
              value="com/horstmann/codecheck/codecheck.properties" />
    <property name="distdir" value="/opt/codecheck" />
 
+   <property name="ant.build.javac.source" value="1.8"/>
+   <property name="ant.build.javac.target" value="1.8"/>
+
    <path id="classpath">
       <fileset dir="${basedir}/lib">
 	       <include name="*.jar"/>
@@ -49,6 +52,7 @@
   <target name="compile" description="Compiles the Task" depends="init">
     <javac includeantruntime="false" srcdir="${src.dir}" debug="true" destdir="${build.dir}">
        <classpath refid="classpath"/>
+       <compilerarg value="-Xlint:all,-serial"/>
     </javac>
     <copy todir="${build.dir}" preservelastmodified="true">
       <fileset dir="${src.dir}">

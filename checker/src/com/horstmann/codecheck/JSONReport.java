@@ -28,12 +28,6 @@ public class JSONReport implements Report {
         public String value;
     }
     
-    public static class Match {
-        public Boolean matches;
-        public String actual;
-        public String expected;
-    }
-    
     public static class Run {
         public String caption;
         public List<Item> args;
@@ -253,25 +247,18 @@ public class JSONReport implements Report {
     }
 
     @Override
-    public Report compareTokens(List<Boolean> matches, List<String> actual,
-            List<String> expected) {
+    public Report compareTokens(String filename, List<Match> matchData) {
         run.matchedOutput = new ArrayList<>();
-        for (int i = 0; i < actual.size() || i < expected.size(); i++)
-        {
-            Match m = new Match();
+        for (Match m : matchData)
             run.matchedOutput.add(m);
-            if (i < actual.size()) m.actual = actual.get(i);
-            if (i < expected.size()) m.expected = expected.get(i);
-            if (i < matches.size()) m.matches = matches.get(i);
-        }
         StringBuilder builder = new StringBuilder();
         if (run.html != null) builder.append(run.html);
         builder.append("<table border='1' style='border-collapse: collapse;'>");
         builder.append("<tr><th>Actual output</th><th>Expected output</th></tr>");
         builder.append("<tr><td><pre>");
-        for (int i = 0; i < actual.size(); i++) {
-            StringBuilder row = HTMLReport.htmlEscape(actual.get(i));
-            if (i < matches.size() && matches.get(i))
+        for (Match m : matchData) {
+            StringBuilder row = HTMLReport.htmlEscape(m.actual);
+            if (m.matches)
                 builder.append(row);
             else {
                 builder.append("<em style='color: red;'>"); 
@@ -281,8 +268,8 @@ public class JSONReport implements Report {
             builder.append("\n");
         }
         builder.append("</pre></td><td><pre>");
-        for (int i = 0; i < expected.size(); i++) {
-            builder.append(HTMLReport.htmlEscape(expected.get(i)));
+        for (Match m : matchData) {
+            builder.append(HTMLReport.htmlEscape(m.expected));
             builder.append("\n");
         }
         builder.append("</pre></td></tr></table>");
@@ -351,7 +338,7 @@ public class JSONReport implements Report {
             
             StringBuilder builder = new StringBuilder();
             if (run.html != null) builder.append(run.html);
-            builder.append("<table border='1' style='border-collapse: collapse;'><tr><th>&nbsp;</th>");
+            builder.append("<table border='1' style='border-collapse: collapse;'><tr><th>&#160;</th>");
             if (methodNames != null) builder.append("<th>Name</th>");
             for (String n : argNames) { 
                 builder.append("<th>"); 

@@ -14,8 +14,27 @@ namespace codecheck {
    void print(double x) { cout << x; }
    void print(float x) { cout << x; }
    void print(bool x) { cout << (x ? "true" : "false"); }
-   void print(string x) { cout << x; }
-   void print(const char* x) { cout << x; }
+   void print(string x) {
+      cout << "\"";
+      for (size_t i = 0; i < x.length(); i++) {
+         if (x[i] == '\0') cout << "\\0";
+         else if (0 < x[i] && x[i] < ' ' && x[i] != '\n')
+            cout << "\\x" << hex << setw(2) << setfill('0') << (int) x[i] << dec;
+         else if (x[i] == '\\' || x[i] == '"') cout << "\\" << x[i];
+         else cout << x[i];
+      }
+      cout << "\"";
+   }
+   void print(const char* x) {
+      cout << "\"";
+      for (size_t i = 0; x[i] != '\0'; i++) {
+         if (0 < x[i] && x[i] < ' ' && x[i] != '\n')
+            cout << "\\x" << hex << setw(2) << setfill('0') << (int) x[i] << dec;
+         else if (x[i] == '\\' || x[i] == '"') cout << "\\" << x[i];
+         else cout << x[i];
+      }
+      cout << "\"";
+   }
 
    bool eq(int x, int y) { return x == y; }
    bool eq(char x, char y) { return x == y; }

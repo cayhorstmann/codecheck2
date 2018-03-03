@@ -18,7 +18,7 @@ public class AsExpected {
 	
 	public static int expectedTests(Path tester) {
 		String contents = Util.read(tester);
-		Pattern expecteds = Pattern.compile("Expected: ");
+		Pattern expecteds = Pattern.compile("Expected: "); // TODO: What if this is commented out? 
 		Matcher matcher = expecteds.matcher(contents);
 		int count = 0;
 		while (matcher.find())
@@ -45,10 +45,11 @@ public class AsExpected {
                 	} else {
                     	String expected = lines.get(i);
                 		String actual = lines.get(i - 1);	                
-	                	// The condition after || is needed if actual has no prefix
+	                	// The second comparison is needed if actual has no prefix
 	                    // but a colon
-	                    if (comp.compare(getSuffix(actual), getSuffix(expected)) 
-	                    		|| comp.compare(actual, getSuffix(expected))) {
+                		Report.Match m = comp.compare(getSuffix(actual), getSuffix(expected));
+                		if (!m.matches) m = comp.compare(actual, getSuffix(expected));
+                		if (m.matches) {
 	                        score.pass(true, report);
 	                    	matches.add(i);
 	                    }

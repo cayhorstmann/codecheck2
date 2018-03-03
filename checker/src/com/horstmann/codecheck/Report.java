@@ -8,6 +8,13 @@ import java.util.Set;
 
 public interface Report
 {
+    static class Match 
+    {
+        public String actual;
+        public String expected;
+        public boolean matches;
+        public String explanation;
+    }
 
    public abstract Report header(String section, String text);
    
@@ -43,7 +50,7 @@ public interface Report
    
    Report pass(boolean b);
    
-   Report compareTokens(List<Boolean> matches, List<String> actual, List<String> expected);
+   Report compareTokens(String filename, List<Match> matches);
    Report output(List<String> lines, Set<Integer> matches, Set<Integer> mismatches);
    Report runTable(String[] functionNames, String[] argNames, String[][] args, String[] actual, String[] expected, boolean[] outcomes);
    

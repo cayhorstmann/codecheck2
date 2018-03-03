@@ -3,7 +3,6 @@ package com.horstmann.codecheck;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -38,6 +37,7 @@ public class HTMLReport implements Report {
         builder.append(".item {font-weight: bold;}\n");
         builder.append(".pass {color: green;}\n");
         builder.append(".fail {color: red;}\n");
+        builder.append(".note {color: blue; font-weight: bold;}\n");
         builder.append("table.file td {padding-right: 1em; background: #FFF; }\n");
         builder.append(".linenumber {color: gray;}\n");
         builder.append(".footnote {font-size: 0.7em;}\n");
@@ -170,10 +170,8 @@ public class HTMLReport implements Report {
      */
     @Override
     public HTMLReport systemError(Throwable t) {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        PrintStream pout = new PrintStream(out);
-        t.printStackTrace(pout);
-        systemError(out.toString());
+        if (t instanceof CodeCheckException) systemError(t.getMessage());
+        else systemError(Util.getStackTrace(t));
         return this;
     }
 
@@ -383,8 +381,6 @@ public class HTMLReport implements Report {
     @Override
     public HTMLReport save(String problemId, String out) throws IOException {
         Path outPath = dir.resolve(out + ".html");
-        builder.append("<p class=\"download\"><a href=\"" + problemId
-                + ".signed.zip\">Download</a></p>\n");
         addFootnotes();
         builder.append("</body></html>\n");
         Files.write(outPath, builder.toString().getBytes());
@@ -427,7 +423,7 @@ public class HTMLReport implements Report {
     private HTMLReport cell(CharSequence text) {
         cellStart();
         if (text.length() == 0)
-            builder.append("&nbsp;");
+            builder.append("&#160;");
         else
             escape(text);
         cellEnd();
@@ -446,7 +442,7 @@ public class HTMLReport implements Report {
     private HTMLReport headerCell(CharSequence text) {
         builder.append("<th>");
         if (text.length() == 0)
-            builder.append("&nbsp;");
+            builder.append("&#160;");
         else
             escape(text);
         builder.append("</th>");
@@ -467,6 +463,13 @@ public class HTMLReport implements Report {
         return this;
     }
 
+    private HTMLReport noteSpan(String text) {
+        builder.append("<span class=\"note\">");
+        escape(text);
+        builder.append("</span>");
+        return this;
+    }
+
     @Override
     public HTMLReport pass(boolean b) {
         if (b)
@@ -477,24 +480,31 @@ public class HTMLReport implements Report {
     }
 
     @Override
-    public HTMLReport compareTokens(List<Boolean> matches, List<String> actual,
-            List<String> expected) {
+    public HTMLReport compareTokens(String filename, List<Match> matchData) {
+        caption(filename);
         tableStart("output").rowStart().headerCell("Actual output")
                 .headerCell("Expected output").rowEnd().rowStart();
         builder.append("<td>");
         builder.append("<pre>");
-        for (int i = 0; i < actual.size(); i++) {
-            if (i < matches.size() && matches.get(i))
-                escape(actual.get(i));
-            else
-                failSpan(actual.get(i));
+        for (Match m : matchData) {
+            if (m.matches)
+                escape(m.actual);
+            else {
+                failSpan(m.actual);
+                if (m.explanation != null) {
+                    builder.append("\n");
+                    noteSpan(m.explanation);
+                }
+            }
             builder.append("\n");
         }
         builder.append("</pre>");
         cellEnd().cellStart();
         builder.append("<pre>");
-        for (int i = 0; i < expected.size(); i++) {
-            escape(expected.get(i));
+        for (Match m : matchData) {
+            escape(m.expected);
+            if (m.explanation != null) 
+                builder.append("\n"); // To match the other column
             builder.append("\n");
         }
         builder.append("</pre>");

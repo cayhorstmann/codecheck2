@@ -41,14 +41,14 @@ public class ScalaLanguage implements Language {
         int i = 0;
         while (i < lines.size() && !lines.get(i).contains("//CALL")) i++;
         if (i == lines.size())
-            throw new RuntimeException("Can't find object in " + file);
+            throw new CodeCheckException("Can't find object in " + file);
         while (i >= 0 && !lines.get(i).trim().startsWith("object")) i--;
         if (i < 0)
-            throw new RuntimeException("Can't find object in " + file);
+            throw new CodeCheckException("Can't find object in " + file);
         String[] tokens = lines.get(i).split("\\P{javaJavaIdentifierPart}+");
         int j = 0;
         if (tokens[0].length() == 0) j++;
-        if (j + 1 >= tokens.length) throw new RuntimeException("Can't find object name in " + file);
+        if (j + 1 >= tokens.length) throw new CodeCheckException("Can't find object name in " + file);
         String objectName = tokens[j + 1];
         lines.add(0, "object " + objectName + "CodeCheck extends App {");
         lines.add(1, "object Solution {");
@@ -82,7 +82,7 @@ public class ScalaLanguage implements Language {
     }
         
     private static Pattern variablePattern = Pattern.compile(
-            "(val|var)\\s+(\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)(\\s*:[^=]+\\s*)?\\s*=\\s*([^;]+);.*");
+            "(val|var)\\s+(?<name>\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)(\\s*:[^=]+\\s*)?\\s*=\\s*(?<rhs>[^;]+);.*");
 
     @Override
     public Pattern variablePattern() { return variablePattern; }

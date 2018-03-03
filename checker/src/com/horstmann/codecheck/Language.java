@@ -153,6 +153,8 @@ public interface Language {
             cmd.add(Util.getHomeDir() + "\\runprog.bat");
         else
             cmd.add(Util.getHomeDir() + "/runprog");
+        int timeoutSeconds = (timeoutMillis + 500) / 1000;
+        cmd.add("" + timeoutSeconds);
         cmd.add(getLanguage());
         String programName = dir.resolve(mainModule).toString();
         cmd.add(programName);
