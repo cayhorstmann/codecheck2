@@ -6,8 +6,6 @@
 # Old web page /codecheck/files, /codecheck/check with type=plain
 # New web page /files, POST /checkJsonp with type=jsonp
 # Wiley Engage interactive element
-# Sunita
-# Hien
 
 # Home page
 GET /    controllers.Default.redirect(to = "http://horstmann.com/codecheck/index.html")
@@ -19,30 +17,27 @@ POST    /echo                             controllers.Application.echo()
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
 
-# New-style UI
-GET	    /files						controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String ?= "1", scoreCallback: String ?= null, type: String ?= null)
-GET		/files/:problem				controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String ?= "1", scoreCallback: String ?= null, type: String ?= null)
-GET		/files/:problem/:level		controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String, scoreCallback: String ?= null, type: String ?= null)
+GET	    /files						controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String ?= "1", ccu: String ?= null)
+GET		/files/:problem				controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String ?= "1", ccu: String ?= null)
+GET		/files/:problem/:level		controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String,        ccu: String ?= null)
 POST    /checkNJS					controllers.Check.checkNJS()
 # GET called from interactive element with jsonp result
 GET     /checkNJS					controllers.Check.checkNJS()
 
-# For Hien 
-GET     /files/data                 controllers.Files.fileData(repo: String ?= "ext", problem: String, level: String ?= "1")
-POST    /checkJson					controllers.Check.checkJson()
+# From Hien's project, but this is potentially useful for others 
+GET     /fileData                   controllers.Files.fileData(repo: String ?= "ext", problem: String, level: String ?= "1", ccu: String ?= null)
 
-# Classic HTML with optional callback for Sunita
+# Classic HTML--is anyone still using it?
 POST	/check						controllers.Check.checkHTML()
 
-POST	/uploadProblem				controllers.Upload.uploadProblem()
+POST    /uploadProblem              controllers.Upload.uploadProblem(newProblem : Boolean ?= true)
+POST    /uploadFiles                controllers.Upload.uploadFiles(newProblem : Boolean ?= true)
+POST    /editProblem                controllers.Upload.editProblem()
+POST    /editedFiles                controllers.Upload.uploadFiles(newProblem : Boolean ?= false)
+POST    /editedProblem              controllers.Upload.uploadProblem(newProblem : Boolean ?= false)
 
-# Old-style UI
-GET	    /codecheck/files						controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String ?= "1", callback: String ?= null, type: String ?= "plain")
-GET		/codecheck/files/:problem				controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String ?= "1", callback: String ?= null, type: String ?= "plain")
-GET		/codecheck/files/:problem/:level		controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String, callback: String ?= null, type: String ?= "plain")
+# Legacy
+GET	    /codecheck/files						controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String ?= "1", ccu: String ?= null)
+GET		/codecheck/files/:problem				controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String ?= "1", ccu: String ?= null)
+GET		/codecheck/files/:problem/:level		controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String, ccu: String ?= null)
 POST	/codecheck/check						controllers.Check.checkHTML()
-GET		/fetch/:dir/*name			    controllers.Upload.fetch(dir: String, name: String)
-
-# For compatibility
-GET     /codecheck/static/*file                 controllers.Assets.versioned(path="/public", file: Asset)
-POST	/codecheck/uploadProblem				controllers.Upload.uploadProblem()

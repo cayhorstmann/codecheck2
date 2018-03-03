@@ -1,0 +1,36 @@
+.studentFiles, .providedFiles { 
+	display: none; 
+}
+
+.ace_editor { 
+	border: 1px solid #EEE; 
+	height: auto; 
+	min-width: 700px; 
+}
+
+.ace_gutter {
+	width: 4em !important;
+}
+
+.ace_gutter-cell {
+    padding-right: 1em !important;
+}
+
+.ace_gutter-layer {
+    display: inline !important;
+}
+
+.ace_hidden-cursors {opacity:0} 
+
+body { 
+	font-family: sans;
+	font-size: 1.2em; 
+}
+
+.editor { 
+	width: 80%; 
+}
+ 
+#submit { 
+	margin: 0.8em; 
+}

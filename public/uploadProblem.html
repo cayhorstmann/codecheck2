@@ -2,11 +2,42 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-<title>Upload Problem</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>Upload Content</title>
+    <script type="text/javascript" src="/assets/jquery.js"></script>
 </head>
 <body style="font-family: sans;">
+<form method="post" action="../uploadFiles">
+    <div>
+    <p>File name: <input name="filename1" size="25" type="text"/></p>
+    <p><textarea name="contents1" rows="24" cols="80"></textarea></p>
+    <div id="addfilecontainer">Need more files? <button id="addfile" type="button">Add file</button></div>
+    <div><input type="submit" value="Submit files"/></div>
+    </div>
+</form>
+<hr/>
 <form method="post" action="../uploadProblem" enctype="multipart/form-data">
-<p>Problem zip file: <input name="file" id="file" type="file"/></p><p><input type="submit"/></p></form>
+<p>Alternatively, upload a zip file: <input name="file" id="file" type="file"/></p>
+<p><input id="upload" type="submit" value="Upload zip file" disabled="disabled"/></p></form>
+<script type="text/javascript">
+var n = 1
+$('#addfile').click(function() {
+    n++
+    let i = n
+    $('<div id="item' + i + '"><p>File name: <input id="filename' + i + '" name="filename' + i 
+            + '" size="25" type="text"/> <button id="delete' + i 
+            +'" type="button">Delete</button></p><p><textarea id="contents' + i + '" name="contents' + i 
+            + '" rows="24" cols="80"/></textarea></p></div>').insertBefore('#addfilecontainer')
+    $('#delete' + i).click(function() {
+        $('#filename' + i).attr('value', '')
+        $('#contents' + i).html('')
+        $('#item' + i).hide()
+    })
+})
+
+$('#file').on("change", function() {
+    $('#upload').prop('disabled', !$(this).val()); 
+});
+</script>
 </body>
 </html>

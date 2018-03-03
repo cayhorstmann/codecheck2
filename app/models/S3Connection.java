@@ -12,7 +12,7 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import play.Logger;
-import play.Configuration;
+import com.typesafe.config.Config;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
@@ -24,14 +24,16 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 
 @Singleton
 public class S3Connection {
-	private Configuration config;
+	private Config config;
 	private String s3AccessKey = null;
 	private String s3SecretKey = null;
+	private String bucketSuffix = null;
 	
-	public @Inject S3Connection(Configuration config) {
+	public @Inject S3Connection(Config config) {
 		this.config = config;
-		String s3CredentialsPath = config.getString("com.horstmann.codecheck.s3credentials");
-		if (s3CredentialsPath != null) {
+		String s3CredentialsKey = "com.horstmann.codecheck.s3credentials";
+		if (config.hasPath(s3CredentialsKey)) {
+			String s3CredentialsPath = config.getString(s3CredentialsKey);
 			try {
 				Properties props = new Properties();
 				props.load(Files.newBufferedReader(Paths.get(s3CredentialsPath),
@@ -41,13 +43,12 @@ public class S3Connection {
 			} catch (IOException ex) {
 				Logger.error("Can't load S3 credentials", ex);
 			}
-		}
+		} 
+		bucketSuffix = config.getString("com.horstmann.codecheck.s3bucketsuffix");
 	}
 
-
 	public boolean isOnS3(String repo) {
-		String repoPath = config.getString("com.horstmann.codecheck.repo." + repo);
-		return repoPath == null;
+		return !config.hasPath("com.horstmann.codecheck.repo." + repo);
 	}
 
 	private AmazonS3 getS3Connection() throws IOException {
@@ -75,14 +76,11 @@ public class S3Connection {
 		getS3Connection().deleteObject(bucket, key);
 	}
 	
-	// Delete returnedPath.getParent() when done
+	// Delete returned path when done
 	public Path unzipFromS3(String repo, String problem)
 			throws IOException {
-		Path unzipDir = java.nio.file.Files.createTempDirectory("problem");
-		String id = problem.replaceAll("/", "_"); // No / in dir name
-		Path problemDir = unzipDir.resolve(id);
-		Files.createDirectory(problemDir);
-		String bucket = repo + "." + config.getString("com.horstmann.codecheck.s3bucketsuffix");
+		Path problemDir = java.nio.file.Files.createTempDirectory("problem");
+		String bucket = repo + "." + bucketSuffix;
 
 		InputStream in = getS3Connection().getObject(bucket, problem)
 				.getObjectContent();

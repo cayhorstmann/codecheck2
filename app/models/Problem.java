@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -16,6 +17,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 public class Problem {
 	private Path problemPath;
@@ -58,15 +60,18 @@ public class Problem {
 		return useFiles;
 	}
 
-	private static Pattern solutionPattern = Pattern
-			.compile("\\s*[^\\pL&&[^\\s]]*SOLUTION[^\\pL]*\\s*\\n");
+	private static Pattern solutionPattern = Pattern.compile("\\s*[\\PL&&[^\\s]]+(SOLUTION|SHOW|EDIT)($|\\s.*|[\\PL].*)");
 
 	// No letters or spaces, SOLUTION, optional no letters, trailing space (e.g.
 	// \r), \n
 
-	public boolean isSolution(Path p) {
-		String cont = Util.read(problemPath, p);
-		return solutionPattern.matcher(cont).lookingAt();
+	public static boolean isSolution(Path p) {
+		// TODO: Filter image extensions etc.
+		try (Stream<String> lines = Files.lines(p)) {
+			return lines.anyMatch(solutionPattern.asPredicate());
+		} catch (IOException | UncheckedIOException ex) { // This happens if the file is binary
+			return false;
+		}
 	}
 
 	private void getLevelDirectories() {
@@ -192,16 +197,16 @@ public class Problem {
 
 		Set<Path> studentFiles = Util.getDescendantFiles(problemPath,
 				studentDirectories);
-		studentFiles = Util.filterNot(studentFiles, ".*", "*.class");
+		studentFiles = Util.filterNot(studentFiles, ".*", "*.class", "param.js");
 
 		// TODO: We only show students source files, not text or images
 		// Would be better to show those as well
 		// But then need to filter out problem.html and the images used inside
 
 		for (Path path : studentFiles)
-			if (isSolution(path))
+			if (isSolution(problemPath.resolve(path)))
 				requiredFiles.add(path);
-			else if (isSource(path)) {
+			else if (isSourceExtension(Util.extension(path))) {
 				String cl = Util.moduleOf(Util.tail(path));
 				if (!requiredFiles.contains(path) && !nodocCl.contains(cl))
 					useFiles.add(path);
@@ -210,13 +215,9 @@ public class Problem {
 			useFiles.remove(findClass(editclass));
 	}
 
-	public static boolean isSource(Path path) {
-		return isSource(path.toString());
-	}
-
-	public static boolean isSource(String path) {
+	public static boolean isSourceExtension(String extension) {
 		return Arrays.asList("java", "c", "cpp", "c++", "h", "py", "scala",
-				"m", "rkt", "js", "cs").contains(Util.extension(path));
+				"m", "rkt", "js", "cs", "hs").contains(extension);
 	}
 
 	public static boolean isPseudocomment(String line, String type,
@@ -235,6 +236,212 @@ public class Problem {
 		return Character.isWhitespace(line.charAt(slen + tlen));
 	}
 
+	public static List<String> processHideShow(Path filepath, String contents){
+		ArrayList <String> result = new ArrayList<String> ();
+		if (contents == null){
+			result.add("");
+			return result;
+		}
+		String start = "//"; 
+		String end = "";
+		String[] lines = contents.split("\n");
+		String extension = Util.extension(filepath);
+		if (extension.equals("py")) {
+			start = "##";
+		} else if (extension.equals("rkt")) {
+			start = ";;";
+		} else if (extension.equals("hs")) {
+			start = "--";
+		} else if (extension.equals("c")) {
+			start = "/*";
+			end = "*/";
+		}
+		
+		boolean hasEdit = false;
+		for (int i = 0; i < lines.length && !hasEdit; ++i){
+			if (isPseudocomment(lines[i], "EDIT", start, end)) {
+				hasEdit = true;
+			}
+		}
+		
+		if (hasEdit) {
+			int sectionStart = 0;
+			boolean hiding = false;
+			boolean editOnPreviousLine = false;
+			boolean startWithEdit = false;
+			for (int i = 0; i < lines.length; i++) {
+				String line = lines[i].trim();
+				if (isPseudocomment(line, "EDIT", start, end)) {
+					hiding = false;
+					if (!editOnPreviousLine) { // emit preceding readonly section
+						StringBuilder section = new StringBuilder();
+						for (int j = sectionStart; j < i; j++){
+							if (lines[j] != null) {
+								section.append(lines[j]);
+								section.append("\n");
+							}
+						}
+						if (section.length() == 0) // Don't add a blank readonly section at the top
+						{
+							if (result.size() > 0) result.add("\n");
+						}
+						else						 
+							result.add(section.toString());
+						sectionStart = i;
+					}					
+					editOnPreviousLine = true;
+					
+					String showString = start + "EDIT";
+					int n1 = lines[i].indexOf(showString);
+					int n2 = showString.length();
+					int n3 = lines[i].lastIndexOf(end);
+					if (n1 + n2 < n3)
+						lines[i] = lines[i].substring(0, n1)
+								+ lines[i].substring(n1 + n2 + 1, n3);
+					else
+						lines[i] = ""; // Edit section is never empty				
+				}
+				else {
+					if (editOnPreviousLine) { // emit edit section
+						StringBuilder section = new StringBuilder();
+						for (int j = sectionStart; j < i; j++){
+							if (lines[j] != null) {
+								section.append(lines[j]);
+								section.append("\n");
+							}
+						}
+						if (section.toString().trim().length() == 0)
+						{	section.insert(0, "\n");
+							section.append("\n");
+						}
+						if (result.size() == 0) startWithEdit = true; 
+						result.add(section.toString());
+						sectionStart = i;						
+					}
+					editOnPreviousLine = false;
+					
+					if (isPseudocomment(line, "HIDE", start, end)) hiding = true;
+					if (hiding) lines[i] = null;
+					else if (isPseudocomment(line, "SOLUTION", start, end)
+							|| isPseudocomment(line, "CALL", start, end)
+							|| isPseudocomment(line, "ID", start, end)
+							|| isPseudocomment(line, "ARGS", start, end)
+							|| isPseudocomment(line, "IN", start, end)
+							|| isPseudocomment(line, "OUT", start, end)){
+						lines[i] = null;
+					} else if(isPseudocomment(line, "REQUIRED", start, end)
+							|| isPseudocomment(line, "FORBIDDEN", start, end)){
+						lines[i] = null;
+						if (i < lines.length - 1) {
+							String nextLine = lines[i + 1].trim();
+							if (nextLine.startsWith(start) && nextLine.endsWith(end)) {
+								lines[i + 1] = null;
+								i++;
+							}
+						}
+					} else if (isPseudocomment(line, "SHOW", start, end)) {
+						hiding = false;
+						String showString = start + "SHOW";
+						int n1 = lines[i].indexOf(showString);
+						int n2 = showString.length();
+						int n3 = lines[i].lastIndexOf(end);
+						if (n1 + n2 < n3)
+							lines[i] = lines[i].substring(0, n1)
+									+ lines[i].substring(n1 + n2 + 1, n3);
+						else
+							lines[i] = null;
+					} else if (line.contains(start + "SUB ")) {
+						int n = lines[i].indexOf(start + "SUB");
+						int n2 = end.equals("") ? lines[i].length() : lines[i].indexOf(
+								end, n) + end.length();
+						lines[i] = lines[i].substring(0, n) + lines[i].substring(n2);
+					}
+				}
+			}
+			// Emit final section
+			StringBuilder section = new StringBuilder();
+			for (int j = sectionStart; j < lines.length; j++) {
+				if (lines[j] != null) {
+					section.append(lines[j]);
+					section.append("\n");
+				}
+			}
+			if (editOnPreviousLine && section.toString().trim().length() == 0)
+			{	
+				section.insert(0, "\n");
+				section.append("\n");
+			}
+			
+			result.add(section.toString());
+			if (!startWithEdit) result.add(0, null);
+			return result;
+		} else { // SHOW mode			
+			boolean hiding = false;
+			boolean somethingHidden = false;
+			boolean isSolution = false;			
+			
+			for (int i = 0; i < lines.length; i++) {
+				String line = lines[i].trim();
+				if (isPseudocomment(line, "SOLUTION", start, end)) {
+					isSolution = true;
+					lines[i] = null;
+				} else if (isPseudocomment(line, "HIDE", start, end)) {
+					hiding = true;
+					somethingHidden = true;
+					lines[i] = null;
+				} else if (isPseudocomment(line, "SHOW", start, end)) {
+					hiding = false;
+					isSolution = true;
+					String showString = start + "SHOW";
+					int n1 = lines[i].indexOf(showString);
+					int n2 = showString.length();
+					int n3 = lines[i].lastIndexOf(end);
+					if (n1 + n2 < n3)
+						lines[i] = lines[i].substring(0, n1)
+								+ lines[i].substring(n1 + n2 + 1, n3);
+					else
+						lines[i] = null;
+				} else if (hiding) {
+					lines[i] = null;
+				} else if (isPseudocomment(line, "CALL", start, end)
+						|| isPseudocomment(line, "ID", start, end)
+						|| isPseudocomment(line, "ARGS", start, end)
+						|| isPseudocomment(line, "IN", start, end)
+						|| isPseudocomment(line, "OUT", start, end)) {
+					lines[i] = null; // TODO: More cases like that? Student files
+										// shouldn't have pseudocomments
+				} else if (isPseudocomment(line, "REQUIRED", start, end)
+						|| isPseudocomment(line, "FORBIDDEN", start, end)) {
+					lines[i] = null;
+					String nextLine = lines[i + 1].trim();
+					if (nextLine.startsWith(start) && nextLine.endsWith(end)) {
+						lines[i + 1] = null;
+						i++;
+					}
+				} else if (line.contains(start + "SUB ")) {
+					int n = lines[i].indexOf(start + "SUB");
+					int n2 = end.equals("") ? lines[i].length() : lines[i].indexOf(
+							end, n) + end.length();
+					lines[i] = lines[i].substring(0, n) + lines[i].substring(n2);
+				}
+			}
+			if (isSolution && !somethingHidden) {
+				result.add("");
+				return result;
+			}
+			StringBuilder allRemainingLines = new StringBuilder();
+			for (String l : lines) {
+				if (l != null) {
+					allRemainingLines.append(l);
+					allRemainingLines.append("\n");
+				}
+			}
+			result.add(allRemainingLines.toString());
+			return result;						
+		}
+	}	
+	
+	/*
 	public static String processHideShow(Path filepath, String contents) {
 		if (contents == null)
 			return "";
@@ -310,4 +517,5 @@ public class Problem {
 			}
 		return result.toString();
 	}
+	*/
 }

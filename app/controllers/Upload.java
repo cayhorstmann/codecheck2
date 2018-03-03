@@ -8,6 +8,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
@@ -16,29 +17,77 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.inject.Inject;
+import javax.script.ScriptException;
 
+import models.CodeCheck;
 import models.S3Connection;
 import models.Util;
-import play.Configuration;
+import models.Problem;
+
+import com.typesafe.config.Config;
+
 import play.Logger;
 import play.mvc.Controller;
 import play.mvc.Result;
+import views.html.*;
 
 public class Upload  extends Controller {	
 	final Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
 	final String repo = "ext";
-	@Inject S3Connection s3conn;
-	@Inject Configuration config;
-	@Inject Util util;
+	@Inject private S3Connection s3conn;
+	@Inject private Config config;
+	@Inject private CodeCheck codeCheck;
 
-	public Result uploadProblem() {		
+	public Result uploadFiles(boolean newProblem) {
+		try {
+			Path problemDir = null;			
+			String problem = newProblem ? Util.createUID() : session().get("pid");
+			if (problem == null) badRequest("No problem id");
+			int n = 1;
+			boolean isOnS3 = s3conn.isOnS3("ext");
+			if (isOnS3) {
+				problemDir = Files.createTempDirectory("problem");						
+			} else {
+				Path extDir = java.nio.file.Paths.get(config
+						.getString("com.horstmann.codecheck.repo.ext"));
+				problemDir = extDir.resolve(problem);
+				Util.deleteDirectory(problemDir);
+				Files.createDirectories(problemDir);
+			}
+			Map<String, String[]> params = request().body().asFormUrlEncoded();
+			while (params.containsKey("filename" + n)) {
+				String filename = params.get("filename" + n)[0];
+				if (filename.trim().length() > 0) {
+					String contents = params.get("contents" + n)[0];
+					Util.write(problemDir, filename, contents);
+				}
+				n++;
+			}
+			if (isOnS3) {
+				Path problemZip = Files.createTempFile("problem", "zip");
+				Util.zip(problemDir, problemZip);
+				s3conn.putToS3(problemZip, repo + "." + config.getString("com.horstmann.codecheck.s3bucketsuffix"), problem);
+				Files.delete(problemZip);
+			}
+			String response = checkProblem(problem, problemDir);
+			if (isOnS3) Util.deleteDirectory(problemDir);
+			return ok(response).as("text/html");
+		}
+	    catch (Exception ex) {
+		    return internalServerError(Util.getStackTrace(ex));
+	    }
+	}
+	
+	public Result uploadProblem(boolean newProblem) {		
 		try {
 			play.mvc.Http.MultipartFormData<File> body = request().body().asMultipartFormData();	
-			String problem = Util.createUID();
+			String problem = newProblem ? Util.createUID() : session().get("pid");
+			if (problem == null) badRequest("No problem id");
 			Path unzipDir;
 			boolean isOnS3 = s3conn.isOnS3("ext"); 
 			if (isOnS3) {
@@ -64,41 +113,8 @@ public class Upload  extends Controller {
 				in.close();
 	
 				if (isOnS3) s3conn.putToS3(problemZip, repo + "." + config.getString("com.horstmann.codecheck.s3bucketsuffix"), problem);
-				Map<String, String> runs = check(problemDir);
-				boolean grade = runs.keySet().contains("grade");
-				boolean multipleLevels = runs.keySet().size() > (grade ? 2
-						: 1);
-				String url =  "files/" + problem; 
-				
-				StringBuilder response = new StringBuilder();
-				response.append("<html><body style=\"font-family: sans\"><ul style=\"list-style: square\">");
-				for (String k : runs.keySet()) {
-					response.append("<li>");
-					String reportUrl = "fetch/" + runs.get(k);
-					if (k.equals("grade")) {
-						response.append("<a href=\"");
-						response.append(reportUrl);
-						response.append("\" target=\"_blank\">Grader report</a>");
-					} else {
-						String problemUrl = (request().secure() ? "https://" : "http://" ) + request().host() + "/" + url;
-						if (multipleLevels) {
-							response.append("Level " + k + " ");
-							problemUrl += "/" + k;
-						}
-						response.append("URL: <code>");
-						response.append(problemUrl); // TODO: Fix
-						response.append("</code> | <a href=\"");
-						response.append(problemUrl);
-						response.append("\" target=\"_blank\">Preview</a>");
-						response.append(" | <a href=\"");
-						response.append(reportUrl);
-						response.append("\" target=\"_blank\">Report</a>");
-					}
-					response.append("</li>\n");
-				}
-				
-				response.append("</ul></body></html>\n");
-				return ok(response.toString()).as("text/html");
+				String response = checkProblem(problem, problemDir);
+				return ok(response).as("text/html");
 			} finally {
 				if (isOnS3) Util.deleteDirectory(unzipDir); else Files.delete(problemZip);
 			}
@@ -106,6 +122,66 @@ public class Upload  extends Controller {
 	    catch (Exception ex) {
 		    return internalServerError(Util.getStackTrace(ex));
 	    }
+	}
+
+	private String checkProblem(String problem, Path problemDir)
+			throws IOException, InterruptedException, NoSuchMethodException, ScriptException {
+		Path newProblemDir = Files.createTempDirectory("problem");
+		Util.copyDirectory(problemDir, newProblemDir);
+		String studentId = Util.createUID();
+		codeCheck.replaceParametersInDirectory(studentId, newProblemDir);
+		Map<String, String> runs = check(problem, newProblemDir, studentId);
+		Util.deleteDirectory(newProblemDir);
+		boolean grade = runs.keySet().contains("grade");
+		boolean multipleLevels = runs.keySet().size() > (grade ? 2
+				: 1);
+		String url =  "files/" + problem; 
+		
+		StringBuilder response = new StringBuilder();
+		response.append("<html><head><title></title><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"/>");
+		response.append("<body style=\"font-family: sans\"><ul style=\"list-style: square\">");
+		for (String k : runs.keySet()) {
+			response.append("<li>");
+			if (k.equals("grade")) {				
+				response.append("Grader report");
+			} else {
+				String problemUrl = (request().secure() ? "https://" : "http://" ) + request().host() + "/" + url;
+				if (multipleLevels) {
+					response.append("Level " + k + " ");
+					problemUrl += "&level=" + k;
+				}
+				response.append("URL: <code>");
+				response.append(problemUrl); 
+				response.append("</code> | <a href=\"");
+				response.append(problemUrl);
+				response.append("\" target=\"_blank\">Preview</a>");
+			}
+			response.append("<br/><iframe height=\"400\" style=\"width: 90%; margin: 2em;\" src=\"data:text/html;base64," + runs.get(k) + "\"></iframe>");			
+			response.append("</li>\n");
+		}
+		session().put("pid", problem);
+		response.append("</ul><form method='post' action='/editProblem'><input type='submit' value='Edit problem'/></form><p></body></html>\n");
+		return response.toString();
+	}
+
+	public Result editProblem()
+	{
+		try {
+			String problem = session().get("pid");
+			if (problem == null) badRequest("No problem to edit");
+			Path problemDir = codeCheck.loadProblem(repo, problem);
+			Map<String, String> filesAndContents = new TreeMap<>();
+			List<Path> entries = Files.list(problemDir).collect(Collectors.toList());
+			for (Path f : entries) {
+				if (Files.isRegularFile(f)) filesAndContents.put(f.getFileName().toString(), Util.read(f));
+				else return badRequest("Cannot edit problem with directories");
+			};
+    		Util.deleteDirectory(problemDir);
+			return ok(edit.render(problem, filesAndContents));
+			
+		} catch (Exception ex) {
+		    return internalServerError(Util.getStackTrace(ex));
+	    }		
 	}
 	
 	// In case the zip file contains an initial directory
@@ -153,14 +229,9 @@ public class Upload  extends Controller {
 	             }
 	         }
 	   }
-	 
-	 private static boolean isSolution(Path p) throws IOException {
-		 try (Scanner in = new Scanner(p)) {
-			 return in.hasNextLine() && in.nextLine().contains("SOLUTION"); // TODO: Check delimiters
-		 }
-	 }
-	 
-	private Map<String, String> check(Path problemDir) throws IOException, InterruptedException {
+	  
+	private Map<String, String> check(String problem, Path problemDir, String studentId) 
+			throws IOException, InterruptedException, NoSuchMethodException, ScriptException {
 		Map<String, String> runs = new LinkedHashMap<>();
 		int maxLevel = 1;
 		for (int i = 9; i >= 2 && maxLevel == 1; i--)
@@ -170,11 +241,10 @@ public class Upload  extends Controller {
 				maxLevel = i;
 
 		boolean grade = Files.exists(problemDir.resolve("grader"));
-		Path submissionDir = util.getDir("submissions");
 		List<String> solutionSubdirs = new ArrayList<>();
 		List<String> studentSubdirs = new ArrayList<>();
 		for (int i = 1; i <= (grade ? maxLevel + 1 : maxLevel); i++) {
-			Path tempDir = Util.createTempDirectory(submissionDir);
+			Path submissionDir = codeCheck.createSubmissionDirectory();
 			// Copy solution files up to the current level
 			if (i <= maxLevel) 
 				solutionSubdirs.add(i == 1 ? "solution" : "solution" + i);
@@ -182,40 +252,19 @@ public class Upload  extends Controller {
 			else if (i == maxLevel + 1) studentSubdirs.add("grader");
 			else studentSubdirs.add("student" + i);
 			for (Path p : Util.getDescendantFiles(problemDir, solutionSubdirs))
-				Files.copy(problemDir.resolve(p), tempDir.resolve(Util.tail(p)));
+				Files.copy(problemDir.resolve(p), submissionDir.resolve(Util.tail(p)));
 			Util.forEachFile(problemDir, p -> { 
-				if (isSolution(p))
-					Files.copy(p, tempDir.resolve(p.getFileName()));
+				if (Problem.isSolution(p))
+					Files.copy(p, submissionDir.resolve(p.getFileName()));
 			});
 			for (Path p : Util.getDescendantFiles(problemDir, studentSubdirs)) 
-				if (isSolution(problemDir.resolve(p)))
-					Files.copy(problemDir.resolve(p), tempDir.resolve(Util.tail(p)));
-
-			String problem = problemDir.getFileName().toString();
+				if (Problem.isSolution(problemDir.resolve(p)))
+					Files.copy(problemDir.resolve(p), submissionDir.resolve(Util.tail(p)));
 			String levelString = grade && i == maxLevel + 1 ? "grade" : "" + i;
-			util.runLabrat("html", repo, problem, levelString,
-					tempDir.toAbsolutePath(), "");
-			// Path reportDir = Util.getDir(context,
-			// "reports").resolve(tempDir.getFileName());
-			// Files.createDirectory(reportDir);
-			// Files.copy(tempDir.resolve("report.html"),
-			// reportDir.resolve("report.html"));
-			// TODO: Remove temp dir?
-			runs.put(levelString, tempDir.getFileName().toString()
-					+ "/report.html");
+			codeCheck.run("html", repo, problem, levelString, studentId, submissionDir);
+			runs.put(levelString, Util.base64(submissionDir, "report.html"));
 		}
 		return runs;
-	}
-	
-    public Result fetch(String dir, String file) throws IOException {
-        Path submissionDir = util.getDir("submissions");
-        File data = submissionDir.resolve(dir).resolve(file).toFile();
-        if (file.endsWith(".html")) { 
-        return ok(data).as("text/html");
-        }
-        else { // JAR
-        	return ok(data).as("application/octet-stream");
-        }
-    }	
+	}	
 }
 	
