@@ -787,9 +787,9 @@ public class Main {
         call.setTolerance(tolerance);
         call.setIgnoreCase(ignoreCase);
         call.setIgnoreSpace(ignoreSpace);
+        Path tempDir = compileSolution(mainModule, null, 0); 
         if (compile(mainModule)) {
             report.header("callMethod", "Calling method");
-            Path tempDir = compileSolution(mainModule, null, 0); 
             call.prepare(tempDir);
             call.run(workDir, report, score);
             Util.deleteDirectory(tempDir);
