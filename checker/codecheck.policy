@@ -10,9 +10,9 @@ grant codeBase "file:${java.home}/../lib/tools.jar" {
    permission java.security.AllPermission;
 };
 
-grant codeBase "jrt:/jdk.compiler" {
-   permission java.security.AllPermission;
-};
+//grant codeBase "jrt:/jdk.compiler" {
+//   permission java.security.AllPermission;
+//};
 
 grant {
   permission java.io.FilePermission "-", "read,write,delete";

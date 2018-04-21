@@ -70,7 +70,7 @@ case _"$LANG" in
         ;;
 
     _Racket)
-        ulimit -d 10000 -f 1000 -n 100 -v 1000000 -t ${TIMEOUT}
+        ulimit -d 100000 -f 1000 -n 100 -v 1000000 -t ${TIMEOUT}
         if grep -qE '\(define\s+\(\s*main\s+' $1 ; then
             timeout ${TIMEOUT}s nice racket -tm $@
         else

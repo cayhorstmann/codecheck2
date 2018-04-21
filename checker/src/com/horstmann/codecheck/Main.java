@@ -1,7 +1,6 @@
 package com.horstmann.codecheck;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.FileSystems;
@@ -45,9 +44,9 @@ public class Main {
     private Properties checkProperties = new Properties();
     private Report report;
     private Path problemDir;
-    private List<String> studentDirectories = new ArrayList<>();
-    private Set<Path> studentFiles;
-    private Set<Path> solutionFiles;
+    private Path studentDirectory;
+    private Set<Path> studentFiles = new TreeSet<>();
+    private Set<Path> solutionFiles = new TreeSet<>();
     private Set<Path> printFiles = new TreeSet<>();
     private Set<Path> requiredFiles = new TreeSet<>(); // tails only
     private Set<Path> mainModules = new TreeSet<>(); // tails only
@@ -74,9 +73,8 @@ public class Main {
      * Entry point to program.
      *
      * @param args
-     *            command-line arguments. args[0] = level (1, 2, 3, ..., or
-     *            check/grade for compatibility) args[1] = submission dir,
-     *            args[2] = problem dir args[3] etc = metadata key=value pairs (optional)
+     *            command-line arguments. args[0] = submission dir,
+     *            args[1] = problem dir args[2] etc = metadata key=value pairs (optional)
      * @throws IOException
      * @throws ReflectiveOperationException 
      */
@@ -119,15 +117,12 @@ public class Main {
     }
 
     public void copySuppliedFiles() throws IOException {
-        for (String s : studentDirectories) {
-            Path dir = problemDir.resolve(s);        
-            for (Path p : Util.getDescendantFiles(dir)) {
-                Path source = dir.resolve(p);
-                Path target = workDir.resolve(p);
-                // Copy if it is not required to be submitted
-                if (!requiredFiles.contains(p)) {
-                    Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
-                }
+        for (Path p : Util.getDescendantFiles(studentDirectory)) {
+            Path source = studentDirectory.resolve(p);
+            Path target = workDir.resolve(p);
+            // Copy if it is not required to be submitted
+            if (!requiredFiles.contains(p)) {
+                Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
             }
         }
     }
@@ -235,14 +230,22 @@ public class Main {
     }
 
     private void testInputs(Map<String, String> inputs, Path mainmodule, Annotations annotations) throws Exception {
+        Path runInput = workDir.resolve("Input");
+        boolean inputMode = Files.exists(runInput);
+        
+        if (inputMode) { 
+            inputs.put("Input", Util.read(runInput));
+        }
+
         /*
          * If there are no inputs, we feed in one empty input to execute the program.
          */
         if (inputs.size() == 0)
             inputs.put("", ""); 
-        report.header("run", "Testing " + mainmodule);
+        report.header("run", inputMode ? "Output" : "Testing " + mainmodule);
         Path solutionDir = null;
-        if (!annotations.isSample(mainmodule)) {
+
+        if (!inputMode && !annotations.isSample(mainmodule)) {
             solutionDir = compileSolution(mainmodule, null, 0);
             if (solutionDir == null) return;
         }        
@@ -268,9 +271,8 @@ public class Main {
         String out = annotations.findUniqueKey("OUT");
         String[] outFiles = out == null ? new String[0] : out.trim().split("\\s+");
         
-        
         String runNumber = test.replace("test", "").trim();
-        report.run(runNumber.length() > 0 ? "Test " + runNumber : null);
+        report.run(!test.equals("Input") && runNumber.length() > 0 ? "Test " + runNumber : null);
         
         for (String args : runargs) {
             testInput(mainmodule, solutionDir, test, input, args, outFiles, timeout / runargs.size(), maxOutput / runargs.size());
@@ -289,7 +291,7 @@ public class Main {
 
         report.args(runargs);
 
-        if (!language.echoesStdin()) report.input(input);
+        if (!language.echoesStdin() && !test.equals("Input")) report.input(input);
 
         // Run student program and capture stdout/err and output files
 
@@ -373,7 +375,7 @@ public class Main {
 
     private void getRequiredModules() {
         for (Path p : solutionFiles)
-            if (language.isSource(p))
+            if (language.isSource(p) || p.getFileName().toString().equals("Input"))
                 requiredFiles.add(Util.tail(p));
     }
     
@@ -478,10 +480,8 @@ public class Main {
     public void run(String[] args) throws IOException, ReflectiveOperationException {
         // TODO: Adjustable Timeouts
         long startTime = System.currentTimeMillis();
-        String mode = args[0].trim();
-        Path submissionDir = FileSystems.getDefault().getPath(args[1]);
-        problemDir = FileSystems.getDefault().getPath(args[2]);
-        
+        Path submissionDir = FileSystems.getDefault().getPath(args[0]);
+        problemDir = FileSystems.getDefault().getPath(args[1]);
         Path homeDir = Util.getHomeDir();
         workDir = new File(".").getAbsoluteFile().toPath().normalize();
         System.setProperty("java.security.policy", homeDir.resolve("codecheck.policy").toString());
@@ -505,61 +505,35 @@ public class Main {
             report = new CodioReport("Report", submissionDir);
         else
             report = new HTMLReport("Report", submissionDir);
-        int level = 0;
-        try {
-            level = Integer.parseInt(mode);
-        } catch (NumberFormatException ex) {
+
+        studentDirectory = problemDir.resolve("student"); 
+        Path solutionDirectory = null;
+        if (Files.exists(studentDirectory)) { // old style with student and solution directories
+            solutionDirectory = problemDir.resolve("solution");
+        } else {
+            studentDirectory = problemDir;
         }
-
-        if (mode.equals("check")) // TODO: Legacy
-            level = 1;
-        else if (mode.equals("grade")) // TODO: Legacy
-            level = 9; // to pick up all
-        if (Files.exists(problemDir.resolve("student")))
-            studentDirectories.add("student");
-        for (int n = 1; n <= level; n++)
-            if (Files.exists(problemDir.resolve("student" + n)))
-                studentDirectories.add("student" + n);
-
-        // TODO: Legacy
-        if (mode.equals("grade")) { // mode grade will be rejected by web app
-            if (Files.exists(problemDir.resolve("grader"))) {
-                studentDirectories.add("grader");
-            }
-        }
-
-        List<String> solutionDirectories = new ArrayList<>();
-        if (Files.exists(problemDir.resolve("solution")))
-            solutionDirectories.add("solution");
-        for (int n = 1; n <= level; n++)
-            if (Files.exists(problemDir.resolve("solution" + n)))
-                solutionDirectories.add("solution" + n);
-
-        if (studentDirectories.size() + solutionDirectories.size() == 0) {
-            // new-style packaging with no student or solution directories
-            studentDirectories.add(".");
-        }
-        
-        
+                
         String problemId = null;
         Annotations annotations = null;
                 
         try {
-            // Read check.properties in level dirs
-            for (String levelDir : studentDirectories) {
-                File modeCheckProperties = problemDir.resolve(levelDir).resolve("check.properties").toFile();
-                if (modeCheckProperties.exists()) {
-                    try (InputStream in = new FileInputStream(modeCheckProperties)) {
-                        checkProperties.load(in);
-                    }
+            // Read check.properties
+            Path modeCheckProperties = studentDirectory.resolve("check.properties");
+            if (Files.exists(modeCheckProperties)) {
+                try (InputStream in = Files.newInputStream(modeCheckProperties)) {
+                    checkProperties.load(in);
                 }
             }
-
-            studentFiles = filterNot(Util.getDescendantFiles(problemDir, studentDirectories), "check.properties", ".*", "problem.ch", "problem.html");
-            solutionFiles = filterNot(Util.getDescendantFiles(problemDir, solutionDirectories), "*.txt", ".*", "*.class");
-            // TODO: Filtering out rubric
-            // TODO: Unify with server/src/Problem.java
             
+            for (Path p : filterNot(Util.getDescendantFiles(studentDirectory), 
+                    "check.properties", ".*", "index.html", "index.ch", "problem.html", "q.properties")) {
+                studentFiles.add(problemDir.relativize(studentDirectory.resolve(p)));
+            }
+            if (solutionDirectory != null)
+                for (Path p : filterNot(Util.getDescendantFiles(solutionDirectory), 
+                    "*.txt", ".*", "*.class"))
+                    solutionFiles.add(problemDir.relativize(solutionDirectory.resolve(p)));
             // Determine language
             
             String languageName = System.getProperty("com.horstmann.codecheck.language");
@@ -590,20 +564,21 @@ public class Main {
             Set<Path> annotatedSolutions = annotations.findSolutions();
             studentFiles.removeAll(annotatedSolutions);
             solutionFiles.addAll(annotatedSolutions);
+            Path runInput = Paths.get("Input");
             if (solutionFiles.size() == 0) {
-                if (studentFiles.size() == 1) { 
-                    // Assume that's the solution
+                if (studentFiles.size() == 1 || studentFiles.contains(runInput)) { 
+                    // Assume that's the solution if only one file
                     solutionFiles.addAll(studentFiles);
                     studentFiles.clear();
                 } else {
-                    String[] delimiters = language.pseudoCommentDelimiters();
-                    throw new CodeCheckException("Mark one or more files as " + delimiters[0] + "SOLUTION" + delimiters[1]);
+                    String[] delimiters = language.pseudoCommentDelimiters();                    
+                    throw new CodeCheckException(
+                            "Mark one or more files as " + delimiters[0] + "SOLUTION" + delimiters[1]);
                 }
             }
           
             report.comment("Submission", submissionDir.toString());
                // This is just a unique ID, can be used to check against cheating
-            report.comment("Level", "" + level);
             DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
             df.setTimeZone(TimeZone.getTimeZone("UTC"));
             String currentTime = df.format(new Date());
@@ -620,7 +595,7 @@ public class Main {
             report.comment("ID", problemId);
             
             // Used to pass in machine instance, git url into report 
-            for (int iarg = 3; iarg < args.length; iarg++) {
+            for (int iarg = 2; iarg < args.length; iarg++) {
             	String arg = args[iarg];
             	int keyEnd = arg.indexOf("=");
             	if (keyEnd >= 0) {
@@ -655,11 +630,9 @@ public class Main {
             
             annotations.check(report, requiredFiles);
                         
-            for (String dir : studentDirectories) {
-                for (Path p : Util.getDescendantFiles(problemDir.resolve(dir))) {
-                    if (!requiredFiles.contains(p)) 
-                        printFiles.add(p);
-                }
+            for (Path p : Util.getDescendantFiles(studentDirectory)) {
+                if (!requiredFiles.contains(p)) 
+                    printFiles.add(p);
             }
 
             copySuppliedFiles();
@@ -676,7 +649,7 @@ public class Main {
             }
 
             if (annotations.checkConditions(workDir, report)) {
-                if (getStringProperty("test.method") != null) // Legacy
+                if (getStringProperty("test.method") != null) // TODO: Legacy
                     callMethod(tolerance, ignoreCase, ignoreSpace);
                 if (annotations.has("CALL"))
                     doCalls(submissionDir, annotations.findCalls());
@@ -686,7 +659,7 @@ public class Main {
                     mainModules.remove(Util.tail(sub.getFile()));
                 }
                 
-                Map<String, String> inputs = new TreeMap<>();
+                Map<String, String> inputs = new TreeMap<>(); // TODO: Legacy
                 for (String i : new String[] { "", "1", "2", "3", "4", "5", "6", "7", "8", "9" }) {
                     String key = "test" + i + ".in";
                     String in = getStringProperty(key);
@@ -747,8 +720,10 @@ public class Main {
             for (Path file : requiredFiles)
                 report.file(submissionDir, file);
 		
-            printFiles = filterNot(printFiles, "test*.in", "test*.out", "check.properties", "q.properties", "*.png", "*.PNG",
-                "*.gif", "*.GIF", "*.jpg", "*.jpeg", "*.JPG", ".DS_Store", "*.jar", "*.class", "problem.ch", "problem.html");      
+            printFiles = filterNot(printFiles, "test*.in", "test*.out", "Input", 
+                    "check.properties", "q.properties", 
+                    "*.png", "*.PNG", "*.gif", "*.GIF", "*.jpg", "*.jpeg", "*.JPG", 
+                    ".DS_Store", "*.jar", "*.class", "index.html", "index.ch", "problem.html");      
 
             printFiles.removeAll(annotations.findHidden());
 	
@@ -761,7 +736,9 @@ public class Main {
         } catch (Throwable t) {
             report.systemError(t);
         } finally {
-            if (annotations != null && !annotations.has("NOSCORE")) report.add(score);
+            if (annotations != null && !annotations.has("NOSCORE") 
+                    && !Files.exists(workDir.resolve("Input"))) 
+                report.add(score);
             long endTime = System.currentTimeMillis();
             report.comment("Elapsed", (endTime - startTime) + " ms");
             report.save(problemId, "report");

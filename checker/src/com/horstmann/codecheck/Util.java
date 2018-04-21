@@ -30,6 +30,7 @@ public class Util {
     }
 
     public static Path tail(Path p) {
+        if (p.getNameCount() < 2) return p;
         return p.subpath(1, p.getNameCount());
     }
     

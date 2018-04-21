@@ -1,15 +1,88 @@
 =CodeCheck
 
+sudo apt install empty-expect
+
+rm empty.log
+empty -f -i in.fifo -o out.fifo -p empty.pid -L empty.log java Volume
+echo 3 > in.fifo
+echo 2 > in.fifo
+cat empty.log 
+
+<<<Please enter the price for a six-pack: >>>3
+<<<Please enter the price for a two-liter bottle: >>>2
+<<<Pack price per liter:       1,41
+Bottle price per liter:     1,00
+
+...
+
+rm empty.log
+empty -f -i in.fifo -o out.fifo -p empty.pid -L empty.log java Volume
+cat empty.log
+
+<<<Please enter the price for a six-pack:
+
+cat empty.pid | xargs kill
+
+rm empty.log
+empty -f -i in.fifo -o out.fifo -p empty.pid -L empty.log java Volume
+echo 3 > in.fifo
+cat empty.log 
+
+<<<Please enter the price for a six-pack: >>>3
+<<<Please enter the price for a two-liter bottle:
+
+cat empty.pid | xargs kill
+
+
+
+---
+
+Unify substitutions with running? It's no different, except for
+that table. (Which we could generally adopt, and maybe have.) 
+
+---
+
 jdeprscan --class-path lib/checkstyle-5.7-all.jar:lib/hamcrest-core.jar:lib/jackson-annotations-2.6.4.jar:lib/jackson-core-2.6.4.jar:lib/jackson-databind-2.6.4.jar:lib/junit.jar codecheck.jar
 Jar file codecheck.jar:
 class com/horstmann/codecheck/CallMethod uses deprecated method java/lang/Thread::stop()V 
 class com/horstmann/codecheck/CallMethod uses deprecated method java/lang/Character::<init>(C)V 
 class com/horstmann/codecheck/JavaLanguage uses deprecated method java/lang/Thread::stop()V 
 
+---
 
+(C) Can I use Java 9 from http://zulu.org/download/ or http://download.java.net/java/GA/jdk9/9/binaries/openjdk-9_linux-x64_bin.tar.gz in play-codecheck? (It's now 9.0.1)
+(C) CodeCheck http://code.makery.ch/blog/javafx-2-snapshot-as-png-image/
+(C) CodeCheck: Allow students to save their work and give them a URL
+(C) Codecheck eliminate levels
+(C) In play project, activate some of the security filters
+(C) https://www.slideshare.net/EricSmalling1/best-practices-for-developing-deploying-java-applications-with-docker, https://blog.sebastian-daschner.com/
+(C) sudo /usr/sbin/cgconfigparser -l /etc/cgconfig.conf before running CodeCheck locally
+
+
+---
+
+Kathleen: I do not use levels. I use your //SOLUTION feature and run two separate files.
+
+I do not use rubrics.
+
+
+---
+
+Another "to be fixed eventually" problem
+
+When using the picture class, if the image is not found and exception is thrown but then the student gets a pass and full marks. 
+
+Here is the report.
+
+http://www.codecheck.it/fetch/17072919018705920314428255902/report.html
+
+This happened because I forgot to include the image, but the same thing would happen if the student misspelled the file name
+
+---
 
 Can we compare numbers by significant digits rather than by epsilon?
 
+---
 
 https://docs.racket-lang.org/rackunit/quick-start.html
 

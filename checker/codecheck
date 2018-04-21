@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2006-2017 Cay S. Horstmann
+# Copyright 2006-2018 Cay S. Horstmann
 #
 # This file is part of CodeCheck.
 #
@@ -40,20 +40,6 @@ function usage {
     exit 1
 }
 
-function copyToSubmission {
-    if [ -e $PROBLEMDIR/$1 ] ; then 
-        cd $PROBLEMDIR/$1
-        for f in `find .` ; do 
-            if [ "$f" != "." ] ; then
-                mkdir -p $SUBMISSIONDIR/`dirname $f`
-                cp $f $SUBMISSIONDIR/$f
-                # cp --parents $f $SUBMISSIONDIR
-            fi
-        done
-        cd ../..
-    fi  
-}
-
 function grade {
     if [ "${SUBMISSIONDIR/#\//}" == "$SUBMISSIONDIR" ] ; then SUBMISSIONDIR="$STARTDIR"/"$SUBMISSIONDIR" ; fi
 
@@ -81,10 +67,10 @@ function grade {
 
     if [ ! -z "$DEBUG" ] ; then
         echo WORKDIR=$WORKDIR
-        echo LC_ALL=en_US.UTF-8 $EXEC_CONTROL "$JAVA_HOME"/bin/java $JOPTS -classpath $CPATH com.horstmann.codecheck.Main $LEVEL "$SDIR" "$PDIR" $@
+        echo LC_ALL=en_US.UTF-8 $EXEC_CONTROL "$JAVA_HOME"/bin/java $JOPTS -classpath $CPATH com.horstmann.codecheck.Main "$SDIR" "$PDIR" $@
     fi
 
-    LC_ALL=en_US.UTF-8 $EXEC_CONTROL "$JAVA_HOME"/bin/java $JOPTS -classpath $CPATH com.horstmann.codecheck.Main $LEVEL "$SDIR" "$PDIR" $@
+    LC_ALL=en_US.UTF-8 $EXEC_CONTROL "$JAVA_HOME"/bin/java $JOPTS -classpath $CPATH com.horstmann.codecheck.Main "$SDIR" "$PDIR" $@
 
     cd "$SUBMISSIONDIR"
 
@@ -165,8 +151,6 @@ if [ "$1" == "-s" ] ; then
     fi
     JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck.report=$REPORT_TYPE"
     EXEC_CONTROL="cgexec -g cpu:codecheck --sticky nice -15"
-    LEVEL=$1
-    shift
     # Program is executed in submission dir
     SUBMISSIONDIR=$1
     WORKDIR=$1
@@ -237,36 +221,15 @@ shift $((OPTIND-1))
 
 JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck.report=$REPORT_TYPE"
 
-if [ -z $2 ] ; then
-  LEVEL=1 # Checking solution
-else
-  LEVEL=$1
-  shift
-fi
-
-if [ -z $2 ] ; then
+if [[ -z $2 ]] ; then
   # Check solution
   PROBLEMDIR=$1
   shift
   SUBMISSIONDIR=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
 
-  if [ -e $PROBLEMDIR/solution ] ; then cp -R $PROBLEMDIR/solution/* $SUBMISSIONDIR ; fi
-  case $LEVEL in 
-    [1-9])
-      for n in `seq 1 $LEVEL` ; do
-        if [ -e $PROBLEMDIR/solution$n ] ; then cp -R $PROBLEMDIR/solution$n/* $SUBMISSIONDIR ; fi
-      done
-    ;;
-    grade)
-      for n in `seq 1 9` ; do
-        if [ -e $PROBLEMDIR/solution$n ] ; then cp -R $PROBLEMDIR/solution$n/* $SUBMISSIONDIR ; fi
-      done
-      if [ -e $PROBLEMDIR/grader ] ; then cp -R $PROBLEMDIR/grader/* $SUBMISSIONDIR ; fi
-    ;;
-  esac
-
-  # If SUBMISSIONDIR is empty, then copy all files from base dir
-  if [ ! "$(ls -A $SUBMISSIONDIR)" ]  ; then
+  if [ -e $PROBLEMDIR/solution ] ; then
+      cp -R $PROBLEMDIR/solution/* $SUBMISSIONDIR
+  else
       cp $PROBLEMDIR/* $SUBMISSIONDIR
   fi
   
@@ -279,9 +242,8 @@ else
   shift
 fi
 
-if [ -z "$LEVEL" ] || [ -z "$PROBLEMDIR" ] || [ ! -d "$SUBMISSIONDIR" ] || [ ! -d "$PROBLEMDIR" ]
+if [ -z "$PROBLEMDIR" ] || [ ! -d "$SUBMISSIONDIR" ] || [ ! -d "$PROBLEMDIR" ]
 then
-    if [ -z "$LEVEL" ] ; then echo "No level supplied" ; fi
     if [ -z "$PROBLEMDIR" ] ; then echo "No problemdir supplied" ; fi
     if [ ! -d "$SUBMISSIONDIR" ] ; then echo "submissiondir $SUBMISSIONDIR doesn't exist" ; fi
     if [ ! -d "$PROBLEMDIR" ] ; then echo "problemdir $PROBLEMDIR doesn't exist" ; fi
@@ -300,20 +262,17 @@ if [ -z "$CHECK_STUDENT_DIR" ] ; then exit ; fi
 cd "$STARTDIR"
 SUBMISSIONDIR=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
 
-copyToSubmission student
-case $LEVEL in 
-  [1-9])
-    for n in `seq 1 $LEVEL` ; do
-      copyToSubmission student$n
+if [ -e $PROBLEMDIR/student ] ; then 
+    cd $PROBLEMDIR/student
+    for f in `find .` ; do 
+      if [ "$f" != "." ] ; then
+          mkdir -p $SUBMISSIONDIR/`dirname $f`
+          cp $f $SUBMISSIONDIR/$f
+          # cp --parents $f $SUBMISSIONDIR
+      fi
     done
-    ;;
-  grade)
-    for n in `seq 1 9` ; do
-      copyToSubmission student$n
-    done
-    copyToSubmission grader
-    ;;
-esac
+    cd ../..
+fi  
 
 WORKDIR=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
 

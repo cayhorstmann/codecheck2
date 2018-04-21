@@ -3,7 +3,7 @@
    For example, if name is "Udacity", set last to "y". 
 */
 
-public class Test
+public class Prog
 {
     public static void main(String[] args)
     {
