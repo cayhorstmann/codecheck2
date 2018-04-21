@@ -80,10 +80,16 @@ public class Util {
 		}
 	}
 
-	public static String base64(Path dir, String fileName) throws IOException {
-		Base64.Encoder encoder = Base64.getEncoder();
-		return encoder.encodeToString(java.nio.file.Files
-				.readAllBytes(dir.resolve(fileName)));
+	public static String base64(Path dir, String fileName) {
+		try {
+			Path file = dir.resolve(fileName);
+			if (!Files.exists(file)) return null;
+			Base64.Encoder encoder = Base64.getEncoder();
+			return encoder.encodeToString(java.nio.file.Files
+				.readAllBytes(file));
+		} catch (IOException e) {
+			return null;
+		}
 	}
 
 	public static String getProperty(String dir, String file, String property) {
@@ -338,6 +344,18 @@ public class Util {
 		}
 	}
 
+	/*
+	 * Gets all files contained in the given directory.
+	 * @return a set of of files, as Path objects that are relativized against
+	 * dir 
+	 */
+	public static SortedSet<Path> getChildren(Path dir) throws IOException {
+		if (dir == null || !Files.exists(dir) || !Files.isDirectory(dir))
+			return Collections.emptySortedSet();
+		else
+			return Files.list(dir).filter(Files::isRegularFile).map(dir::relativize).collect(Collectors.toCollection(TreeSet::new));
+	}
+	
 	/**
 	 * Gets all files contained in a directory and its subdirectories
 	 * 

@@ -130,35 +130,24 @@ public class Upload  extends Controller {
 		Util.copyDirectory(problemDir, newProblemDir);
 		String studentId = Util.createUID();
 		codeCheck.replaceParametersInDirectory(studentId, newProblemDir);
-		Map<String, String> runs = check(problem, newProblemDir, studentId);
+		String run = check(problem, newProblemDir, studentId);
 		Util.deleteDirectory(newProblemDir);
-		boolean grade = runs.keySet().contains("grade");
-		boolean multipleLevels = runs.keySet().size() > (grade ? 2
-				: 1);
 		String url =  "files/" + problem; 
 		
 		StringBuilder response = new StringBuilder();
 		response.append("<html><head><title></title><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"/>");
-		response.append("<body style=\"font-family: sans\"><ul style=\"list-style: square\">");
-		for (String k : runs.keySet()) {
-			response.append("<li>");
-			if (k.equals("grade")) {				
-				response.append("Grader report");
-			} else {
-				String problemUrl = (request().secure() ? "https://" : "http://" ) + request().host() + "/" + url;
-				if (multipleLevels) {
-					response.append("Level " + k + " ");
-					problemUrl += "&level=" + k;
-				}
-				response.append("URL: <code>");
-				response.append(problemUrl); 
-				response.append("</code> | <a href=\"");
-				response.append(problemUrl);
-				response.append("\" target=\"_blank\">Preview</a>");
-			}
-			response.append("<br/><iframe height=\"400\" style=\"width: 90%; margin: 2em;\" src=\"data:text/html;base64," + runs.get(k) + "\"></iframe>");			
-			response.append("</li>\n");
-		}
+		response.append("<body style=\"font-family: sans\">");
+		String problemUrl = (request().secure() ? "https://" : "http://" ) + request().host() + "/" + url;
+		response.append("URL: <code>");
+		response.append(problemUrl); 
+		response.append("</code> | <a href=\"");
+		response.append(problemUrl);
+		response.append("\" target=\"_blank\">Preview</a>");
+		if (run == null)
+			response.append("<p>Fatal error: No report could be generated.</p>");
+		else
+			response.append("<br/><iframe height=\"400\" style=\"width: 90%; margin: 2em;\" src=\"data:text/html;base64," + run + "\"></iframe>");			
+		response.append("</li>\n");
 		session().put("pid", problem);
 		response.append("</ul><form method='post' action='/editProblem'><input type='submit' value='Edit problem'/></form><p></body></html>\n");
 		return response.toString();
@@ -230,41 +219,23 @@ public class Upload  extends Controller {
 	         }
 	   }
 	  
-	private Map<String, String> check(String problem, Path problemDir, String studentId) 
+	private String check(String problem, Path problemDir, String studentId) 
 			throws IOException, InterruptedException, NoSuchMethodException, ScriptException {
-		Map<String, String> runs = new LinkedHashMap<>();
-		int maxLevel = 1;
-		for (int i = 9; i >= 2 && maxLevel == 1; i--)
-			// Find highest level
-			if (Files.exists(problemDir.resolve("student" + i))
-					|| Files.exists(problemDir.resolve("solution" + i)))
-				maxLevel = i;
-
-		boolean grade = Files.exists(problemDir.resolve("grader"));
-		List<String> solutionSubdirs = new ArrayList<>();
-		List<String> studentSubdirs = new ArrayList<>();
-		for (int i = 1; i <= (grade ? maxLevel + 1 : maxLevel); i++) {
-			Path submissionDir = codeCheck.createSubmissionDirectory();
-			// Copy solution files up to the current level
-			if (i <= maxLevel) 
-				solutionSubdirs.add(i == 1 ? "solution" : "solution" + i);
-			if (i == 1) studentSubdirs.add("student");
-			else if (i == maxLevel + 1) studentSubdirs.add("grader");
-			else studentSubdirs.add("student" + i);
-			for (Path p : Util.getDescendantFiles(problemDir, solutionSubdirs))
-				Files.copy(problemDir.resolve(p), submissionDir.resolve(Util.tail(p)));
+		Path submissionDir = codeCheck.createSubmissionDirectory();
+		// Copy solution files 
+		Path solutionDir = problemDir.resolve("solution");
+		if (Files.exists(solutionDir)) {
+			for (Path p : Util.getDescendantFiles(solutionDir))
+				Files.copy(solutionDir.resolve(p), submissionDir.resolve(p));
+		} else {
+			boolean runMode = Files.exists(problemDir.resolve("Input"));						
 			Util.forEachFile(problemDir, p -> { 
-				if (Problem.isSolution(p))
+				if (runMode || Problem.isSolution(p))
 					Files.copy(p, submissionDir.resolve(p.getFileName()));
 			});
-			for (Path p : Util.getDescendantFiles(problemDir, studentSubdirs)) 
-				if (Problem.isSolution(problemDir.resolve(p)))
-					Files.copy(problemDir.resolve(p), submissionDir.resolve(Util.tail(p)));
-			String levelString = grade && i == maxLevel + 1 ? "grade" : "" + i;
-			codeCheck.run("html", repo, problem, levelString, studentId, submissionDir);
-			runs.put(levelString, Util.base64(submissionDir, "report.html"));
 		}
-		return runs;
+		codeCheck.run("html", repo, problem, studentId, submissionDir);
+		return Util.base64(submissionDir, "report.html");
 	}	
 }
 	

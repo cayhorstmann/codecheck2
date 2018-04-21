@@ -38,7 +38,6 @@ public class Check extends Controller {
 				String ccu = null;
 		        String repo = "ext";
 		        String problem = "";
-		        String level = "1";
 		        Path submissionDir = codeCheck.createSubmissionDirectory();
 		        
 		        for (String key : params.keySet()) {
@@ -47,8 +46,6 @@ public class Check extends Controller {
 		                repo = value;
 		            else if (key.equals("problem"))
 		                problem = value;
-		            else if (key.equals("level"))
-		                level = value;
 		            else if (key.equals("ccu"))
 		            	ccu = value;
 		            else
@@ -59,7 +56,7 @@ public class Check extends Controller {
 				    ccu = ccuCookie == null ? Util.createUID() : ccuCookie.value();
 				}
 				long startTime = System.nanoTime();			
-		        codeCheck.run("html", repo, problem, level, ccu, submissionDir);
+		        codeCheck.run("html", repo, problem, ccu, submissionDir);
 				double elapsed = (System.nanoTime() - startTime) / 1000000000.0;
 		        String report = Util.read(submissionDir.resolve("report.html"));
 		        if (report == null || report.length() == 0) {
@@ -90,7 +87,6 @@ public class Check extends Controller {
 				String ccu = null;
 				String repo = "ext";
 				String problem = null;
-				String level = "1";
 		        Path submissionDir = codeCheck.createSubmissionDirectory();
 				String reportType = "njs";
 				String callback = null;
@@ -112,7 +108,6 @@ public class Check extends Controller {
 					
 					if ("repo".equals(key)) repo = value;
 					else if ("problem".equals(key)) problem = value;
-					else if ("level".equals(key)) level = value;
 					else if ("callback".equals(key)) callback = value;
 					else if ("scoreCallback".equals(key)) scoreCallback = value;
 					else if ("ccu".equals(key)) ccu = value;
@@ -127,7 +122,7 @@ public class Check extends Controller {
 				};				
 				Logger.of("com.horstmann.codecheck.check").info("checkNJS: " + requestParams);
 				//TODO last param should be submissionDir
-				codeCheck.run(reportType, repo, problem, level, ccu, submissionDir);
+				codeCheck.run(reportType, repo, problem, ccu, submissionDir);
 				ObjectNode result = (ObjectNode) Json.parse(Util.read(submissionDir.resolve("report.json")));
 				String reportZip = Util.base64(submissionDir, "report.signed.zip");
 				

@@ -17,11 +17,9 @@ import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
-import play.Logger;
-import play.api.Environment;
-import play.api.Play;
-
 import com.typesafe.config.Config;
+
+import play.api.Environment;
 
 @Singleton
 public class CodeCheck {
@@ -116,23 +114,23 @@ public class CodeCheck {
 	}
 	
 	public void run(String reportType, String repo,
-			String problem, String level, String ccu, Path submissionDir)
+			String problem, String ccu, Path submissionDir)
 			throws IOException, InterruptedException, NoSuchMethodException, ScriptException {
 		Path problemDir = loadProblem(repo, problem, ccu);
-		run(reportType, repo, problem, level, problemDir, submissionDir,
+		run(reportType, repo, problem, problemDir, submissionDir,
 				"User=" + ccu, "Problem=" + (repo + "/" + problem).replaceAll("[^\\pL\\pN_/-]", ""));
 		Util.deleteDirectory(problemDir);
 	}
 
 	private void run(String reportType, String repo,
-			String problem, String level, Path problemDir,
+			String problem, Path problemDir,
 			Path submissionDir, String... metaData) throws IOException, InterruptedException {
 		String command = config.getString("com.horstmann.codecheck." + reportType);
 		StringBuilder metas = new StringBuilder();
 		for (String meta : metaData) { if (metas.length() > 0) metas.append(" "); metas.append(meta); }
 		
-		String script = MessageFormat.format(command, level, submissionDir.toAbsolutePath(),
-				problemDir.toAbsolutePath(), metas);
+		String script = MessageFormat.format(command, submissionDir.toAbsolutePath(),
+				problemDir.toAbsolutePath(), metas); 
 		
 		Files.write(submissionDir.resolve("codecheck.log"), script.getBytes("UTF-8"));
 		ProcessBuilder builder = new ProcessBuilder(script.split(" "));

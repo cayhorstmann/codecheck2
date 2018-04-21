@@ -17,17 +17,17 @@ POST    /echo                             controllers.Application.echo()
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
 
-GET	    /files						controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String ?= "1", ccu: String ?= null)
-GET		/files/:problem				controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String ?= "1", ccu: String ?= null)
-GET		/files/:problem/:level		controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String,        ccu: String ?= null)
+GET	    /files						controllers.Files.filesHTML(repo: String ?= "ext", problem: String, ccu: String ?= null)
+GET		/files/:problem				controllers.Files.filesHTML(repo: String ?= "ext", problem: String, ccu: String ?= null)
+GET		/files/:repo/:problem		controllers.Files.filesHTML(repo: String, problem: String,          ccu: String ?= null)
 POST    /checkNJS					controllers.Check.checkNJS()
 # GET called from interactive element with jsonp result
 GET     /checkNJS					controllers.Check.checkNJS()
 
 # From Hien's project, but this is potentially useful for others 
-GET     /fileData                   controllers.Files.fileData(repo: String ?= "ext", problem: String, level: String ?= "1", ccu: String ?= null)
+GET     /fileData                   controllers.Files.fileData(repo: String ?= "ext", problem: String, ccu: String ?= null)
 
-# Classic HTML--is anyone still using it?
+# Classic HTML--is anyone still using it? Core Java?
 POST	/check						controllers.Check.checkHTML()
 
 POST    /uploadProblem              controllers.Upload.uploadProblem(newProblem : Boolean ?= true)
@@ -37,7 +37,6 @@ POST    /editedFiles                controllers.Upload.uploadFiles(newProblem : 
 POST    /editedProblem              controllers.Upload.uploadProblem(newProblem : Boolean ?= false)
 
 # Legacy
-GET	    /codecheck/files						controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String ?= "1", ccu: String ?= null)
-GET		/codecheck/files/:problem				controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String ?= "1", ccu: String ?= null)
-GET		/codecheck/files/:problem/:level		controllers.Files.filesHTML(repo: String ?= "ext", problem: String, level: String, ccu: String ?= null)
+GET	    /codecheck/files						controllers.Files.filesHTML(repo: String ?= "ext", problem: String, ccu: String ?= null)
+GET		/codecheck/files/:problem				controllers.Files.filesHTML(repo: String ?= "ext", problem: String, ccu: String ?= null)
 POST	/codecheck/check						controllers.Check.checkHTML()
