@@ -43,8 +43,8 @@ public class Problem {
 				Set<Path> solutionFiles = Util.getDescendantFiles(solutionDir);
 				solutionFiles = Util.filterNot(solutionFiles, "*~", ".*", "*.class", "a.out");
 			
-				for (Path p : solutionFiles) {
-					requiredFiles.add(solutionDir.resolve(p));
+				for (Path p : solutionFiles) {					
+					requiredFiles.add(studentDir.resolve(p));  // Student gets to see these
 					studentFiles.remove(p);					
 				}
 				for (Path p : studentFiles) {
@@ -86,14 +86,14 @@ public class Problem {
 			String cont = Util.read(problemPath, p);
 			String extension = Util.extension(p);
 			List<String> parts = Problem.processHideShow(extension, cont);
-			data.requiredFiles.put(Util.tail(p).toString(), parts);
+			data.requiredFiles.put(p.getFileName().toString(), parts);
 		}
 		for (Path p : useFiles) {
 			String cont = Util.read(problemPath, p);
 			String extension = Util.extension(p);
 			cont = Problem.processHideShow(extension, cont).get(0);
 			if (cont.length() > 0) // If it's entirely hidden, don't show its name--this happens with //HIDE in line 1
-				data.useFiles.put(Util.tail(p).toString(), cont);
+				data.useFiles.put(p.getFileName().toString(), cont);
 		}
 	}
 
