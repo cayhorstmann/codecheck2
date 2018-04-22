@@ -38,21 +38,23 @@ public class Problem {
 			Path studentDir = problemPath.resolve("student");
 			if (Files.exists(studentDir)) { 
 				Set<Path> studentFiles = Util.getDescendantFiles(studentDir);  
-				studentFiles = Util.filterNot(studentFiles, "*~", ".*", "*.class", "a.out");
+				studentFiles = Util.filterNot(studentFiles, "*~", ".*");
 				Path solutionDir = problemPath.resolve("solution");
 				Set<Path> solutionFiles = Util.getDescendantFiles(solutionDir);
-				solutionFiles = Util.filterNot(solutionFiles, "*~", ".*", "*.class", "a.out");
+				solutionFiles = Util.filterNot(solutionFiles, "*~", ".*");
 			
-				for (Path p : solutionFiles) {					
-					requiredFiles.add(studentDir.resolve(p));  // Student gets to see these
+				for (Path p : solutionFiles) {
+					if (isSourceExtension(Util.extension(p)))
+						requiredFiles.add(studentDir.resolve(p));  // Student gets to see these
 					studentFiles.remove(p);					
 				}
 				for (Path p : studentFiles) {
-					useFiles.add(studentDir.resolve(p));
+					if (isSourceExtension(Util.extension(p)))
+						useFiles.add(studentDir.resolve(p));
 				}
 			} else {
 				Set<Path> providedFiles = Util.getDescendantFiles(problemPath);
-				providedFiles = Util.filterNot(providedFiles, "param.js");
+				providedFiles = Util.filterNot(providedFiles, "*~", ".*", "param.js");
 				Path runInput = Paths.get("./Input");
 				if (providedFiles.contains(runInput)) {
 					for (Path p : providedFiles) {
