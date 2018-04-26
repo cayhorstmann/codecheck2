@@ -79,7 +79,7 @@ case _"$LANG" in
         ;;
 
     _JavaScript)
-        ulimit -d 100000 -f 1000 -n 100 -v 10000000 -t ${TIMEOUT}
+        ulimit -d 1000000 -f 1000 -n 100 -v 10000000 -t ${TIMEOUT}
         timeout ${TIMEOUT}s nice jjs --language=es6 -scripting $@
         ;;
 

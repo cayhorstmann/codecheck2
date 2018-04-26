@@ -1,10 +1,10 @@
 maxNum :: [Integer] -> Integer
----HIDE
+--HIDE
 maxNum [] = error "empty list"
 maxNum (x:[]) = x
 maxNum (x:xs) = if x > largest then x else largest
   where largest = maxNum xs
----EDIT
+--EDIT
 
 main :: IO ()
 main = do

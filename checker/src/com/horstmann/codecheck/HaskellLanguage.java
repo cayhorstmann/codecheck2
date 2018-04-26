@@ -43,7 +43,7 @@ public class HaskellLanguage implements Language {
             List<Calls.Call> calls) throws IOException {
         // Rewrite solution in module CodeCheckSolution
         
-        String moduleName = moduleOf(Util.tail(solutionFile));
+        String moduleName = moduleOf(solutionFile);
         Path solutionModule = targetDir.resolve("CodeCheckSolution.hs");
         try (PrintWriter out = new PrintWriter(solutionModule.toFile(), "UTF-8");
                 Scanner in = new Scanner(solutionFile, "UTF-8")) {

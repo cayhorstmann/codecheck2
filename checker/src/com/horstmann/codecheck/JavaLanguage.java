@@ -243,7 +243,7 @@ public class JavaLanguage implements Language {
     public List<Path> writeTester(Path sourceDir, Path targetDir, Path file,
             List<Calls.Call> calls)
             throws IOException {
-        String className = moduleOf(Util.tail(file));
+        String className = moduleOf(file);
         List<String> lines = Util.readLines(sourceDir.resolve(file));
         int i = 0;
         while (i < lines.size() && !lines.get(i).contains(className))
@@ -427,11 +427,11 @@ public class JavaLanguage implements Language {
     }
 
     @Override
-    public boolean accept(Path file, Path dir, Set<Path> requiredFiles,
-            Report report, Score score) {
+    public boolean accept(Path file, Path dir, 
+            Report report, Score score) throws IOException {
         if (file.getFileName().toString().equals("checkstyle.xml")) {
             report.header("checkStyle", "CheckStyle");
-            for (Path p : requiredFiles) {
+            for (Path p : Util.getDescendantFiles(dir)) {
                 if (isSource(p)) {
                     String result = runCheckStyle(dir.resolve(p));
                     report.output(p.getFileName().toString() + 

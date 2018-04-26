@@ -262,7 +262,7 @@ public class CallMethod {
         else if (cl == boolean.class)
             cl1 = Boolean.class;
         else if (cl == char.class) {
-            return new Character(value.charAt(0));
+            return Character.valueOf(value.charAt(0));
         }
 
         // Check if there is a constructor from a string

@@ -54,7 +54,7 @@ public class CppLanguage implements Language {
         // Remove any trailing {, add ;
         // add solution wrapped in namespace solution { ... }
         
-        String moduleName = moduleOf(Util.tail(file));
+        String moduleName = moduleOf(file);
         List<String> lines = Util.readLines(sourceDir.resolve(file));
         int i = 0;
         boolean done = false;

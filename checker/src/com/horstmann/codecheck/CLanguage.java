@@ -43,7 +43,7 @@ public class CLanguage implements Language {
             List<Calls.Call> calls)
             throws IOException {
         
-        String moduleName = moduleOf(Util.tail(file));
+        String moduleName = moduleOf(file);
         //List<String> lines = Util.readLines(sourceDir.resolve(file));
         
         List<Path> paths = new ArrayList<>();

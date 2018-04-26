@@ -14,7 +14,7 @@ public class Score {
     public void pass(boolean b, Report r) {
         if (invalid) return;
         pass(b);
-        r.pass(b);
+        if (r != null) r.pass(b);
     }
     
     public void add(int passed, int total, Report r) {

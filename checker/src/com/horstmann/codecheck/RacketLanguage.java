@@ -65,7 +65,7 @@ public class RacketLanguage implements Language {
     public List<Path> writeTester(Path sourceDir, Path targetDir, Path file,
             List<Calls.Call> calls)
             throws IOException {
-       String moduleName = Util.removeExtension(Util.tail(file));
+       String moduleName = moduleOf(file);
         // Copy source/module.rkt to target/module-solution.rkt
         Files.copy(sourceDir.resolve(file), targetDir.resolve(moduleName+ "-solution.rkt"));
         String testerModule = moduleName + "CodeCheck.rkt";

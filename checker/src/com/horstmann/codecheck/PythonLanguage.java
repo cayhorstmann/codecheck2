@@ -45,7 +45,7 @@ public class PythonLanguage implements Language {
     public List<Path> writeTester(Path sourceDir, Path targetDir, Path file,
             List<Calls.Call> calls)
             throws IOException {
-        String moduleName = moduleOf(Util.tail(file));
+        String moduleName = moduleOf(file);
         List<String> lines = Util.readLines(sourceDir.resolve(file));
         int i = 0;
         lines.add(i++, "from sys import argv");

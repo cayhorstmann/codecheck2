@@ -16,6 +16,7 @@
   /home/codecheck/submissions/** rwix,
   /tmp/submissions/** rwix,
   /usr/bin/python3.5 mrix,
+  /usr/bin/python3.6 mrix,
   /usr/bin/racket mrix,
   /usr/bin/nice mrix,
   /usr/bin/timeout mrix,

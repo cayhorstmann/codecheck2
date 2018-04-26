@@ -385,8 +385,8 @@ public class JSONReport implements Report {
     @Override
     public Report errors(List<Error> errorData) 
     {
-        if (section != null && !section.errorData.contains(errorData))
-            section.errorData = errorData;
+        if (section != null)
+            section.errorData.addAll(errorData);
         return this; 
     } 
 }

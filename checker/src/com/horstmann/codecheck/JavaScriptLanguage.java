@@ -32,7 +32,7 @@ public class JavaScriptLanguage implements Language {
     public List<Path> writeTester(Path sourceDir, Path targetDir, Path file,
             List<Call> calls) throws IOException {
         
-        String moduleName = moduleOf(Util.tail(file));
+        String moduleName = moduleOf(file);
         Set<String> functionNames = new TreeSet<>();
         for (Calls.Call call : calls) functionNames.add(call.name);
         List<String> lines = Util.readLines(sourceDir.resolve(file));

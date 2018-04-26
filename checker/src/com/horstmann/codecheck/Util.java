@@ -8,15 +8,18 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -95,25 +98,6 @@ public class Util {
                 return FileVisitResult.CONTINUE;
             }
         });
-        return result;
-    }
-
-    public static Set<Path> getDescendantFiles(Path dir, List<String> subdirs)
-            throws IOException {
-        Set<Path> result = new TreeSet<>();
-        for (String subdir : subdirs) {
-            for (Path p : getDescendantFiles(dir.resolve(subdir))) {
-                // Is there a matching one? If so, replace it
-                boolean found = false;
-                Iterator<Path> iter = result.iterator();
-                while (!found && iter.hasNext())
-                    if (p.equals(Util.tail(iter.next()))) {
-                        iter.remove();
-                        found = true;
-                    }
-                result.add(Paths.get(subdir).resolve(p));
-            }
-        }
         return result;
     }
 
@@ -271,5 +255,48 @@ public class Util {
     public static String truncate(String str, int maxlen) {
         if (str.length() > maxlen) return str.substring(0, maxlen - 3) + "...";
         else return str;
+    }
+
+    // TODO: Should be in Util
+    public static boolean matches(Path path, String glob) {
+        PathMatcher matcher = FileSystems.getDefault().getPathMatcher(
+                                  "glob:" + glob.replace("/", FileSystems.getDefault().getSeparator()));
+        return matcher.matches(path);
+    }
+
+    // TODO: Should be in Util
+    public static Set<Path> filter(Set<Path> paths, String glob) {
+        Set<Path> result = new TreeSet<>();
+        for (Path p : paths)
+            if (matches(p.getFileName(), glob))
+                result.add(p);
+        return result;
+    }
+
+    // TODO: Should be in Util
+    public static Set<Path> filterNot(Set<Path> paths, String... glob) {
+        Set<Path> result = new TreeSet<>();
+        PathMatcher[] matcher = new PathMatcher[glob.length];
+        for (int i = 0; i < matcher.length; i++)
+            matcher[i] = FileSystems.getDefault().getPathMatcher(
+                             "glob:" + glob[i].replace("/", FileSystems.getDefault().getSeparator()));
+        for (Path p : paths) {
+            boolean matchesOne = false;
+            for (int i = 0; i < matcher.length && !matchesOne; i++)
+                if (matcher[i].matches(p.getFileName()))
+                    matchesOne = true;
+            if (!matchesOne)
+                result.add(p);
+        }
+        return result;
+    }
+
+    // TODO: Should be in Util
+    public static void copyAll(Collection<Path> paths, Path fromDir, Path toDir)  throws IOException {
+        for (Path p : paths) {
+            Path source = fromDir.resolve(p);
+            Path target = toDir.resolve(p);
+            Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+        }        
     }
 }

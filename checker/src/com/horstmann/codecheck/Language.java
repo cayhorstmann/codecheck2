@@ -224,8 +224,8 @@ public interface Language {
      *            the score object to reward
      * @return true if an action was taken
      */
-    default boolean accept(Path file, Path dir, Set<Path> studentFiles, Report report,
-            Score score) { 
+    default boolean accept(Path file, Path dir, Report report,
+            Score score) throws IOException { 
         return false; 
     }
 

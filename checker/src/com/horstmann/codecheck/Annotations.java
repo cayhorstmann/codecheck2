@@ -11,13 +11,13 @@ import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-
 public class Annotations {
     private static Set<String> validAnnotations = new HashSet<>(Arrays.asList(
             "HIDE", "SHOW", "SOLUTION", "CALL", "SUB", "ID", "SAMPLE", "ARGS", "IN", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "REQUIRED", "FORBIDDEN", "NOSCORE", "FOR", "EDIT"));    
     
     private class Annotation {
         Path path;
+        Path directory; // TODO
         String key;
         String args;
         String before;
@@ -28,13 +28,25 @@ public class Annotations {
     private List<Annotation> annotations = new ArrayList<>();
     private Set<String> keys = new HashSet<>();
     private Set<Path> solutions = new TreeSet<>();
+    private Set<Path> hidden = new TreeSet<>();
     
     public Annotations(Language language) {
         this.language = language;
     }
 
-    public void read(Path dir, Set<Path> ps, boolean inSolution) {
-        for (Path p : ps) read(dir, p, inSolution);
+    public void read(Path useDir, Set<Path> useFiles, Path solutionDir, Set<Path> solutionFiles, Report r) {
+        for (Path p : useFiles) read(useDir, p, false);
+        for (Path p : solutionFiles) read(solutionDir, p, true);
+        for (Annotation a : annotations) {
+            if (a.key.equals("HIDE") && !solutions.contains(a.path)) hidden.add(a.path);
+        }
+        
+        // Annotations in solution files and hidden files are ok. 
+        for (Annotation a : annotations) {
+            if (!validAnnotations.contains(a.key) ||
+                    (!solutions.contains(a.path) && !hidden.contains(a.path)))                    
+                r.systemError("Unknown pseudocomment " + a.key + " in " + a.path);
+        }
     }
 
     private void read(Path dir, Path p, boolean inSolution) {
@@ -59,34 +71,19 @@ public class Annotations {
                 }
                 if (Arrays.asList("SOLUTION", "SHOW", "EDIT").contains(a.key)) 
                     solutions.add(p);
+                a.directory = dir;
                 a.path = p;
                 annotations.add(a);
             }
         }
     }
 
-    public void check(Report r, Set<Path> requiredFiles) {
-        // Annotations in solution files are ok. Student file annotations only make sense 
-        // when the student can't change the file. 
-
-        for (Annotation a : annotations) {
-            boolean ok = validAnnotations.contains(a.key)
-                    && (solutions.contains(a.path) || !requiredFiles.contains(Util.tail(a.path)));   
-            if (!ok)
-                r.systemError("Unknown pseudocomment " + a.key + " in " + a.path);
-        }
-    }
-    
-    public Set<Path> findSolutions() {        
+    public Set<Path> getSolutions() {        
         return Collections.unmodifiableSet(solutions);
     }
     
-    public Set<Path> findHidden() {
-        Set<Path> result = new HashSet<>();
-        for (Annotation a : annotations) {
-            if (a.key.equals("HIDE") && !solutions.contains(a.path)) result.add(Util.tail(a.path));
-        }
-        return result;
+    public Set<Path> getHidden() {
+        return Collections.unmodifiableSet(hidden);
     }
 
     public String findUniqueKey(String key) {
@@ -132,13 +129,11 @@ public class Annotations {
         for (Annotation a : annotations) {
             boolean forbidden = a.key.equals("FORBIDDEN");
             if (a.key.equals("REQUIRED") || forbidden) {
-                Path p = Util.tail(a.path);
                 StringBuilder contents = new StringBuilder();
-                for (String line : Util.readLines(dir.resolve(p)))
-                {
-                   // TODO: Removing comments like this is language specific
-                	contents.append(line.replaceAll("//.*$", ""));
-               		contents.append(" ");
+                for (String line : Util.readLines(dir.resolve(a.path))) {
+                    // TODO: Removing comments like this is language specific
+                    contents.append(line.replaceAll("//.*$", ""));
+       		    contents.append(" ");
                 }
                 boolean found = Pattern.compile(a.args).matcher(contents).find();
                 if (found == forbidden) { // found && forbidden || !found && required
@@ -149,7 +144,7 @@ public class Annotations {
                         message = nextLine.substring(delims[0].length(), nextLine.length() - delims[1].length()).trim();
                     else 
                         message = (forbidden ? "Found " : "Did not find ") + a.args;
-                    report.error(p + ": " + message);
+                    report.error(a.path + ": " + message);
                     return false;
                 }
             }
@@ -177,7 +172,7 @@ public class Annotations {
      */
     public boolean isSample(Path p) {
         for (Annotation a : annotations) {
-            if (a.key.equals("SAMPLE") && Util.tail(a.path).equals(p)) return true;
+            if (a.key.equals("SAMPLE") && a.path.equals(p)) return true;
         }
         return false;
     }
