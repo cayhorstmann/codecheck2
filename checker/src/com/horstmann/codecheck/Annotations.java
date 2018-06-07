@@ -13,11 +13,12 @@ import java.util.regex.Pattern;
 
 public class Annotations {
     private static Set<String> validAnnotations = new HashSet<>(Arrays.asList(
-            "HIDE", "SHOW", "SOLUTION", "CALL", "SUB", "ID", "SAMPLE", "ARGS", "IN", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "REQUIRED", "FORBIDDEN", "NOSCORE", "FOR", "EDIT"));    
+            "HIDE", "SHOW", "EDIT", "SOLUTION", "CALL", "SUB", "ID", "SAMPLE", "ARGS", 
+            "IN", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "MAXOUTPUTLEN",
+            "REQUIRED", "FORBIDDEN", "NOSCORE"));    
     
     private class Annotation {
         Path path;
-        Path directory; // TODO
         String key;
         String args;
         String before;
@@ -71,7 +72,6 @@ public class Annotations {
                 }
                 if (Arrays.asList("SOLUTION", "SHOW", "EDIT").contains(a.key)) 
                     solutions.add(p);
-                a.directory = dir;
                 a.path = p;
                 annotations.add(a);
             }

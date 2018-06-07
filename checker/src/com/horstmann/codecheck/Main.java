@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -44,11 +45,16 @@ public class Main {
     private Path studentDir;
     private Path solutionDir;
     private Set<Path> useFiles = new TreeSet<>(); // relative to studentDir
-        // the files that must be copied to the directory in which the program is run
-    private Set<Path> solutionFiles = new TreeSet<>(); // relative to solutionDir
-        
+        // the files (sources and inputs) that must be copied to the directory 
+        // in which the program is run (workDir/tempDir)
+    private Set<Path> solutionFiles = new TreeSet<>(); // relative to solutionDir/submissionDir
+        // the source files that make up the solution
     private Set<Path> mainSourceFiles = new TreeSet<>(); // relative to workDir/tempDir
-    private Set<Path> dependentSourceFiles = new TreeSet<>(); 
+        // the source files that contain main
+    private Set<Path> dependentSourceFiles = new TreeSet<>();
+        // all other source files
+
+    private boolean inputMode = false;
     
     private Score score = new Score();
     private Comparison comp = new Comparison();
@@ -171,13 +177,6 @@ public class Main {
     }
 
     private void testInputs(Map<String, String> inputs, Path mainmodule, Annotations annotations) throws Exception {
-        Path runInput = workDir.resolve("Input");
-        boolean inputMode = Files.exists(runInput);
-        
-        if (inputMode) { 
-            inputs.put("Input", Util.read(runInput));
-        }
-
         /*
          * If there are no inputs, we feed in one empty input to execute the program.
          */
@@ -356,7 +355,7 @@ public class Main {
                     for (String v : sub.values(i)) { args[i][j] = v; j++; }
                     outcomes[i] = comp.compare(actual[i], expected[i]).matches;
                     actual[i] = Util.truncate(actual[i], expected[i].length() + MUCH_LONGER);
-                    score.pass(outcomes[i], report);
+                    score.pass(outcomes[i], null); // Pass/fail shown in run table
                 }
             }
             report.runTable(null, argNames, args, actual, expected, outcomes);
@@ -437,44 +436,43 @@ public class Main {
             report.header("callMethod", "Calling method");
             call.prepare(tempDir);
             call.run(workDir, report, score);
-            Util.deleteDirectory(tempDir);
         } else
             score.setInvalid();
+        Util.deleteDirectory(tempDir);
     }
 
     public void run(String[] args) throws IOException, ReflectiveOperationException {
+        Annotations annotations = null;
+        String problemId = "";
         // TODO: Adjustable Timeouts
         long startTime = System.currentTimeMillis();
-        Path submissionDir = FileSystems.getDefault().getPath(args[0]);
-        Path problemDir = FileSystems.getDefault().getPath(args[1]);
-        Path homeDir = Util.getHomeDir();
-        workDir = new File(".").getAbsoluteFile().toPath().normalize();
-        System.setProperty("java.security.policy", homeDir.resolve("codecheck.policy").toString());
-        System.setProperty("com.horstmann.codecheck.home", homeDir.toString());
-        
-        if (System.getProperty("com.horstmann.codecheck.debug") == null) 
-            System.setSecurityManager(new SecurityManager()); 
-
-        String reportType = System.getProperty("com.horstmann.codecheck.report");
-        if (reportType != null) {
-            Class<?> reportClass = Class.forName("com.horstmann.codecheck." + reportType + "Report");
-            report = (Report) reportClass.getConstructor(String.class, Path.class).newInstance("Report", submissionDir);            
-        }
-        else if (System.getProperty("com.horstmann.codecheck.textreport") != null) // TODO: Legacy
-            report = new TextReport("Report", submissionDir);
-        else if (System.getProperty("com.horstmann.codecheck.jsonreport") != null)
-            report = new JSONReport("Report", submissionDir);
-        else if (System.getProperty("com.horstmann.codecheck.njsreport") != null)
-            report = new NJSReport("Report", submissionDir);
-        else if (System.getProperty("com.horstmann.codecheck.codioreport") != null)
-            report = new CodioReport("Report", submissionDir);
-        else
-            report = new HTMLReport("Report", submissionDir);
-
-        String problemId = null;
-        Annotations annotations = null;
-                
         try {
+            Path submissionDir = FileSystems.getDefault().getPath(args[0]);
+            Path problemDir = FileSystems.getDefault().getPath(args[1]);
+            Path homeDir = Util.getHomeDir();
+            workDir = Paths.get(".").toAbsolutePath().normalize();
+            System.setProperty("java.security.policy", homeDir.resolve("codecheck.policy").toString());
+            System.setProperty("com.horstmann.codecheck.home", homeDir.toString());
+            
+            if (System.getProperty("com.horstmann.codecheck.debug") == null) 
+                System.setSecurityManager(new SecurityManager()); 
+
+            String reportType = System.getProperty("com.horstmann.codecheck.report");
+            if (reportType != null) {
+                Class<?> reportClass = Class.forName("com.horstmann.codecheck." + reportType + "Report");
+                report = (Report) reportClass.getConstructor(String.class, Path.class).newInstance("Report", submissionDir);            
+            }
+            else if (System.getProperty("com.horstmann.codecheck.textreport") != null) // TODO: Legacy
+                report = new TextReport("Report", submissionDir);
+            else if (System.getProperty("com.horstmann.codecheck.jsonreport") != null)
+                report = new JSONReport("Report", submissionDir);
+            else if (System.getProperty("com.horstmann.codecheck.njsreport") != null)
+                report = new NJSReport("Report", submissionDir);
+            else if (System.getProperty("com.horstmann.codecheck.codioreport") != null)
+                report = new CodioReport("Report", submissionDir);
+            else
+                report = new HTMLReport("Report", submissionDir);
+                    
             // Determine language
             
             String languageName = System.getProperty("com.horstmann.codecheck.language");
@@ -501,8 +499,6 @@ public class Main {
             checkProperties = new Properties();
             annotations = new Annotations(language);
             
-            Path runInput = Paths.get("Input");
-
             if (Files.exists(studentDir)) { // old style with student and solution directories
                 Path checkPropertiesPath = studentDir.resolve("check.properties");
                 if (Files.exists(checkPropertiesPath)) {
@@ -524,17 +520,25 @@ public class Main {
                 useFiles = Util.filterNot(Util.getDescendantFiles(studentDir), 
                         ".*", "*~", "*.class", "a.out", 
                         "index.html", "index.ch", "problem.html", 
-                        "q.properties", "check.properties", "param.js");
+                        "*.in", "q.properties", "check.properties", "param.js");
                 solutionFiles = new TreeSet<Path>();
                 annotations.read(studentDir, useFiles, solutionDir, solutionFiles, report);
                 // Move any files annotated with SOLUTION, SHOW or EDIT to solution 
                 Set<Path> annotatedSolutions = annotations.getSolutions();
                 useFiles.removeAll(annotatedSolutions);
                 solutionFiles.addAll(annotatedSolutions);
-                
-                if (useFiles.contains(runInput)) { 
-                    solutionFiles.addAll(useFiles);
-                    useFiles.clear();
+
+                inputMode = Files.exists(submissionDir.resolve("Input"));
+                if (inputMode) {
+                    Iterator<Path> iter = useFiles.iterator();
+                    while (iter.hasNext()) {
+                        Path p = iter.next();
+                        if (language.isSource(studentDir.resolve(p)) && !annotations.getHidden().contains(p)) {
+                            solutionFiles.add(p);
+                            iter.remove();                            
+                        }
+                    }
+                    useFiles.remove(Paths.get("Input"));
                 }                 
             }
 
@@ -542,9 +546,6 @@ public class Main {
                 throw new CodeCheckException("No solution files found");
             }
             
-            System.out.println("useFiles=" + useFiles);
-            System.out.println("solutionFiles=" + solutionFiles);
-          
             report.comment("Submission", submissionDir.toString());
                // This is just a unique ID, can be used to check against cheating
             DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
@@ -597,37 +598,23 @@ public class Main {
                         
             copyUseFiles(workDir);
                 
-            Set<Path> printFiles = new TreeSet<>();
-            // the supplied files that the students are entitled to see
-            
-            Set<Path> requiredModules = new TreeSet<>();
-            for (Path p : solutionFiles)
-                if (language.isSource(solutionDir.resolve(p)))
-                    requiredModules.add(p);
-            
-            Set<Path> missingModules = new TreeSet<>();
-            for (Path file : requiredModules) {
+            Set<Path> missingFiles = new TreeSet<>();
+            for (Path file : solutionFiles) {
                 Path source = submissionDir.resolve(file);
                 if (Files.exists(source))
                     Files.copy(source, workDir.resolve(file), StandardCopyOption.REPLACE_EXISTING);
                 else {
                     report.error("Missing file " + file);
-                    missingModules.add(file);
+                    missingFiles.add(file); // TODO: How can this happen? Why not abort?
                 }
             }
-
-            for (Path p : useFiles) {
-                if (!requiredModules.contains(p)) 
-                    printFiles.add(p);
-            }
             
-            printFiles = Util.filterNot(printFiles, "test*.in", "test*.out", "Input", 
-                    "check.properties", "q.properties", "param.js",
+            // the supplied files that the students are entitled to see
+            Set<Path> printFiles = Util.filterNot(useFiles, "test*.in", "test*.out", "Input", 
                     "*.png", "*.PNG", "*.gif", "*.GIF", "*.jpg", "*.jpeg", "*.JPG", 
-                    ".*", "*.jar", "*.class", "a.out", "index.html", "index.ch", "problem.html");      
+                    "*.jar");      
 
             printFiles.removeAll(annotations.getHidden()); 
-            printFiles.remove(runInput);
             
             if (annotations.checkConditions(submissionDir, report)) {
                 if (getStringProperty("test.method") != null) // TODO: Legacy
@@ -645,7 +632,7 @@ public class Main {
                     String key = "test" + i + ".in";
                     String in = getStringProperty(key);
                     if (in == null)
-                        in = Util.read(workDir.resolve(key));
+                        in = Util.read(studentDir.resolve(key));
                     else
                         in += "\n";
                     if (in != null)
@@ -655,25 +642,27 @@ public class Main {
                 for (String s : annotations.findKeys("IN")) {
                     inputs.put("test" + ++inIndex, Util.unescapeJava(s));
                 }
+                if (inputMode) { 
+                    Path runInput = submissionDir.resolve("Input");
+                    inputs.put("Input", Util.read(runInput));
+                }
 
                 runUnitTests();
     
                 List<Path> testerModules = new ArrayList<>();
                 List<Path> runModules = new ArrayList<>();
-                System.out.println("mainSourceFiles=" + mainSourceFiles);
                 for (Path mainmodule : mainSourceFiles) {
                     if (language.isTester(mainmodule)
-                             && !annotations.isSample(mainmodule))
+                             && !annotations.isSample(mainmodule) && !inputMode)
                         testerModules.add(mainmodule);
                     else
                         runModules.add(mainmodule);
                 }
-                System.out.println("testerModules=" + testerModules);
                 
                 if (testerModules.size() > 0) {
                     report.header("tester", "Testers");
                     for (Path mainmodule : testerModules)
-                        if (missingModules.contains(mainmodule)) {
+                        if (missingFiles.contains(mainmodule)) {
                             report.error("Missing " + mainmodule);
                             score.setInvalid();
                         }
@@ -683,7 +672,7 @@ public class Main {
 
                 if (runModules.size() > 0) {
                     for (Path mainmodule : runModules)
-                        if (missingModules.contains(mainmodule)) {
+                        if (missingFiles.contains(mainmodule)) {
                             report.error("Missing " + mainmodule);
                             score.setInvalid();
                         }
@@ -693,27 +682,28 @@ public class Main {
                 // Process checkstyle.xml etc.
                 for (Path p : useFiles) {
                     if (language.accept(p, submissionDir, report, score)) {
-                        printFiles = Util.filterNot(printFiles, p.getFileName().toString());
-                        // TODO: Why can't we just remove p?
+                        printFiles.remove(p);
                     }
                 }
             }
             
-            report.header("studentFiles", "Submitted files");
-            
-            for (Path file : requiredModules) 
-                report.file(submissionDir, file);
-		
-            if (printFiles.size() > 0) {
-                report.header("providedFiles", "Provided files");
-                for (Path file : printFiles)
-                    report.file(studentDir, file);
+            if (!inputMode) { // Don't print student or provided files for run-only mode
+                report.header("studentFiles", "Submitted files");
+                
+                for (Path file : solutionFiles) 
+                    report.file(submissionDir, file);
+    		
+                if (printFiles.size() > 0) {
+                    report.header("providedFiles", "Provided files");
+                    for (Path file : printFiles)
+                        report.file(studentDir, file);
+                }
             }
         } catch (Throwable t) {
             report.systemError(t);
         } finally {
             if (annotations != null && !annotations.has("NOSCORE") 
-                    && !Files.exists(workDir.resolve("Input"))) 
+                    && !inputMode) 
                 report.add(score);
             long endTime = System.currentTimeMillis();
             report.comment("Elapsed", (endTime - startTime) + " ms");

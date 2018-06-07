@@ -45,32 +45,25 @@ function grade {
 
     if [ "${PROBLEMDIR/#\//}" == "$PROBLEMDIR" ] ; then PROBLEMDIR="$STARTDIR"/"$PROBLEMDIR" ; fi
 
-    if [ "${WORKDIR/#\//}" == "$WORKDIR" ] ; then WORKDIR="$STARTDIR"/"$WORKDIR" ; fi
-
     cd "$SUBMISSIONDIR"
     REPORT_JAR=report.signed.zip
     "$JAVA_HOME"/bin/jar cf $REPORT_JAR . 
 
+    WORKDIR=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
     cd "$WORKDIR"
 
-    if $cygwin; then
-      SDIR=`cygpath -w $SUBMISSIONDIR`
-      PDIR=`cygpath -w $PROBLEMDIR`
-      CPATH=`cygpath -wp $CLASSPATH`
-    else
-      SDIR="$SUBMISSIONDIR"
-      PDIR="$PROBLEMDIR"
-      CPATH="$CLASSPATH"
-    fi
-    
     JOPTS="-Duser.language=en -Duser.country=US -Dcom.horstmann.codecheck $JAVA_OPTS"
 
     if [ ! -z "$DEBUG" ] ; then
         echo WORKDIR=$WORKDIR
-        echo LC_ALL=en_US.UTF-8 $EXEC_CONTROL "$JAVA_HOME"/bin/java $JOPTS -classpath $CPATH com.horstmann.codecheck.Main "$SDIR" "$PDIR" $@
+        echo LC_ALL=en_US.UTF-8 $EXEC_CONTROL "$JAVA_HOME"/bin/java $JOPTS -classpath $CLASSPATH com.horstmann.codecheck.Main "$SUBMISSIONDIR" "$PROBLEMDIR" $@
     fi
 
-    LC_ALL=en_US.UTF-8 $EXEC_CONTROL "$JAVA_HOME"/bin/java $JOPTS -classpath $CPATH com.horstmann.codecheck.Main "$SDIR" "$PDIR" $@
+    LC_ALL=en_US.UTF-8 $EXEC_CONTROL "$JAVA_HOME"/bin/java $JOPTS -classpath $CLASSPATH com.horstmann.codecheck.Main "$SUBMISSIONDIR" "$PROBLEMDIR" $@
+
+    if [ ! -z "$DEBUG" ] ; then
+        rm -rf $WORKDIR
+    fi
 
     cd "$SUBMISSIONDIR"
 
@@ -97,24 +90,6 @@ function grade {
 
 STARTDIR=`pwd`
 BASEDIR=`dirname $0`
-
-# Detect OS
-
-cygwin=false;
-linux=false
-mac=false
-
-case "`uname`" in
-    CYGWIN*)
-        cygwin=true
-        ;;
-    Linux)
-        linux=true
-        ;;
-    Darwin)
-        mac=true
-        ;;
-esac
 
 # Pick up env settings and set JAVA_HOME
 
@@ -151,9 +126,7 @@ if [ "$1" == "-s" ] ; then
     fi
     JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck.report=$REPORT_TYPE"
     EXEC_CONTROL="cgexec -g cpu:codecheck --sticky nice -15"
-    # Program is executed in submission dir
     SUBMISSIONDIR=$1
-    WORKDIR=$1
     shift
     PROBLEMDIR=$1
     shift
@@ -168,16 +141,6 @@ fi
 EXEC_CONTROL=""
 
 if [ -z $1 ] ; then usage; fi
-
-if [ -z "$BROWSER" ] ; then
-  if $cygwin; then
-    BROWSER=cygstart
-  elif $linux; then
-    BROWSER=xdg-open
-  else
-    BROWSER=open
-  fi
-fi
 
 REPORT=report.html
 
@@ -219,6 +182,17 @@ do
 done
 shift $((OPTIND-1))
 
+if [ -z "$BROWSER" ] ; then
+    case "`uname`" in
+      Linux)
+        BROWSER=xdg-open
+        ;;
+      Darwin)
+        BROWSER=open
+        ;;
+    esac
+fi
+
 JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck.report=$REPORT_TYPE"
 
 if [[ -z $2 ]] ; then
@@ -250,8 +224,6 @@ then
     usage
 fi
 
-WORKDIR=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
-
 grade $@
 
 $BROWSER "$SUBMISSIONDIR/$REPORT" 2> /dev/null 
@@ -273,8 +245,6 @@ if [ -e $PROBLEMDIR/student ] ; then
     done
     cd ../..
 fi  
-
-WORKDIR=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
 
 grade $@
 

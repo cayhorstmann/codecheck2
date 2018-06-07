@@ -53,7 +53,6 @@ class com/horstmann/codecheck/JavaLanguage uses deprecated method java/lang/Thre
 (C) Can I use Java 9 from http://zulu.org/download/ or http://download.java.net/java/GA/jdk9/9/binaries/openjdk-9_linux-x64_bin.tar.gz in play-codecheck? (It's now 9.0.1)
 (C) CodeCheck http://code.makery.ch/blog/javafx-2-snapshot-as-png-image/
 (C) CodeCheck: Allow students to save their work and give them a URL
-(C) Codecheck eliminate levels
 (C) In play project, activate some of the security filters
 (C) https://www.slideshare.net/EricSmalling1/best-practices-for-developing-deploying-java-applications-with-docker, https://blog.sebastian-daschner.com/
 (C) sudo /usr/sbin/cgconfigparser -l /etc/cgconfig.conf before running CodeCheck locally
