@@ -30,4 +30,16 @@
   /usr/bin/dirname ix,
   /usr/bin/basename ix,
   /usr/local/lib/python3*/dist-packages/** rix,
+
+  /opt/codecheck/interleaveio mrix,
+  /bin/rm mrix,
+  /bin/cat mrix,
+  /bin/sleep mrix,
+  /usr/bin/empty mrix,
+  /bin/dash mrix,
+  /dev/ptmx rw,
+  /bin/sed mrix,
+  /proc/cgroups mrix,
+  /sys/fs/cgroup/cpu,cpuacct/codecheck/** rw,
+  /usr/bin/cg* mrix,
 }

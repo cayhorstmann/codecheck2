@@ -51,7 +51,7 @@ case _"$LANG" in
         ulimit -d 10000 -f 1000 -n 100 -v 100000 -t ${TIMEOUT}
         PROG=`dirname $1`/prog # Ignore module base name--we called it prog in comprog
         shift
-        timeout ${TIMEOUT}s cgexec -g cpu:$CGROUP $PROG $@
+        timeout ${TIMEOUT}s cgexec -g cpu:$CGROUP /opt/codecheck/interleaveio $PROG $@
         ;;
 
     _Scala)

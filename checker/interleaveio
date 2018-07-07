@@ -1,0 +1,11 @@
+#!/bin/bash
+rm -f empty.log in.fifo out.fifo empty.pid
+empty -f -i in.fifo -o out.fifo -p empty.pid -L empty.log $@
+while read line
+do
+    sleep 0.2
+    echo "$line" > in.fifo
+done
+sleep 0.75
+cat empty.log | sed -e 's/<<<\|>>>//'g
+
