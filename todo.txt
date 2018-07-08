@@ -1,5 +1,11 @@
 =CodeCheck
 
+Chaz Chang
+
+https://console.cloud.google.com/compute/instances?project=codecheck-205306
+gcloud compute --project "codecheck-205306" ssh --zone "us-west1-b" "instance-1"
+
+
 sudo apt install empty-expect
 
 rm empty.log

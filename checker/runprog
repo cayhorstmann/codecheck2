@@ -32,7 +32,7 @@ shift
 
 case _"$LANG" in
     _Python)        
-        ulimit -d 10000 -f 1000 -n 100 -v 100000 -t ${TIMEOUT}
+        ulimit -d 100000 -f 1000 -n 100 -v 100000 -t ${TIMEOUT}
         if [[ $1 =~ .*Test[0-9]*[.]py ]] ; then
             timeout ${TIMEOUT}s nice python3 -m unittest $@
         else
