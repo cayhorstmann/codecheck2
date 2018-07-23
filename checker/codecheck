@@ -55,13 +55,14 @@ function grade {
     JOPTS="-Duser.language=en -Duser.country=US -Dcom.horstmann.codecheck $JAVA_OPTS"
 
     if [ ! -z "$DEBUG" ] ; then
+        JOPTS="$JOPTS -Dcom.horstmann.codecheck.debug" 
         echo WORKDIR=$WORKDIR
         echo LC_ALL=en_US.UTF-8 $EXEC_CONTROL "$JAVA_HOME"/bin/java $JOPTS -classpath $CLASSPATH com.horstmann.codecheck.Main "$SUBMISSIONDIR" "$PROBLEMDIR" $@
     fi
 
     LC_ALL=en_US.UTF-8 $EXEC_CONTROL "$JAVA_HOME"/bin/java $JOPTS -classpath $CLASSPATH com.horstmann.codecheck.Main "$SUBMISSIONDIR" "$PROBLEMDIR" $@
 
-    if [ ! -z "$DEBUG" ] ; then
+    if [ -z "$DEBUG" ] ; then
         rm -rf $WORKDIR
     fi
 

@@ -36,7 +36,8 @@ public class Main {
     public static final int DEFAULT_MAX_OUTPUT_LEN = 100_000;
     public static final String DEFAULT_TOKEN = "line";
     public static final int MUCH_LONGER = 1000; // if longer than the expected by this amount, truncate 
-        
+    public static boolean DEBUG = System.getProperty("com.horstmann.codecheck.debug") != null;
+    
     private int timeoutMillis;
     private int maxOutputLen;
     private Path workDir;
@@ -454,8 +455,8 @@ public class Main {
             System.setProperty("java.security.policy", homeDir.resolve("codecheck.policy").toString());
             System.setProperty("com.horstmann.codecheck.home", homeDir.toString());
             
-            if (System.getProperty("com.horstmann.codecheck.debug") == null) 
-                System.setSecurityManager(new SecurityManager()); 
+            // if (!DEBUG) // TODO: Why not in debug mode? 
+                System.setSecurityManager(new SecurityManager());
 
             String reportType = System.getProperty("com.horstmann.codecheck.report");
             if (reportType != null) {

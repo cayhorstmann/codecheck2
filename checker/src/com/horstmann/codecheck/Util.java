@@ -110,7 +110,7 @@ public class Util {
     }
 
     public static void deleteDirectory(Path start) throws IOException {
-        if (start == null)
+        if (start == null || Main.DEBUG) 
             return;
         Files.walkFileTree(start, new SimpleFileVisitor<Path>() {
             @Override
@@ -140,11 +140,15 @@ public class Util {
             Path in = null;
             try {            
                 ProcessBuilder builder = new ProcessBuilder(cmd);
-                if (input != null && input.length() > 0) {
-                    in = Util.createTempFile();
-                    Files.write(in, input.getBytes(StandardCharsets.UTF_8));
-                    builder.redirectInput(in.toFile());
-                }
+                if (input == null) input = "";
+                in = Util.createTempFile();
+                Files.write(in, input.getBytes(StandardCharsets.UTF_8));
+                /*
+                 * TODO: It's weird that we write the input to a file and then, in runprog/
+                 * interleaveio, read it from stdin a line at a time. Maybe we should just
+                 * make a special case for runprog and give it the file?
+                 */
+                builder.redirectInput(in.toFile());
                 builder.redirectErrorStream(true);
                 builder.redirectOutput(out.toFile());
                 Process process = builder.start();

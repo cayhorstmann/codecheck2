@@ -19,6 +19,8 @@ public class CppLanguage implements Language {
         return "cpp";
     }
     
+    @Override public boolean echoesStdin() { return true; }
+    
     @Override
     public boolean isSource(Path p) {
         String name = p.toString();
