@@ -22,7 +22,6 @@ import play.mvc.Result;
 public class Files extends Controller {
 	private static String start = "<!DOCTYPE html>\n<html><head>\n" 
 			+ "<meta http-equiv='content-type' content='text/html; charset=UTF-8' />\n" 
-			+ "<script src='/assets/jquery.js'></script>\n" 
 			+ "<script src='/assets/download.js'></script>\n" 
 			+ "<script src='/assets/ace/ace.js'></script>\n" 
 			+ "<script src='/assets/codecheck.js'></script>\n" 

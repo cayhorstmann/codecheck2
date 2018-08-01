@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.Iterator;
+import static java.util.Map.Entry;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -22,6 +24,7 @@ import play.mvc.Controller;
 import play.mvc.Http;
 import play.mvc.Result;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -79,6 +82,15 @@ public class Check extends Controller {
 		Map<String, String[]> params;
 		if ("application/x-www-form-urlencoded".equals(request().contentType().orElse(""))) 
 			params = request().body().asFormUrlEncoded();
+		else if ("application/json".equals(request().contentType().orElse(""))) {
+			params = new HashMap<>();
+			JsonNode json = request().body().asJson();
+			Iterator<Entry<String, JsonNode>> iter = json.fields();
+			while (iter.hasNext()) {
+				Entry<String, JsonNode> entry = iter.next();
+				params.put(entry.getKey(), new String[] { entry.getValue().asText() });			
+			};
+		}
 		else 
 			params = request().queryString();
 		
