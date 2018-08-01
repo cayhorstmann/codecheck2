@@ -4,9 +4,10 @@ TIMEOUT=$1
 CGROUP=codecheck
 shift
 empty -f -i in.fifo -o out.fifo -p empty.pid -L empty.log timeout ${TIMEOUT}s cgexec -g cpu:$CGROUP $@
+sleep 0.1
 while read line
 do
-  if [[ -e in.fifo ]] ; then (echo "$line" | empty -s -o in.fifo) ; fi
+  if [[ -e in.fifo ]] ; then (echo "$line" | empty -s -o in.fifo 2>/dev/null) ; fi
 done
 while [[ -e empty.pid ]] ; do sleep 0.1 ; done
 cat empty.log | sed -e 's/<<<\|>>>//'g

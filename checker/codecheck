@@ -21,7 +21,7 @@
 # codecheck problemdir
 
 # To check a submission, run
-# codecheck submissiondir problemdir level
+# codecheck submissiondir problemdir
 
 # Options:
 # -s server execution (modifies submission dir, only has flags -j -n)
@@ -34,9 +34,9 @@
 # -u Also check student directory (to verify that it will fail)
 
 function usage {
-    echo "Usage: `basename $0` [-dpqut] [level] problemdir"
-    echo "       `basename $0` [-dpqt] level submissiondir problemdir"
-    echo "       `basename $0` -s [-j] [-n] level submissiondir problemdir"
+    echo "Usage: `basename $0` [-dpqut] problemdir"
+    echo "       `basename $0` [-dpqt] submissiondir problemdir"
+    echo "       `basename $0` -s [-j] [-n] submissiondir problemdir"
     exit 1
 }
 

@@ -272,7 +272,7 @@ public class Main {
         
             // Report on results
 
-            if (expectedOuterr != null && expectedOuterr.length() > 0) {
+            if (expectedOuterr != null && expectedOuterr.trim().length() > 0) {
                 boolean outcome = comp.execute(outerr, expectedOuterr, report, null);
                 score.pass(outcome, report);
             }        
@@ -455,7 +455,7 @@ public class Main {
             System.setProperty("java.security.policy", homeDir.resolve("codecheck.policy").toString());
             System.setProperty("com.horstmann.codecheck.home", homeDir.toString());
             
-            // if (!DEBUG) // TODO: Why not in debug mode? 
+            if (!DEBUG) // TODO: Why not in debug mode? 
                 System.setSecurityManager(new SecurityManager());
 
             String reportType = System.getProperty("com.horstmann.codecheck.report");
@@ -519,7 +519,7 @@ public class Main {
                 studentDir = problemDir;
                 solutionDir = problemDir;
                 useFiles = Util.filterNot(Util.getDescendantFiles(studentDir), 
-                        ".*", "*~", "*.class", "a.out", 
+                        ".*", "*~", "*.class", "a.out", "*.pyc",  
                         "index.html", "index.ch", "problem.html", 
                         "*.in", "q.properties", "check.properties", "param.js");
                 solutionFiles = new TreeSet<Path>();

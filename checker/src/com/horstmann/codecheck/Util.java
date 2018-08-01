@@ -277,13 +277,19 @@ public class Util {
         return result;
     }
 
-    // TODO: Should be in Util
-    public static Set<Path> filterNot(Set<Path> paths, String... glob) {
+    /**
+     * Yields all paths not matching a set of name patterns 
+     * @param paths a set of paths
+     * @param namePatterns A set of name patterns in glob syntax. CAUTION: Directory
+     * patterns such as __pycache__/** are NOT supported. 
+     * @return the paths whose file names don't match any of the given name patterns
+     */
+    public static Set<Path> filterNot(Set<Path> paths, String... namePatterns) {
         Set<Path> result = new TreeSet<>();
-        PathMatcher[] matcher = new PathMatcher[glob.length];
+        PathMatcher[] matcher = new PathMatcher[namePatterns.length];
         for (int i = 0; i < matcher.length; i++)
             matcher[i] = FileSystems.getDefault().getPathMatcher(
-                             "glob:" + glob[i].replace("/", FileSystems.getDefault().getSeparator()));
+                             "glob:" + namePatterns[i]);
         for (Path p : paths) {
             boolean matchesOne = false;
             for (int i = 0; i < matcher.length && !matchesOne; i++)

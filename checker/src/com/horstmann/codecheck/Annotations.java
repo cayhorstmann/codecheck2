@@ -91,7 +91,17 @@ public class Annotations {
         for (Annotation a : annotations) {
             if (a.key.equals(key)) {
                 if (match == null) match = a;
-                else if (!match.args.equals(a.args)) throw new CodeCheckException("Duplicate " + key + " in " + a.path + " and " + match.path);
+                else if (!match.args.equals(a.args)) {
+                    // If one of them is in a hidden file and the other is not,
+                    // we'll allow the non-hidden one to override. This is useful 
+                    // with ezgraphics.py that has ##OUT out.png which may occasionally
+                    // be overridden
+                    boolean aHidden = hidden.contains(a.path);
+                    boolean matchHidden = hidden.contains(match.path);
+                    if (aHidden == matchHidden)
+                        throw new CodeCheckException("Duplicate " + key + " in " + a.path + " and " + match.path);
+                    if (matchHidden) match = a;
+                }
             }
         }
         return match == null ? null : match.args;
