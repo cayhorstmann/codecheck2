@@ -198,6 +198,9 @@ public class Problem {
       return Character.isWhitespace(line.charAt(slen + tlen));
    }
 
+   /** Yields a list of sections, alternating with editable and noneditable sections.
+    * Starts with an editable section or null if the initial section should be noneditable. 
+    */
    public static List<String> processHideShow(String extension, String contents){
       ArrayList <String> result = new ArrayList<String> ();
       if (contents == null){
@@ -220,7 +223,7 @@ public class Problem {
              hasShow = true;
     	  }           
       }
-	  if (lines.length > 0 && isPseudocomment(lines[0], "HIDE", start, end) && !hasShow)
+	  if (lines.length > 0 && isPseudocomment(lines[0], "HIDE", start, end) && !hasShow && !hasEdit)
 		  return result; // Empty list means file is hidden
 		
       if (hasEdit) {
@@ -243,6 +246,7 @@ public class Problem {
                   if (section.length() == 0) // Don't add a blank readonly section at the top
                   {
                      if (result.size() > 0) result.add("\n");
+                     else startWithEdit = true;
                   }
                   else						 
                      result.add(section.toString());
