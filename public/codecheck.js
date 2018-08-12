@@ -3,11 +3,11 @@ document.addEventListener('DOMContentLoaded', function () {
   // For embedding CodeCheck in an iframe
 
   function getScore() {
-    var repo = document.querySelector('input[name=repo]').getAttribute('value');
-    var problem = document.querySelector('input[name=problem]').getAttribute('value');
-    var scoreText = document.getElementById('codecheck-submit-response').score;
-    var correct = 0;
-    var maxscore = 1; // default maxscore. not 0 to avoid divide by zero
+    let repo = document.querySelector('input[name=repo]').getAttribute('value');
+    let problem = document.querySelector('input[name=problem]').getAttribute('value');
+    let scoreText = document.getElementById('codecheck-submit-response').score;
+    let correct = 0;
+    let maxscore = 1; // default maxscore. not 0 to avoid divide by zero
     if (scoreText !== undefined && scoreText !== '0' && scoreText.length > 0) {
       correct = scoreText.split('/')[0];
       maxscore = scoreText.split('/')[1];
@@ -43,8 +43,8 @@ document.addEventListener('DOMContentLoaded', function () {
       const problems = document.querySelectorAll('body > form');
 
       let studentWork = [];
-      var editorDivs = document.getElementsByClassName('editor');
-      for (var i = 0; i < editorDivs.length; i++) {
+      let editorDivs = document.getElementsByClassName('editor');
+      for (let i = 0; i < editorDivs.length; i++) {
         let editor = ace.edit(editorDivs[i]);
         if (!editorDivs[i].classList.contains('readonly'))
           studentWork.push({problemName: editorDivs[i].getAttribute('id'), code: editor.getValue()});
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function () {
       event.source.postMessage(response, event.origin);        
     }
     else if (event.data.query === undefined) { // Engage
-      var response = getScore();
+      let response = getScore();
       response.request = event.data;
       event.source.postMessage(response, event.origin);        
     }
@@ -65,13 +65,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // Set up Ace editors
 	
-  var files = document.getElementsByClassName('file');
-  for (var i = 0; i < files.length; i++) {
+  let files = document.getElementsByClassName('file');
+  for (let i = 0; i < files.length; i++) {
     let editorDivs = files[i].getElementsByClassName('editor');
     let editors = [];
-    for (var k = 0; k < editorDivs.length; k++)
+    for (let k = 0; k < editorDivs.length; k++)
       editors.push(ace.edit(editorDivs[k]));
-    for (var k = 0; k < editors.length; k++) {
+    for (let k = 0; k < editors.length; k++) {
       if (editorDivs[k].getAttribute('id').indexOf('.java-')!=-1) {
 	editors[k].getSession().setMode('ace/mode/java');
       } else if(editorDivs[k].getAttribute('id').indexOf('.cpp-')!=-1) {
@@ -106,19 +106,19 @@ document.addEventListener('DOMContentLoaded', function () {
       }
     }
     
-    var update = function() {
-      var totalLines = 0;
-      for (var k = 0; k < editors.length; k++) {
-        var editorSession = editors[k].getSession()
+    let update = function() {
+      let totalLines = 0;
+      for (let k = 0; k < editors.length; k++) {
+        let editorSession = editors[k].getSession()
         editorSession.clearAnnotations()
 	editorSession.setOption('firstLineNumber', totalLines + 1);
-	var lines = editors[k].getSession().getDocument().getLength();
+	let lines = editors[k].getSession().getDocument().getLength();
 	editorDivs[k].style.height = editors[k].renderer.lineHeight * lines + "px";
 	editors[k].resize();
 	totalLines += lines;
       }
     };
-    for (var k = 0; k < editors.length; k++) {
+    for (let k = 0; k < editors.length; k++) {
       editors[k].on('change', update);
     }
     update();
@@ -135,19 +135,19 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function highlightLine(file, line, message) {
-    var totalLines = 0;
+    let totalLines = 0;
     let fileDiv = document.getElementById(file);
     if (fileDiv == null) return // This happens if there is an error in a tester
     let editorDivs = fileDiv.getElementsByClassName('editor');
     let editors = [];
-    for (var k = 0; k < editorDivs.length; k++)
+    for (let k = 0; k < editorDivs.length; k++)
       editors.push(ace.edit(editorDivs[k]));
-    for (var k = 0; k < editors.length; k++) {
+    for (let k = 0; k < editors.length; k++) {
       let editorSession = editors[k].getSession();
-      var length = editorSession.getDocument().getLength() 
+      let length = editorSession.getDocument().getLength() 
       totalLines += length;
       if (totalLines >= line) {
-        var annotations = editorSession.getAnnotations()
+        let annotations = editorSession.getAnnotations()
         annotations.push({
           row: line - (totalLines - length) - 1, // ace editor lines are 0-indexed
           text: message,
@@ -161,13 +161,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function clearErrorAnnotations () {
     let editorDivs = document.getElementsByClassName('editor');
-    for (var k = 0; k < editorDivs.length; k++)
+    for (let k = 0; k < editorDivs.length; k++)
       ace.edit(editorDivs[k]).getSession().clearAnnotations()
   };
 
   function successfulSubmission(data) {
-    var submitButton = document.getElementById('submit');        
-    var codecheckSubmitResponse = document.getElementById('codecheck-submit-response')
+    let submitButton = document.getElementById('submit');        
+    let codecheckSubmitResponse = document.getElementById('codecheck-submit-response')
     submitButton.removeAttribute('disabled');
     codecheckSubmitResponse.innerHTML = data['report']
     if (!inIframe()) { // No download button in iframe (Engage)
@@ -184,19 +184,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     clearErrorAnnotations();                
     if ('errors' in data) {
-      for (var i = 0; i < data['errors'].length; i++) {
-        var error = data['errors'][i]; 
+      for (let i = 0; i < data['errors'].length; i++) {
+        let error = data['errors'][i]; 
         highlightLine(error['file'], error['line'], error['message']); }
     }
   }
 
-  var form = document.getElementsByTagName('form')[0]
+  let form = document.getElementsByTagName('form')[0]
   form.addEventListener('submit', function(e) {
     e.preventDefault();
-    var submitButton = document.getElementById('submit');        
+    let submitButton = document.getElementById('submit');        
     submitButton.setAttribute('disabled', 'disabled');
     clearErrorAnnotations();
-    var codecheckSubmitResponse = document.getElementById('codecheck-submit-response')
+    let codecheckSubmitResponse = document.getElementById('codecheck-submit-response')
     codecheckSubmitResponse.innerHTML = '<p>Submitting...</p>'
     let params = {}
     let inputs = form.getElementsByTagName('input');
@@ -218,7 +218,7 @@ document.addEventListener('DOMContentLoaded', function () {
       params[filename] = allContent
     }
     
-    var xhr = new XMLHttpRequest()
+    let xhr = new XMLHttpRequest()
     xhr.timeout = 300000 // 5 minutes
     xhr.open('POST', '/checkNJS');    
     xhr.setRequestHeader('Content-Type', 'application/json');

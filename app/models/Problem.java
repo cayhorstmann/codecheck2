@@ -7,6 +7,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -27,6 +29,29 @@ public class Problem {
 	
    public ProblemData getData() {
       return data;
+   } 
+   
+   private static Pattern argsPattern = Pattern.compile("\\s*[\\PL&&[^\\s]]+(ARGS)($|\\s.*|[\\PL].*)");
+   
+   private List<String> potentialEditableInputs(Set<Path> files, String input) {
+	   List<String> candidates = new ArrayList<>();
+	   
+	   for (Path p : files)
+		   if (isSourceExtension(Util.extension(p))) {
+			   try {
+				   for (String line : Files.readAllLines(p)) {
+					   if (argsPattern.matcher(line).matches())
+						   candidates.addAll(Arrays.asList(line.split("\\s+")));
+				   }
+			   } catch (IOException ex) {
+			   }
+		   }
+	   candidates.addAll(Arrays.asList(input.split("\\s+")));
+	   Iterator<String> iter = candidates.iterator();
+	   while (iter.hasNext())
+		   if (!iter.next().endsWith(".txt")) iter.remove();
+	   Collections.sort(candidates);
+	   return candidates;
    }
 
    public Problem(Path problemPath) throws IOException {		
@@ -63,7 +88,13 @@ public class Problem {
             providedFiles = Util.filterNot(providedFiles, "param.js");
             Path runInput = Paths.get("Input");
             if (providedFiles.contains(runInput)) {
-               data.requiredFiles.put("Input", Arrays.asList(Util.read(problemPath, runInput)));
+           	   String input = Util.read(problemPath, runInput);
+               data.requiredFiles.put("Input", Arrays.asList(input));
+               for (String f : potentialEditableInputs(providedFiles, input)) {
+            	   Path p = problemPath.resolve(f);
+            	   if (Files.exists(p))
+            		   data.requiredFiles.put(f, Arrays.asList(Util.read(p)));
+               }
                
                for (Path p : providedFiles) {
                   if (isSourceExtension(Util.extension(p)))
