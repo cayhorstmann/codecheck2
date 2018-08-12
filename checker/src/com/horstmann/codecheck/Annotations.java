@@ -35,7 +35,7 @@ public class Annotations {
         this.language = language;
     }
 
-    public void read(Path useDir, Set<Path> useFiles, Path solutionDir, Set<Path> solutionFiles, Report r) {
+    public void read(Path useDir, Set<Path> useFiles, Path solutionDir, Set<Path> solutionFiles, boolean inputMode, Report r) {
         for (Path p : useFiles) read(useDir, p, false);
         for (Path p : solutionFiles) read(solutionDir, p, true);
         for (Annotation a : annotations) {
@@ -44,9 +44,11 @@ public class Annotations {
         
         // Annotations in solution files and hidden files are ok. 
         for (Annotation a : annotations) {
-            if (!validAnnotations.contains(a.key) ||
-                    (!solutions.contains(a.path) && !hidden.contains(a.path)))                    
+            if (!validAnnotations.contains(a.key))
                 r.systemError("Unknown pseudocomment " + a.key + " in " + a.path);
+            else if (!(inputMode || solutions.contains(a.path) || hidden.contains(a.path)))
+                r.systemError("Student file has pseudocomment " + a.key + " in " + a.path);
+                
         }
     }
 

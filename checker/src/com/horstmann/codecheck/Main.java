@@ -43,6 +43,7 @@ public class Main {
     private Path workDir;
     private Properties checkProperties;
     private Report report;
+    private Path submissionDir;
     private Path studentDir;
     private Path solutionDir;
     private Set<Path> useFiles = new TreeSet<>(); // relative to studentDir
@@ -92,6 +93,13 @@ public class Main {
             Path source = studentDir.resolve(p);
             Path target = targetDir.resolve(p);
             Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+        }
+        for (Path p : useFiles) { // This happens in Input mode with submitted inputs
+            Path source = submissionDir.resolve(p);
+            if (Files.exists(source)) {
+                Path target = targetDir.resolve(p);
+                Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+            }
         }
     }
 
@@ -226,10 +234,9 @@ public class Main {
         
         // Before the run, clear any output files in case they existed, 
         // and recopy any supplied files (in case an input has been mutated by a previous run) 
-        
         for (String f : outFiles) Files.deleteIfExists(workDir.resolve(f));           
         copyUseFiles(workDir); 
-
+    
         report.args(runargs);
 
         if (!language.echoesStdin() && !test.equals("Input")) report.input(input);
@@ -263,11 +270,10 @@ public class Main {
                     report.file(f, contents.remove(0));
             }
             // No score
-        } else { // Run solution in the same way 
-        
+        } else { // Run solution in the same way         
             for (String f : outFiles) Files.deleteIfExists(workDir.resolve(f));           
             copyUseFiles(workDir); // Might have been deleted or mutated
-        
+            
             String expectedOuterr = language.run(mainmodule, dependentSourceFiles, solutionDir, runargs, input, timeout, maxOutput);
         
             // Report on results
@@ -296,7 +302,7 @@ public class Main {
                     score.pass(outcome, report);
                 }
             }
-        }       
+        }
     }
 
     private void getMainAndDependentModules() {
@@ -448,7 +454,7 @@ public class Main {
         // TODO: Adjustable Timeouts
         long startTime = System.currentTimeMillis();
         try {
-            Path submissionDir = FileSystems.getDefault().getPath(args[0]);
+            submissionDir = FileSystems.getDefault().getPath(args[0]);
             Path problemDir = FileSystems.getDefault().getPath(args[1]);
             Path homeDir = Util.getHomeDir();
             workDir = Paths.get(".").toAbsolutePath().normalize();
@@ -513,7 +519,7 @@ public class Main {
                 solutionDir = problemDir.resolve("solution");
                 solutionFiles = Util.filterNot(Util.getDescendantFiles(solutionDir), 
                         ".*", "*~");
-                annotations.read(studentDir, useFiles, solutionDir, solutionFiles, report);
+                annotations.read(studentDir, useFiles, solutionDir, solutionFiles, /* inputMode = */ false, report);
                 useFiles.removeAll(solutionFiles);
             } else {
                 studentDir = problemDir;
@@ -523,13 +529,13 @@ public class Main {
                         "index.html", "index.ch", "problem.html", 
                         "*.in", "q.properties", "check.properties", "param.js");
                 solutionFiles = new TreeSet<Path>();
-                annotations.read(studentDir, useFiles, solutionDir, solutionFiles, report);
+                inputMode = Files.exists(submissionDir.resolve("Input"));
+                annotations.read(studentDir, useFiles, solutionDir, solutionFiles, inputMode, report);
                 // Move any files annotated with SOLUTION, SHOW or EDIT to solution 
                 Set<Path> annotatedSolutions = annotations.getSolutions();
                 useFiles.removeAll(annotatedSolutions);
                 solutionFiles.addAll(annotatedSolutions);
 
-                inputMode = Files.exists(submissionDir.resolve("Input"));
                 if (inputMode) {
                     Iterator<Path> iter = useFiles.iterator();
                     while (iter.hasNext()) {
