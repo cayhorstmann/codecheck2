@@ -66,6 +66,17 @@ class com/horstmann/codecheck/JavaLanguage uses deprecated method java/lang/Thre
 
 ---
 
+Hi Rance,
+
+unfortunately, CALL doesn't work with the TOLERANCE, IGNORECASE, and IGNORESPACE pseudocomments. This would be a nice change going forward, but I don't know how to implement it in Python. I would need to write a Python function 
+
+deepEqual(x, y, tolerance, ignorecase, ignorespace) 
+
+that checks whether x and y are equal except if they are doubles, use the tolerance, if they are strings, use ignorecase/ignorespace (I know how to do this part), and if they are sequences such as lists, sets, or tuples, do this recursively for the elements. I guess I should see if something is iterable (https://stackoverflow.com/questions/1952464/in-python-how-do-i-determine-if-an-object-is-iterable). This seems like a good thing to do in the long run, and I am adding it to the wish list.---
+
+
+---
+
 Kathleen: I do not use levels. I use your //SOLUTION feature and run two separate files.
 
 I do not use rubrics.

@@ -25,6 +25,7 @@ if [ -e `dirname $0`/codecheck.env ] ; then
     set +o allexport
 fi    
 
+DIR=`dirname $0`
 TIMEOUT=$1
 shift
 LANG=$1
@@ -36,7 +37,8 @@ case _"$LANG" in
     if [[ $1 =~ .*Test[0-9]*[.]py ]] ; then
         timeout ${TIMEOUT}s nice python3 -m unittest $@
     else
-      /opt/codecheck/interleaveio ${TIMEOUT} python3 $@
+      TIMEOUT=$((TIMEOUT+1))
+      timeout ${TIMEOUT}s nice $DIR/interleaveio python3 $@
     fi
     ;;
 
@@ -51,7 +53,8 @@ case _"$LANG" in
     ulimit -d 10000 -f 1000 -n 100 -v 100000 -t ${TIMEOUT}
     PROG=`dirname $1`/prog # Ignore module base name--we called it prog in comprog
     shift
-    /opt/codecheck/interleaveio ${TIMEOUT} $PROG $@
+    TIMEOUT=$((TIMEOUT+1))
+    timeout ${TIMEOUT}s nice $DIR/interleaveio $PROG $@
     ;;
 
   _Scala)

@@ -80,9 +80,9 @@ public class MatlabLanguage implements Language {
         lines.add("main()");
         Path p = pathOf(moduleName + "CodeCheck");
         Files.write(targetDir.resolve(p), lines, StandardCharsets.UTF_8);        
-        List<Path> testModules = new ArrayList<>();
-        testModules.add(p);
-        return testModules;        
+        List<Path> testFiles = new ArrayList<>();
+        testFiles.add(p);
+        return testFiles;        
     }
 
     @Override

@@ -68,8 +68,7 @@ public class RacketLanguage implements Language {
        String moduleName = moduleOf(file);
         // Copy source/module.rkt to target/module-solution.rkt
         Files.copy(sourceDir.resolve(file), targetDir.resolve(moduleName+ "-solution.rkt"));
-        String testerModule = moduleName + "CodeCheck.rkt";
-        Path testerFile = targetDir.resolve(testerModule);
+        Path testerFile = targetDir.resolve(moduleName + "CodeCheck.rkt");
         try (PrintWriter out = new PrintWriter(testerFile.toFile(), "UTF-8")) {
            out.println("#lang racket");
            out.println("(require (prefix-in solution:: \"" + moduleName + "-solution.rkt\"))");
@@ -93,9 +92,9 @@ public class RacketLanguage implements Language {
            out.println(")))");
         }
         
-        List<Path> testModules = new ArrayList<>();
-        testModules.add(testerFile);
-        return testModules;
+        List<Path> testerFiles = new ArrayList<>();
+        testerFiles.add(testerFile);
+        return testerFiles;
     }
     
     private static String patternString = ".*\\S\\s+(?<name>\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*(?<rhs>[^;]+);.*";
@@ -112,17 +111,17 @@ public class RacketLanguage implements Language {
     }
 
     @Override
-    public boolean isUnitTest(Path modulename) {
-        return modulename != null && modulename.toString().matches(".*Test[0-9]*.rkt");
+    public boolean isUnitTest(Path fileName) {
+        return fileName != null && fileName.toString().matches(".*Test[0-9]*.rkt");
     }
 
    private static final Pattern successPattern = Pattern.compile("All ([0-9]+) tests passed");
    private static final Pattern failurePattern = Pattern.compile("Ran [0-9]+ checks.\\s+([0-9]+) of the ([0-9]+) checks failed");
    
-   public @Override void runUnitTest(Path mainModule, Set<Path> dependentModules, Path dir, Report report,
+   public @Override void runUnitTest(Path mainFile, Set<Path> dependentFiles, Path dir, Report report,
             Score score, int timeout, int maxOutput) {
       try {
-         String result = run(mainModule, dependentModules, dir, "", "", timeout, maxOutput); 
+         String result = run(mainFile, dependentFiles, dir, "", "", timeout, maxOutput); 
          Matcher matcher = successPattern.matcher(result);
          int runs = 0;
          int failures = 0;

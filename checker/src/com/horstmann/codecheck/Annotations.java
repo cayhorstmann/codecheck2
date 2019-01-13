@@ -42,13 +42,9 @@ public class Annotations {
             if (a.key.equals("HIDE") && !solutions.contains(a.path)) hidden.add(a.path);
         }
         
-        // Annotations in solution files and hidden files are ok. 
         for (Annotation a : annotations) {
             if (!validAnnotations.contains(a.key))
                 r.systemError("Unknown pseudocomment " + a.key + " in " + a.path);
-            else if (!(inputMode || solutions.contains(a.path) || hidden.contains(a.path)))
-                r.systemError("Student file has pseudocomment " + a.key + " in " + a.path);
-                
         }
     }
 

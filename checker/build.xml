@@ -84,6 +84,7 @@
            <include name="runprog.apparmor"/>
            <include name="killold"/>
            <include name="interleaveio"/>
+           <include name="interleaveio2"/>
            <include name="lib/**"/>
         </fileset>
     </copy>

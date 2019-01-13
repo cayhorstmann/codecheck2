@@ -83,9 +83,9 @@ public class PythonLanguage implements Language {
         lines.add("main()");
         Path p = pathOf(moduleName + "CodeCheck");
         Files.write(targetDir.resolve(p), lines, StandardCharsets.UTF_8);        
-        List<Path> testModules = new ArrayList<>();
-        testModules.add(p);
-        return testModules;        
+        List<Path> testFiles = new ArrayList<>();
+        testFiles.add(p);
+        return testFiles;        
     }
 
     @Override
@@ -108,15 +108,15 @@ public class PythonLanguage implements Language {
 
     // TODO: Same as Racket. 
     
-    public boolean isUnitTest(Path modulename) { return modulename != null && modulename.toString().matches(".*Test[0-9]*.py"); }
+    public boolean isUnitTest(Path fileName) { return fileName != null && fileName.toString().matches(".*Test[0-9]*.py"); }
     
     private static final Pattern successPattern = Pattern.compile("Ran ([0-9]+) tests in [0-9.]+s\\s+OK");
     private static final Pattern failurePattern = Pattern.compile("Ran (?<runs>[0-9]+) tests in [0-9.]+s\\s+FAILED \\([^=]+=(?<failures>[0-9]+)\\)");
     
-    public @Override void runUnitTest(Path mainModule, Set<Path> dependentModules, Path dir, Report report,
+    public @Override void runUnitTest(Path mainFile, Set<Path> dependentFiles, Path dir, Report report,
              Score score, int timeout, int maxOutput) {
        try {
-          String result = run(mainModule, dependentModules, dir, "", "", timeout, maxOutput); 
+          String result = run(mainFile, dependentFiles, dir, "", "", timeout, maxOutput); 
           Matcher matcher = successPattern.matcher(result);
           int runs = 0;
           int failures = 0;

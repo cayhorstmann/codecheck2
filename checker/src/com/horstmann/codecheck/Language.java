@@ -87,8 +87,8 @@ public interface Language {
      * @param p the path to the file
      * @return true if it is an "Expected" style unit test file
      */
-    default boolean isTester(Path modulename) { 
-        return modulename != null && modulename.toString().matches(".*Tester[0-9]*\\.[^.]+");
+    default boolean isTester(Path fileName) { 
+        return fileName != null && moduleOf(fileName).matches(".*Tester[0-9]*");
     }
 
 
@@ -97,36 +97,37 @@ public interface Language {
      * @param p the path to the file
      * @return true if it is an "XUnit" style unit test file
      */
-    default boolean isUnitTest(Path modulename) { return false; }
+    default boolean isUnitTest(Path fileName) { return false; }
 
     /**
      * Tests if a file is a "main" file, i.e. an entry point for execution. By default,
      * a file whose module name ends in Runner or Tester, optionally followed by a number, matches.
      * Many languages instead check whether the file contains something such as "public 
      * static void main"
-     * @param p the path to the file
+     * @param fileName the path to the file
      * @return true if it is a "main" file
      */
-    default boolean isMain(Path p) { 
-        return moduleOf(p).matches(".*(Runn|Test)er[0-9]*"); 
+    default boolean isMain(Path fileName) { 
+        return moduleOf(fileName).matches(".*(Runn|Test)er[0-9]*"); 
     }
 
     // TODO: Why wire in the report? Maybe needs to return a compilation result with success, messages, name of executable?
     /**
      * Compiles a program
-     * @param modules the modules that need to be compiled. The first one
+     * @param sourceFiles the source files that need to be compiled. The first one
      * is the "main" one. 
-     * @param dir the directory containing the modules
+     * @param dir the directory containing the files
+     * 
      * @return null for no error, or an error report if there was an error.
      */
-    default String compile(List<Path> modules, Path dir) {
+    default String compile(List<Path> sourceFiles, Path dir) {
         List<String> cmd = new ArrayList<>();
         if (System.getProperty("os.name").toLowerCase().contains("win")) // We lose
             cmd.add(Util.getHomeDir() + "\\comprog.bat");
         else
             cmd.add(Util.getHomeDir() + "/comprog");
         cmd.add(getLanguage());
-        for (Path p : modules)
+        for (Path p : sourceFiles)
             cmd.add(dir.resolve(p).toString());
         StringBuilder output = new StringBuilder();
         final int MAX_OUTPUT_LEN = 10_000;
@@ -139,14 +140,14 @@ public interface Language {
 
     /**
      * Runs a program
-     * @param mainModule the path of the main module (from which the
+     * @param sourceFile the path of the main file (from which the
      * program name needs to be derived, in concert with the compile method) 
-     * @param dir the directory containing the main module
+     * @param dir the directory containing the main file
      * @param args the command-line arguments
      * @param input the input to pass to stdin  
      * @return the combined stdout/stderr of the run 
      */
-    default String run(Path mainModule, Set<Path> dependentModules, Path dir, String args,
+    default String run(Path sourceFile, Set<Path> dependentFiles, Path dir, String args,
             String input, int timeoutMillis, int maxOutputLen) throws Exception {
         List<String> cmd = new ArrayList<>();
         if (System.getProperty("os.name").toLowerCase().contains("win")) // We lose
@@ -156,7 +157,7 @@ public interface Language {
         int timeoutSeconds = (timeoutMillis + 500) / 1000;
         cmd.add("" + timeoutSeconds);
         cmd.add(getLanguage());
-        String programName = dir.resolve(mainModule).toString();
+        String programName = dir.resolve(sourceFile).toString();
         cmd.add(programName);
         if (args != null) cmd.addAll(Arrays.asList(args.split("\\s+")));
         StringBuilder output = new StringBuilder();        
@@ -185,7 +186,7 @@ public interface Language {
      * @param name the name of the method being tested
      * @param argsList the args to pass to the calls
      * @return a list containing the Path to the tester (with the main method or its equivalent),
-     * relative to the target directory, followed by the paths to any helper modules
+     * relative to the target directory, followed by the paths to any helper files
      * @throws IOException
      */
     List<Path> writeTester(Path sourceDir, Path targetDir, Path file,
@@ -206,7 +207,7 @@ public interface Language {
      */
     default String substitutionSeparator() { return ";"; }
     
-    default void runUnitTest(Path mainModule, Set<Path> dependentModules, Path workdir, Report report, Score score,  int timeoutMillis, int maxOutputLen) {        
+    default void runUnitTest(Path mainFile, Set<Path> dependentFiles, Path workdir, Report report, Score score,  int timeoutMillis, int maxOutputLen) {        
     }
 
     /**

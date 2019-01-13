@@ -1,13 +1,21 @@
 #!/bin/bash
+PROG=$0
+PROG2=${PROG}2
+
 rm -f empty.log in.fifo out.fifo empty.pid
-TIMEOUT=$1
-CGROUP=codecheck
-shift
-empty -f -i in.fifo -o out.fifo -p empty.pid -L empty.log timeout ${TIMEOUT}s cgexec -g cpu:$CGROUP $@
-sleep 0.1
+DELAY1=0.1
+DELAY2=0.01
+DELAY3=0.05
+DELAY4=1
+
+echo empty -f -i in.fifo -o out.fifo -p empty.pid -L empty.log $PROG2 $@
+empty -f -i in.fifo -o out.fifo -p empty.pid -L empty.log $PROG2 $@
+sleep $DELAY1
 while read line
 do
-  if [[ -e in.fifo ]] ; then (echo "$line" | empty -s -o in.fifo 2>/dev/null) ; fi
+  sleep $DELAY2
+  echo "$line" | empty -s -o in.fifo 2>/dev/null
 done
-while [[ -e empty.pid ]] ; do sleep 0.1 ; done
+sleep $DELAY3
+while [[ -e empty.pid ]] ; do sleep $DELAY4 ; done
 cat empty.log | sed -e 's/<<<\|>>>//'g

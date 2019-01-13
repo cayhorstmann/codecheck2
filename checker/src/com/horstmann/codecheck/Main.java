@@ -1,6 +1,5 @@
 package com.horstmann.codecheck;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.FileSystems;
@@ -103,8 +102,8 @@ public class Main {
         }
     }
 
-    public boolean compile(Path mainModule) {
-        return compile(Collections.singletonList(mainModule));
+    public boolean compile(Path mainFile) {
+        return compile(Collections.singletonList(mainFile));
     }
 
     /**
@@ -169,42 +168,42 @@ public class Main {
             return null;
     }
 
-    private void runTester(Path mainmodule, int timeout, int maxOutputLen) throws Exception {
-        report.run("Running " + mainmodule);
+    private void runTester(Path mainFile, int timeout, int maxOutputLen) throws Exception {
+        report.run("Running " + mainFile);
         // TODO: Assume testers always in default package?
         
         // TODO: Scoring doesn't work when outerr contains an exception report because we don't know how many
         // test cases have not occurred. 
         // May need to count the number of expected cases in the 
         
-        if (compile(mainmodule)) {
-            String outerr = language.run(mainmodule, dependentSourceFiles, workDir, "", null, timeout, maxOutputLen);
+        if (compile(mainFile)) {
+            String outerr = language.run(mainFile, dependentSourceFiles, workDir, "", null, timeout, maxOutputLen);
             AsExpected cond = new AsExpected(comp);
-            cond.eval(outerr, report, score, workDir.resolve(mainmodule));
+            cond.eval(outerr, report, score, workDir.resolve(mainFile));
         } else
             score.setInvalid();
     }
 
-    private void testInputs(Map<String, String> inputs, Path mainmodule, Annotations annotations) throws Exception {
+    private void testInputs(Map<String, String> inputs, Path mainFile, Annotations annotations) throws Exception {
         /*
          * If there are no inputs, we feed in one empty input to execute the program.
          */
         if (inputs.size() == 0)
             inputs.put("", ""); 
-        report.header("run", inputMode ? "Output" : "Testing " + mainmodule);
+        report.header("run", inputMode ? "Output" : "Testing " + mainFile);
         Path solutionDir = null;
 
-        if (!inputMode && !annotations.isSample(mainmodule)) {
-            solutionDir = compileSolution(mainmodule, null, 0);
+        if (!inputMode && !annotations.isSample(mainFile)) {
+            solutionDir = compileSolution(mainFile, null, 0);
             if (solutionDir == null) return;
         }        
         
-        if (compile(mainmodule)) {
+        if (compile(mainFile)) {
             for (String test : inputs.keySet()) {
                 String input = inputs.get(test);
                 if (!input.endsWith("\n")) input += "\n";
 
-                testInput(mainmodule, annotations, solutionDir, test, input, timeoutMillis / inputs.size(), maxOutputLen / inputs.size());
+                testInput(mainFile, annotations, solutionDir, test, input, timeoutMillis / inputs.size(), maxOutputLen / inputs.size());
             }
         } else
             score.setInvalid();
@@ -212,7 +211,7 @@ public class Main {
         Util.deleteDirectory(solutionDir);
     }
 
-    private void testInput(Path mainmodule, Annotations annotations,
+    private void testInput(Path mainFile, Annotations annotations,
             Path solutionDir, String test, String input, int timeout, int maxOutput)
             throws Exception {
         List<String> runargs = annotations.findKeys("ARGS");
@@ -224,11 +223,11 @@ public class Main {
         report.run(!test.equals("Input") && runNumber.length() > 0 ? "Test " + runNumber : null);
         
         for (String args : runargs) {
-            testInput(mainmodule, solutionDir, test, input, args, outFiles, timeout / runargs.size(), maxOutput / runargs.size());
+            testInput(mainFile, solutionDir, test, input, args, outFiles, timeout / runargs.size(), maxOutput / runargs.size());
         }
     }
     
-    private void testInput(Path mainmodule,
+    private void testInput(Path mainFile,
             Path solutionDir, String test, String input, String runargs, String[] outFiles, int timeout, int maxOutput)
             throws Exception {
         
@@ -243,7 +242,7 @@ public class Main {
 
         // Run student program and capture stdout/err and output files
 
-        String outerr = language.run(mainmodule, dependentSourceFiles, workDir, runargs, input, timeout, maxOutput);
+        String outerr = language.run(mainFile, dependentSourceFiles, workDir, runargs, input, timeout, maxOutput);
         List<String> contents = new ArrayList<>();
         List<CompareImages> imageComp = new ArrayList<>();
         
@@ -274,13 +273,18 @@ public class Main {
             for (String f : outFiles) Files.deleteIfExists(workDir.resolve(f));           
             copyUseFiles(workDir); // Might have been deleted or mutated
             
-            String expectedOuterr = language.run(mainmodule, dependentSourceFiles, solutionDir, runargs, input, timeout, maxOutput);
+            String expectedOuterr = language.run(mainFile, dependentSourceFiles, solutionDir, runargs, input, timeout, maxOutput);
         
             // Report on results
 
-            if (expectedOuterr != null && expectedOuterr.trim().length() > 0) {
-                boolean outcome = comp.execute(outerr, expectedOuterr, report, null);
-                score.pass(outcome, report);
+            if (expectedOuterr != null && expectedOuterr.trim().length() > 0) {                
+                if (outFiles.length > 0) {
+                    // Report output but don't grade it
+                    report.output(outerr);
+                } else {
+                    boolean outcome = comp.execute(outerr, expectedOuterr, report, null);
+                    score.pass(outcome, report);
+                }
             }        
         
             for (String f : outFiles) {
@@ -305,7 +309,7 @@ public class Main {
         }
     }
 
-    private void getMainAndDependentModules() {
+    private void getMainAndDependentFiles() {
         for (Path p : solutionFiles) {
             Path fullPath = solutionDir.resolve(p);
             if (language.isMain(fullPath))
@@ -339,8 +343,8 @@ public class Main {
 
     private void doSubstitutions(Path submissionDir, Substitution sub) throws Exception {
         report.header("sub", "Running program with substitutions");
-        Path mainmodule = sub.getFile();
-        if (compile(mainmodule)) {
+        Path mainFile = sub.getFile();
+        if (compile(mainFile)) {
         	int n = sub.getSize();
         	String[] argNames = sub.names().toArray(new String[0]);
             String[][] args = new String[n][argNames.length];
@@ -351,12 +355,12 @@ public class Main {
             int timeout = timeoutMillis / Math.max(1, sub.getSize());
             int maxOutput = maxOutputLen / Math.max(1, sub.getSize());
             for (int i = 0; i < sub.getSize(); i++) {
-                sub.substitute(submissionDir.resolve(mainmodule),
-                               workDir.resolve(mainmodule), i);
-                if (compile(mainmodule)) {
-                    actual[i] = language.run(mainmodule, dependentSourceFiles, workDir, null, null, timeout, maxOutput);
-                    Path tempDir = compileSolution(mainmodule, sub, i);
-                    expected[i] = language.run(mainmodule, dependentSourceFiles, tempDir, null, null, timeout, maxOutput);                    
+                sub.substitute(submissionDir.resolve(mainFile),
+                               workDir.resolve(mainFile), i);
+                if (compile(mainFile)) {
+                    actual[i] = language.run(mainFile, dependentSourceFiles, workDir, null, null, timeout, maxOutput);
+                    Path tempDir = compileSolution(mainFile, sub, i);
+                    expected[i] = language.run(mainFile, dependentSourceFiles, tempDir, null, null, timeout, maxOutput);                    
                     Util.deleteDirectory(tempDir);
                     int j = 0;
                     for (String v : sub.values(i)) { args[i][j] = v; j++; }
@@ -373,7 +377,7 @@ public class Main {
 
     private void doCalls(Path submissionDir, Calls calls) throws Exception {        
         report.header("call", "Calling with Arguments");
-        List<Path> testModules = calls.writeTester(solutionDir, workDir);
+        List<Path> testFiles = calls.writeTester(solutionDir, workDir);
         
         String[] names = new String[calls.getSize()];
         String[][] args = new String[calls.getSize()][1];
@@ -384,12 +388,12 @@ public class Main {
         int timeout = timeoutMillis / calls.getSize();
         int maxOutput = maxOutputLen  / calls.getSize();
         
-        if (compile(testModules)) {
+        if (compile(testFiles)) {
             for (int i = 0; i < calls.getSize(); i++) {
-                Path mainModule = testModules.get(0);
-                Set<Path> otherModules = new TreeSet<>(dependentSourceFiles);
-                for (int j = 1; j < testModules.size(); j++) otherModules.add(testModules.get(j));
-            	String result = language.run(mainModule, otherModules, workDir, "" + (i + 1), null, timeout, maxOutput);
+                Path mainFile = testFiles.get(0);
+                Set<Path> otherFiles = new TreeSet<>(dependentSourceFiles);
+                for (int j = 1; j < testFiles.size(); j++) otherFiles.add(testFiles.get(j));
+            	String result = language.run(mainFile, otherFiles, workDir, "" + (i + 1), null, timeout, maxOutput);
             	Scanner in = new Scanner(result);
                 List<String> lines = new ArrayList<>();
                 while (in.hasNextLine()) lines.add(in.nextLine());
@@ -423,23 +427,23 @@ public class Main {
     private void callMethod(double tolerance, boolean ignoreCase,
             boolean ignoreSpace) throws IOException, Exception {
         String mainclass = getStringProperty("mainclass");
-        Path mainModule = null;
+        Path mainFile = null;
         if (mainclass == null) {
             if (mainSourceFiles.size() == 1)
-                mainModule = mainSourceFiles.iterator().next();
+                mainFile = mainSourceFiles.iterator().next();
             else if (solutionFiles.size() == 1)
-                mainModule = solutionFiles.iterator().next();
+                mainFile = solutionFiles.iterator().next();
             else
-                report.systemError("Can't identify main module");
-            mainclass = Util.removeExtension(mainModule);
-        } else mainModule = Paths.get(mainclass + ".java");
+                report.systemError("Can't identify main file");
+            mainclass = Util.removeExtension(mainFile);
+        } else mainFile = Paths.get(mainclass + ".java");
 
         CallMethod call = new CallMethod(mainclass, checkProperties, timeoutMillis);
         call.setTolerance(tolerance);
         call.setIgnoreCase(ignoreCase);
         call.setIgnoreSpace(ignoreSpace);
-        Path tempDir = compileSolution(mainModule, null, 0); 
-        if (compile(mainModule)) {
+        Path tempDir = compileSolution(mainFile, null, 0); 
+        if (compile(mainFile)) {
             report.header("callMethod", "Calling method");
             call.prepare(tempDir);
             call.run(workDir, report, score);
@@ -601,7 +605,7 @@ public class Main {
             comp.setIgnoreCase(ignoreCase);
             comp.setIgnoreSpace(ignoreSpace);            
             
-            getMainAndDependentModules();            
+            getMainAndDependentFiles();            
                         
             copyUseFiles(workDir);
                 
@@ -656,35 +660,35 @@ public class Main {
 
                 runUnitTests();
     
-                List<Path> testerModules = new ArrayList<>();
-                List<Path> runModules = new ArrayList<>();
-                for (Path mainmodule : mainSourceFiles) {
-                    if (language.isTester(mainmodule)
-                             && !annotations.isSample(mainmodule) && !inputMode)
-                        testerModules.add(mainmodule);
+                List<Path> testerFiles = new ArrayList<>();
+                List<Path> runFiles = new ArrayList<>();
+                for (Path mainSourceFile : mainSourceFiles) {
+                    if (language.isTester(mainSourceFile) && !solutionFiles.contains(mainSourceFile)
+                             && !annotations.isSample(mainSourceFile) && !inputMode)
+                        testerFiles.add(mainSourceFile);
                     else
-                        runModules.add(mainmodule);
+                        runFiles.add(mainSourceFile);
                 }
                 
-                if (testerModules.size() > 0) {
+                if (testerFiles.size() > 0) {
                     report.header("tester", "Testers");
-                    for (Path mainmodule : testerModules)
-                        if (missingFiles.contains(mainmodule)) {
-                            report.error("Missing " + mainmodule);
+                    for (Path testerFile : testerFiles)
+                        if (missingFiles.contains(testerFile)) {
+                            report.error("Missing " + testerFile);
                             score.setInvalid();
                         }
                         else
-                            runTester(mainmodule, timeoutMillis / testerModules.size(), maxOutputLen / testerModules.size());
+                            runTester(testerFile, timeoutMillis / testerFiles.size(), maxOutputLen / testerFiles.size());
                 }
 
-                if (runModules.size() > 0) {
-                    for (Path mainmodule : runModules)
-                        if (missingFiles.contains(mainmodule)) {
-                            report.error("Missing " + mainmodule);
+                if (runFiles.size() > 0) {
+                    for (Path runFile : runFiles)
+                        if (missingFiles.contains(runFile)) {
+                            report.error("Missing " + runFile);
                             score.setInvalid();
                         }
                         else
-                            testInputs(inputs, mainmodule, annotations);
+                            testInputs(inputs, runFile, annotations);
                 }
                 // Process checkstyle.xml etc.
                 for (Path p : useFiles) {

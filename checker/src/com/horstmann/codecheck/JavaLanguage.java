@@ -44,8 +44,8 @@ public class JavaLanguage implements Language {
     public String getExtension() { return "java"; };
     
     @Override
-    public boolean isUnitTest(Path modulename) {
-        return modulename != null && modulename.toString().matches(".*Test[0-9]*.java");
+    public boolean isUnitTest(Path fileName) {
+        return fileName != null && fileName.toString().matches(".*Test[0-9]*.java");
     }
 
     private static Pattern mainPattern = Pattern
@@ -80,22 +80,22 @@ public class JavaLanguage implements Language {
     }
 
     @Override
-    public String compile(List<Path> modules, Path dir) {
+    public String compile(List<Path> sourceFiles, Path dir) {
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
         OutputStream outStream = new ByteArrayOutputStream();
         OutputStream errStream = new ByteArrayOutputStream();
         final String classPath = buildClasspath(dir);
 
         int result;
-        Path mainModule = modules.get(0);
+        Path mainFile = sourceFiles.get(0);
         if (classPath.length() == 0) {
             result = compiler.run(null, outStream, errStream, "-sourcepath",
                     dir.toString(), "-d", dir.toString(),
-                    dir.resolve(mainModule).toString());
+                    dir.resolve(mainFile).toString());
         } else {
             result = compiler.run(null, outStream, errStream, "-sourcepath",
                     dir.toString(), "-d", dir.toString(),
-                    dir.resolve(mainModule).toString(), "-cp",
+                    dir.resolve(mainFile).toString(), "-cp",
                     classPath.toString());
         }
         
@@ -113,7 +113,7 @@ public class JavaLanguage implements Language {
      */
     @Override
     @SuppressWarnings("deprecation")
-    public String run(final Path mainModule, Set<Path> dependentModules, final Path classpathDir,
+    public String run(final Path mainFile, Set<Path> dependentFiles, final Path classpathDir,
             String args, String input, int timeoutMillis, int maxOutputLen) throws IOException,
             ReflectiveOperationException {
         InputStream oldIn = System.in;
@@ -185,7 +185,7 @@ public class JavaLanguage implements Language {
             final Thread mainmethodThread = new Thread() {
                 public void run() {
                     try {
-                        Class<?> klass = loader.loadClass(classNameOfModule(mainModule));
+                        Class<?> klass = loader.loadClass(classNameOfFile(mainFile));
                         final Method mainmethod = klass.getMethod("main",
                                 String[].class);
                         mainmethod.invoke(null, (Object) argsArray);
@@ -309,9 +309,9 @@ public class JavaLanguage implements Language {
         Path p = pathOf(className + "CodeCheck");
         Files.write(targetDir.resolve(p), lines,
                 StandardCharsets.UTF_8);
-        List<Path> testModules = new ArrayList<>();
-        testModules.add(p);
-        return testModules;
+        List<Path> testFiles = new ArrayList<>();
+        testFiles.add(p);
+        return testFiles;
     }
     
     private static String patternString = ".*\\S\\s+(?<name>\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*(?<rhs>[^;]+);.*";
@@ -444,8 +444,8 @@ public class JavaLanguage implements Language {
         return false;
     }
 
-    private String classNameOfModule(Path moduleName) {
-        String className = moduleName.toString();
+    private String classNameOfFile(Path fileName) {
+        String className = fileName.toString();
         className = className.substring(0, className.lastIndexOf("."));
         className = className.replace('/', '.');
         return className;
@@ -453,17 +453,17 @@ public class JavaLanguage implements Language {
     
     @Override
     @SuppressWarnings("deprecation")
-    public void runUnitTest(Path mainModule, Set<Path> dependentModules, Path dir, Report report,
+    public void runUnitTest(Path mainFile, Set<Path> dependentFiles, Path dir, Report report,
             Score score,  int timeoutMillis, int maxOutputLen) {
-        report.run(mainModule.toString());
-        String errorReport = compile(Collections.singletonList(mainModule), dir); 
+        report.run(mainFile.toString());
+        String errorReport = compile(Collections.singletonList(mainFile), dir); 
         if (errorReport == null) {
             try {
                 PrintStream oldOut = System.out;
                 PrintStream oldErr = System.err;
                 try (URLClassLoader loader = buildClassLoader(dir)) {
                     loader.setDefaultAssertionStatus(true);
-                    Class<?> c = loader.loadClass(classNameOfModule(mainModule));
+                    Class<?> c = loader.loadClass(classNameOfFile(mainFile));
                     final AtomicBoolean done = new AtomicBoolean(false);                    
                     org.junit.runner.Result resultHolder[] = new org.junit.runner.Result[1];
                     final ByteArrayOutputStream newOut = new ByteArrayOutputStream();
@@ -525,7 +525,7 @@ public class JavaLanguage implements Language {
         }
         else {
             if (errorReport.trim().equals(""))
-                report.error("Error compiling " + mainModule);
+                report.error("Error compiling " + mainFile);
             else
                 report.error(errorReport);
             score.setInvalid();
@@ -563,7 +563,7 @@ public class JavaLanguage implements Language {
                 // oldManager.checkPermission(perm, context);
             }
         });
-
+        String exceptionMessage = null;
         try {
             String[] args = new String[3];
             args[0] = "-c";
@@ -573,7 +573,7 @@ public class JavaLanguage implements Language {
             com.puppycrawl.tools.checkstyle.Main.main(args);
         } catch (ExitException e) {
         } catch (Exception e) {
-            e.printStackTrace();
+            exceptionMessage = e.getMessage();
         } finally {
             System.setSecurityManager(oldManager);
             newOutPrint.close();
@@ -593,6 +593,7 @@ public class JavaLanguage implements Language {
         String footer = "Audit done.\n";
         if (result.endsWith(footer))
             result = result.substring(0, result.length() - footer.length());
+        if (exceptionMessage != null) result = exceptionMessage + "\n" + result;
         return result;
     }
     

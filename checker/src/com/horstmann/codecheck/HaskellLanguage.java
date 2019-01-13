@@ -44,8 +44,8 @@ public class HaskellLanguage implements Language {
         // Rewrite solution in module CodeCheckSolution
         
         String moduleName = moduleOf(solutionFile);
-        Path solutionModule = targetDir.resolve("CodeCheckSolution.hs");
-        try (PrintWriter out = new PrintWriter(solutionModule.toFile(), "UTF-8");
+        Path solutionModuleFile = targetDir.resolve("CodeCheckSolution.hs");
+        try (PrintWriter out = new PrintWriter(solutionModuleFile.toFile(), "UTF-8");
                 Scanner in = new Scanner(solutionFile, "UTF-8")) {
             out.println("module CodeCheckSolution where");            
             while (in.hasNextLine()) {
@@ -56,8 +56,8 @@ public class HaskellLanguage implements Language {
         }
         
         // Generate testCodeCheck.hs
-        Path testModule = targetDir.resolve("testCodeCheck.hs");
-        try (PrintWriter out = new PrintWriter(testModule.toFile(), "UTF-8")) {
+        Path testFile = targetDir.resolve("testCodeCheck.hs");
+        try (PrintWriter out = new PrintWriter(testFile.toFile(), "UTF-8")) {
             out.println("import " + moduleName);
             out.println("import CodeCheckSolution");
             out.println("import Control.Exception");
@@ -85,8 +85,8 @@ public class HaskellLanguage implements Language {
             out.println("        (Just a, Nothing) -> putStrLn $ (show a) ++ \"\\nerror\\nfalse\"");
             out.println("        (Nothing, Just b) -> putStrLn $ \"error\\n\" ++ (show b) ++ \"\\nfalse\"");
         }
-        return Arrays.asList(testModule);
-            }
+        return Arrays.asList(testFile);
+    }
         /*
  
 

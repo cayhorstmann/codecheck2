@@ -74,7 +74,7 @@ public class JavaScriptLanguage implements Language {
         return null;
     }
     
-    public String run(Path mainModule, Set<Path> dependentModules, Path dir, String args,
+    public String run(Path mainFile, Set<Path> dependentFiles, Path dir, String args,
             String input, int timeoutMillis, int maxOutputLen) throws Exception {
         List<String> cmd = new ArrayList<>();
         if (System.getProperty("os.name").toLowerCase().contains("win")) // We lose
@@ -84,10 +84,10 @@ public class JavaScriptLanguage implements Language {
         int timeoutSeconds = (timeoutMillis + 500) / 1000;
         cmd.add("" + timeoutSeconds);        
         cmd.add(getLanguage());
-        for (Path p : dependentModules)  
+        for (Path p : dependentFiles)  
             cmd.add(dir.resolve(p).toString());
                 
-        String programName = dir.resolve(mainModule).toString();
+        String programName = dir.resolve(mainFile).toString();
         cmd.add(programName);
         if (args != null) { cmd.add("--"); cmd.addAll(Arrays.asList(args.split("\\s+"))); }
         StringBuilder output = new StringBuilder();        

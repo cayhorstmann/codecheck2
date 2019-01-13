@@ -31,7 +31,7 @@
   /usr/bin/basename ix,
   /usr/local/lib/python3*/dist-packages/** rix,
 
-  /opt/codecheck/interleaveio mrix,
+  /opt/codecheck/interleaveio* mrix,
   /bin/rm mrix,
   /bin/cat mrix,
   /bin/sleep mrix,
