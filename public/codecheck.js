@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function () {
       editors[k].setOption('showFoldWidgets', false);
       editors[k].setOption('newLineMode', 'unix');
       editors[k].setOption('fontSize', '1em');
-      
+      editors[k].setOption('scrollSpeed', 0);      
       
       if(editorDivs[k].classList.contains('readonly')){
 	editors[k].setReadOnly(true);
@@ -113,14 +113,19 @@ document.addEventListener('DOMContentLoaded', function () {
         editorSession.clearAnnotations()
 	editorSession.setOption('firstLineNumber', totalLines + 1);
 	let lines = editors[k].getSession().getDocument().getLength();
-	editorDivs[k].style.height = editors[k].renderer.lineHeight * lines + "px";
+        editorDivs[k].style.height = (editors[k].renderer.lineHeight * lines) + "px";
 	editors[k].resize();
+        let aceScroller = editorDivs[k].getElementsByClassName('ace_scroller')[0]
+        aceScroller.style.bottom = '0px'
+        // this is the scrolled area, not the scroll bar
+        // we are hiding the scroll bars in css, but ace doesn't seem to take that into account
 	totalLines += lines;
       }
-    };
+    }
     for (let k = 0; k < editors.length; k++) {
       editors[k].on('change', update);
     }
+    window.addEventListener('resize', function() { setTimeout(update, 1000)})
     update();
   }
 

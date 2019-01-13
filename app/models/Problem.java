@@ -254,7 +254,7 @@ public class Problem {
              hasShow = true;
     	  }           
       }
-	  if (lines.length > 0 && isPseudocomment(lines[0], "HIDE", start, end) && !hasShow && !hasEdit)
+	  if (lines.length == 0 || isPseudocomment(lines[0], "HIDE", start, end) && !hasShow && !hasEdit)
 		  return result; // Empty list means file is hidden
 		
       if (hasEdit) {
@@ -328,6 +328,7 @@ public class Problem {
                   || isPseudocomment(line, "TOLERANCE", start, end)
                   || isPseudocomment(line, "MAXOUTPUTLEN", start, end)
                   || isPseudocomment(line, "TIMEOUT", start, end)
+                  || isPseudocomment(line, "NOSCORE", start, end)
                   ) {
                   lines[i] = null;
                } else if(isPseudocomment(line, "REQUIRED", start, end)
@@ -405,6 +406,7 @@ public class Problem {
             } else if (hiding) {
                lines[i] = null;
             } else if (isPseudocomment(line, "CALL", start, end)
+               || isPseudocomment(line, "SAMPLE", start, end)
                || isPseudocomment(line, "ID", start, end)
                || isPseudocomment(line, "ARGS", start, end)
                || isPseudocomment(line, "IN", start, end)
@@ -414,9 +416,9 @@ public class Problem {
                || isPseudocomment(line, "TOLERANCE", start, end)
                || isPseudocomment(line, "MAXOUTPUTLEN", start, end)
                || isPseudocomment(line, "TIMEOUT", start, end)
+               || isPseudocomment(line, "NOSCORE", start, end)               
                ) {
-               lines[i] = null; // TODO: More cases like that? Student files
-               // shouldn't have pseudocomments
+               lines[i] = null; 
             } else if (isPseudocomment(line, "REQUIRED", start, end)
                || isPseudocomment(line, "FORBIDDEN", start, end)) {
                lines[i] = null;

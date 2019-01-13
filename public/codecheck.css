@@ -3,8 +3,9 @@
 }
 
 .ace_editor { 
-	border: 1px solid #EEE; 
-	height: auto; 
+    // border: 1px solid #EEE;
+    // TODO: If we want a border, put all editor divs inside
+    // a div with a border
 	min-width: 700px; 
 }
 
@@ -20,7 +21,11 @@
     display: inline !important;
 }
 
-.ace_hidden-cursors {opacity:0} 
+.ace_hidden-cursors {opacity:0}
+
+.ace_scrollbar {
+    display: none;
+}
 
 body { 
 	font-family: sans;
