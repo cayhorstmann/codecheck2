@@ -1,4 +1,4 @@
-@(pid: String, problems: Map[String, String])
+@(pid: String, problems: Map[String, String], editKey: String)
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -8,7 +8,7 @@
     <script type="text/javascript" src="/assets/jquery.js"></script>    
 </head>
 <body style="font-family: sans;">
-<form method="post" action="/editedFiles">
+<form method="post" action="/editedFiles/@pid/@editKey">
     <div>
  @for(((k, v), i) <- problems.toSeq.zipWithIndex) {
     <div id="item@(i + 1)">
@@ -24,8 +24,9 @@
 </form>
 <p></p>
 <hr/>
-<form method="post" action="/editedProblem" enctype="multipart/form-data">
-<p>Alternatively, upload a zip file. Select the file <input name="file" id="file" type="file"/>, then submit: <input id="upload" type="submit" value="Upload zip file"/></p></form>
+<form method="post" action="/editedProblem/@pid/@editKey" enctype="multipart/form-data">
+<p>Alternatively, upload a zip file. Select the file <input name="file" id="file" type="file"/></p>
+<p><input id="upload" type="submit" value="Upload zip file" disabled="disabled"/></p></form>
 <script type="text/javascript">
 for (let i = 1; i <= @{problems.size()}; i++) { 
     $('#delete' + i).click(function() {
@@ -48,6 +49,10 @@ $('#addfile').click(function() {
         $('#item' + i).hide()
     })
 })
+
+$('#file').on("change", function() {
+    $('#upload').prop('disabled', !$(this).val()); 
+});
 </script>
 </body>
 </html>

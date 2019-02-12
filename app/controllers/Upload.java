@@ -42,11 +42,33 @@ public class Upload  extends Controller {
 	@Inject private S3Connection s3conn;
 	@Inject private Config config;
 	@Inject private CodeCheck codeCheck;
+	
+	public Result uploadFiles() {
+		return uploadFiles(Util.createUID(), Util.randomString(16));
+	}
+	
+	public Result editedFiles(String problem, String editKey) {
+		try {
+			Path problemDir = codeCheck.loadProblem(repo, problem);
+			String editKeyCorrect = Util.read(problemDir, ".editKey");
+			if (!editKeyCorrect.equals(editKey)) {
+				return badRequest("Wrong Edit Key: " + editKey + "\nProblem found: " + problem);
+			}
+			
+    		Util.deleteDirectory(problemDir);
+			return uploadFiles(problem, editKeyCorrect);
+			
+		} catch (IOException ex) {
+		    return badRequest("Problem not found: " + problem);
+	    } catch (Exception ex) {
+		    return internalServerError(Util.getStackTrace(ex));
+	    }	
+	}
 
-	public Result uploadFiles(boolean newProblem) {
+	public Result uploadFiles(String problem, String editKey) {
 		try {
 			Path problemDir = null;			
-			String problem = newProblem ? Util.createUID() : session().get("pid");
+			//String problem = newProblem ? Util.createUID() : session().get("pid");
 			if (problem == null) badRequest("No problem id");
 			int n = 1;
 			boolean isOnS3 = s3conn.isOnS3("ext");
@@ -68,6 +90,8 @@ public class Upload  extends Controller {
 				}
 				n++;
 			}
+
+			Util.write(problemDir, ".editKey", editKey);
 			if (isOnS3) {
 				Path problemZip = Files.createTempFile("problem", "zip");
 				Util.zip(problemDir, problemZip);
@@ -83,10 +107,32 @@ public class Upload  extends Controller {
 	    }
 	}
 	
-	public Result uploadProblem(boolean newProblem) {		
+	public Result uploadProblem() {
+		return uploadProblem(Util.createUID(), Util.randomString(16));
+	}
+	
+	public Result editedProblem(String problem, String editKey) {
+		try {
+			Path problemDir = codeCheck.loadProblem(repo, problem);
+			String editKeyCorrect = Util.read(problemDir, ".editKey");
+			if (!editKeyCorrect.equals(editKey)) {
+				return badRequest("Wrong Edit Key: " + editKey + "\nProblem found: " + problem);
+			}
+			
+    		Util.deleteDirectory(problemDir);
+    		return uploadProblem(problem, editKey);
+			
+		} catch (IOException ex) {
+		    return badRequest("Problem not found: " + problem);
+	    } catch (Exception ex) {
+		    return internalServerError(Util.getStackTrace(ex));
+	    }
+	}
+	
+	public Result uploadProblem(String problem, String editKey) {		
 		try {
 			play.mvc.Http.MultipartFormData<File> body = request().body().asMultipartFormData();	
-			String problem = newProblem ? Util.createUID() : session().get("pid");
+			//String problem = newProblem ? Util.createUID() : session().get("pid");
 			if (problem == null) badRequest("No problem id");
 			Path unzipDir;
 			boolean isOnS3 = s3conn.isOnS3("ext"); 
@@ -100,7 +146,7 @@ public class Upload  extends Controller {
 			Path problemZip = unzipDir.resolve(problem + ".zip");
 			try {
 				Path problemDir = unzipDir.resolve(problem);			
-				Files.createDirectory(problemDir);
+				Files.createDirectories(problemDir);
 				File file = body.getFile("file").getFile();
 				logger.debug("file=" + file);
 				Path savedPath = file.toPath();
@@ -111,8 +157,15 @@ public class Upload  extends Controller {
 				InputStream in = Files.newInputStream(problemZip);
 				Util.unzip(in, problemDir);
 				in.close();
+				
+				Util.write(problemDir, ".editKey", editKey);
 	
-				if (isOnS3) s3conn.putToS3(problemZip, repo + "." + config.getString("com.horstmann.codecheck.s3bucketsuffix"), problem);
+				if (isOnS3) {
+					Path problemEditKeyZip = Files.createTempFile("problem", "zip");
+					Util.zip(problemDir, problemEditKeyZip);
+					s3conn.putToS3(problemEditKeyZip, repo + "." + config.getString("com.horstmann.codecheck.s3bucketsuffix"), problem);
+					Files.delete(problemEditKeyZip);
+				}
 				String response = checkProblem(problem, problemDir);
 				return ok(response).as("text/html");
 			} finally {
@@ -138,22 +191,22 @@ public class Upload  extends Controller {
 		response.append("<html><head><title></title><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"/>");
 		response.append("<body style=\"font-family: sans\">");
 		String problemUrl = (request().secure() ? "https://" : "http://" ) + request().host() + "/" + url;
-		response.append("URL: <code>");
-		response.append(problemUrl); 
-		response.append("</code> | <a href=\"");
-		response.append(problemUrl);
-		response.append("\" target=\"_blank\">Preview</a>");
+		String editURL = (request().secure() ? "https://" : "http://" ) + request().host() + "/edit/" + problem + "/" + Util.read(problemDir, ".editKey");
+		response.append("URL: ");
+		response.append("<a href=\"" + problemUrl + "\" target=\"_blank\">" + problemUrl + "</a>");
+		response.append("<br/>Edit URL: ");
+		response.append("<a href=\"" + editURL + "\" target=\"_blank\">" + editURL + "</a>");
 		if (run == null)
 			response.append("<p>Fatal error: No report could be generated.</p>");
 		else
 			response.append("<br/><iframe height=\"400\" style=\"width: 90%; margin: 2em;\" src=\"data:text/html;base64," + run + "\"></iframe>");			
 		response.append("</li>\n");
 		session().put("pid", problem);
-		response.append("</ul><form method='post' action='/editProblem'><input type='submit' value='Edit problem'/></form><p></body></html>\n");
+		response.append("</ul><p></body></html>\n");
 		return response.toString();
 	}
 
-	public Result editProblem()
+	/*public Result editProblem()
 	{
 		try {
 			String problem = session().get("pid");
@@ -169,6 +222,33 @@ public class Upload  extends Controller {
 			return ok(edit.render(problem, filesAndContents));
 			
 		} catch (Exception ex) {
+		    return internalServerError(Util.getStackTrace(ex));
+	    }		
+	}*/
+	
+	public Result editKeySubmit(String problem, String editKeySubmit) {
+		if (problem.equals("")) return badRequest("No Problem ID entered");
+		
+		try {
+			Path problemDir = codeCheck.loadProblem(repo, problem);
+			String editKey = Util.read(problemDir, ".editKey");
+			if (!editKeySubmit.equals(editKey)) {
+				return badRequest("Wrong Edit Key: " + editKeySubmit + "\nProblem found: " + problem);
+			}
+			
+			Map<String, String> filesAndContents = new TreeMap<>();
+			List<Path> entries = Files.list(problemDir).collect(Collectors.toList());
+			for (Path f : entries) {
+				if (Files.isRegularFile(f)) filesAndContents.put(f.getFileName().toString(), Util.read(f));
+				else return badRequest("Cannot edit problem with directories");
+			};
+    		Util.deleteDirectory(problemDir);
+    		filesAndContents.remove(".editKey");
+			return ok(edit.render(problem, filesAndContents, editKey));
+			
+		} catch (IOException ex) {
+		    return badRequest("Problem not found: " + problem);
+	    } catch (Exception ex) {
 		    return internalServerError(Util.getStackTrace(ex));
 	    }		
 	}

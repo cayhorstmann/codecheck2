@@ -45,6 +45,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 public class Util {
+	private static final String alphaNumeric = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 	private static Random generator = new Random();
 
 	public static boolean isEmpty(String str) { return str == null || str.isEmpty(); }
@@ -489,5 +490,13 @@ public class Util {
 			result.append(getStackTrace(ex));
 		}
 		return result.toString();		
+	}
+	
+	public static String randomString(int len) {
+		StringBuilder sb = new StringBuilder(len);
+		for (int i = 0; i < len; i++) {
+			sb.append(alphaNumeric.charAt(generator.nextInt(alphaNumeric.length())));
+		}
+		return sb.toString();
 	}
 }
