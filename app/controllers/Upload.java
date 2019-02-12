@@ -68,7 +68,6 @@ public class Upload  extends Controller {
 	public Result uploadFiles(String problem, String editKey) {
 		try {
 			Path problemDir = null;			
-			//String problem = newProblem ? Util.createUID() : session().get("pid");
 			if (problem == null) badRequest("No problem id");
 			int n = 1;
 			boolean isOnS3 = s3conn.isOnS3("ext");
@@ -132,7 +131,6 @@ public class Upload  extends Controller {
 	public Result uploadProblem(String problem, String editKey) {		
 		try {
 			play.mvc.Http.MultipartFormData<File> body = request().body().asMultipartFormData();	
-			//String problem = newProblem ? Util.createUID() : session().get("pid");
 			if (problem == null) badRequest("No problem id");
 			Path unzipDir;
 			boolean isOnS3 = s3conn.isOnS3("ext"); 
@@ -205,26 +203,6 @@ public class Upload  extends Controller {
 		response.append("</ul><p></body></html>\n");
 		return response.toString();
 	}
-
-	/*public Result editProblem()
-	{
-		try {
-			String problem = session().get("pid");
-			if (problem == null) badRequest("No problem to edit");
-			Path problemDir = codeCheck.loadProblem(repo, problem);
-			Map<String, String> filesAndContents = new TreeMap<>();
-			List<Path> entries = Files.list(problemDir).collect(Collectors.toList());
-			for (Path f : entries) {
-				if (Files.isRegularFile(f)) filesAndContents.put(f.getFileName().toString(), Util.read(f));
-				else return badRequest("Cannot edit problem with directories");
-			};
-    		Util.deleteDirectory(problemDir);
-			return ok(edit.render(problem, filesAndContents));
-			
-		} catch (Exception ex) {
-		    return internalServerError(Util.getStackTrace(ex));
-	    }		
-	}*/
 	
 	public Result editKeySubmit(String problem, String editKeySubmit) {
 		if (problem.equals("")) return badRequest("No Problem ID entered");

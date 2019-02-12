@@ -32,8 +32,7 @@ POST	/check						controllers.Check.checkHTML()
 
 POST    /uploadProblem                    controllers.Upload.uploadProblem()
 POST    /uploadFiles                      controllers.Upload.uploadFiles()
-# POST    /editProblem                      controllers.Upload.editProblem()
-GET		/edit/:problem/:editKey		      controllers.Upload.editKeySubmit(problem: String, editKey: String)
+GET     /edit/:problem/:editKey           controllers.Upload.editKeySubmit(problem: String, editKey: String)
 POST    /editedFiles/:problem/:editKey    controllers.Upload.editedFiles(problem: String, editKey: String)
 POST    /editedProblem/:problem/:editKey  controllers.Upload.editedProblem(problem: String, editKey: String)
 
