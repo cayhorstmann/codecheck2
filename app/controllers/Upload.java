@@ -44,20 +44,22 @@ public class Upload  extends Controller {
 	@Inject private CodeCheck codeCheck;
 	
 	public Result uploadFiles() {
-		return uploadFiles(Util.createUID(), Util.randomString(16));
+		return uploadFiles(Util.createUID(), Util.createUID());
 	}
 	
 	public Result editedFiles(String problem, String editKey) {
 		try {
-			Path problemDir = codeCheck.loadProblem(repo, problem);
-			String editKeyCorrect = Util.read(problemDir, ".editKey");
-			if (!editKeyCorrect.equals(editKey)) {
-				return badRequest("Wrong Edit Key: " + editKey + "\nProblem found: " + problem);
+			Path problemDir = null;
+			try {
+				problemDir = codeCheck.loadProblem(repo, problem);
+				String correctEditKey = Util.read(problemDir, ".editKey");
+				if (correctEditKey.equals(editKey)) 
+					return uploadFiles(problem, correctEditKey);
+				else
+					return badRequest("Wrong edit key " + editKey + " in problem " + problem);
+			} finally {
+				Util.deleteDirectory(problemDir);
 			}
-			
-    		Util.deleteDirectory(problemDir);
-			return uploadFiles(problem, editKeyCorrect);
-			
 		} catch (IOException ex) {
 		    return badRequest("Problem not found: " + problem);
 	    } catch (Exception ex) {
@@ -107,20 +109,22 @@ public class Upload  extends Controller {
 	}
 	
 	public Result uploadProblem() {
-		return uploadProblem(Util.createUID(), Util.randomString(16));
+		return uploadProblem(Util.createUID(), Util.createUID());
 	}
 	
 	public Result editedProblem(String problem, String editKey) {
 		try {
-			Path problemDir = codeCheck.loadProblem(repo, problem);
-			String editKeyCorrect = Util.read(problemDir, ".editKey");
-			if (!editKeyCorrect.equals(editKey)) {
-				return badRequest("Wrong Edit Key: " + editKey + "\nProblem found: " + problem);
-			}
-			
-    		Util.deleteDirectory(problemDir);
-    		return uploadProblem(problem, editKey);
-			
+			Path problemDir = null;
+			try {
+				problemDir = codeCheck.loadProblem(repo, problem);
+				String correctEditKey = Util.read(problemDir, ".editKey");
+				if (correctEditKey.equals(editKey))
+					return uploadProblem(problem, editKey);
+				else
+					return badRequest("Wrong edit key " + editKey + " for problem " + problem);
+			} finally {			
+				Util.deleteDirectory(problemDir);
+			}			
 		} catch (IOException ex) {
 		    return badRequest("Problem not found: " + problem);
 	    } catch (Exception ex) {
@@ -146,17 +150,16 @@ public class Upload  extends Controller {
 				Path problemDir = unzipDir.resolve(problem);			
 				Files.createDirectories(problemDir);
 				File file = body.getFile("file").getFile();
-				logger.debug("file=" + file);
 				Path savedPath = file.toPath();
 				Files.copy(savedPath, problemZip);
 				
 				fixZip(problemZip);
-				
+				// TODO: Inefficient to unzip and zip just for the edit key
 				InputStream in = Files.newInputStream(problemZip);
 				Util.unzip(in, problemDir);
 				in.close();
-				
-				Util.write(problemDir, ".editKey", editKey);
+				if (!Files.exists(problemDir.resolve(".editKey")))
+					Util.write(problemDir, ".editKey", editKey);
 	
 				if (isOnS3) {
 					Path problemEditKeyZip = Files.createTempFile("problem", "zip");
@@ -183,16 +186,15 @@ public class Upload  extends Controller {
 		codeCheck.replaceParametersInDirectory(studentId, newProblemDir);
 		String run = check(problem, newProblemDir, studentId);
 		Util.deleteDirectory(newProblemDir);
-		String url =  "files/" + problem; 
-		
 		StringBuilder response = new StringBuilder();
 		response.append("<html><head><title></title><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"/>");
 		response.append("<body style=\"font-family: sans\">");
-		String problemUrl = (request().secure() ? "https://" : "http://" ) + request().host() + "/" + url;
-		String editURL = (request().secure() ? "https://" : "http://" ) + request().host() + "/edit/" + problem + "/" + Util.read(problemDir, ".editKey");
-		response.append("URL: ");
+		String prefix = (request().secure() ? "https://" : "http://" ) + request().host() + "/"; 
+		String problemUrl =  prefix + "files/" + problem;
+		String editURL = prefix + "edit/" + problem + "/" + Util.read(problemDir, ".editKey");
+		response.append("Public URL (for your students): ");
 		response.append("<a href=\"" + problemUrl + "\" target=\"_blank\">" + problemUrl + "</a>");
-		response.append("<br/>Edit URL: ");
+		response.append("<br/>Edit URL (for you only): ");
 		response.append("<a href=\"" + editURL + "\" target=\"_blank\">" + editURL + "</a>");
 		if (run == null)
 			response.append("<p>Fatal error: No report could be generated.</p>");
@@ -204,26 +206,27 @@ public class Upload  extends Controller {
 		return response.toString();
 	}
 	
-	public Result editKeySubmit(String problem, String editKeySubmit) {
-		if (problem.equals("")) return badRequest("No Problem ID entered");
-		
+	public Result editKeySubmit(String problem, String editKey) {
+		if (problem.equals("")) return badRequest("No problem id");		
 		try {
-			Path problemDir = codeCheck.loadProblem(repo, problem);
-			String editKey = Util.read(problemDir, ".editKey");
-			if (!editKeySubmit.equals(editKey)) {
-				return badRequest("Wrong Edit Key: " + editKeySubmit + "\nProblem found: " + problem);
-			}
-			
-			Map<String, String> filesAndContents = new TreeMap<>();
-			List<Path> entries = Files.list(problemDir).collect(Collectors.toList());
-			for (Path f : entries) {
-				if (Files.isRegularFile(f)) filesAndContents.put(f.getFileName().toString(), Util.read(f));
-				else return badRequest("Cannot edit problem with directories");
-			};
-    		Util.deleteDirectory(problemDir);
-    		filesAndContents.remove(".editKey");
-			return ok(edit.render(problem, filesAndContents, editKey));
-			
+			Path problemDir = null;
+			try {
+				problemDir = codeCheck.loadProblem(repo, problem);
+				String correctEditKey = Util.read(problemDir, ".editKey");
+				if (!editKey.equals(correctEditKey)) {
+					return badRequest("Wrong edit key " + editKey + " for problem " + problem);
+				}			
+				Map<String, String> filesAndContents = new TreeMap<>();
+				List<Path> entries = Files.list(problemDir).collect(Collectors.toList());
+				for (Path f : entries) {
+					if (Files.isRegularFile(f)) filesAndContents.put(f.getFileName().toString(), Util.read(f));
+					else return badRequest("Cannot edit problem with directories");
+				}
+	    		filesAndContents.remove(".editKey");
+				return ok(edit.render(problem, filesAndContents, correctEditKey));					
+			} finally {
+				Util.deleteDirectory(problemDir);
+			}			
 		} catch (IOException ex) {
 		    return badRequest("Problem not found: " + problem);
 	    } catch (Exception ex) {

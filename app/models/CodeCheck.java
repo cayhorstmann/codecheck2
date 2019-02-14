@@ -136,8 +136,13 @@ public class CodeCheck {
 		ProcessBuilder builder = new ProcessBuilder(script.split(" "));
         builder.redirectErrorStream(true);        
         builder.redirectOutput(submissionDir.resolve("codecheck.out").toFile());
-        Process process = builder.start();
-        boolean completed = process.waitFor(TIMEOUT, TimeUnit.MILLISECONDS);
-        if (!completed) process.destroyForcibly();		
+        try {
+        	Process process = builder.start();
+        	boolean completed = process.waitFor(TIMEOUT, TimeUnit.MILLISECONDS);
+        	if (!completed) process.destroyForcibly();
+        } catch (Exception ex) {
+        	ex.printStackTrace();
+        	throw ex;
+        }
 	}	
 }

@@ -154,6 +154,7 @@ public class Util {
 	}
 
 	public static void deleteDirectory(Path start) throws IOException {
+		if (start == null) return;
 		if (!Files.exists(start)) return;
 		Files.walkFileTree(start, new SimpleFileVisitor<Path>() {
 			@Override
@@ -490,13 +491,5 @@ public class Util {
 			result.append(getStackTrace(ex));
 		}
 		return result.toString();		
-	}
-	
-	public static String randomString(int len) {
-		StringBuilder sb = new StringBuilder(len);
-		for (int i = 0; i < len; i++) {
-			sb.append(alphaNumeric.charAt(generator.nextInt(alphaNumeric.length())));
-		}
-		return sb.toString();
 	}
 }

@@ -5,7 +5,6 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <title>Edit Problem</title>
-    <script type="text/javascript" src="/assets/jquery.js"></script>    
 </head>
 <body style="font-family: sans;">
 <form method="post" action="/editedFiles/@pid/@editKey">
@@ -29,30 +28,38 @@
 <p><input id="upload" type="submit" value="Upload zip file" disabled="disabled"/></p></form>
 <script type="text/javascript">
 for (let i = 1; i <= @{problems.size()}; i++) { 
-    $('#delete' + i).click(function() {
-    	$('#filename' + i).attr('value', '')
-        $('#contents' + i).html('')
-        $('#item' + i).hide()
+  document.getElementById('delete' + i).addEventListener('click',
+    function() {
+      document.getElementById('filename' + i).setAttribute('value', '')
+      document.getElementById('contents' + i).innerHTML = ''
+      document.getElementById('item' + i).style.display = 'none'
     })
 }
-var n = 1
-$('#addfile').click(function() {
+let n = 1
+document.getElementById('addfile').addEventListener('click',
+  function() {
     n++
     let i = n
-    $('<div id="item' + i + '"><p>File name: <input id="filename' + i + '" name="filename' + i 
+    let fileDiv = document.createElement('div')
+    fileDiv.setAttribute('id', 'item' + i)
+    fileDiv.innerHTML = '<p>File name: <input id="filename' + i + '" name="filename' + i 
             + '" size="25" type="text"/> <button id="delete' + i 
             +'" type="button">Delete</button></p><p><textarea id="contents' + i + '" name="contents' + i 
-            + '" rows="24" cols="80"/></textarea></p></div>').insertBefore('#addfilecontainer')
-    $('#delete' + i).click(function() {
-        $('#filename' + i).attr('value', '')
-        $('#contents' + i).html('')
-        $('#item' + i).hide()
+            + '" rows="24" cols="80"/></textarea></p>'
+    let addFile = document.getElementById('addfilecontainer')
+    addFile.parentNode.insertBefore(fileDiv, addFile)
+    
+    document.getElementById('delete' + i).addEventListener('click',
+      function() {
+        document.getElementById('filename' + i).setAttribute('value', '')
+        document.getElementById('contents' + i).innerHTML = ''
+        document.getElementById('item' + i).style.display = 'none'
     })
 })
 
-$('#file').on("change", function() {
-    $('#upload').prop('disabled', !$(this).val()); 
-});
+document.getElementById('file').addEventListener('change', function() {
+    document.getElementById('upload').disabled = false
+})
 </script>
 </body>
 </html>
