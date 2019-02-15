@@ -52,7 +52,7 @@ public class Upload  extends Controller {
 			Path problemDir = null;
 			try {
 				problemDir = codeCheck.loadProblem(repo, problem);
-				String correctEditKey = Util.read(problemDir, ".editKey");
+				String correctEditKey = Util.read(problemDir, ".editKey").trim();
 				if (correctEditKey.equals(editKey)) 
 					return uploadFiles(problem, correctEditKey);
 				else
@@ -117,11 +117,11 @@ public class Upload  extends Controller {
 			Path problemDir = null;
 			try {
 				problemDir = codeCheck.loadProblem(repo, problem);
-				String correctEditKey = Util.read(problemDir, ".editKey");
+				String correctEditKey = Util.read(problemDir, ".editKey").trim();
 				if (correctEditKey.equals(editKey))
 					return uploadProblem(problem, editKey);
 				else
-					return badRequest("Wrong edit key " + editKey + " for problem " + problem);
+					return badRequest("Wrong edit key " + editKey + " of problem " + problem);
 			} finally {			
 				Util.deleteDirectory(problemDir);
 			}			
@@ -212,7 +212,7 @@ public class Upload  extends Controller {
 			Path problemDir = null;
 			try {
 				problemDir = codeCheck.loadProblem(repo, problem);
-				String correctEditKey = Util.read(problemDir, ".editKey");
+				String correctEditKey = Util.read(problemDir, ".editKey").trim();
 				if (!editKey.equals(correctEditKey)) {
 					return badRequest("Wrong edit key " + editKey + " for problem " + problem);
 				}			

@@ -19,3 +19,6 @@ aws/**
 gcloud/**
 ssl_cert/**
 *.gz
+docker
+gcloud-build
+ssl_cert2
