@@ -77,14 +77,14 @@
     <copy todir="${distdir}" preservelastmodified="true">
         <fileset dir="${basedir}">
            <include name="codecheck.jar"/>
+           <include name="codecheck.jks"/>
            <include name="codecheck"/>
            <include name="codecheck.policy"/>
            <include name="comprog"/>
            <include name="runprog"/>
            <include name="runprog.apparmor"/>
            <include name="killold"/>
-           <include name="interleaveio"/>
-           <include name="interleaveio2"/>
+           <include name="interleaveio.py"/>
            <include name="lib/**"/>
         </fileset>
     </copy>

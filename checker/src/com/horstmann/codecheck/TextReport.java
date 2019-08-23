@@ -38,7 +38,8 @@ public class TextReport implements Report {
 
     private TextReport add(CharSequence s) {
         builder.append(s);
-        builder.append("\n");
+        if (s != null && s.length() > 0 && s.charAt(s.length() - 1) != '\n')
+            builder.append("\n");
         return this;
     }
 
@@ -64,8 +65,9 @@ public class TextReport implements Report {
 
     private TextReport caption(String text) {
         if (text != null && !text.trim().equals("")) {
+            builder.append(">>> ");            
             builder.append(text);
-            builder.append(":\n\n");
+            builder.append(" <<<\n");            
         }
         return this;
     }
@@ -83,7 +85,8 @@ public class TextReport implements Report {
 
     @Override
     public TextReport args(String args) {
-        output("Command line arguments: " + args);
+        if (args != null && args.trim().length() > 0)
+            output("Command line arguments: " + args);
         return this;
     }
 
@@ -304,7 +307,7 @@ public class TextReport implements Report {
     private int longest(String header, String[] entries) {
         int longest = header.length();
         for (int i = 0; i < entries.length; i++)
-            longest = Math.max(longest, entries[i].length());
+            longest = Math.max(longest, entries[i].trim().length());
         return longest;
     }
 
@@ -314,7 +317,7 @@ public class TextReport implements Report {
     }
 
     private void pad(String s, int col) {
-        s = s.trim();
+        s = s.trim().replace("\n", " ");
         builder.append(s);
         repeat(' ', col - s.length());
     }

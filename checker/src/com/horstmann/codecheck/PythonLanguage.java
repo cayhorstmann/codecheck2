@@ -10,6 +10,8 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.horstmann.codecheck.Language.Interleave;
+
 public class PythonLanguage implements Language {
 
     public PythonLanguage() {
@@ -21,8 +23,9 @@ public class PythonLanguage implements Language {
         return "py";
     }
     
-    @Override public boolean echoesStdin() { return true; }    
-
+    //@Override public Interleave echoesStdin() { return Interleave.UNGRADED; }    
+    @Override public Interleave echoesStdin() { return Interleave.ALWAYS; }
+    
     private static Pattern mainPattern = Pattern.compile("def\\s+main\\s*\\(\\s*\\)\\s*:");
     private static Pattern fundefPattern = Pattern.compile("def\\s+[A-Za-z0-9_]+\\s*\\(\\s*([A-Za-z0-9_]+(\\s*,\\s*[A-Za-z0-9_]+)*\\s*)?\\s*\\)\\s*:");
 
@@ -116,7 +119,7 @@ public class PythonLanguage implements Language {
     public @Override void runUnitTest(Path mainFile, Set<Path> dependentFiles, Path dir, Report report,
              Score score, int timeout, int maxOutput) {
        try {
-          String result = run(mainFile, dependentFiles, dir, "", "", timeout, maxOutput); 
+          String result = run(mainFile, dependentFiles, dir, "", "", timeout, maxOutput, false); 
           Matcher matcher = successPattern.matcher(result);
           int runs = 0;
           int failures = 0;

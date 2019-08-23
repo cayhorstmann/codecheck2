@@ -73,28 +73,18 @@ public class JavaScriptLanguage implements Language {
     public String compile(List<Path> modules, Path dir) {
         return null;
     }
-    
-    public String run(Path mainFile, Set<Path> dependentFiles, Path dir, String args,
-            String input, int timeoutMillis, int maxOutputLen) throws Exception {
+        
+    @Override public List<String> runCommand(Path dir, Path sourceFile, Set<Path> dependentFiles, String args)
+    {
         List<String> cmd = new ArrayList<>();
-        if (System.getProperty("os.name").toLowerCase().contains("win")) // We lose
-            cmd.add(Util.getHomeDir() + "\\runprog.bat");
-        else
-            cmd.add(Util.getHomeDir() + "/runprog");
-        int timeoutSeconds = (timeoutMillis + 500) / 1000;
-        cmd.add("" + timeoutSeconds);        
-        cmd.add(getLanguage());
         for (Path p : dependentFiles)  
             cmd.add(dir.resolve(p).toString());
-                
-        String programName = dir.resolve(mainFile).toString();
-        cmd.add(programName);
-        if (args != null) { cmd.add("--"); cmd.addAll(Arrays.asList(args.split("\\s+"))); }
-        StringBuilder output = new StringBuilder();        
-        Util.runProcess(cmd, input, timeoutMillis, output, maxOutputLen);
-        return output.toString();
+        String programName = dir.resolve(sourceFile).toString();
+        cmd.add(programName);        
+        if (args != null) { cmd.add("--"); }
+        return cmd;
     }
-    
+
     
     
     

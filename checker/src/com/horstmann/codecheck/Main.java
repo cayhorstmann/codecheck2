@@ -177,7 +177,7 @@ public class Main {
         // May need to count the number of expected cases in the 
         
         if (compile(mainFile)) {
-            String outerr = language.run(mainFile, dependentSourceFiles, workDir, "", null, timeout, maxOutputLen);
+            String outerr = language.run(mainFile, dependentSourceFiles, workDir, "", null, timeout, maxOutputLen, false);
             AsExpected cond = new AsExpected(comp);
             cond.eval(outerr, report, score, workDir.resolve(mainFile));
         } else
@@ -221,14 +221,16 @@ public class Main {
         
         String runNumber = test.replace("test", "").trim();
         report.run(!test.equals("Input") && runNumber.length() > 0 ? "Test " + runNumber : null);
-        
+        boolean interleaveio = language.echoesStdin() == Language.Interleave.ALWAYS ||
+            language.echoesStdin() == Language.Interleave.UNGRADED && test.equals("Input");
+        // TODO: Language settings
         for (String args : runargs) {
-            testInput(mainFile, solutionDir, test, input, args, outFiles, timeout / runargs.size(), maxOutput / runargs.size());
+            testInput(mainFile, solutionDir, test, input, args, outFiles, timeout / runargs.size(), maxOutput / runargs.size(), interleaveio);
         }
     }
     
     private void testInput(Path mainFile,
-            Path solutionDir, String test, String input, String runargs, String[] outFiles, int timeout, int maxOutput)
+            Path solutionDir, String test, String input, String runargs, String[] outFiles, int timeout, int maxOutput, boolean interleaveio)
             throws Exception {
         
         // Before the run, clear any output files in case they existed, 
@@ -238,11 +240,11 @@ public class Main {
     
         report.args(runargs);
 
-        if (!language.echoesStdin() && !test.equals("Input")) report.input(input);
+        if (!interleaveio && !test.equals("Input")) report.input(input);
 
         // Run student program and capture stdout/err and output files
 
-        String outerr = language.run(mainFile, dependentSourceFiles, workDir, runargs, input, timeout, maxOutput);
+        String outerr = language.run(mainFile, dependentSourceFiles, workDir, runargs, input, timeout, maxOutput, interleaveio);
         List<String> contents = new ArrayList<>();
         List<CompareImages> imageComp = new ArrayList<>();
         
@@ -273,7 +275,7 @@ public class Main {
             for (String f : outFiles) Files.deleteIfExists(workDir.resolve(f));           
             copyUseFiles(workDir); // Might have been deleted or mutated
             
-            String expectedOuterr = language.run(mainFile, dependentSourceFiles, solutionDir, runargs, input, timeout, maxOutput);
+            String expectedOuterr = language.run(mainFile, dependentSourceFiles, solutionDir, runargs, input, timeout, maxOutput, interleaveio);
         
             // Report on results
 
@@ -358,9 +360,9 @@ public class Main {
                 sub.substitute(submissionDir.resolve(mainFile),
                                workDir.resolve(mainFile), i);
                 if (compile(mainFile)) {
-                    actual[i] = language.run(mainFile, dependentSourceFiles, workDir, null, null, timeout, maxOutput);
+                    actual[i] = language.run(mainFile, dependentSourceFiles, workDir, null, null, timeout, maxOutput, false);
                     Path tempDir = compileSolution(mainFile, sub, i);
-                    expected[i] = language.run(mainFile, dependentSourceFiles, tempDir, null, null, timeout, maxOutput);                    
+                    expected[i] = language.run(mainFile, dependentSourceFiles, tempDir, null, null, timeout, maxOutput, false);                    
                     Util.deleteDirectory(tempDir);
                     int j = 0;
                     for (String v : sub.values(i)) { args[i][j] = v; j++; }
@@ -393,7 +395,7 @@ public class Main {
                 Path mainFile = testFiles.get(0);
                 Set<Path> otherFiles = new TreeSet<>(dependentSourceFiles);
                 for (int j = 1; j < testFiles.size(); j++) otherFiles.add(testFiles.get(j));
-            	String result = language.run(mainFile, otherFiles, workDir, "" + (i + 1), null, timeout, maxOutput);
+            	String result = language.run(mainFile, otherFiles, workDir, "" + (i + 1), null, timeout, maxOutput, false);
             	Scanner in = new Scanner(result);
                 List<String> lines = new ArrayList<>();
                 while (in.hasNextLine()) lines.add(in.nextLine());

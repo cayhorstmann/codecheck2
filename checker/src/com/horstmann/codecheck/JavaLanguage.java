@@ -114,7 +114,7 @@ public class JavaLanguage implements Language {
     @Override
     @SuppressWarnings("deprecation")
     public String run(final Path mainFile, Set<Path> dependentFiles, final Path classpathDir,
-            String args, String input, int timeoutMillis, int maxOutputLen) throws IOException,
+            String args, String input, int timeoutMillis, int maxOutputLen, boolean interleaveio) throws IOException,
             ReflectiveOperationException {
         InputStream oldIn = System.in;
         PrintStream oldOut = System.out;
@@ -124,15 +124,30 @@ public class JavaLanguage implements Language {
         final ByteArrayOutputStream newOut = new ByteArrayOutputStream();
         final PrintStream newOutPrint = new PrintStream(newOut);
         System.setIn(new ByteArrayInputStream(input.getBytes("UTF-8")) {
+            private boolean firstInLine = true;
+            
             public int available() {
                 return 0;
+            }
+            
+            public void echo(int c) {
+                if (firstInLine) {
+                    for (byte b : "〈".getBytes(StandardCharsets.UTF_8))
+                        newOut.write(b);
+                    firstInLine = false;
+                }
+                if (c == '\n' || c == -1) { 
+                    for (byte b : "〉\n".getBytes(StandardCharsets.UTF_8))
+                        newOut.write(b);                    
+                    firstInLine = true;
+                }
+                else
+                    newOut.write((char) c);
             }
 
             public int read() {
                 int c = super.read();
-                if (c != -1) {
-                    newOut.write((char) c);
-                }
+                echo(c);
                 return c;
             }
 
@@ -145,7 +160,7 @@ public class JavaLanguage implements Language {
                 if (len == 0 || off >= b.length)
                     return 0;
                 int r = 0;
-                int c = super.read();
+                int c = /*super.*/read();
                 if (c == -1)
                     return -1;
                 boolean done = false;
@@ -155,14 +170,16 @@ public class JavaLanguage implements Language {
                     if (c == '\n')
                         done = true;
                     else {
-                        c = super.read();
+                        c = /*super.*/read();
                         if (c == -1)
                             done = true;
                     }
                 }
+                /*
                 if (r != -1) {
                     newOut.write(b, off, r);
                 }
+                */
                 return r;
             }
         });
@@ -193,7 +210,7 @@ public class JavaLanguage implements Language {
                         Throwable cause = ex.getCause();
                         if (cause instanceof AccessControlException
                                 && cause.getMessage()
-                                        .equals("access denied (\"java.lang.RuntimePermission\" \"exitVM.0\")")) {
+                                        .startsWith("access denied (\"java.lang.RuntimePermission\" \"exitVM.")) {
                             // do nothing
                         } else if (cause == null)
                             ex.printStackTrace(newOutPrint);
@@ -603,7 +620,7 @@ public class JavaLanguage implements Language {
         if (declaration.contains(" static ")) return Collections.singletonList("static"); else return Collections.emptyList();
     }
     
-    public boolean echoesStdin() { return true; }
+    public Interleave echoesStdin() { return Interleave.ALWAYS; }
 
     private static Pattern ERROR_PATTERN = Pattern.compile(".+/(?<file>[^/]+\\.java):(?<line>[0-9]+): error: (?<msg>.+)");
     @Override public Pattern errorPattern() { return ERROR_PATTERN; }        

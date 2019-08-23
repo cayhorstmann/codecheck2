@@ -121,7 +121,7 @@ public class RacketLanguage implements Language {
    public @Override void runUnitTest(Path mainFile, Set<Path> dependentFiles, Path dir, Report report,
             Score score, int timeout, int maxOutput) {
       try {
-         String result = run(mainFile, dependentFiles, dir, "", "", timeout, maxOutput); 
+         String result = run(mainFile, dependentFiles, dir, "", "", timeout, maxOutput, false); 
          Matcher matcher = successPattern.matcher(result);
          int runs = 0;
          int failures = 0;

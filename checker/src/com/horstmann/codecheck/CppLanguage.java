@@ -19,7 +19,7 @@ public class CppLanguage implements Language {
         return "cpp";
     }
     
-    @Override public boolean echoesStdin() { return true; }
+    @Override public Interleave echoesStdin() { return Interleave.ALWAYS; }
     
     @Override
     public boolean isSource(Path p) {

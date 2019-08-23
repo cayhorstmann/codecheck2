@@ -82,8 +82,9 @@ function grade {
     fi
 
     if [ ! -z "$STOREPASS" -a -e "$BASEDIR/codecheck.jks" ] ; then
-        "$JAVA_HOME"/bin/jarsigner -keystore "$BASEDIR/codecheck.jks" -storepass "$STOREPASS" $REPORT_JAR codecheck > /dev/null
-        # Don't use -tsa http://timestamp.comodoca.com/rfc3161
+      "$JAVA_HOME"/bin/jarsigner -keystore "$BASEDIR/codecheck.jks" -storepass "$STOREPASS" $REPORT_JAR codecheck > /dev/null
+      # Don't use -tsa http://timestamp.comodoca.com
+      # It's MUCH too slow
     fi
 }
 

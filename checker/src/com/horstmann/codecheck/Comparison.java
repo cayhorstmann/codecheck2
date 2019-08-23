@@ -13,20 +13,21 @@ public class Comparison {
         // If actual lines > expected + MANY_MORE_LINES, truncate actual output
     
     public boolean execute(String actual, String expected, Report report, String filename) throws IOException {
-        List<String> lines1 = getLines(actual);
-        List<String> lines2 = getLines(expected);
+        List<String> lines1 = getLines(actual.replace("〉\n", "〉")); 
+        List<String> lines2 = getLines(expected.replace("〉\n", "〉"));
 
         List<Report.Match> matches = new ArrayList<>();
         boolean outcome = lines1.size() == lines2.size();
         int i;
         for (i = 0; i < lines1.size() && i < lines2.size(); i++) {
-           String line1 = lines1.get(i);
-           String line2 = lines2.get(i);
+           String line1 = lines1.get(i).replaceAll("〈[^〉]*〉", "");
+           String line2 = lines2.get(i).replaceAll("〈[^〉]*〉", "");
            Report.Match m = compare(line1, line2);
            outcome &= m.matches;
            matches.add(m);
         }
         if (outcome) {
+            // TODO: Report needs to deal with 〈...〉 (replace with <b>...</b>\n)
             if (filename != null) {
                 report.file(filename, actual);
             }
@@ -61,6 +62,7 @@ public class Comparison {
                 m.explanation = null;
                 matches.add(m);
             }
+            // TODO: Report needs to deal with 〈...〉 (replace with <b>...</b>\n)
             report.compareTokens(filename, matches);
         }
         return outcome;
@@ -94,7 +96,9 @@ public class Comparison {
     	return r.toArray(new String[r.size()]);
     }
     
-    private static String normalizeWS(String s) { return s.trim().replaceAll("\\s+", " "); }
+    private static String normalizeWS(String s) { 
+        return s.replaceAll("\\pZ+", " ").trim(); 
+    }
     
     public Report.Match compare(String a, String b) {
         Report.Match m = new Report.Match();
@@ -148,7 +152,7 @@ public class Comparison {
         this.tolerance = tolerance;
     }
     
-	public void setIgnoreSpace(boolean ignoreSpace) {
-		this.ignoreSpace = ignoreSpace;
-	}
+    public void setIgnoreSpace(boolean ignoreSpace) {
+        this.ignoreSpace = ignoreSpace;
+    }
 }

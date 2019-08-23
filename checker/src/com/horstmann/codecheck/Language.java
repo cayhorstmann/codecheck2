@@ -148,23 +148,31 @@ public interface Language {
      * @return the combined stdout/stderr of the run 
      */
     default String run(Path sourceFile, Set<Path> dependentFiles, Path dir, String args,
-            String input, int timeoutMillis, int maxOutputLen) throws Exception {
+            String input, int timeoutMillis, int maxOutputLen, boolean interleaveIO) throws Exception {
         List<String> cmd = new ArrayList<>();
         if (System.getProperty("os.name").toLowerCase().contains("win")) // We lose
             cmd.add(Util.getHomeDir() + "\\runprog.bat");
         else
             cmd.add(Util.getHomeDir() + "/runprog");
-        int timeoutSeconds = (timeoutMillis + 500) / 1000;
+        int timeoutSeconds = Math.max(1, (timeoutMillis + 500) / 1000);
         cmd.add("" + timeoutSeconds);
-        cmd.add(getLanguage());
-        String programName = dir.resolve(sourceFile).toString();
-        cmd.add(programName);
+        cmd.add("" + interleaveIO);
+        cmd.add(getLanguage());        
+        cmd.addAll(runCommand(dir, sourceFile, dependentFiles, args));
+        
         if (args != null) cmd.addAll(Arrays.asList(args.split("\\s+")));
         StringBuilder output = new StringBuilder();        
         Util.runProcess(cmd, input, timeoutMillis, output, maxOutputLen);
         return output.toString();
     }
 
+    default List<String> runCommand(Path dir, Path sourceFile, Set<Path> dependentFiles, String args)
+    {
+        List<String> cmd = new ArrayList<>();
+        String programName = dir.resolve(sourceFile).toString();
+        cmd.add(programName);        
+        return cmd;
+    }
     
     /**
      * Gets the language string for this language.
@@ -266,12 +274,13 @@ public interface Language {
         return Collections.emptyList();
     }
     
+    enum Interleave { ALWAYS, UNGRADED, NEVER }
     /**
      * Reports whether, when running the program, stdin is echoed to stdout, making input
      * and output interleaved.
      * @return true if stdin is echoed 
      */
-    default boolean echoesStdin() { return false; }
+    default Interleave echoesStdin() { return Interleave.NEVER; }
     
     default Pattern errorPattern() { return null; }
     

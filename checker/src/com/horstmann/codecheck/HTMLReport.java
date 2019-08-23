@@ -308,6 +308,10 @@ public class HTMLReport implements Report {
                 builder.append("&gt;");
             else if (c == '&')
                 builder.append("&amp;");
+            else if (c == '〈')
+                builder.append("<b>");
+            else if (c == '〉')
+                builder.append("</b>");
             else
                 builder.append(c);
         }

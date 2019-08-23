@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# args: timeout language module arg1 arg2 ...
+# args: timeout interleaveio language module arg1 arg2 ...
 
 # TODO: If nice isn't good enough, we can use cgroups. 
 # sudo apt-get install cgroup-bin
@@ -28,6 +28,8 @@ fi
 DIR=`dirname $0`
 TIMEOUT=$1
 shift
+INTERLEAVEIO=$1
+shift
 LANG=$1
 shift
 
@@ -36,25 +38,35 @@ case _"$LANG" in
     ulimit -d 100000 -f 1000 -n 100 -v 100000 -t ${TIMEOUT}
     if [[ $1 =~ .*Test[0-9]*[.]py ]] ; then
         timeout ${TIMEOUT}s nice python3 -m unittest $@
+    elif [[ $INTERLEAVEIO == 'true' ]] ; then
+      TMPFILE=codecheck.XXXXXXXXXX
+      while read line
+      do
+        echo "$line" >> $TMPFILE
+      done
+      cat $TMPFILE | nice $DIR/interleaveio.py ${TIMEOUT} python3 $@
+      rm $TMPFILE
     else
-      TIMEOUT=$((TIMEOUT+1))
-      timeout ${TIMEOUT}s nice $DIR/interleaveio python3 $@
+      timeout ${TIMEOUT}s nice python3 $@
     fi
     ;;
 
   _C)
-    ulimit -d 10000 -f 1000 -n 100 -v 100000 -t ${TIMEOUT}
+    ulimit -d 100000 -f 1000 -n 100 -v 100000 -t ${TIMEOUT}
     PROG=`dirname $1`/prog # Ignore module base name--we called it prog in comprog
     shift 
     timeout ${TIMEOUT}s nice $PROG $@
     ;;
   
   _Cpp)
-    ulimit -d 10000 -f 1000 -n 100 -v 100000 -t ${TIMEOUT}
+    ulimit -d 100000 -f 1000 -n 100 -v 100000 -t ${TIMEOUT}
     PROG=`dirname $1`/prog # Ignore module base name--we called it prog in comprog
     shift
-    TIMEOUT=$((TIMEOUT+1))
-    timeout ${TIMEOUT}s nice $DIR/interleaveio $PROG $@
+    if [[ $INTERLEAVEIO == 'true' ]] ; then
+      nice $DIR/interleaveio.py ${TIMEOUT} $PROG $@
+    else
+      timeout ${TIMEOUT}s nice $PROG $@
+    fi
     ;;
 
   _Scala)

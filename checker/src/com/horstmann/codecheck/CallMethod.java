@@ -193,8 +193,8 @@ public class CallMethod {
         }
         else if (a instanceof String && b instanceof String) {
         	if (ignoreSpace) {
-        		a = ((String) a).replaceAll("\\s+", " ").trim();
-        		b = ((String) b).replaceAll("\\s+", " ").trim();
+        		a = ((String) a).replaceAll("\\pZ+", " ").trim();
+        		b = ((String) b).replaceAll("\\pZ+", " ").trim();
         	}
         	if (ignoreCase) 
         		return ((String) a).equalsIgnoreCase((String) b);

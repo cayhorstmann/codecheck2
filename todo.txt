@@ -1,45 +1,19 @@
 =CodeCheck
 
-Chaz Chang
+If interleaveio is inherently unstable, may need to run without, compare result, and then run with for visual representation
 
-https://console.cloud.google.com/compute/instances?project=codecheck-205306
-gcloud compute --project "codecheck-205306" ssh --zone "us-west1-b" "instance-1"
+for f in `seq 1 100` ; do http POST http://codecheck.it/checkNJS  @/data/temp/request.json | jq '. | {score}' ; done
 
+---
 
-sudo apt install empty-expect
+CodeCheck requires that a tester ends in "Tester", "Tester2", etc. I suppose I could change CodeCheck to allow "_tester" as well.
 
-rm empty.log
-empty -f -i in.fifo -o out.fifo -p empty.pid -L empty.log java Volume
-echo 3 > in.fifo
-echo 2 > in.fifo
-cat empty.log 
+---
 
-<<<Please enter the price for a six-pack: >>>3
-<<<Please enter the price for a two-liter bottle: >>>2
-<<<Pack price per liter:       1,41
-Bottle price per liter:     1,00
-
-...
-
-rm empty.log
-empty -f -i in.fifo -o out.fifo -p empty.pid -L empty.log java Volume
-cat empty.log
-
-<<<Please enter the price for a six-pack:
-
-cat empty.pid | xargs kill
-
-rm empty.log
-empty -f -i in.fifo -o out.fifo -p empty.pid -L empty.log java Volume
-echo 3 > in.fifo
-cat empty.log 
-
-<<<Please enter the price for a six-pack: >>>3
-<<<Please enter the price for a two-liter bottle:
-
-cat empty.pid | xargs kill
-
-
+> ebook-bc-3-ch08-sec01-cc-6
+> ebook-bc-3-ch08-sec01-cc-7
+> Both have only one set of test values.  OK?
+I added another output to cc-6, but there is no easy way to do it with cc-7. //OUTPUT doesn't interact well with //SUB or //CALL. 
 
 ---
 
@@ -56,13 +30,9 @@ class com/horstmann/codecheck/JavaLanguage uses deprecated method java/lang/Thre
 
 ---
 
-(C) Can I use Java 9 from http://zulu.org/download/ or http://download.java.net/java/GA/jdk9/9/binaries/openjdk-9_linux-x64_bin.tar.gz in play-codecheck? (It's now 9.0.1)
-(C) CodeCheck http://code.makery.ch/blog/javafx-2-snapshot-as-png-image/
 (C) CodeCheck: Allow students to save their work and give them a URL
 (C) In play project, activate some of the security filters
 (C) https://www.slideshare.net/EricSmalling1/best-practices-for-developing-deploying-java-applications-with-docker, https://blog.sebastian-daschner.com/
-(C) sudo /usr/sbin/cgconfigparser -l /etc/cgconfig.conf before running CodeCheck locally
-
 
 ---
 
@@ -73,13 +43,6 @@ unfortunately, CALL doesn't work with the TOLERANCE, IGNORECASE, and IGNORESPACE
 deepEqual(x, y, tolerance, ignorecase, ignorespace) 
 
 that checks whether x and y are equal except if they are doubles, use the tolerance, if they are strings, use ignorecase/ignorespace (I know how to do this part), and if they are sequences such as lists, sets, or tuples, do this recursively for the elements. I guess I should see if something is iterable (https://stackoverflow.com/questions/1952464/in-python-how-do-i-determine-if-an-object-is-iterable). This seems like a good thing to do in the long run, and I am adding it to the wish list.---
-
-
----
-
-Kathleen: I do not use levels. I use your //SOLUTION feature and run two separate files.
-
-I do not use rubrics.
 
 
 ---
@@ -106,10 +69,6 @@ mono-mcs
 
 http://danml.com/download.html
 
-JSONP won't cut it--use only for worksheets
-need to make other JSON handler for same origin
-type=JSONS make that the default for non-codecheck
-
 Codecheck JdK 9
 Put junit, hamcrest on module path
 
@@ -121,11 +80,8 @@ grant codeBase "jrt:/jdk.compiler" {
 };
 
 
-
 Should be possible to detect JAVA_HOME by finding the real path for
 `which java` in codecheck script
-
-https://en.wikipedia.org/wiki/Cross-origin_resource_sharing
 
 JUnit 5
 
@@ -149,8 +105,6 @@ JUnit only needs
 and we grant that to students and testers so they can do stuff with reflection
 
 This reorg would deal with an attack where a student puts arbitrary code into a JUnit test file.
-
-
 
 > - Is it possible to embed(in html) css stylesheets in the problem.html? I've tried it but codecheck seems to get rid of them
 
@@ -177,8 +131,6 @@ Codecheck bug with 04_11
 CodeCheck SQL, Scheme 
    http://stackoverflow.com/questions/6380327/how-do-you-load-a-file-into-racket-via-command-line
 Codecheck
-Make it possible to turn off echoing of input in cc?
-
 
 
 Blog https://wiley.adobeconnect.com/_a44433639/p9ab13p2db7/?launcher=false&fcsContent=true&pbMode=normal
@@ -188,7 +140,6 @@ ivy
 grep -l test.run=true ~/codecheck/*/*/*/*/check.properties
 
 
-Limiting CPU: http://www.howtoforge.com/how-to-limit-cpu-usage-with-cpulimit-on-ubuntu-linux
 Firejail: https://firejail.wordpress.com/
 
 
