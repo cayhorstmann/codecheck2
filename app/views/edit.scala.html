@@ -25,7 +25,7 @@
 <hr/>
 <form method="post" action="/editedProblem/@pid/@editKey" enctype="multipart/form-data">
 <p>Alternatively, upload a zip file. Select the file <input name="file" id="file" type="file"/></p>
-<p><input id="upload" type="submit" value="Upload zip file" disabled="disabled"/></p></form>
+<p><input id="upload" type="submit" value="Upload zip file"/></p></form>
 <script type="text/javascript">
 for (let i = 1; i <= @{files.size()}; i++) { 
   document.getElementById('delete' + i).addEventListener('click',
@@ -56,8 +56,10 @@ document.getElementById('addfile').addEventListener('click',
     })
 })
 
+document.getElementById('upload').disabled = document.getElementById('file').files.length === 0 
+
 document.getElementById('file').addEventListener('change', function() {
-    document.getElementById('upload').disabled = false
+    document.getElementById('upload').disabled = document.getElementById('file').files.length === 0
 })
 </script>
 </body>

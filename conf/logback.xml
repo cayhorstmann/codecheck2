@@ -8,6 +8,10 @@
       </encoder>
    </appender>
 
+   <appender name="ASYNCSTDOUT" class="ch.qos.logback.classic.AsyncAppender">
+      <appender-ref ref="STDOUT" />
+   </appender>
+
    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
       <file>${application.home:-.}/../logs/application.log</file>
       <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">

@@ -11,23 +11,19 @@ import java.util.Properties;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import play.Logger;
-import com.typesafe.config.Config;
-
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.Protocol;
-import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.typesafe.config.Config;
+
+import play.Logger;
 
 @Singleton
 public class S3Connection {
 	private Config config;
-	private String s3AccessKey = null;
-	private String s3SecretKey = null;
 	private String bucketSuffix = null;
+	private AmazonS3 amazonS3;
 	
 	public @Inject S3Connection(Config config) {
 		this.config = config;
@@ -38,10 +34,17 @@ public class S3Connection {
 				Properties props = new Properties();
 				props.load(Files.newBufferedReader(Paths.get(s3CredentialsPath),
 						StandardCharsets.UTF_8));
-				s3AccessKey = props.getProperty("accessKey");
-				s3SecretKey = props.getProperty("secretKey");
+				String s3AccessKey = props.getProperty("accessKey");
+				String s3SecretKey = props.getProperty("secretKey");
+				String s3Region = props.getProperty("region", "us-west-1"); 
+				amazonS3 = AmazonS3ClientBuilder
+						.standard()
+						.withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(s3AccessKey, s3SecretKey)))
+						.withRegion(s3Region)
+						.withForceGlobalBucketAccessEnabled(true)
+						.build(); 
 			} catch (IOException ex) {
-				Logger.error("Can't load S3 credentials", ex);
+				Logger.of("com.horstmann.codecheck").error("Can't load S3 credentials", ex);
 			}
 		} 
 		bucketSuffix = config.getString("com.horstmann.codecheck.s3bucketsuffix");
@@ -51,24 +54,28 @@ public class S3Connection {
 		return !config.hasPath("com.horstmann.codecheck.repo." + repo);
 	}
 
-	private AmazonS3 getS3Connection() throws IOException {
+	private AmazonS3 getS3Connection() { // throws IOException {
+		/*
 		AWSCredentials credentials = new BasicAWSCredentials(s3AccessKey,
 				s3SecretKey);
 
 		ClientConfiguration clientConfig = new ClientConfiguration();
 		clientConfig.setProtocol(Protocol.HTTP);
-
-		return new AmazonS3Client(credentials, clientConfig);
+		*/
+		return amazonS3; // new AmazonS3Client(credentials, clientConfig);
 	}
 
 	public void putToS3(Path file, String bucket, String key)
 			throws IOException {
+		/*
 		InputStream in = Files.newInputStream(file);
 		try {
 			getS3Connection().putObject(bucket, key, in, new ObjectMetadata());
 		} finally {
 			in.close();
 		}
+		*/
+		getS3Connection().putObject(bucket, key, file.toFile());
 	}
 
 	public void deleteFromS3(String bucket, String key)

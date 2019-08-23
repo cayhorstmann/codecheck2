@@ -17,7 +17,7 @@
 <hr/>
 <form method="post" action="../uploadProblem" enctype="multipart/form-data">
 <p>Alternatively, upload a zip file: <input name="file" id="file" type="file"/></p>
-<p><input id="upload" type="submit" value="Upload zip file" disabled="disabled"/></p></form>
+<p><input id="upload" type="submit" value="Upload zip file"/></p></form>
 <script type="text/javascript">
 let fileIndex = 1
 
@@ -41,8 +41,10 @@ document.getElementById('addfile').addEventListener('click',
     })
 })
 
+document.getElementById('upload').disabled = document.getElementById('file').files.length === 0 
+
 document.getElementById('file').addEventListener('change', function() {
-    document.getElementById('upload').disabled = false
+    document.getElementById('upload').disabled = document.getElementById('file').files.length === 0
 })
 </script>
 </body>

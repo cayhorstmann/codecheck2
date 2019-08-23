@@ -1,11 +1,6 @@
 # Routes
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
-# Request can come from
-#
-# Old web page /codecheck/files, /codecheck/check with type=plain
-# New web page /files, POST /checkJsonp with type=jsonp
-# Wiley Engage interactive element
 
 # Home page
 GET /    controllers.Default.redirect(to = "http://horstmann.com/codecheck/index.html")
@@ -30,11 +25,11 @@ GET     /fileData                   controllers.Files.fileData(repo: String ?= "
 # Classic HTML--is anyone still using it? Core Java?
 POST	/check						controllers.Check.checkHTML()
 
-POST    /uploadProblem                    controllers.Upload.uploadProblem()
-POST    /uploadFiles                      controllers.Upload.uploadFiles()
+POST    /uploadProblem                    controllers.Upload.uploadProblem(request: Request)
+POST    /uploadFiles                      controllers.Upload.uploadFiles(request: Request)
 GET     /edit/:problem/:editKey           controllers.Upload.editKeySubmit(problem: String, editKey: String)
-POST    /editedFiles/:problem/:editKey    controllers.Upload.editedFiles(problem: String, editKey: String)
-POST    /editedProblem/:problem/:editKey  controllers.Upload.editedProblem(problem: String, editKey: String)
+POST    /editedFiles/:problem/:editKey    controllers.Upload.editedFiles(request: Request, problem: String, editKey: String)
+POST    /editedProblem/:problem/:editKey  controllers.Upload.editedProblem(request: Request, problem: String, editKey: String)
 
 # Legacy
 GET	    /codecheck/files						controllers.Files.filesHTML(repo: String ?= "ext", problem: String, ccu: String ?= null)
