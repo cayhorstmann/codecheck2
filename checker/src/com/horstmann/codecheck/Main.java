@@ -327,6 +327,12 @@ public class Main {
             else if (language.isSource(fullPath) && !language.isUnitTest(fullPath))
                 dependentSourceFiles.add(p);
         }
+        
+        if (mainSourceFiles.size() == 0 && dependentSourceFiles.size() == 1) {
+            // This can happen with Python where main is not required
+            mainSourceFiles.addAll(dependentSourceFiles);
+            dependentSourceFiles.clear();
+        }
     }
 
     private void runUnitTests() {
@@ -460,16 +466,17 @@ public class Main {
         // TODO: Adjustable Timeouts
         long startTime = System.currentTimeMillis();
         try {
-            submissionDir = FileSystems.getDefault().getPath(args[0]);
-            Path problemDir = FileSystems.getDefault().getPath(args[1]);
             Path homeDir = Util.getHomeDir();
-            workDir = Paths.get(".").toAbsolutePath().normalize();
             System.setProperty("java.security.policy", homeDir.resolve("codecheck.policy").toString());
             System.setProperty("com.horstmann.codecheck.home", homeDir.toString());
-            
             if (!DEBUG) // TODO: Why not in debug mode? 
                 System.setSecurityManager(new SecurityManager());
+            Path problemDir = FileSystems.getDefault().getPath(args[1]);
+            workDir = Paths.get(".").toAbsolutePath().normalize();
+            submissionDir = FileSystems.getDefault().getPath(args[0]);
 
+            // Set up report first in case anything else throws an exception 
+            
             String reportType = System.getProperty("com.horstmann.codecheck.report");
             if (reportType != null) {
                 Class<?> reportClass = Class.forName("com.horstmann.codecheck." + reportType + "Report");
@@ -485,7 +492,7 @@ public class Main {
                 report = new CodioReport("Report", submissionDir);
             else
                 report = new HTMLReport("Report", submissionDir);
-                    
+                        
             // Determine language
             
             String languageName = System.getProperty("com.horstmann.codecheck.language");
@@ -625,15 +632,18 @@ public class Main {
             // the supplied files that the students are entitled to see
             Set<Path> printFiles = Util.filterNot(useFiles, "test*.in", "test*.out", "Input", 
                     "*.png", "*.PNG", "*.gif", "*.GIF", "*.jpg", "*.jpeg", "*.JPG", 
-                    "*.jar");      
+                    "*.jar", "edit.key");      
 
             printFiles.removeAll(annotations.getHidden()); 
             
             if (annotations.checkConditions(submissionDir, report)) {
                 if (getStringProperty("test.method") != null) // TODO: Legacy
                     callMethod(tolerance, ignoreCase, ignoreSpace);
-                if (annotations.has("CALL"))
-                    doCalls(submissionDir, annotations.findCalls());
+                if (annotations.has("CALL")) {
+                    Calls calls = annotations.findCalls();
+                    doCalls(submissionDir, calls);
+                    mainSourceFiles.remove(calls.getFile());
+                }
                 if (annotations.has("SUB")) {
                     Substitution sub = annotations.findSubstitution();
                     doSubstitutions(submissionDir, sub);
@@ -713,14 +723,18 @@ public class Main {
                 }
             }
         } catch (Throwable t) {
-            report.systemError(t);
+            if (report != null) report.systemError(t);
+            else t.printStackTrace();
         } finally {
-            if (annotations != null && !annotations.has("NOSCORE") 
-                    && !inputMode) 
-                report.add(score);
-            long endTime = System.currentTimeMillis();
-            report.comment("Elapsed", (endTime - startTime) + " ms");
-            report.save(problemId, "report");
+            if (report != null) {
+                if (annotations != null && !annotations.has("NOSCORE") 
+                        && !inputMode) 
+                    report.add(score);
+                long endTime = System.currentTimeMillis();
+                report.comment("Elapsed", (endTime - startTime) + " ms");
+                report.save(problemId, "report");
+            }
+            else System.err.println("report is null");
         }
         System.exit(0);
     }

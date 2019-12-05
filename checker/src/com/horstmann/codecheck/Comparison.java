@@ -39,7 +39,7 @@ public class Comparison {
             while (i < lines2.size()) {
                 Report.Match m = new Report.Match();
                 m.actual = "";
-                m.expected = lines2.get(i);
+                m.expected = lines2.get(i).replaceAll("〈[^〉]*〉", "");
                 m.matches = false;
                 m.explanation = null;
                 matches.add(m);
@@ -47,7 +47,7 @@ public class Comparison {
             }
             while (i < lines1.size() && i < lines2.size() + MANY_MORE_LINES) {
                 Report.Match m = new Report.Match();
-                m.actual = lines1.get(i);
+                m.actual = lines1.get(i).replaceAll("〈[^〉]*〉", "");
                 m.expected = "";
                 m.matches = false;
                 m.explanation = null;

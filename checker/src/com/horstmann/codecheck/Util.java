@@ -56,7 +56,9 @@ public class Util {
 
     public static String read(Path path) {
         try {
-            return new String(java.nio.file.Files.readAllBytes(path), "UTF-8");
+            String result = new String(java.nio.file.Files.readAllBytes(path), "UTF-8");
+            result = result.replaceAll("\r", "");
+            return result.endsWith("\n") ? result : result + "\n";
         } catch (IOException ex) {
             return null;
         }
