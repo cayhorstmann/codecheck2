@@ -641,13 +641,15 @@ public class Main {
                     callMethod(tolerance, ignoreCase, ignoreSpace);
                 if (annotations.has("CALL")) {
                     Calls calls = annotations.findCalls();
-                    doCalls(submissionDir, calls);
                     mainSourceFiles.remove(calls.getFile());
+                    dependentSourceFiles.add(calls.getFile());
+                    doCalls(submissionDir, calls);
                 }
                 if (annotations.has("SUB")) {
                     Substitution sub = annotations.findSubstitution();
-                    doSubstitutions(submissionDir, sub);
                     mainSourceFiles.remove(sub.getFile());
+                    //dependentSourceFiles.add(sub.getFile());
+                    doSubstitutions(submissionDir, sub);
                 }
                 
                 Map<String, String> inputs = new TreeMap<>(); // TODO: Legacy
