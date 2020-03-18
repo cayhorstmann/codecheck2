@@ -45,7 +45,7 @@ function randWord() {
 function randIntArray(len, a, b) {
 	var result = []
 	for (var i = 0; i < len; i++)
-		result.push(randomInt(a, b))
+		result.push(randInt(a, b))
 	return result;
 }
 
@@ -64,7 +64,7 @@ function randIntArray2(r, c, a, b) {
 function randFloatArray(len, a, b) {
    var result = []
    for (var i = 0; i < len; i++)
-		result.push(randomInt(a, b))
+		result.push(randInt(a, b))
 	return result;
 }
 
@@ -83,13 +83,13 @@ function randFloatArray2(r, c, a, b) {
 function randString(len, a, b) {
 	var result = ""
 	for (var i = 0; i < len; i++)
-		result += randomCodePoint(a, b)
+		result += randCodePoint(a, b)
 	return result;
 }
 
 function randWordArray(len) {
    var result = []
 	for (var i = 0; i < len; i++)
-		result.push(randomWord())	
+		result.push(randWord())	
 	return result;
 }

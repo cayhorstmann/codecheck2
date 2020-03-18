@@ -2,6 +2,8 @@ name := """play-codecheck"""
 
 version := "1.0-SNAPSHOT"
 
+maintainer := "cay@horstmann.com"
+
 scalaVersion := "2.12.8"
 
 lazy val root = (project in file(".")).enablePlugins(PlayJava)
