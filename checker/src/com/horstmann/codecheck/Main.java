@@ -71,7 +71,8 @@ public class Main {
        new RacketLanguage(),
        new JavaScriptLanguage(),
        new CSharpLanguage(),
-       new HaskellLanguage()
+       new HaskellLanguage(),
+       new SMLLanguage()
     };
 
     /**
@@ -540,7 +541,7 @@ public class Main {
                 useFiles = Util.filterNot(Util.getDescendantFiles(studentDir), 
                         ".*", "*~", "*.class", "a.out", "*.pyc",  
                         "index.html", "index.ch", "problem.html", 
-                        "*.in", "q.properties", "check.properties", "param.js");
+                        "*.in", "q.properties", "check.properties", "param.js", "edit.key");
                 solutionFiles = new TreeSet<Path>();
                 inputMode = Files.exists(submissionDir.resolve("Input"));
                 annotations.read(studentDir, useFiles, solutionDir, solutionFiles, inputMode, report);
@@ -632,7 +633,7 @@ public class Main {
             // the supplied files that the students are entitled to see
             Set<Path> printFiles = Util.filterNot(useFiles, "test*.in", "test*.out", "Input", 
                     "*.png", "*.PNG", "*.gif", "*.GIF", "*.jpg", "*.jpeg", "*.JPG", 
-                    "*.jar", "edit.key");      
+                    "*.jar");      
 
             printFiles.removeAll(annotations.getHidden()); 
             

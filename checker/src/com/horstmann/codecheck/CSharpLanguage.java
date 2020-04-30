@@ -22,7 +22,7 @@ public class CSharpLanguage implements Language {
     }
     
     @Override
-    public List<Path> writeTester(Path sourceDir, Path targetDir, Path file,
+    public List<Path> writeTester(Path solutionDir, Path workDir, Path file,
             List<Call> calls) throws IOException {
         // TODO Auto-generated method stub
         return null;

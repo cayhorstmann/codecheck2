@@ -32,10 +32,10 @@ public class ScalaLanguage implements Language {
     }
 
     @Override
-    public List<Path> writeTester(Path sourceDir, Path targetDir, Path file,
+    public List<Path> writeTester(Path solutionDir, Path workDir, Path file,
             List<Calls.Call> calls)
             throws IOException {
-        List<String> lines = Util.readLines(sourceDir.resolve(file));
+        List<String> lines = Util.readLines(solutionDir.resolve(file));
         
         // Find class name
         int i = 0;
@@ -66,7 +66,7 @@ public class ScalaLanguage implements Language {
             lines.add(++i, "println(actual == expected) }");
          }
         Path p = Paths.get(objectName + "CodeCheck.scala");
-        Files.write(targetDir.resolve(p), lines, StandardCharsets.UTF_8);
+        Files.write(workDir.resolve(p), lines, StandardCharsets.UTF_8);
         List<Path> testModules = new ArrayList<>();
         testModules.add(p);
         return testModules;        

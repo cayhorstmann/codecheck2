@@ -94,7 +94,7 @@ case _"$LANG" in
 
   _JavaScript)
     ulimit -d 1000000 -f 1000 -n 100 -v 10000000 -t ${TIMEOUT}
-    timeout ${TIMEOUT}s nice jjs --language=es6 -scripting $@
+    timeout ${TIMEOUT}s nice node $@
     ;;
 
   _CSharp)
@@ -102,8 +102,8 @@ case _"$LANG" in
     timeout ${TIMEOUT}s nice mono `dirname $1`/Prog.exe $@
     ;;
 
-  _Haskell)
-    ulimit -d 10000 -f 1000 -n 100 -v 1000000 -t ${TIMEOUT}
+  _Haskell|_SML)
+    ulimit -d 100000 -f 1000 -n 100 -v 1000000 -t ${TIMEOUT}
     PROG=`dirname $1`/prog
     shift
     timeout ${TIMEOUT}s nice $PROG $@

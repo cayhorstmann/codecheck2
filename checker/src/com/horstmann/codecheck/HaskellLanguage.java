@@ -39,14 +39,14 @@ public class HaskellLanguage implements Language {
         return mainPattern.matcher(contents).find();
     }
 
-    public List<Path> writeTester(Path sourceDir, Path targetDir, Path solutionFile,
+    public List<Path> writeTester(Path solutionDir, Path workDir, Path file,
             List<Calls.Call> calls) throws IOException {
         // Rewrite solution in module CodeCheckSolution
         
-        String moduleName = moduleOf(solutionFile);
-        Path solutionModuleFile = targetDir.resolve("CodeCheckSolution.hs");
+        String moduleName = moduleOf(file);
+        Path solutionModuleFile = workDir.resolve("CodeCheckSolution.hs");
         try (PrintWriter out = new PrintWriter(solutionModuleFile.toFile(), "UTF-8");
-                Scanner in = new Scanner(solutionFile, "UTF-8")) {
+                Scanner in = new Scanner(solutionDir.resolve(file), "UTF-8")) {
             out.println("module CodeCheckSolution where");            
             while (in.hasNextLine()) {
                 String line = in.nextLine();
@@ -56,7 +56,7 @@ public class HaskellLanguage implements Language {
         }
         
         // Generate testCodeCheck.hs
-        Path testFile = targetDir.resolve("testCodeCheck.hs");
+        Path testFile = workDir.resolve("testCodeCheck.hs");
         try (PrintWriter out = new PrintWriter(testFile.toFile(), "UTF-8")) {
             out.println("import " + moduleName);
             out.println("import CodeCheckSolution");

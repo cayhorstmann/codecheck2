@@ -50,7 +50,7 @@ public class Annotations {
 
     private void read(Path dir, Path p, boolean inSolution) {
     	String[] delims = language.pseudoCommentDelimiters();
-        Pattern pattern = Pattern.compile("(.*\\s|)" + delims[0] + "([A-Z\\[\\]]+)(\\s.*|)" + delims[1]);
+        Pattern pattern = Pattern.compile("(.*\\s|)" + delims[0] + "([A-Z\\[\\]]+)(\\s.*|)" + delims[1] + "\\s*");
         List<String> lines =  Util.readLines(dir.resolve(p));
         if (inSolution) solutions.add(p);
         for (int i = 0; i < lines.size(); i++) {

@@ -1,5 +1,4 @@
 // From https://github.com/angular/angular.js/blob/master/src/Angular.js
-var codecheck = function() {
 function isDate(value) {
   return toString.call(value) === '[object Date]';
 }
@@ -49,5 +48,6 @@ function deepEquals(o1, o2) {
   return false;
 }
 
-return { deepEquals: deepEquals }
-}()
+exports.deepEquals = deepEquals
+
+

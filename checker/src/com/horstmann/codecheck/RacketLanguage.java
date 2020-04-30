@@ -62,13 +62,13 @@ public class RacketLanguage implements Language {
      * java.util.List)
      */
     @Override
-    public List<Path> writeTester(Path sourceDir, Path targetDir, Path file,
+    public List<Path> writeTester(Path solutionDir, Path workDir, Path file,
             List<Calls.Call> calls)
             throws IOException {
        String moduleName = moduleOf(file);
         // Copy source/module.rkt to target/module-solution.rkt
-        Files.copy(sourceDir.resolve(file), targetDir.resolve(moduleName+ "-solution.rkt"));
-        Path testerFile = targetDir.resolve(moduleName + "CodeCheck.rkt");
+        Files.copy(solutionDir.resolve(file), workDir.resolve(moduleName+ "-solution.rkt"));
+        Path testerFile = workDir.resolve(moduleName + "CodeCheck.rkt");
         try (PrintWriter out = new PrintWriter(testerFile.toFile(), "UTF-8")) {
            out.println("#lang racket");
            out.println("(require (prefix-in solution:: \"" + moduleName + "-solution.rkt\"))");

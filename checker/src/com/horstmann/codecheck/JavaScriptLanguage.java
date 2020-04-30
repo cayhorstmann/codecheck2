@@ -29,38 +29,46 @@ public class JavaScriptLanguage implements Language {
     }
         
     @Override
-    public List<Path> writeTester(Path sourceDir, Path targetDir, Path file,
+    public List<Path> writeTester(Path solutionDir, Path workDir, Path file,
             List<Call> calls) throws IOException {
         
         String moduleName = moduleOf(file);
         Set<String> functionNames = new TreeSet<>();
         for (Calls.Call call : calls) functionNames.add(call.name);
-        List<String> lines = Util.readLines(sourceDir.resolve(file));
-        lines.add(0, "var solutionFunctions = function(){");
+        List<String> lines = new ArrayList<>();
+        lines.add("const codecheck = require('./codecheck.js');");
+        lines.add("const studentFunctions = function(){");
+        lines.addAll(Util.readLines(workDir.resolve(file)));
         lines.add("return {");
         for (String functionName : functionNames)
-            lines.add(functionName + ": " + functionName);
+            lines.add(functionName + ", ");
         lines.add("}}()");
+        lines.add("const solutionFunctions = function(){");
+        lines.addAll(Util.readLines(solutionDir.resolve(file)));
+        lines.add("return {");
+        for (String functionName : functionNames)
+            lines.add(functionName + ", ");
+        lines.add("}}()");
+        
         for (int k = 0; k < calls.size(); k++) {
             Calls.Call call = calls.get(k);
-            lines.add("if (arguments[0] === '" + (k + 1) + "') {");
-            lines.add("var actual = " + call.name + "(" + call.args + ")");
-            lines.add("var expected = solutionFunctions." + call.name + "(" + call.args + ")");
-            lines.add("print(JSON.stringify(expected))");
-            lines.add("print(JSON.stringify(actual))");
-            lines.add("print(codecheck.deepEquals(actual, expected))");
+            lines.add("if (process.argv[process.argv.length - 1] === '" + (k + 1) + "') {");
+            lines.add("const actual = studentFunctions." + call.name + "(" + call.args + ")");
+            lines.add("const expected = solutionFunctions." + call.name + "(" + call.args + ")");
+            lines.add("console.log(JSON.stringify(expected))");
+            lines.add("console.log(JSON.stringify(actual))");
+            lines.add("console.log(codecheck.deepEquals(actual, expected))");
             lines.add("}");            
         }
-        Files.write(targetDir.resolve(pathOf(moduleName + "CodeCheck")), lines,
+        Files.write(workDir.resolve(pathOf(moduleName + "CodeCheck")), lines,
                 StandardCharsets.UTF_8);
-        Files.copy(getClass().getResourceAsStream("codecheck.js"), targetDir.resolve("codecheck.js"));
+        Files.copy(getClass().getResourceAsStream("codecheck.js"), workDir.resolve("codecheck.js"));
         List<Path> paths = new ArrayList<>();
         paths.add(pathOf(moduleName + "CodeCheck"));
-        paths.add(Paths.get("codecheck.js"));
         return paths;
     }
 
-    private static String patternString = "var\\s+(?<name>[A-Za-z][A-Za-z0-9]*)\\s*=(?<rhs>[^;]+);?";
+    private static String patternString = "(var|const|let)\\s+(?<name>[A-Za-z][A-Za-z0-9]*)\\s*=(?<rhs>[^;]+);?";
     private static Pattern pattern = Pattern.compile(patternString);
 
     @Override
@@ -72,17 +80,6 @@ public class JavaScriptLanguage implements Language {
     @Override
     public String compile(List<Path> modules, Path dir) {
         return null;
-    }
-        
-    @Override public List<String> runCommand(Path dir, Path sourceFile, Set<Path> dependentFiles, String args)
-    {
-        List<String> cmd = new ArrayList<>();
-        for (Path p : dependentFiles)  
-            cmd.add(dir.resolve(p).toString());
-        String programName = dir.resolve(sourceFile).toString();
-        cmd.add(programName);        
-        if (args != null) { cmd.add("--"); }
-        return cmd;
     }
 
     

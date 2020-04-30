@@ -41,11 +41,11 @@ public class MatlabLanguage implements Language {
 
     // TODO: Implement correctly
     @Override
-    public List<Path> writeTester(Path sourceDir, Path targetDir, Path file,
+    public List<Path> writeTester(Path solutionDir, Path workDir, Path file,
             List<Calls.Call> calls)
             throws IOException {
         String moduleName = moduleOf(file);
-        List<String> lines = Util.readLines(sourceDir.resolve(file));
+        List<String> lines = Util.readLines(solutionDir.resolve(file));
         int i = 0;
         lines.add(i++, "from sys import argv");
         lines.add(i++, "import " + moduleName);        
@@ -79,7 +79,7 @@ public class MatlabLanguage implements Language {
         }
         lines.add("main()");
         Path p = pathOf(moduleName + "CodeCheck");
-        Files.write(targetDir.resolve(p), lines, StandardCharsets.UTF_8);        
+        Files.write(workDir.resolve(p), lines, StandardCharsets.UTF_8);        
         List<Path> testFiles = new ArrayList<>();
         testFiles.add(p);
         return testFiles;        

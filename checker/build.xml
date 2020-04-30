@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <!--
 
-    Copyright 2006-2015 Cay S. Horstmann
+    Copyright 2006-2020 Cay S. Horstmann
 
     This file is part of Codecheck.
 
@@ -28,7 +28,7 @@
              value="com/horstmann/codecheck/codecheck.properties" />
    <property name="distdir" value="/opt/codecheck" />
 
-   <property name="ant.build.javac.source" value="1.8"/>
+   <property name="ant.build.javac.source" value="1.8"/> 
    <property name="ant.build.javac.target" value="1.8"/>
 
    <path id="classpath">

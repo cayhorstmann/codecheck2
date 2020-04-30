@@ -47,8 +47,12 @@ case _"$LANG" in
     _Haskell)
         ghc -o prog $@
         ;;
+
+    _SML)
+       polyc -o prog $1
+       ;;
     
     _)  
-        echo Unknown language $LANG 
-        ;;          
+       echo Unknown language $LANG 
+       ;;          
 esac

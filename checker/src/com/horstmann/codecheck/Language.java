@@ -187,17 +187,15 @@ public interface Language {
 
     /**
      * Writes a CALL tester.
-     * @param sourceDir the directory of the source of the files
-     * @param targetDir the target directory to write the tester to
-     * @param file the template file
-     * @param modifiers any modifiers for the test generation
-     * @param name the name of the method being tested
-     * @param argsList the args to pass to the calls
+     * @param solutionDir the directory of the solution
+     * @param workDir the target directory to write the tester to (which also contains the submission files)
+     * @param file the relative path of the submitted/solved file
+     * @param calls the calls to be made
      * @return a list containing the Path to the tester (with the main method or its equivalent),
-     * relative to the target directory, followed by the paths to any helper files
+     * relative to the work directory, followed by the paths to any helper files
      * @throws IOException
      */
-    List<Path> writeTester(Path sourceDir, Path targetDir, Path file,
+    List<Path> writeTester(Path solutionDir, Path workDir, Path file,
             List<Calls.Call> calls)
             throws IOException;
 

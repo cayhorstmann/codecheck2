@@ -39,7 +39,7 @@ public class CLanguage implements Language {
 
     // TODO: Implement this
     @Override
-    public List<Path> writeTester(Path sourceDir, Path targetDir, Path file,
+    public List<Path> writeTester(Path solutionDir, Path workDir, Path file,
             List<Calls.Call> calls)
             throws IOException {
         

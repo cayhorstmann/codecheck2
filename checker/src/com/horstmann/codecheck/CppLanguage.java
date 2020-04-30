@@ -45,7 +45,7 @@ public class CppLanguage implements Language {
     }
 
     @Override
-    public List<Path> writeTester(Path sourceDir, Path targetDir, Path file,
+    public List<Path> writeTester(Path solutionDir, Path workDir, Path file,
             List<Calls.Call> calls)
             throws IOException {
         
@@ -57,7 +57,7 @@ public class CppLanguage implements Language {
         // add solution wrapped in namespace solution { ... }
         
         String moduleName = moduleOf(file);
-        List<String> lines = Util.readLines(sourceDir.resolve(file));
+        List<String> lines = Util.readLines(solutionDir.resolve(file));
         int i = 0;
         boolean done = false;
         while (!done) {
@@ -97,10 +97,10 @@ public class CppLanguage implements Language {
         lines.add(i++, "}");
         lines.add(i++, "namespace solution {");
         lines.add("}");
-        Files.write(targetDir.resolve(pathOf(moduleName + "CodeCheck")), lines,
+        Files.write(workDir.resolve(pathOf(moduleName + "CodeCheck")), lines,
                 StandardCharsets.UTF_8);
-        Files.copy(getClass().getResourceAsStream("codecheck.cpp"), targetDir.resolve("codecheck.cpp"));
-        Files.copy(getClass().getResourceAsStream("codecheck.h"), targetDir.resolve("codecheck.h"));
+        Files.copy(getClass().getResourceAsStream("codecheck.cpp"), workDir.resolve("codecheck.cpp"));
+        Files.copy(getClass().getResourceAsStream("codecheck.h"), workDir.resolve("codecheck.h"));
         List<Path> paths = new ArrayList<>();
         paths.add(pathOf(moduleName + "CodeCheck"));
         paths.add(Paths.get("codecheck.cpp"));

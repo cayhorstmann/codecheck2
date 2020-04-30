@@ -257,11 +257,11 @@ public class JavaLanguage implements Language {
      * java.util.List)
      */
     @Override
-    public List<Path> writeTester(Path sourceDir, Path targetDir, Path file,
+    public List<Path> writeTester(Path solutionDir, Path workDir, Path file,
             List<Calls.Call> calls)
             throws IOException {
         String className = moduleOf(file);
-        List<String> lines = Util.readLines(sourceDir.resolve(file));
+        List<String> lines = Util.readLines(solutionDir.resolve(file));
         int i = 0;
         while (i < lines.size() && !lines.get(i).contains(className))
             i++;
@@ -324,7 +324,7 @@ public class JavaLanguage implements Language {
         // expected.getClass().isArray() ? java.util.Arrays.toString(expected) :
         // expected
         Path p = pathOf(className + "CodeCheck");
-        Files.write(targetDir.resolve(p), lines,
+        Files.write(workDir.resolve(p), lines,
                 StandardCharsets.UTF_8);
         List<Path> testFiles = new ArrayList<>();
         testFiles.add(p);

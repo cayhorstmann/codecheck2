@@ -57,9 +57,9 @@ public class Calls {
         } 
     }
 
-    public List<Path> writeTester(Path sourceDir, Path targetDir) throws IOException {
+    public List<Path> writeTester(Path solutionDir, Path workDir) throws IOException {
         if (lastGroup < calls.size() - 1)
             throw new CodeCheckException("No function below CALL in " + file + "\n");
-        return language.writeTester(sourceDir, targetDir, file, calls);
+        return language.writeTester(solutionDir, workDir, file, calls);
     }
 }
