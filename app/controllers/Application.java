@@ -3,6 +3,7 @@ package controllers;
 import java.util.regex.*;
 
 import play.mvc.Controller;
+import play.mvc.Http;
 import play.mvc.Http.RequestBody;
 import play.mvc.Result;
 import models.Util;
@@ -10,7 +11,7 @@ import models.Util;
 public class Application extends Controller {
    private Pattern dfPattern = Pattern.compile("(?s:.*?(?<percent>[0-9]+)%.*)");
    
-    public Result health() {
+    public Result health(Http.Request request) {
        try {
           String df = Util.runProcess("/bin/df /", 1000);
           String mp = Util.runProcess("/usr/bin/mpstat 2 1", 3000);
@@ -29,8 +30,8 @@ public class Application extends Controller {
        }
     }   
     
-    public Result echo() {
-    	RequestBody body = request().body();
+    public Result echo(Http.Request request) {
+    	RequestBody body = request.body();
     	return ok("Received: " + body.asJson());
     }
 }

@@ -6,32 +6,32 @@
 GET /    controllers.Default.redirect(to = "http://horstmann.com/codecheck/index.html")
 
 # Health check
-GET     /health                           controllers.Application.health()
-POST    /echo                             controllers.Application.echo()
+GET     /health                           controllers.Application.health(request: Request)
+POST    /echo                             controllers.Application.echo(request: Request)
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
 
-GET	    /files						controllers.Files.filesHTML(repo: String ?= "ext", problem: String, ccu: String ?= null)
-GET		/files/:problem				controllers.Files.filesHTML(repo: String ?= "ext", problem: String, ccu: String ?= null)
-GET		/files/:repo/:problem		controllers.Files.filesHTML(repo: String, problem: String,          ccu: String ?= null)
-POST    /checkNJS					controllers.Check.checkNJS()
+GET	    /files						controllers.Files.filesHTML(request: Request, repo: String ?= "ext", problem: String, ccu: String ?= null)
+GET		/files/:problem				controllers.Files.filesHTML(request: Request, repo: String ?= "ext", problem: String, ccu: String ?= null)
+GET		/files/:repo/:problem		controllers.Files.filesHTML(request: Request, repo: String, problem: String,          ccu: String ?= null)
+POST    /checkNJS					controllers.Check.checkNJS(request: Request)
 # GET called from interactive element with jsonp result
-GET     /checkNJS					controllers.Check.checkNJS()
+GET     /checkNJS					controllers.Check.checkNJS(request: Request)
 
 # From Hien's project, but this is potentially useful for others 
-GET     /fileData                   controllers.Files.fileData(repo: String ?= "ext", problem: String, ccu: String ?= null)
+GET     /fileData                   controllers.Files.fileData(request: Request, repo: String ?= "ext", problem: String, ccu: String ?= null)
 
 # Classic HTML--is anyone still using it? Core Java?
-POST	/check						controllers.Check.checkHTML()
+POST	/check						controllers.Check.checkHTML(request: Request)
 
 POST    /uploadProblem                    controllers.Upload.uploadProblem(request: Request)
 POST    /uploadFiles                      controllers.Upload.uploadFiles(request: Request)
-GET     /edit/:problem/:editKey           controllers.Upload.editKeySubmit(problem: String, editKey: String)
+GET     /edit/:problem/:editKey           controllers.Upload.editKeySubmit(request: Request, problem: String, editKey: String)
 POST    /editedFiles/:problem/:editKey    controllers.Upload.editedFiles(request: Request, problem: String, editKey: String)
 POST    /editedProblem/:problem/:editKey  controllers.Upload.editedProblem(request: Request, problem: String, editKey: String)
 
 # Legacy
-GET	    /codecheck/files						controllers.Files.filesHTML(repo: String ?= "ext", problem: String, ccu: String ?= null)
-GET		/codecheck/files/:problem				controllers.Files.filesHTML(repo: String ?= "ext", problem: String, ccu: String ?= null)
-POST	/codecheck/check						controllers.Check.checkHTML()
+GET	    /codecheck/files						controllers.Files.filesHTML(request: Request, repo: String ?= "ext", problem: String, ccu: String ?= null)
+GET		/codecheck/files/:problem				controllers.Files.filesHTML(request: Request, repo: String ?= "ext", problem: String, ccu: String ?= null)
+POST	/codecheck/check						controllers.Check.checkHTML(request: Request)

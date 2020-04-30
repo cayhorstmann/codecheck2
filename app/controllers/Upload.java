@@ -214,7 +214,7 @@ public class Upload extends Controller {
 		return response.toString();
 	}
 
-	public Result editKeySubmit(String problem, String editKey) {
+	public Result editKeySubmit(Http.Request request, String problem, String editKey) {
 		if (problem.equals(""))
 			return badRequest("No problem id");
 		try {

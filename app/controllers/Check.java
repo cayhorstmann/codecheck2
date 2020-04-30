@@ -34,8 +34,8 @@ public class Check extends Controller {
 	@Inject CodeCheck codeCheck;
 	
 	// Classic HTML report
-	public CompletableFuture<Result> checkHTML() throws IOException, InterruptedException {
-		Map<String, String[]> params = request().body().asFormUrlEncoded();
+	public CompletableFuture<Result> checkHTML(Http.Request request) throws IOException, InterruptedException {
+		Map<String, String[]> params = request.body().asFormUrlEncoded();
 		return CompletableFuture.supplyAsync(() -> {
 			try {
 				String ccu = null;
@@ -55,7 +55,7 @@ public class Check extends Controller {
 		                Util.write(submissionDir, key, value);
 		        }
 		    	if (ccu == null) { 
-					Http.Cookie ccuCookie = request().cookie("ccu");
+					Http.Cookie ccuCookie = request.cookie("ccu");
 				    ccu = ccuCookie == null ? Util.createUID() : ccuCookie.value();
 				}
 				long startTime = System.nanoTime();			
@@ -78,13 +78,13 @@ public class Check extends Controller {
 	}
 			
 	// From JS UI
-	public CompletableFuture<Result> checkNJS() throws IOException, InterruptedException  {
+	public CompletableFuture<Result> checkNJS(Http.Request request) throws IOException, InterruptedException  {
 		Map<String, String[]> params;
-		if ("application/x-www-form-urlencoded".equals(request().contentType().orElse(""))) 
-			params = request().body().asFormUrlEncoded();
-		else if ("application/json".equals(request().contentType().orElse(""))) {
+		if ("application/x-www-form-urlencoded".equals(request.contentType().orElse(""))) 
+			params = request.body().asFormUrlEncoded();
+		else if ("application/json".equals(request.contentType().orElse(""))) {
 			params = new HashMap<>();
-			JsonNode json = request().body().asJson();
+			JsonNode json = request.body().asJson();
 			Iterator<Entry<String, JsonNode>> iter = json.fields();
 			while (iter.hasNext()) {
 				Entry<String, JsonNode> entry = iter.next();
@@ -92,7 +92,7 @@ public class Check extends Controller {
 			};
 		}
 		else 
-			params = request().queryString();
+			params = request.queryString();
 		
 		return CompletableFuture.supplyAsync(() -> {
 			try {
@@ -129,7 +129,7 @@ public class Check extends Controller {
 					}
 				}
 				if (ccu == null) { 
-					Http.Cookie ccuCookie = request().cookie("ccu");
+					Http.Cookie ccuCookie = request.cookie("ccu");
 				    ccu = ccuCookie == null ? Util.createUID() : ccuCookie.value();
 				};				
 				Logger.of("com.horstmann.codecheck.check").info("checkNJS: " + requestParams);

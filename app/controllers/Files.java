@@ -47,10 +47,10 @@ public class Files extends Controller {
 
    @Inject CodeCheck codeCheck;
 
-   public Result fileData(String repo, String problemName, String ccu)
+   public Result fileData(Http.Request request, String repo, String problemName, String ccu)
       throws IOException, NoSuchMethodException, ScriptException {        
       if (ccu == null) { 
-         Http.Cookie ccuCookie = request().cookie("ccu");
+         Http.Cookie ccuCookie = request.cookie("ccu");
          ccu = ccuCookie == null ? Util.createUID() : ccuCookie.value();
       }		
       Path problemPath = null;
@@ -65,10 +65,10 @@ public class Files extends Controller {
       }
    }
 
-   public Result filesHTML(String repo, String problemName, String ccu)
+   public Result filesHTML(Http.Request request, String repo, String problemName, String ccu)
       throws IOException, NoSuchMethodException, ScriptException {
       if (ccu == null) { 
-         Http.Cookie ccuCookie = request().cookie("ccu");
+         Http.Cookie ccuCookie = request.cookie("ccu");
          ccu = ccuCookie == null ? Util.createUID() : ccuCookie.value();
       }
       Path problemPath = null;
@@ -81,7 +81,7 @@ public class Files extends Controller {
 			
          if (data.description != null)
             result.append(data.description);
-         String contextPath = ""; // request().host(); // TODO
+         String contextPath = ""; // request.host(); // TODO
          String url = contextPath + "/check";
          result.append(MessageFormat.format(before, url));
          result.append(MessageFormat.format(provideStart,

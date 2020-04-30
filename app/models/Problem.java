@@ -182,7 +182,7 @@ public class Problem {
 
    private static boolean isSourceExtension(String extension) {
       return Arrays.asList("java", "c", "cpp", "c++", "h", "py", "scala",
-         "m", "rkt", "js", "cs", "hs").contains(extension);
+         "m", "rkt", "js", "cs", "hs", "sml").contains(extension);
    }
 	
    // No letters or spaces, SOLUTION, optional no letters, trailing space (e.g.
@@ -206,10 +206,12 @@ public class Problem {
          start = ";;";
       } else if (extension.equals("hs")) {
          start = "--";
-      } else if (extension.equals("c")) {
-         start = "/*";
-         end = "*/";
-      }
+      } else if (extension.equals("m")) {
+         start = "%%";
+      } else if (extension.equals("sml")) {
+          start = "(*";
+          end = "*)";
+      } 
       return new String[] { start, end };
    }
 
