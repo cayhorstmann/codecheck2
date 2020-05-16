@@ -182,7 +182,7 @@ public class Problem {
 
    private static boolean isSourceExtension(String extension) {
       return Arrays.asList("java", "c", "cpp", "c++", "h", "py", "scala",
-         "m", "rkt", "js", "cs", "hs", "sml").contains(extension);
+         "m", "rkt", "js", "cs", "hs", "sml", "s", "S").contains(extension);
    }
 	
    // No letters or spaces, SOLUTION, optional no letters, trailing space (e.g.
