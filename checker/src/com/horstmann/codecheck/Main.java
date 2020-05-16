@@ -633,7 +633,7 @@ public class Main {
             // the supplied files that the students are entitled to see
             Set<Path> printFiles = Util.filterNot(useFiles, "test*.in", "test*.out", "Input", 
                     "*.png", "*.PNG", "*.gif", "*.GIF", "*.jpg", "*.jpeg", "*.JPG", 
-                    "*.jar");      
+                    "*.jar", "*.pdf");      
 
             printFiles.removeAll(annotations.getHidden()); 
             

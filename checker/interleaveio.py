@@ -30,11 +30,12 @@ def readAvailable(p, fd, delay):
             done = True
       if not done :
          if p.poll() == None :
-            time.sleep(0.1)
             if delay :
+               time.sleep(0.1)
                if time.time() >= start + timeout :
                   done = True
             else :
+               time.sleep(0.01)               
                iters -= 1
                if (iters <= 0) :
                   done = True

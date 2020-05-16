@@ -19,7 +19,7 @@ case _"$LANG" in
         
     _C)
         ulimit -f 1000
-        gcc -std=c99 -g -o prog $@
+        gcc -std=c99 -g -o prog -lm $@
         ;;
 
     _Cpp)

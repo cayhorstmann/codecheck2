@@ -17,7 +17,7 @@ public class CLanguage implements Language {
     @Override
     public boolean isSource(Path p) {
         String name = p.toString();
-        return name.endsWith(".c") || name.endsWith(".h");
+        return name.endsWith(".c") || name.endsWith(".h") || name.endsWith(".s") || name.endsWith(".S");
     }
     
     private static Pattern mainPattern = Pattern.compile("\\s*((int|void)\\s+)?main\\s*\\([^)]*\\)\\s*(\\{\\s*)?");
