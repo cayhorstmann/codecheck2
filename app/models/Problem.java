@@ -134,7 +134,7 @@ public class Problem {
 
    private static Pattern solutionPattern = Pattern.compile("\\s*[\\PL&&[^\\s]]+(SOLUTION|SHOW|EDIT)($|\\s.*|[\\PL].*)");
 
-   private String getDescription(Path problemDir, String problemFile)
+   public static String getDescription(Path problemDir, String problemFile)
       throws IOException {
       String description = Util.read(problemDir, problemFile);
       if (description == null)
@@ -197,7 +197,7 @@ public class Problem {
       }
    }
 
-   private static String[] commentDelimiters(String extension) {
+   public static String[] commentDelimiters(String extension) {
       String start = "//"; 
       String end = "";
       if (extension.equals("py")) {
