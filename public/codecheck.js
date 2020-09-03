@@ -1,8 +1,8 @@
 document.addEventListener('DOMContentLoaded', function () {
 	
   // For embedding CodeCheck in an iframe
-
-  function getScore() {
+  
+  function getScore() { // TODO: Remove when decommissioning v1
     let repo = document.querySelector('input[name=repo]').getAttribute('value');
     let problem = document.querySelector('input[name=problem]').getAttribute('value');
     let scoreText = document.getElementById('codecheck-submit-response').score;
@@ -14,13 +14,50 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     return {correct: correct, errors: 0, maxscore: maxscore, repo: repo, problem: problem};
   }
+  
+  function getNumericScore() {
+    let scoreText = document.getElementById('codecheck-submit-response').score;
+    let correct = 0;
+    let maxscore = 1; // default maxscore. not 0 to avoid divide by zero
+    if (scoreText !== undefined && scoreText !== '0' && scoreText.length > 0) {
+      correct = scoreText.split('/')[0];
+      maxscore = scoreText.split('/')[1];
+    }
+    return correct / maxscore   
+  }
+
+  function restoreStudentWork(studentWork) {
+    if (studentWork === null) return 
+    for (let i = 0; i < studentWork.length; i++) {
+      const problemName = studentWork[i].problemName;
+      const studentCode = studentWork[i].code;
+
+      // Need to get the textarea with the given id, then find the ace editor from there
+      const editorDiv = document.getElementById(problemName);
+      const editor = ace.edit(editorDiv);
+      editor.setValue(studentCode);
+    }
+  }
+  
+  function getStudentWork() {
+    let studentWork = [];
+    let editorDivs = document.getElementsByClassName('editor');
+    for (let i = 0; i < editorDivs.length; i++) {
+      let editor = ace.edit(editorDivs[i]);
+      if (!editorDivs[i].classList.contains('readonly'))
+        studentWork.push({problemName: editorDivs[i].getAttribute('id'), code: editor.getValue()});
+    }
+    return studentWork      
+  }
 
   function receiveMessage(event) {
-    const origin = event.origin || event.originalEvent.origin;
-    // For Chrome, the origin property is in the event.originalEvent object.
-    // TODO: Filter origin?
-    if (event.data.response) return; // It's a response
-    else if (event.data.query === 'docHeight') {
+    if (event.data.request) { // It's a response
+      const request = event.data.request    
+      if (request.query === 'retrieve') { // LTIHub v2
+        restoreStudentWork(event.data.param)                
+      }
+    }
+    else if (event.data.query === 'docHeight') { // All of these are LTIHub v1
       const body = document.body
       const html = document.documentElement;
       const fudge = 50;
@@ -28,35 +65,10 @@ document.addEventListener('DOMContentLoaded', function () {
                                html.clientHeight, html.scrollHeight, html.offsetHeight ) + fudge;
       event.source.postMessage({docHeight: height, request: event.data}, '*' );
     } else if (event.data.query === 'restoreState') {
-      const studentWork = event.data.state;
-
-      for (let i = 0; i < studentWork.length; i++) {
-        const problemName = studentWork[i].problemName;
-        const studentCode = studentWork[i].code;
-
-        // Need to get the textarea with the given id, then find the ace editor from there
-        const editorDiv = document.getElementById(problemName);
-        const editor = ace.edit(editorDiv);
-        editor.setValue(studentCode);
-      }
+      restoreStudentWork(event.data.state)      
     } else if (event.data.query === 'getContent') {
-      const problems = document.querySelectorAll('body > form');
-
-      let studentWork = [];
-      let editorDivs = document.getElementsByClassName('editor');
-      for (let i = 0; i < editorDivs.length; i++) {
-        let editor = ace.edit(editorDivs[i]);
-        if (!editorDivs[i].classList.contains('readonly'))
-          studentWork.push({problemName: editorDivs[i].getAttribute('id'), code: editor.getValue()});
-      }
-      
-
+      const studentWork = getStudentWork()
       const response = { request: event.data, score: getScore(), state: studentWork };
-      event.source.postMessage(response, event.origin);        
-    }
-    else if (event.data.query === undefined) { // Engage
-      let response = getScore();
-      response.request = event.data;
       event.source.postMessage(response, event.origin);        
     }
   }
@@ -193,6 +205,13 @@ document.addEventListener('DOMContentLoaded', function () {
         let error = data['errors'][i]; 
         highlightLine(error['file'], error['line'], error['message']); }
     }
+    
+    if (inIframe()) {      
+      const param = { state: getStudentWork(), score: getNumericScore() }
+      const data = { query: 'send', param }
+      console.log('Posting to parent', data)
+      window.parent.postMessage(data, '*' )
+    }
   }
 
   let form = document.getElementsByTagName('form')[0]
@@ -238,6 +257,27 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     xhr.send(JSON.stringify(params))
   })
+  
+  if (inIframe()) {
+    document.body.style.height = '100%'
+    document.body.style.overflow = 'hidden' 
+    const resizeObserver = new ResizeObserver(entries => {
+      const docHeight = document.documentElement.scrollHeight 
+      const data = { query: 'docHeight', param: { docHeight } }
+      console.log('Posting to parent', data)
+      window.parent.postMessage(data, '*' )
+    })
+    /* 
+       Weirdly, when listening to document.body or 
+       document.documentElement, the document height keeps
+       getting increased
+    */    
+    resizeObserver.observe(document.body.children[0])
+    resizeObserver.observe(document.body.children[1])
+    const data = { query: 'retrieve' }  
+    console.log('Posting to parent', data)
+    window.parent.postMessage(data, '*' )
+  }  
 })	
 
 

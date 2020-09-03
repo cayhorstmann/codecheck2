@@ -6,6 +6,7 @@ import java.text.MessageFormat;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.inject.Inject;
 import javax.script.ScriptException;
@@ -50,8 +51,8 @@ public class Files extends Controller {
    public Result fileData(Http.Request request, String repo, String problemName, String ccu)
       throws IOException, NoSuchMethodException, ScriptException {        
       if (ccu == null) { 
-         Http.Cookie ccuCookie = request.cookie("ccu");
-         ccu = ccuCookie == null ? Util.createUID() : ccuCookie.value();
+         Optional<Http.Cookie> ccuCookie = request.getCookie("ccu");
+         ccu = ccuCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
       }		
       Path problemPath = null;
       try {
@@ -68,8 +69,8 @@ public class Files extends Controller {
    public Result filesHTML(Http.Request request, String repo, String problemName, String ccu)
       throws IOException, NoSuchMethodException, ScriptException {
       if (ccu == null) { 
-         Http.Cookie ccuCookie = request.cookie("ccu");
-         ccu = ccuCookie == null ? Util.createUID() : ccuCookie.value();
+          Optional<Http.Cookie> ccuCookie = request.getCookie("ccu");
+          ccu = ccuCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
       }
       Path problemPath = null;
       try {						

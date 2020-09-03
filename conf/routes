@@ -3,35 +3,60 @@
 # ~~~~
 
 # Home page
-GET /    controllers.Default.redirect(to = "http://horstmann.com/codecheck/index.html")
+GET   /                       controllers.Default.redirect(to = "http://horstmann.com/codecheck/index.html")
 
 # Health check
-GET     /health                           controllers.Application.health(request: Request)
-POST    /echo                             controllers.Application.echo(request: Request)
+GET  /health                  controllers.Application.health(request: Request)
+POST /echo                    controllers.Application.echo(request: Request)
 
 # Map static resources from the /public folder to the /assets URL path
-GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
+GET  /assets/*file            controllers.Assets.versioned(path="/public", file: Asset)
 
-GET	    /files						controllers.Files.filesHTML(request: Request, repo: String ?= "ext", problem: String, ccu: String ?= null)
-GET		/files/:problem				controllers.Files.filesHTML(request: Request, repo: String ?= "ext", problem: String, ccu: String ?= null)
-GET		/files/:repo/:problem		controllers.Files.filesHTML(request: Request, repo: String, problem: String,          ccu: String ?= null)
-POST    /checkNJS					controllers.Check.checkNJS(request: Request)
-# GET called from interactive element with jsonp result
-GET     /checkNJS					controllers.Check.checkNJS(request: Request)
+GET	 /files						        controllers.Files.filesHTML(request: Request, repo: String ?= "ext", problem: String, ccu: String ?= null)
+GET	 /files/:problem				  controllers.Files.filesHTML(request: Request, repo: String ?= "ext", problem: String, ccu: String ?= null)
+GET  /files/:repo/:problem		controllers.Files.filesHTML(request: Request, repo: String, problem: String,          ccu: String ?= null)
+POST /checkNJS					      controllers.Check.checkNJS(request: Request)
+# GET called from interactive element with jsonp result--TODO: Does this still happen???
+GET  /checkNJS					      controllers.Check.checkNJS(request: Request)
 
 # From Hien's project, but this is potentially useful for others 
-GET     /fileData                   controllers.Files.fileData(request: Request, repo: String ?= "ext", problem: String, ccu: String ?= null)
+GET  /fileData                controllers.Files.fileData(request: Request, repo: String ?= "ext", problem: String, ccu: String ?= null)
 
-# Classic HTML--is anyone still using it? Core Java?
-POST	/check						controllers.Check.checkHTML(request: Request)
+# Classic HTML--TODO: is anyone still using it? Core Java?
+POST /check						        controllers.Check.checkHTML(request: Request)
 
-POST    /uploadProblem                    controllers.Upload.uploadProblem(request: Request)
-POST    /uploadFiles                      controllers.Upload.uploadFiles(request: Request)
-GET     /edit/:problem/:editKey           controllers.Upload.editKeySubmit(request: Request, problem: String, editKey: String)
-POST    /editedFiles/:problem/:editKey    controllers.Upload.editedFiles(request: Request, problem: String, editKey: String)
-POST    /editedProblem/:problem/:editKey  controllers.Upload.editedProblem(request: Request, problem: String, editKey: String)
+POST /uploadProblem                     controllers.Upload.uploadProblem(request: Request)
+POST /uploadFiles                       controllers.Upload.uploadFiles(request: Request)
+# TODO Legacy without /private
+GET  /edit/:problem/:editKey            controllers.Upload.editKeySubmit(request: Request, problem: String, editKey: String)
+GET  /private/problem/:problem/:editKey controllers.Upload.editKeySubmit(request: Request, problem: String, editKey: String)
+POST /editedFiles/:problem/:editKey     controllers.Upload.editedFiles(request: Request, problem: String, editKey: String)
+POST /editedProblem/:problem/:editKey   controllers.Upload.editedProblem(request: Request, problem: String, editKey: String)
 
-# Legacy
-GET	    /codecheck/files						controllers.Files.filesHTML(request: Request, repo: String ?= "ext", problem: String, ccu: String ?= null)
-GET		/codecheck/files/:problem				controllers.Files.filesHTML(request: Request, repo: String ?= "ext", problem: String, ccu: String ?= null)
-POST	/codecheck/check						controllers.Check.checkHTML(request: Request)
+# Legacy--TODO: Eliminate?
+GET	 /codecheck/files						controllers.Files.filesHTML(request: Request, repo: String ?= "ext", problem: String, ccu: String ?= null)
+GET	 /codecheck/files/:problem	controllers.Files.filesHTML(request: Request, repo: String ?= "ext", problem: String, ccu: String ?= null)
+POST /codecheck/check						controllers.Check.checkHTML(request: Request)
+
+# Assignments
+# Student starting
+GET  /assignment/:assignmentID                      controllers.Assignment.work(request: Request, assignmentID: String, ccid: String = null, key: String = null, editable: Boolean = true)
+# Student resuming
+GET  /private/resume/:assignmentID/:ccid/:key       controllers.Assignment.work(request: Request, assignmentID: String, ccid: String, key: String, editable: Boolean = true)
+# Instructor viewing student submission
+GET  /private/submission/:assignmentID/:ccid/:key   controllers.Assignment.work(request: Request, assignmentID: String, ccid: String, key: String, editable: Boolean = false)
+# Viewing assignment for demonstration/cloning
+GET  /viewAssignment/:assignmentID                  controllers.Assignment.work(request: Request, assignmentID: String, ccid: String = null, key: String = null, editable: Boolean = false)
+# Make new assignment
+GET  /newAssignment                                 controllers.Assignment.edit(request: Request, assignmentID: String = null, key: String = null)
+# Copy existing assignment (TODO: Should anyone be able to copy existing?)
+GET  /copyAssignment/:assignmentID                  controllers.Assignment.edit(request: Request, assignmentID: String, key: String = null)
+# Edit existing assignment
+GET  /private/editAssignment/:assignmentID/:key         controllers.Assignment.edit(request: Request, assignmentID: String, key: String)
+
+GET  /private/assignment/:assignmentID/:key         controllers.Assignment.view(request: Request, assignmentID: String, key: String)
+
+POST /saveAssignment                           controllers.Assignment.saveAssignment(request: Request)
+POST /saveWork/:assignmentID/:ccid/:key        controllers.Assignment.saveWork(request: Request, assignmentID: String, ccid: String, key: String)
+
+

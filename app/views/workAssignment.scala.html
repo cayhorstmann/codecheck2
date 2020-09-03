@@ -1,0 +1,42 @@
+@(assignment: String, work: String, studentID: String)
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="/assets/codecheck.css"/>
+    <script type="text/javascript">//<![CDATA[
+    const studentID = '@studentID'
+    const assignmentData = @Html(assignment)    
+    let work = @Html(work)
+    //]]></script>
+    <script src="/assets/main.js" type="text/javascript"></script>
+    <script src="/assets/workAssignment.js" type="text/javascript"></script>
+    <title>Your Assignment</title>
+</head>
+<body>
+   <div class="studentInstructions">
+        <h1>Your Assignment</h1>
+        <p>Your CodeCheck ID: <span class="ccid">@studentID</span></p>
+        <ul id="ccidBullets">
+          <li>Share this ID with your professor, but otherwise keep it private.</li>
+          <li id="clearID">If you work on a shared computer, clear the ID after you are done.</li>
+          <li id="switchID">Not your ID? Enter yours here: <input id='newccid' type='text' size='30'/>
+          <li id="newID">Don't have a CodeCheck ID?</li>
+        </ul>
+  <!--  TODO when inside LTI
+        <p>
+            When you are done, click <button onclick="submitGrades()">Record my score</button> to save your score in the gradebook.
+        </p>
+ -->        
+
+        <p style='display:none' class='message' id='response'></p>
+
+ <dl id="urls">
+  <dt>Use this private URL for resuming your work later:</dt><dd id="returnToWork"><span id="returnToWorkURL" class="ccurl"></span></dd>  
+ </dl>
+ <p id="savedcopy"><input type="checkbox"/>  I saved a copy of the private URL</p>
+ </div>
+<p id="abovebuttons">Click on the buttons below to view all parts of the assignment.</p>
+</body>
+</html>

@@ -40,7 +40,7 @@ public class Upload extends Controller {
 	private CodeCheck codeCheck;
 
 	public Result uploadFiles(Http.Request request) {
-		return uploadFiles(request, Util.createUID(), Util.createUID());
+		return uploadFiles(request, Util.createPublicUID(), Util.createPrivateUID());
 	}
 
 	public Result editedFiles(Http.Request request, String problem, String editKey) {
@@ -85,8 +85,7 @@ public class Upload extends Controller {
 			if (isOnS3) {
 				Path problemZip = Files.createTempFile("problem", "zip");
 				Util.zip(problemDir, problemZip);
-				s3conn.putToS3(problemZip, repo + "." + config.getString("com.horstmann.codecheck.s3bucketsuffix"),
-						problem);
+				s3conn.putToS3(problemZip, repo, problem);
 				Files.delete(problemZip);
 			}
 			String response = checkProblem(request, problem, problemDir);
@@ -99,7 +98,7 @@ public class Upload extends Controller {
 	}
 
 	public Result uploadProblem(Http.Request request) {
-		return uploadProblem(request, Util.createUID(), Util.createUID());
+		return uploadProblem(request, Util.createPublicUID(), Util.createPrivateUID());
 	}
 
 	private boolean checkEditKey(String problem, String editKey) throws IOException {
@@ -164,8 +163,7 @@ public class Upload extends Controller {
 				if (isOnS3) {
 					Path problemEditKeyZip = Files.createTempFile("problem", "zip");
 					Util.zip(problemDir, problemEditKeyZip);
-					s3conn.putToS3(problemEditKeyZip,
-							repo + "." + config.getString("com.horstmann.codecheck.s3bucketsuffix"), problem);
+					s3conn.putToS3(problemEditKeyZip, repo, problem);
 					Files.delete(problemEditKeyZip);
 				}
 				String response = checkProblem(request, problem, problemDir);
@@ -185,7 +183,7 @@ public class Upload extends Controller {
 			throws IOException, InterruptedException, NoSuchMethodException, ScriptException {
 		Path newProblemDir = Files.createTempDirectory("problem");
 		Util.copyDirectory(problemDir, newProblemDir);
-		String studentId = Util.createUID();
+		String studentId = Util.createPronouncableUID();
 		codeCheck.replaceParametersInDirectory(studentId, newProblemDir);
 		String run = check(problem, newProblemDir, studentId);
 		Util.deleteDirectory(newProblemDir);
@@ -199,7 +197,7 @@ public class Upload extends Controller {
 		response.append("<a href=\"" + problemUrl + "\" target=\"_blank\">" + problemUrl + "</a>");
 		String editKey = Util.read(problemDir, "edit.key");
 		if (editKey != null) {
-			String editURL = prefix + "edit/" + problem + "/" + editKey;
+			String editURL = prefix + "private/problem/" + problem + "/" + editKey;
 			response.append("<br/>Edit URL (for you only): ");
 			response.append("<a href=\"" + editURL + "\" target=\"_blank\">" + editURL + "</a>");
 		}

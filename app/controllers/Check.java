@@ -56,7 +56,7 @@ public class Check extends Controller {
 		        }
 		    	if (ccu == null) { 
 					Http.Cookie ccuCookie = request.cookie("ccu");
-				    ccu = ccuCookie == null ? Util.createUID() : ccuCookie.value();
+				    ccu = ccuCookie == null ? Util.createPronouncableUID() : ccuCookie.value();
 				}
 				long startTime = System.nanoTime();			
 		        codeCheck.run("html", repo, problem, ccu, submissionDir);
@@ -130,7 +130,7 @@ public class Check extends Controller {
 				}
 				if (ccu == null) { 
 					Http.Cookie ccuCookie = request.cookie("ccu");
-				    ccu = ccuCookie == null ? Util.createUID() : ccuCookie.value();
+				    ccu = ccuCookie == null ? Util.createPronouncableUID() : ccuCookie.value();
 				};				
 				Logger.of("com.horstmann.codecheck.check").info("checkNJS: " + requestParams);
 				//TODO last param should be submissionDir

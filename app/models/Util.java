@@ -27,6 +27,8 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
@@ -139,17 +141,41 @@ public class Util {
 	}
 
 	public static Path createTempDirectory(Path parent) throws IOException {
-		String prefix = new SimpleDateFormat("yyMMddkkmm").format(new Date());
+		String prefix = datePrefix();
 		Set<PosixFilePermission> perms = PosixFilePermissions
 				.fromString("rwxr-xr-x");
 		return java.nio.file.Files.createTempDirectory(parent, prefix,
 				PosixFilePermissions.asFileAttribute(perms));
 	}
 
-	public static String createUID() {
-		String prefix = new SimpleDateFormat("yyMMddkkmm").format(new Date());
-		BigInteger big = new BigInteger(128, generator);
-		return prefix + big.toString(36);
+	public static String createPublicUID() {
+		return datePrefix() + new BigInteger(128, generator).toString(36);		
+	}
+	
+	public static String createPrivateUID() {
+		return new BigInteger(128, generator).toString(36).toUpperCase();		
+	}
+	
+	private static String datePrefix() {
+		return DateTimeFormatter.ofPattern("yyMMddkkmm").format(LocalDateTime.now());
+	}
+	
+	private static String vowels = "aeiouy";
+	private static String consonants = "bcdfghjklmnpqrstvwxz";
+	public static String createPronouncableUID() {
+		StringBuilder result = new StringBuilder();
+		int len = 16;
+		int b = generator.nextInt(2);
+		for (int i = 0; i < len; i++) {
+			String s = i % 2 == b ? consonants : vowels;
+			int n = generator.nextInt(s.length());
+			result.append(s.charAt(n));
+			if (i % 4 == 3 && i < len - 1) {
+				result.append('-');
+				b = generator.nextInt(2);
+			}
+		}
+		return result.toString();
 	}
 
 	public static void deleteDirectory(Path start) throws IOException {

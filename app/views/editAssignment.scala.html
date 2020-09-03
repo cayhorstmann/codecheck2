@@ -1,0 +1,30 @@
+@(assignmentID: String, assignment: String)
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="/assets/codecheck.css"/>
+    <script type="text/javascript">//<![CDATA[
+    const assignmentID = '@assignmentID'
+    const assignmentData = @Html(assignment)    
+    //]]></script>
+    <script src="/assets/main.js" type="text/javascript"></script>
+    <script src="/assets/editAssignment.js" type="text/javascript"></script>    
+    <title>Edit Assignment</title>
+</head>
+<body>
+ <h1>Edit Assignment</h1>
+ <p>Enter problem URLs or IDs, one per line</p>
+ <textarea style="display: block; width: 90%;" id="assignment" rows="10"></textarea>
+ <p>Deadline (<b>In UTC</b>):</p>
+ <input type="date" id="deadlineDate" />  <input type="time" id="deadlineTime" value="23:59"/>
+ <p>Leave date blank for no deadline.</p>
+ <div id='saveButtonDiv'></div>
+ <div id="response" class="message" style='display: none'></div>
+ <dl id="urls">
+  <dt>Public URL for your students:</dt><dd><span id='publicURL' class='ccurl'></span></dd>
+  <dt>Private URL for you only:</dt><dd><span id='privateURL' class='ccurl'></span></dd>  
+ </dl>
+</body>
+</html>
