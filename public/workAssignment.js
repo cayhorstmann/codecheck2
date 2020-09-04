@@ -115,7 +115,7 @@ window.addEventListener('DOMContentLoaded', () => {
   
   const clearCookie = () => { 
       // https://stackoverflow.com/questions/2144386/how-to-delete-a-cookie
-      const newCookie = 'ccid=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=' + window.location.hostname
+      const newCookie = 'ccid=; max-age: 0; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=' + window.location.hostname
       document.cookie = newCookie
       location = location
     }
@@ -123,7 +123,7 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('switchID').appendChild(createButton('hc-command', 'Switch to this ID', () => { 
       const newccid =  document.getElementById('newccid').value
       if (/^[a-z]{4}(-[a-z]{4}){3}$/.test(newccid)) {
-        const newCookie = 'ccid=' + newccid + '; expires=' + (new Date(new Date() * 1 + 180 * 24 * 60 * 60 * 1000)).toUTCString() + '; path=/; domain=' + window.location.hostname
+        const newCookie = 'ccid=' + newccid + '; max-age: 0; expires=' + (new Date(new Date() * 1 + 180 * 24 * 60 * 60 * 1000)).toUTCString() + '; path=/; domain=' + window.location.hostname
         document.cookie = newCookie 
         location = location                
       } else {
