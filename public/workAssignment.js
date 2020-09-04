@@ -115,15 +115,17 @@ window.addEventListener('DOMContentLoaded', () => {
   
   const clearCookie = () => { 
       // https://stackoverflow.com/questions/2144386/how-to-delete-a-cookie
-      document.cookie = 'ccid=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=' + window.location.hostname 
-      window.location.reload()
+      const newCookie = 'ccid=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=' + window.location.hostname
+      document.cookie = newCookie
+      location = location
     }
   document.getElementById('clearID').appendChild(createButton('hc-command', 'Clear ID now', clearCookie))
   document.getElementById('switchID').appendChild(createButton('hc-command', 'Switch to this ID', () => { 
       const newccid =  document.getElementById('newccid').value
       if (/^[a-z]{4}(-[a-z]{4}){3}$/.test(newccid)) {
-        document.cookie = 'ccid=' + newccid + '; expires=' + (new Date(new Date() * 1 + 180 * 24 * 60 * 60 * 1000)).toUTCString() + '; path=/; domain=' + window.location.hostname
-        window.location.reload()                
+        const newCookie = 'ccid=' + newccid + '; expires=' + (new Date(new Date() * 1 + 180 * 24 * 60 * 60 * 1000)).toUTCString() + '; path=/; domain=' + window.location.hostname
+        document.cookie = newCookie 
+        location = location                
       } else {
         document.getElementById('response').textContent = 'Not a valid CodeCheck ID'
         document.getElementById('response').style.display = 'block'
