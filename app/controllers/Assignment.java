@@ -199,7 +199,7 @@ public class Assignment extends Controller {
     		String workUpdateURL = prefix + "saveWork/" + assignmentID + "/" + ccid + "/" + editKey; 
     		assignmentNode.put("workUpdateURL", workUpdateURL);
         	assignmentNode.put("editKeySaved", editKeySaved);
-        	Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).withHttpOnly(false).build();
+        	Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withPath("/").withMaxAge(Duration.ofDays(180)).withHttpOnly(false).build();
         	return ok(views.html.workAssignment.render(assignmentNode.toString(), studentWork, ccid)).withCookies(newCookie);
     	}
     	else // Instructor--no cookie
