@@ -177,6 +177,10 @@ public class Util {
 		}
 		return result.toString();
 	}
+	
+	public static boolean isPronouncableUID(String s) {
+		return s.matches("(([aeiouy][bcdfghjklmnpqrstvwxz]){2}|([bcdfghjklmnpqrstvwxz][aeiouy]){2})(-(([aeiouy][bcdfghjklmnpqrstvwxz]){2}|([bcdfghjklmnpqrstvwxz][aeiouy]){2})){3}");
+	}
 
 	public static void deleteDirectory(Path start) throws IOException {
 		if (start == null) return;

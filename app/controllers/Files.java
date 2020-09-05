@@ -58,7 +58,7 @@ public class Files extends Controller {
       try {
          problemPath = codeCheck.loadProblem(repo, problemName, ccu);
          Problem problem = new Problem(problemPath);
-         Http.Cookie newCookie = Http.Cookie.builder("ccu", ccu).withMaxAge(Duration.ofDays(180)).build();
+         Http.Cookie newCookie = Http.Cookie.builder("ccid", ccu).withMaxAge(Duration.ofDays(180)).build();
          return ok(Json.toJson(problem.getData())).withCookies(newCookie);
       } finally {
          if (problemPath != null)
@@ -69,7 +69,7 @@ public class Files extends Controller {
    public Result filesHTML(Http.Request request, String repo, String problemName, String ccu)
       throws IOException, NoSuchMethodException, ScriptException {
       if (ccu == null) { 
-          Optional<Http.Cookie> ccuCookie = request.getCookie("ccu");
+          Optional<Http.Cookie> ccuCookie = request.getCookie("ccid");
           ccu = ccuCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
       }
       Path problemPath = null;

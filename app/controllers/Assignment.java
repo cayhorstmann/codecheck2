@@ -170,9 +170,12 @@ public class Assignment extends Controller {
      * ccid != null, editKey != null, editable = true: Student resumes editing
      * ccid != null, editKey != null, editable = false: Instructor views student work
      */
-    public Result work(Http.Request request, String assignmentID, String ccid, String editKey, boolean editable) 
+    public Result work(Http.Request request, String assignmentID, String ccid, String editKey, 
+    		boolean editable, String newid) 
     		throws IOException, GeneralSecurityException {
-    	if (ccid == null && editable) {
+    	if (newid != null)
+    		ccid = Util.isPronouncableUID(newid) ? newid : Util.createPronouncableUID();
+    	else if (ccid == null && editable) {    		
             Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
             ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
     	}
@@ -199,7 +202,7 @@ public class Assignment extends Controller {
     		String workUpdateURL = prefix + "saveWork/" + assignmentID + "/" + ccid + "/" + editKey; 
     		assignmentNode.put("workUpdateURL", workUpdateURL);
         	assignmentNode.put("editKeySaved", editKeySaved);
-        	Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withPath("/").withMaxAge(Duration.ofDays(180)).withHttpOnly(false).build();
+        	Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withPath("/").withMaxAge(Duration.ofDays(180)).build();
         	return ok(views.html.workAssignment.render(assignmentNode.toString(), studentWork, ccid)).withCookies(newCookie);
     	}
     	else // Instructor--no cookie
