@@ -30,9 +30,7 @@ window.addEventListener('DOMContentLoaded', () => {
   if (work === undefined) { 
     work = { ccid: studentID }
   } else {
-    responseDiv.textContent = `Score: ${percent(score(problems, work))}`
-    responseDiv.title = `Submitted at ${work.submittedAt}`
-    responseDiv.style.display = 'block'
+    updateScore(document.querySelector('h1'), score(problems, work))
   }
   for (const problem of problems) {
     const k = key(problem)
@@ -55,19 +53,24 @@ window.addEventListener('DOMContentLoaded', () => {
     return undefined
   }
 
+  function updateScore(e, score) {
+    const text = e.textContent
+    let index = text.indexOf(' (')
+    if (index < 0) index = text.length
+    e.textContent = text.substring(0, index) + ' (' + percent(score) + ')'
+  }
+
   function updateScoreDisplay(workKey) {
     if (!assignmentData.editable) return
     const score = work[workKey].score
     const button = document.getElementById('button-' + workKey)
-    const text = button.textContent
-    let index = text.indexOf(' (')
-    if (index < 0) index = text.length
-    button.textContent = text.substring(0, index) + ' (' + percent(score) + ')'
+    updateScore(button, score)
   }
-
+  
   function adjustDocHeight(iframe, request) {
     const newHeight = request.param.docHeight;
-    iframe.style.height = newHeight + 'px'
+    if (iframe.height < newHeight)
+      iframe.style.height = newHeight + 'px'
   }
 
   function restoreStateOfProblem(iframe, request) {
@@ -82,15 +85,11 @@ window.addEventListener('DOMContentLoaded', () => {
     work[workKey] = request.param
     updateScoreDisplay(workKey);     
     try {
-      responseDiv.style.display = 'none'
-      responseDiv.title = ''
+      responseDiv.textContent = ''
       response = await postData(assignmentData.workUpdateURL, work) 
-      responseDiv.textContent = `Score: ${percent(score(problems, work))}`
-      responseDiv.title = `Submitted at ${response.submittedAt}`
-      responseDiv.style.display = 'block'
+      updateScore(document.querySelector('h1'), score(problems, work))
     } catch (e) {
       responseDiv.textContent = `Error: ${e.message}` 
-      responseDiv.style.display = 'block'
     }  
   }
     
@@ -113,13 +112,13 @@ window.addEventListener('DOMContentLoaded', () => {
       sendScoreAndState(iframe, event.data)
   }, false);
   
-  document.getElementById('switchID').appendChild(createButton('hc-command', 'Switch to this ID', () => { 
+  document.getElementById('switchID').appendChild(createButton('hc-command', 'Switch to this ID', () => {
+      responseDiv.textContent = ''
       const newccid =  document.getElementById('newccid').value
       if (/^(([aeiouy][bcdfghjklmnpqrstvwxz]){2}|([bcdfghjklmnpqrstvwxz][aeiouy]){2})(-(([aeiouy][bcdfghjklmnpqrstvwxz]){2}|([bcdfghjklmnpqrstvwxz][aeiouy]){2})){3}$/.test(newccid)) {
         location = `${location.href.split(/[?#]/)[0]}?newid=${newccid}`                
       } else {
-        document.getElementById('response').textContent = 'Not a valid CodeCheck ID'
-        document.getElementById('response').style.display = 'block'
+        responseDiv.textContent = 'Not a valid CodeCheck ID'
       }        
     }))
   document.getElementById('clearID').appendChild(createButton('hc-command', 'Clear ID now', () => {

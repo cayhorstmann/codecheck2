@@ -16,12 +16,12 @@
 </head>
 <body>
    <div class="studentInstructions">
-        <h1>Your Assignment</h1>
+        <h1 id="heading">Your Assignment</h1>
         <p>Your CodeCheck ID: <span class="ccid">@studentID</span></p>
         <ul id="ccidBullets">
-          <li>Share this ID with your professor, but otherwise keep it private.</li>
+          <li>Share this ID with your professor</li>
           <li id="switchID">Not your ID? Enter yours here: <input id='newccid' type='text' size='30'/>
-          <li id="clearID">If you work on a shared computer, clear the ID after you are done.</li>
+          <li id="clearID">If you work on a shared computer, clear the ID after you are done</li>
         </ul>
   <!--  TODO when inside LTI
         <p>
@@ -29,13 +29,13 @@
         </p>
  -->        
 
-        <p style='display:none' class='message' id='response'></p>
 
  <dl id="urls">
   <dt>Use this private URL for resuming your work later:</dt><dd id="returnToWork"><span id="returnToWorkURL" class="ccurl"></span></dd>  
  </dl>
  <p id="savedcopy"><input type="checkbox"/>  I saved a copy of the private URL</p>
  </div>
+<p class='message' id='response'></p>
 <p id="abovebuttons">Click on the buttons below to view all parts of the assignment.</p>
 </body>
 </html>

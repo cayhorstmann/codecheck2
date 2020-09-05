@@ -107,10 +107,14 @@ body {
 }
 
 #response {
-	border: solid thin gray;
+	border: solid thin red;
 	padding: 0.5em;
 	margin-top: 0.5em;
 	margin-bottom: 0.5em;
+}
+
+#response:empty {
+	border: none;
 }
 
 #abovebuttons {
