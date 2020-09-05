@@ -113,26 +113,19 @@ window.addEventListener('DOMContentLoaded', () => {
       sendScoreAndState(iframe, event.data)
   }, false);
   
-  const clearCookie = () => { 
-      // https://stackoverflow.com/questions/2144386/how-to-delete-a-cookie
-      // const newCookie = 'ccid=; max-age: 0; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'
-      // document.cookie = newCookie
-      location = `${location.href.split(/[?#]/)[0]}?newid=`
-    }
-  document.getElementById('clearID').appendChild(createButton('hc-command', 'Clear ID now', clearCookie))
   document.getElementById('switchID').appendChild(createButton('hc-command', 'Switch to this ID', () => { 
       const newccid =  document.getElementById('newccid').value
       if (/^(([aeiouy][bcdfghjklmnpqrstvwxz]){2}|([bcdfghjklmnpqrstvwxz][aeiouy]){2})(-(([aeiouy][bcdfghjklmnpqrstvwxz]){2}|([bcdfghjklmnpqrstvwxz][aeiouy]){2})){3}$/.test(newccid)) {
-        //const newCookie = 'ccid=' + newccid + '; max-age: 0; expires=' + (new Date(new Date() * 1 + 180 * 24 * 60 * 60 * 1000)).toUTCString() + '; path=/'
-        //document.cookie = newCookie 
         location = `${location.href.split(/[?#]/)[0]}?newid=${newccid}`                
       } else {
         document.getElementById('response').textContent = 'Not a valid CodeCheck ID'
         document.getElementById('response').style.display = 'block'
       }        
     }))
-  document.getElementById('newID').appendChild(createButton('hc-command', 'Create new ID', clearCookie))
-  
+  document.getElementById('clearID').appendChild(createButton('hc-command', 'Clear ID now', () => {
+      location = `${location.href.split(/[?#]/)[0]}?newid=`    
+    }))
+      
   buttonDiv.id = 'buttons'
   document.body.appendChild(buttonDiv)
   
