@@ -8,6 +8,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -344,7 +345,7 @@ Apparently, the simpler putItem(item, conditionalExpression, nameMap, valueMap) 
 			new PutItemSpec()
 				.withItem(Item.fromJSON(jsonString))
 				.withConditionExpression("attribute_not_exists(assignmentID) OR submittedAt < :submittedAt")
-				.withValueMap(Map.of(":submittedAt", contents.get("submittedAt").asText()))
+				.withValueMap(Collections.singletonMap(":submittedAt", contents.get("submittedAt").asText()))
 		);
 		return ok(result); 
 	}	
