@@ -63,8 +63,10 @@ document.addEventListener('DOMContentLoaded', function () {
       const fudge = 50;
       const height = Math.max( body.scrollHeight, body.offsetHeight,
                                html.clientHeight, html.scrollHeight, html.offsetHeight ) + fudge;
+      document.body.style.overflow = 'auto'; 
       event.source.postMessage({docHeight: height, request: event.data}, '*' );
     } else if (event.data.query === 'restoreState') {
+      document.body.style.overflow = 'auto'; 
       restoreStudentWork(event.data.state)      
     } else if (event.data.query === 'getContent') {
       const studentWork = getStudentWork()

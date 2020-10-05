@@ -7,12 +7,29 @@ import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import javax.inject.Inject;
 
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
+import com.amazonaws.services.dynamodbv2.document.DynamoDB;
+import com.amazonaws.services.dynamodbv2.document.Item;
+import com.amazonaws.services.dynamodbv2.document.ItemCollection;
+import com.amazonaws.services.dynamodbv2.document.PutItemOutcome;
+import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
+import com.amazonaws.services.dynamodbv2.document.RangeKeyCondition;
+import com.amazonaws.services.dynamodbv2.document.Table;
+import com.amazonaws.services.dynamodbv2.document.spec.PutItemSpec;
+import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
+import com.amazonaws.services.dynamodbv2.model.PutItemRequest;
+import com.amazonaws.services.dynamodbv2.model.PutItemResult;
+import com.amazonaws.services.dynamodbv2.model.ReturnValue;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -136,9 +153,8 @@ public class Assignment extends Controller {
 		}
 	}
 		  	 
-	private static double score(ObjectNode assignment, ObjectNode submission) {
+	private static double score(String ccid, ObjectNode assignment, ObjectNode submission) {
 		double result = 0;
-		String ccid = submission.get("ccid").asText();
 		ArrayNode groups = (ArrayNode) assignment.get("assignment");
 		ArrayNode problems = (ArrayNode) groups.get(ccid.hashCode() % groups.size());
 		for (JsonNode p : problems) {
@@ -173,19 +189,40 @@ public class Assignment extends Controller {
     public Result work(Http.Request request, String assignmentID, String ccid, String editKey, 
     		boolean editable, String newid) 
     		throws IOException, GeneralSecurityException {
-    	if (newid != null)
+    	if (newid != null) {
     		ccid = Util.isPronouncableUID(newid) ? newid : Util.createPronouncableUID();
+    	}
     	else if (ccid == null && editable) {    		
             Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
             ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
-    	}
+        }
 		String s3key = assignmentID + "/" + ccid + "/" + editKey;
     	String studentWork = "undefined";
     	boolean editKeySaved = false;
-    	if (editKey != null && s3conn.isOnS3("work", s3key)) {
-    		studentWork = s3conn.readFromS3("work", s3key);
+    	
+    	// Look in DynamoDB first
+    	AmazonDynamoDB client = s3conn.getAmazonDynamoDB();
+    	DynamoDB dynamoDB = new DynamoDB(client);
+    	Table table = dynamoDB.getTable("CodeCheckWork"); 
+    	ItemCollection<QueryOutcome> items = table.query("assignmentID", assignmentID, 
+    			new RangeKeyCondition("workID").eq(ccid + "/" + editKey)); 
+    	Iterator<Item> iterator = items.iterator();
+    	Map<String, ObjectNode> itemMap = new HashMap<>();
+    	if (iterator.hasNext()) {
+    		Item item = iterator.next();
+    		studentWork = item.toJSON();
     		editKeySaved = true;
-    	} else if (editable) {
+    	}
+    	
+    	/* TODO: Soon legacy
+    	if (studentWork.equals("undefined") && editKey != null && s3conn.isOnS3("work", s3key)) {
+    		studentWork = s3conn.readFromS3("work", s3key);
+    		ObjectNode studentWorkJSON = (ObjectNode)(new ObjectMapper().readTree(studentWork));
+    		//TODO: Restructure
+    	} 
+    	*/
+    	
+    	if (editable && editKey == null) {
     		editKey = Util.createPrivateUID();
     	}
     	// Need to remove private URL, add submission URL
@@ -202,6 +239,7 @@ public class Assignment extends Controller {
     		String workUpdateURL = prefix + "saveWork/" + assignmentID + "/" + ccid + "/" + editKey; 
     		assignmentNode.put("workUpdateURL", workUpdateURL);
         	assignmentNode.put("editKeySaved", editKeySaved);
+        	assignmentNode.put("sentAt", Instant.now().toString());
         	Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withPath("/").withMaxAge(Duration.ofDays(180)).build();
         	return ok(views.html.workAssignment.render(assignmentNode.toString(), studentWork, ccid)).withCookies(newCookie);
     	}
@@ -214,60 +252,100 @@ public class Assignment extends Controller {
 		ObjectNode assignment = readJsonObjectFromS3("assignments", assignmentID);
 		if (!assignment.get("editKey").asText().equals(editKey))
 			throw new IllegalArgumentException("Edit key does not match");
-		List<String> submissionKeys = s3conn.keys("work", assignmentID);
-		
-		ObjectNode submissions = JsonNodeFactory.instance.objectNode(); 
+		/*
+		List<String> submissionKeys = s3conn.keys("work", assignmentID); 
+		*/
+		List<String> submissionKeys = new ArrayList<>(); // TODO: Eliminate and use itemMap.keySet
+		ObjectNode submissions = JsonNodeFactory.instance.objectNode();
+
+    	AmazonDynamoDB client = s3conn.getAmazonDynamoDB();
+    	DynamoDB dynamoDB = new DynamoDB(client);
+    	Table table = dynamoDB.getTable("CodeCheckWork");
+    	ItemCollection<QueryOutcome> items = table.query("assignmentID", assignmentID);
+    	Iterator<Item> iterator = items.iterator();
+    	Map<String, ObjectNode> itemMap = new HashMap<>();
+    	while (iterator.hasNext()) {
+    		Item item = iterator.next();
+    		String key = item.getString("workID");
+    		itemMap.put(key, (ObjectNode)(new ObjectMapper().readTree(item.toJSON())));
+    		submissionKeys.add(key);
+    	}
 		
 		for (String submissionKey : submissionKeys) {
 			String[] parts = submissionKey.split("/");
-			if (!submissions.has(parts[1])) submissions.set(parts[1], JsonNodeFactory.instance.objectNode());
-			ObjectNode child = (ObjectNode) submissions.get(parts[1]);
-			ObjectNode submission = readJsonObjectFromS3("work", submissionKey);
+			String ccid = parts[0];
+			String submissionEditKey = parts[1];
+			if (!submissions.has(ccid)) submissions.set(ccid, JsonNodeFactory.instance.objectNode());
+			ObjectNode submissionsForCcid = (ObjectNode) submissions.get(ccid);
+			
+			ObjectNode work = itemMap.get(submissionKey);
+			/*
+			if (submission == null) {
+				submission = readJsonObjectFromS3("work", assignmentID + "/" + submissionKey); 
+				// TODO: restructure
+			}
+			*/
 			ObjectNode submissionData = JsonNodeFactory.instance.objectNode();
-			submissionData.put("score", score(assignment, submission));
-			submissionData.set("submittedAt", submission.get("submittedAt"));
-			child.set(parts[2], submissionData);
+			submissionData.put("score", score(ccid, assignment, (ObjectNode) work.get("problems")));
+			submissionData.set("submittedAt", work.get("submittedAt"));
+			submissionsForCcid.set(submissionEditKey, submissionData);
 		}
 		String editURL = "/private/editAssignment/" + assignmentID + "/" + editKey;
 		
 		return ok(views.html.viewSubmissions.render(assignmentID, assignment.toString(), submissions.toString(), editURL)); 
 	}
 
-	public Result saveAssignment(Http.Request request) {		
+	public Result saveAssignment(Http.Request request) throws IOException {		
         ObjectNode params = (ObjectNode) request.body().asJson();        
-        try {
-            String assignment = params.get("assignment").asText();
-        	params.set("assignment", parseAssignment(assignment));
-        	String id = params.has("id") ? params.get("id").asText() : Util.createPublicUID();
-        	String editKey = Util.createPrivateUID();
-        	String prefix = prefix(request);
-    		String publicURL = prefix + "assignment/" + id;
-        	String privateURL = prefix + "private/assignment/" + id + "/" + editKey;
-        	params.put("editKey", editKey);
-        	params.remove("privateURL");
-        	params.remove("publicURL");
-        	params.remove("id");        	
-        	params.remove("error");        	
-        	s3conn.putToS3(params.toString(), "assignments", id);
-        	params.put("privateURL", privateURL);
-        	params.put("publicURL", publicURL);      
-        	params.put("id", id);
-        }
-        catch (Exception ex) {
-        	params.put("error", ex.getMessage());
-        }
+        String assignment = params.get("assignment").asText();
+    	params.set("assignment", parseAssignment(assignment));
+    	String id = params.has("id") ? params.get("id").asText() : Util.createPublicUID();
+    	String editKey = Util.createPrivateUID();
+    	String prefix = prefix(request);
+		String publicURL = prefix + "assignment/" + id;
+    	String privateURL = prefix + "private/assignment/" + id + "/" + editKey;
+    	params.put("editKey", editKey);
+    	params.remove("privateURL");
+    	params.remove("publicURL");
+    	params.remove("id");        	
+    	params.remove("error");        	
+    	s3conn.putToS3(params.toString(), "assignments", id);
+    	params.put("privateURL", privateURL);
+    	params.put("publicURL", publicURL);      
+    	params.put("id", id);
     	return ok(params);
 	}
 	
 	public Result saveWork(Http.Request request, String assignmentID, String ccid, String editKey) throws IOException, NoSuchAlgorithmException {
 		//TODO: Do we need some level of security? Want to avoid spamming
 		ObjectNode contents = (ObjectNode) request.body().asJson();
-		String submittedAt = Instant.now().toString();
-		contents.put("submittedAt", submittedAt);
-		String s3key = assignmentID + "/" + ccid + "/" + editKey;
-    	s3conn.putToS3(contents.toString(), "work", s3key);
+		/*
+    	String s3key = assignmentID + "/" + ccid + "/" + editKey;
+		s3conn.putToS3(contents.toString(), "work", s3key);
+    	*/
     	ObjectNode result = JsonNodeFactory.instance.objectNode();
-    	result.put("submittedAt", submittedAt);    	
+    	result.put("submittedAt", Instant.now().toString());    	
+    	
+    	// Also put in DynamoDB
+    	contents.put("assignmentID", assignmentID);
+		contents.put("workID", ccid + "/" + editKey); 
+
+    	AmazonDynamoDB client = s3conn.getAmazonDynamoDB();
+    	DynamoDB dynamoDB = new DynamoDB(client);
+    	Table table = dynamoDB.getTable("CodeCheckWork"); 
+   		String jsonString = contents.toString(); 
+   		/*
+To prevent a new item from replacing an existing item, use a conditional expression that contains the attribute_not_exists function with the name of the attribute being used as the partition key for the table. Since every record must contain that attribute, the attribute_not_exists function will only succeed if no matching item exists.
+https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/SQLtoNoSQL.WriteData.html
+
+Apparently, the simpler putItem(item, conditionalExpression, nameMap, valueMap) swallows the ConditionalCheckFailedException 
+   		 */
+   		table.putItem(
+			new PutItemSpec()
+				.withItem(Item.fromJSON(jsonString))
+				.withConditionExpression("attribute_not_exists(assignmentID) OR submittedAt < :submittedAt")
+				.withValueMap(Map.of(":submittedAt", contents.get("submittedAt").asText()))
+		);
 		return ok(result); 
 	}	
 }

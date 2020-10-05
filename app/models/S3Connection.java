@@ -17,6 +17,8 @@ import javax.inject.Singleton;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
@@ -31,6 +33,7 @@ public class S3Connection {
 	private Config config;
 	private String bucketSuffix = null;
 	private AmazonS3 amazonS3;
+	private AmazonDynamoDB amazonDynamoDB;
 	
 	public @Inject S3Connection(Config config) {
 		this.config = config;
@@ -49,7 +52,14 @@ public class S3Connection {
 						.withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(s3AccessKey, s3SecretKey)))
 						.withRegion(s3Region)
 						.withForceGlobalBucketAccessEnabled(true)
-						.build(); 
+						.build();
+				
+		    	amazonDynamoDB = AmazonDynamoDBClientBuilder
+		    			.standard()
+		    			.withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(s3AccessKey, s3SecretKey)))
+						.withRegion("us-west-1")
+		    			.build();
+				
 			} catch (IOException ex) {
 				Logger.of("com.horstmann.codecheck").error("Can't load S3 credentials", ex);
 			}
@@ -70,6 +80,10 @@ public class S3Connection {
 		return amazonS3; 
 	}
 
+	public AmazonDynamoDB getAmazonDynamoDB() {
+		return amazonDynamoDB;
+	}
+	
 	public void putToS3(Path file, String repo, String key)
 			throws IOException {
 		String bucket = repo + "." + bucketSuffix;

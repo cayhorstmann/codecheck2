@@ -6,6 +6,9 @@ window.addEventListener('DOMContentLoaded', () => {
     return r      
   }
   
+  /*
+  TODO: Baking in assumption that problem source is ebook or CodeCheck. What if someone else
+  has a problem source? MD5 hash the problem URL? */
   function key(problem) {
     return problem.qid !== undefined ? problem.qid
       : problem.URL.substring(problem.URL.lastIndexOf("/") + 1).replace(/[^A-Za-z_-]/, '')
@@ -15,26 +18,27 @@ window.addEventListener('DOMContentLoaded', () => {
     let score = 0
     for (const problem of problems) {
       const workKey = key(problem)
-      if (workKey in work) {
-        score += work[workKey].score * problem.weight
+      if (workKey in work.problems) {
+        score += work.problems[workKey].score * problem.weight
       }
     }
     return score
   }
 
+  assignmentData.receivedAt = Date.now()
   const problems = assignmentData.assignment[hash(studentID) % assignmentData.assignment.length]  
   const responseDiv = document.getElementById('response')
   const savedCopyCheckbox = document.querySelector('#savedcopy > input')
   const buttonDiv = document.createElement('div')
 
   if (work === undefined) { 
-    work = { ccid: studentID }
+    work = { problems: {} } 
   } else {
     updateScore(document.querySelector('h1'), score(problems, work))
   }
   for (const problem of problems) {
     const k = key(problem)
-    if (! (k in work)) work[k] = { score: 0, state: null }  
+    if (! (k in work.problems)) work.problems[k] = { score: 0, state: null }  
   } 
 
   
@@ -62,7 +66,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   function updateScoreDisplay(workKey) {
     if (!assignmentData.editable) return
-    const score = work[workKey].score
+    const score = work.problems[workKey].score
     const button = document.getElementById('button-' + workKey)
     updateScore(button, score)
   }
@@ -75,18 +79,19 @@ window.addEventListener('DOMContentLoaded', () => {
 
   function restoreStateOfProblem(iframe, request) {
     let workKey = iframe.id.replace('problem-', '')   
-    iframe.contentWindow.postMessage({ request, param: work[workKey].state }, '*');
+    iframe.contentWindow.postMessage({ request, param: work.problems[workKey].state }, '*');
     updateScoreDisplay(workKey);
   }
 
   async function sendScoreAndState(iframe, request) {    
     if (studentID === null || !assignmentData.editable) return // Viewing as instructor
     let workKey = iframe.id.replace('problem-', '')   
-    work[workKey] = request.param
+    work.problems[workKey] = request.param
     updateScoreDisplay(workKey);     
     try {
       responseDiv.textContent = ''
-      response = await postData(assignmentData.workUpdateURL, work) 
+      work.submittedAt = new Date(Date.now() - assignmentData.receivedAt + Date.parse(assignmentData.sentAt)).toISOString()
+      response = await postData(assignmentData.workUpdateURL, work)
       updateScore(document.querySelector('h1'), score(problems, work))
     } catch (e) {
       responseDiv.textContent = `Error: ${e.message}` 
@@ -94,6 +99,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
     
   function activateButtons() {
+    savedCopyCheckbox.checked = true 
     for (const btn of buttonDiv.children) {
       btn.classList.remove('hc-disabled')
     }
@@ -172,7 +178,6 @@ window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('abovebuttons').appendChild(createButton('hc-command', 'Clone', () => {
         window.open(assignmentData.cloneURL, '_blank')        
       }))
-    savedCopyCheckbox.checked = true
     activateButtons()
   }
   
