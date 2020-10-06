@@ -26,7 +26,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   assignmentData.receivedAt = Date.now()
-  const problems = assignmentData.assignment[hash(studentID) % assignmentData.assignment.length]  
+  const problems = assignmentData.problems[hash(studentID) % assignmentData.problems.length]  
   const responseDiv = document.getElementById('response')
   const savedCopyCheckbox = document.querySelector('#savedcopy > input')
   const buttonDiv = document.createElement('div')
