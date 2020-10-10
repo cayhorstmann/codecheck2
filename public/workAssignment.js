@@ -25,8 +25,8 @@ window.addEventListener('DOMContentLoaded', () => {
     return score
   }
 
-  assignmentData.receivedAt = Date.now()
-  const problems = assignmentData.problems[hash(studentID) % assignmentData.problems.length]  
+  assignment.receivedAt = Date.now()
+  const problems = assignment.problems[hash(studentID) % assignment.problems.length]  
   const responseDiv = document.getElementById('response')
   const savedCopyCheckbox = document.querySelector('#savedcopy > input')
   const buttonDiv = document.createElement('div')
@@ -43,7 +43,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   
   const returnToWorkURLSpan =  document.getElementById('returnToWorkURL')
-  returnToWorkURLSpan.textContent = assignmentData.returnToWorkURL
+  returnToWorkURLSpan.textContent = assignment.returnToWorkURL
   
   document.getElementById('returnToWork').appendChild(createButton('hc-command', 'Copy', () => { 
     window.getSelection().selectAllChildren(returnToWorkURLSpan); 
@@ -65,7 +65,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateScoreDisplay(workKey) {
-    if (!assignmentData.editable) return
+    if (!assignment.editable) return
     const score = work.problems[workKey].score
     const button = document.getElementById('button-' + workKey)
     updateScore(button, score)
@@ -84,14 +84,14 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   async function sendScoreAndState(iframe, request) {    
-    if (studentID === null || !assignmentData.editable) return // Viewing as instructor
+    if (studentID === null || !assignment.editable) return // Viewing as instructor
     let workKey = iframe.id.replace('problem-', '')   
     work.problems[workKey] = request.param
     updateScoreDisplay(workKey);     
     try {
       responseDiv.textContent = ''
-      work.submittedAt = new Date(Date.now() - assignmentData.receivedAt + Date.parse(assignmentData.sentAt)).toISOString()
-      response = await postData(assignmentData.workUpdateURL, work)
+      work.submittedAt = new Date(Date.now() - assignment.receivedAt + Date.parse(assignment.sentAt)).toISOString()
+      response = await postData(assignment.workUpdateURL, work)
       updateScore(document.querySelector('h1'), score(problems, work))
     } catch (e) {
       responseDiv.textContent = `Error: ${e.message}` 
@@ -134,6 +134,15 @@ window.addEventListener('DOMContentLoaded', () => {
   buttonDiv.id = 'buttons'
   document.body.appendChild(buttonDiv)
   
+    /*  TODO when inside LTI
+        <p>
+            When you are done, click <button onclick="submitGrades()">Record my score</button> to save your score in the gradebook.
+        </p>
+    */        
+
+
+
+  
   let allWeightsSame = true
   for (let i = 1; allWeightsSame && i < problems.length; i++) 
     allWeightsSame = Math.abs(problems[0].weight - problems[i].weight) < 0.001   
@@ -165,8 +174,8 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!allWeightsSame) button.title = `Weight: ${percent(problems[i].weight)}` 
   }
   
-  if (assignmentData.editable) { 
-    if (assignmentData.editKeySaved) {
+  if (assignment.editable) { 
+    if (assignment.editKeySaved) {
       activateButtons()
       document.getElementById('savedcopy').style.display = 'none'
     } else {  
@@ -174,9 +183,9 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   } else { // Instructor view
     for (const e of document.querySelectorAll('.studentInstructions')) e.style.display = 'none'
-    if ('cloneURL' in assignmentData) 
+    if ('cloneURL' in assignment) 
       document.getElementById('abovebuttons').appendChild(createButton('hc-command', 'Clone', () => {
-        window.open(assignmentData.cloneURL, '_blank')        
+        window.open(assignment.cloneURL, '_blank')        
       }))
     activateButtons()
   }

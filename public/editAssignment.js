@@ -19,11 +19,12 @@ window.addEventListener('DOMContentLoaded', () => {
   const responseDiv = document.getElementById('response')
   const urlsDl = document.getElementById('urls')
   urlsDl.style.display = 'none'
-  if (assignmentData !== undefined) { 
-    document.getElementById('problems').value = format(assignmentData.problems)
-    document.getElementById('deadlineDate').value = assignmentData.deadlineDate
-    document.getElementById('deadlineTime').value = assignmentData.deadlineTime
-  }
+  if ('problems' in assignment)  
+    document.getElementById('problems').value = format(assignment.problems)
+  if ('deadlineDate' in assignment)  
+    document.getElementById('deadlineDate').value = assignment.deadlineDate
+  if ('deadlineTime' in assignment)  
+    document.getElementById('deadlineTime').value = assignment.deadlineTime
 
   const privateURLSpan = document.getElementById('privateURL')
   privateURLSpan.parentNode.appendChild(createButton('hc-command', 'Copy', () => { 
@@ -37,20 +38,24 @@ window.addEventListener('DOMContentLoaded', () => {
     urlsDl.style.display = 'none'
     try {
       request = {
+        assignmentID: assignment.assignmentID,
+        editKey: assignment.editKey, // null when cloned
         problems: document.getElementById('problems').value,
         deadlineDate: document.getElementById('deadlineDate').value,
         deadlineTime: document.getElementById('deadlineTime').value,
+        lti
       }
-      if (assignmentID !== '') request.assignmentID = assignmentID       
       response = await postData('/saveAssignment', request)
       if (response.error !== undefined) {
         responseDiv.textContent = `Error: ${response.error}`
         responseDiv.style.display = 'block'
       } else {
-        document.getElementById('publicURL').textContent = response.publicURL
-        document.getElementById('privateURL').textContent = response.privateURL
-        urlsDl.style.display = 'block'
-        assignmentID = response.assignmentID
+        assignment.assignmentID = response.assignmentID
+        if (lti === undefined) {
+          document.getElementById('publicURL').textContent = response.publicURL
+          document.getElementById('privateURL').textContent = response.privateURL
+          urlsDl.style.display = 'block'
+        }
       }
     } catch (e) {
       responseDiv.textContent = `Error: ${e.message}`            

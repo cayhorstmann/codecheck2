@@ -8,7 +8,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import javax.inject.Inject;
@@ -19,11 +23,20 @@ import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
+import com.amazonaws.services.dynamodbv2.document.DynamoDB;
+import com.amazonaws.services.dynamodbv2.document.Item;
+import com.amazonaws.services.dynamodbv2.document.ItemCollection;
+import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
+import com.amazonaws.services.dynamodbv2.document.RangeKeyCondition;
+import com.amazonaws.services.dynamodbv2.document.Table;
+import com.amazonaws.services.dynamodbv2.document.spec.PutItemSpec;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.typesafe.config.Config;
 
 import play.Logger;
@@ -135,7 +148,7 @@ public class S3Connection {
 		return problemDir;
 	}
 	
-	public List<String> keys(String repo, String keyPrefix) throws AmazonServiceException {
+	public List<String> readS3keys(String repo, String keyPrefix) throws AmazonServiceException {
 		// https://docs.aws.amazon.com/AmazonS3/latest/dev/ListingObjectKeysUsingJava.html		
 		String bucket = repo + "." + bucketSuffix;
 		ListObjectsV2Request req = new ListObjectsV2Request()
@@ -154,5 +167,79 @@ public class S3Connection {
 			req.setContinuationToken(token);
 		} while (result.isTruncated());
 		return allKeys;
-	}	
+	}
+
+    public ObjectNode readJsonObjectFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue) throws IOException {
+    	String result = readJsonStringFromDynamoDB(tableName, primaryKeyName, primaryKeyValue);
+    	return result == null ? null : (ObjectNode)(new ObjectMapper().readTree(result)); 
+    }
+    
+	public String readJsonStringFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue) throws IOException {
+    	DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
+    	Table table = dynamoDB.getTable(tableName); 
+    	ItemCollection<QueryOutcome> items = table.query(primaryKeyName, primaryKeyValue); 
+    	Iterator<Item> iterator = items.iterator();
+    	if (iterator.hasNext())
+    		return iterator.next().toJSON();
+    	else
+    		return null;
+    }	
+    
+    public ObjectNode readJsonObjectFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName, String sortKeyValue) throws IOException {
+    	String result = readJsonStringFromDynamoDB(tableName, primaryKeyName, primaryKeyValue, sortKeyName, sortKeyValue);
+    	return result == null ? null : (ObjectNode)(new ObjectMapper().readTree(result)); 
+    }
+    
+    public String readJsonStringFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName, String sortKeyValue) throws IOException {
+    	DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
+    	Table table = dynamoDB.getTable(tableName); 
+		ItemCollection<QueryOutcome> items = table.query(primaryKeyName, primaryKeyValue, 
+				new RangeKeyCondition(sortKeyName).eq(sortKeyValue)); 
+		Iterator<Item> iterator = items.iterator();
+    	if (iterator.hasNext())
+    		return iterator.next().toJSON();
+    	else
+    		return null;
+    }
+    
+    public Map<String, ObjectNode> readJsonObjectsFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName) throws IOException {
+    	DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
+    	Table table = dynamoDB.getTable(tableName); 
+    	ItemCollection<QueryOutcome> items = table.query(primaryKeyName, primaryKeyValue);
+    	Iterator<Item> iterator = items.iterator();
+    	Map<String, ObjectNode> itemMap = new HashMap<>();
+    	while (iterator.hasNext()) {
+    		Item item = iterator.next();
+    		String key = item.getString(sortKeyName);
+    		itemMap.put(key, (ObjectNode)(new ObjectMapper().readTree(item.toJSON())));
+    	}
+    	return itemMap;
+    }
+    
+    public void writeJsonObjectToDynamoDB(String tableName, ObjectNode obj) {
+    	DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
+    	Table table = dynamoDB.getTable(tableName); 
+   		table.putItem(
+			new PutItemSpec()
+				.withItem(Item.fromJSON(obj.toString()))
+		);
+    }
+
+    public void writeNewerJsonObjectToDynamoDB(String tableName, ObjectNode obj, String primaryKeyName, String timeStampKeyName) {
+    	DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
+    	Table table = dynamoDB.getTable(tableName); 
+    		/*
+    To prevent a new item from replacing an existing item, use a conditional expression that contains the attribute_not_exists function with the name of the attribute being used as the partition key for the table. Since every record must contain that attribute, the attribute_not_exists function will only succeed if no matching item exists.
+    https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/SQLtoNoSQL.WriteData.html
+
+    Apparently, the simpler putItem(item, conditionalExpression, nameMap, valueMap) swallows the ConditionalCheckFailedException 
+    		 */
+    	String conditionalExpression = "attribute_not_exists(" + primaryKeyName + ") OR " + timeStampKeyName + " < :" + timeStampKeyName;
+		table.putItem(
+    		new PutItemSpec()
+    			.withItem(Item.fromJSON(obj.toString()))
+    			.withConditionExpression(conditionalExpression)
+    			.withValueMap(Collections.singletonMap(":" + timeStampKeyName, obj.get(timeStampKeyName).asText()))
+    	);         	
+    }   
 }
