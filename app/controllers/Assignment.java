@@ -318,7 +318,7 @@ public class Assignment extends Controller {
    			launchPresentationReturnURL = launchPresentationReturnURL
    					+ (launchPresentationReturnURL.contains("?") ? "&" : "?")     					
    					+ "return_type=lti_launch_url"
-   					+ "&url=" + URLEncoder.encode(launchPresentationReturnURL, StandardCharsets.UTF_8);
+   					+ "&url=" + URLEncoder.encode(launchPresentationReturnURL, "UTF-8" /* StandardCharsets.UTF_8 */); // TODO
    			new URL(launchPresentationReturnURL).openStream().close();
    		} else {   		
    	    	String prefix = prefix(request);
