@@ -209,7 +209,7 @@ Instructor:
 	}	
 
 	@Security.Authenticated(Secured.class)
-	public Result viewSubmissions() {
+	public Result viewSubmissions(Http.Request request) {
 		return null;
 	}
 	
