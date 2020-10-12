@@ -1,4 +1,8 @@
 window.addEventListener('DOMContentLoaded', () => {
+  const responseDiv = document.getElementById('response')
+  const savedCopyCheckbox = document.querySelector('#savedcopy > input')
+  const buttonDiv = document.createElement('div')
+
   function hash(s) {
     let r = 0
     for (let i = 0; i < s.length; i++) r = (31 * r + s.charCodeAt(i)) % 4294967296 // 2 ** 32
@@ -25,32 +29,6 @@ window.addEventListener('DOMContentLoaded', () => {
     return score
   }
 
-  assignment.receivedAt = Date.now()
-  const problems = assignment.problems[hash(studentID) % assignment.problems.length]  
-  const responseDiv = document.getElementById('response')
-  const savedCopyCheckbox = document.querySelector('#savedcopy > input')
-  const buttonDiv = document.createElement('div')
-
-  if (work === undefined) { 
-    work = { problems: {} } 
-  } else {
-    updateScore(document.querySelector('h1'), score(problems, work))
-  }
-  for (const problem of problems) {
-    const k = key(problem)
-    if (! (k in work.problems)) work.problems[k] = { score: 0, state: null }  
-  } 
-
-  
-  const returnToWorkURLSpan =  document.getElementById('returnToWorkURL')
-  returnToWorkURLSpan.textContent = assignment.returnToWorkURL
-  
-  document.getElementById('returnToWork').appendChild(createButton('hc-command', 'Copy', () => { 
-    window.getSelection().selectAllChildren(returnToWorkURLSpan); 
-    document.execCommand('copy');
-    window.getSelection().removeAllRanges(); }))
-
-  
   function sendingIframe(event) {
     for (const f of document.getElementsByClassName('exercise-iframe'))
       if (f.contentWindow === event.source) return f
@@ -65,7 +43,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateScoreDisplay(workKey) {
-    if (!assignment.editable) return
+    if (!assignment.isStudent) return
     const score = work.problems[workKey].score
     const button = document.getElementById('button-' + workKey)
     updateScore(button, score)
@@ -84,15 +62,21 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   async function sendScoreAndState(iframe, request) {    
-    if (studentID === null || !assignment.editable) return // Viewing as instructor
+    if (!assignment.isStudent) return // Viewing as instructor
     let workKey = iframe.id.replace('problem-', '')   
     work.problems[workKey] = request.param
     updateScoreDisplay(workKey);     
     try {
       responseDiv.textContent = ''
       work.submittedAt = new Date(Date.now() - assignment.receivedAt + Date.parse(assignment.sentAt)).toISOString()
-      response = await postData(assignment.workUpdateURL, work)
-      updateScore(document.querySelector('h1'), score(problems, work))
+      if (lti !== undefined) {
+        lti.work = work
+        let result = await postData("/lti/saveWork", lti)
+        updateScore(document.querySelector('h1'), result.score)
+      } else {
+        await postData("/saveWork", work)
+        updateScore(document.querySelector('h1'), score(problems, work))
+      }
     } catch (e) {
       responseDiv.textContent = `Error: ${e.message}` 
     }  
@@ -107,6 +91,13 @@ window.addEventListener('DOMContentLoaded', () => {
     const iframeID = buttonDiv.children[0].id.replace('button', 'problem')       
     document.getElementById(iframeID).style.display = 'block'                   
   }
+  
+  assignment.receivedAt = Date.now()  
+  const problems = assignment.problems[hash(studentID) % assignment.problems.length]  
+  for (const problem of problems) {
+    const k = key(problem)
+    if (! (k in work.problems)) work.problems[k] = { score: 0, state: null }  
+  } 
   
   window.addEventListener("message", event => {
     let iframe = sendingIframe(event)
@@ -138,11 +129,10 @@ window.addEventListener('DOMContentLoaded', () => {
         <p>
             When you are done, click <button onclick="submitGrades()">Record my score</button> to save your score in the gradebook.
         </p>
+        
+        If instructor, add link to view/maybe edit
     */        
 
-
-
-  
   let allWeightsSame = true
   for (let i = 1; allWeightsSame && i < problems.length; i++) 
     allWeightsSame = Math.abs(problems[0].weight - problems[i].weight) < 0.001   
@@ -174,24 +164,36 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!allWeightsSame) button.title = `Weight: ${percent(problems[i].weight)}` 
   }
   
-  if (assignment.editable) { 
-    if (assignment.editKeySaved) {
+  if (assignment.isStudent) {
+    updateScore(document.querySelector('h1'), score(problems, work))  
+    if (lti === undefined) {
+      document.getElementById('returnToWorkURL').textContent = assignment.returnToWorkURL
+    
+      document.getElementById('returnToWork').appendChild(createButton('hc-command', 'Copy', () => { 
+        window.getSelection().selectAllChildren(returnToWorkURLSpan) 
+        document.execCommand('copy')
+        window.getSelection().removeAllRanges() 
+      }))
+      
+      if (assignment.editKeySaved) {
+        activateButtons()
+        document.getElementById('savedcopy').style.display = 'none'
+      } else {  
+        savedCopyCheckbox.checked = false
+      }      
+    } else {
       activateButtons()
-      document.getElementById('savedcopy').style.display = 'none'
-    } else {  
-      savedCopyCheckbox.checked = false
-    }
+      document.getElementById('studentInstructions').style.display = 'none'
+    }       
   } else { // Instructor view
-    for (const e of document.querySelectorAll('.studentInstructions')) e.style.display = 'none'
     if ('cloneURL' in assignment) 
       document.getElementById('abovebuttons').appendChild(createButton('hc-command', 'Clone', () => {
         window.open(assignment.cloneURL, '_blank')        
       }))
     activateButtons()
+    document.getElementById('studentInstructions').style.display = 'none'
   }
-  
-  
-  
+    
   savedCopyCheckbox.addEventListener('change', () => {    
     if (savedCopyCheckbox.checked) {
       activateButtons()

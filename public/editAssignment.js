@@ -39,7 +39,7 @@ window.addEventListener('DOMContentLoaded', () => {
     try {
       request = {
         assignmentID: assignment.assignmentID,
-        editKey: assignment.editKey, // null when cloned
+        editKey: assignment.editKey, // undefined when cloned
         problems: document.getElementById('problems').value,
         deadlineDate: document.getElementById('deadlineDate').value,
         deadlineTime: document.getElementById('deadlineTime').value,

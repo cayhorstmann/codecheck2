@@ -1,7 +1,6 @@
 package controllers;
 
 import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -12,7 +11,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -48,33 +46,7 @@ import play.mvc.Result;
 public class Assignment extends Controller {
 	@Inject private S3Connection s3conn;
 	
-	// TODO: Move these to Util
-	public static <T> Iterable<T> iterable(Iterator<T> iterator) { 
-        return new Iterable<T>() { 
-            public Iterator<T> iterator() { return iterator; } 
-        }; 
-    } 	
-	
-	public static String prefix(Http.Request request) {
-		return (request.secure() ? "https://" : "http://") + request.host() + "/";
-	}
-	
-	private static boolean exists(String url) {
-		boolean result = false;
-		try {
-			HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
-			try {
-				conn.connect();
-				result = conn.getHeaderField(null).contains("200");
-			} finally {
-				conn.disconnect();
-			}
-		} catch (Exception ex) {
-		}
-		return result;
-	}
-	
-    private static ArrayNode parseAssignment(String assignment) {
+	private static ArrayNode parseAssignment(String assignment) {
         if (assignment == null || assignment.trim().isEmpty()) 
         	throw new IllegalArgumentException("No assignments");
     	ArrayNode groupsNode = JsonNodeFactory.instance.arrayNode();
@@ -94,13 +66,13 @@ public class Assignment extends Controller {
             			else if (token.matches("[a-zA-Z0-9_]+(-[a-zA-Z0-9_]+)*")) {	
             				qids[i] = token;
             				problemURLs[i] = "https://www.interactivities.ws/" + token + ".xhtml";
-            				if (exists(problemURLs[i]))
+            				if (Util.exists(problemURLs[i]))
             					checked = true;
             				else
             					problemURLs[i] = "https://codecheck.it/files?repo=wiley&problem=" + token;            				            					
             			}
             			else throw new IllegalArgumentException("Bad token: " + token);
-            			if (!checked && !exists(problemURLs[i]))
+            			if (!checked && !Util.exists(problemURLs[i]))
             				throw new IllegalArgumentException("Cannot find " + (qids[i] == null 
             					? problemURLs[i] : qids[i]));
             		}
@@ -151,15 +123,16 @@ public class Assignment extends Controller {
 		}
 	}
 		  	 
-	private static double score(String ccid, ObjectNode assignment, ObjectNode submission) {
+	public static double score(String ccid, ObjectNode assignment, ObjectNode work) {
 		double result = 0;
 		ArrayNode groups = (ArrayNode) assignment.get("problems");
 		ArrayNode problems = (ArrayNode) groups.get(ccid.hashCode() % groups.size());
+		ObjectNode submissions = (ObjectNode) work.get("problems");
 		for (JsonNode p : problems) {
 			ObjectNode problem = (ObjectNode) p;
 			String problemKey = key(problem);
-			if (submission.has(problemKey))
-				result += problem.get("weight").asDouble() * submission.get(problemKey).get("score").asDouble();
+			if (problems.has(problemKey))
+				result += problem.get("weight").asDouble() * submissions.get(problemKey).get("score").asDouble();
 		}
 		return result;
 	}
@@ -175,8 +148,10 @@ public class Assignment extends Controller {
     		assignment = "{}";
     	} else {
     		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
-    		if (editKey == null) // Clone
+    		if (editKey == null) { // Clone
     			assignmentNode.remove("editKey");
+    			assignmentNode.remove("assignmentID");
+    		}
     		else if (!editKey.equals(assignmentNode.get("editKey").asText())) 
     			return badRequest("editKey " + editKey + " does not match");
     		assignment = assignmentNode.toString(); 
@@ -186,56 +161,55 @@ public class Assignment extends Controller {
     }
     
     /*
-     * ccid == null, editKey == null, editable = true: Student starts editing
-     * ccid == null, editKey == null, editable = false: Instructor views for possible cloning 
-     * ccid != null, editKey != null, editable = true: Student resumes editing
-     * ccid != null, editKey != null, editable = false: Instructor views student work
+     * ccid == null, editKey == null, isStudent = true: Student starts editing
+     * ccid == null, editKey == null, isStudent = false: Instructor views for possible cloning 
+     * ccid != null, editKey != null, isStudent = true: Student resumes editing
+     * ccid != null, editKey != null, isStudent = false: Instructor views student work
      */
     public Result work(Http.Request request, String assignmentID, String ccid, String editKey, 
-    		boolean editable, String newid) 
+    		boolean isStudent, String newid) 
     		throws IOException, GeneralSecurityException {
     	if (newid != null) {
     		ccid = Util.isPronouncableUID(newid) ? newid : Util.createPronouncableUID();
     	}
-    	else if (ccid == null && editable) {    		
+    	else if (ccid == null && isStudent) {    		
             Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
             ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
         }
     	boolean editKeySaved = false;
-    	String studentWork = null;
-    	if (editable) {
+    	String work = null;
+    	if (isStudent) {
     		if (editKey != null)
-    		    studentWork = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", assignmentID, "workID", ccid + "/" + editKey);
-    		if (studentWork == null) { 
-    			studentWork = "undefined";
+    		    work = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", assignmentID, "workID", ccid + "/" + editKey);
+    		if (work == null) { 
         		editKey = Util.createPrivateUID();
+    			work = "{ assignmentID: \"" + assignmentID + "\", workID: \"" + ccid + "/" + editKey + "\", problems: {} }";
     		}
     		else
     			editKeySaved = true;
     	}
+    	else work = "{ problems: {} }";
     	    	
     	ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
     	if (assignmentNode == null)
     		badRequest("No assignment " + assignmentID);
-    	String prefix = prefix(request);
+    	String prefix = Util.prefix(request);
     	assignmentNode.remove("editKey");
-    	assignmentNode.put("editable", editable);
-    	if (!editable && editKey == null) 
+    	assignmentNode.put("isStudent", isStudent);
+    	if (!isStudent && editKey == null) 
     		assignmentNode.put("cloneURL", "/copyAssignment/" + assignmentID);	
     	
     	String lti = "undefined";
-    	if (editable) {
+    	if (isStudent) {    		
     		String returnToWorkURL = prefix + "private/resume/" + assignmentID + "/" + ccid + "/" + editKey;
     		assignmentNode.put("returnToWorkURL", returnToWorkURL); 
-    		String workUpdateURL = prefix + "saveWork/" + assignmentID + "/" + ccid + "/" + editKey; 
-    		assignmentNode.put("workUpdateURL", workUpdateURL);
         	assignmentNode.put("editKeySaved", editKeySaved);
         	assignmentNode.put("sentAt", Instant.now().toString());
         	Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withPath("/").withMaxAge(Duration.ofDays(180)).build();
-        	return ok(views.html.workAssignment.render(assignmentNode.toString(), studentWork, ccid, lti)).withCookies(newCookie);
+        	return ok(views.html.workAssignment.render(assignmentNode.toString(), work, ccid, lti)).withCookies(newCookie);
     	}
     	else // Instructor--no cookie
-    		return ok(views.html.workAssignment.render(assignmentNode.toString(), "undefined", ccid, lti));    	
+    		return ok(views.html.workAssignment.render(assignmentNode.toString(), work, ccid, lti));    	
     }
     
 	public Result view(Http.Request request, String assignmentID, String editKey)
@@ -257,7 +231,7 @@ public class Assignment extends Controller {
 			
 			ObjectNode work = itemMap.get(submissionKey);
 			ObjectNode submissionData = JsonNodeFactory.instance.objectNode();
-			submissionData.put("score", score(ccid, assignmentNode, (ObjectNode) work.get("problems")));
+			submissionData.put("score", score(ccid, assignmentNode, work));
 			submissionData.set("submittedAt", work.get("submittedAt"));
 			submissionsForCcid.set(submissionEditKey, submissionData);
 		}
@@ -266,6 +240,11 @@ public class Assignment extends Controller {
 		return ok(views.html.viewSubmissions.render(assignmentID, assignmentNode.toString(), submissions.toString(), editURL)); 
 	}
 
+	/*
+	 * Save existing: request.assignmentID, request.editKey exist
+	 * New or cloned: Neither request.assignmentID nor request.editKey exist
+	 */
+	
 	public Result saveAssignment(Http.Request request) throws IOException {		
         ObjectNode params = (ObjectNode) request.body().asJson();
         ObjectNode lti = null;
@@ -277,24 +256,29 @@ public class Assignment extends Controller {
         String assignment = params.get("problems").asText();
     	params.set("problems", parseAssignment(assignment));
     	String assignmentID;
-    	if (params.has("assignmentID"))
+    	String editKey;
+    	ObjectNode assignmentNode;
+    	if (params.has("assignmentID")) {
     		assignmentID = params.get("assignmentID").asText();
-    	else {
-    		assignmentID = Util.createPublicUID();
-        	params.put("assignmentID", assignmentID);     		
-    	}
-    	String editKey = Util.createPrivateUID();
-    	if (params.has("editKey")) {
+    		assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+    		if (assignmentNode == null) return badRequest("Assignment not found");
+    		if (!params.has("editKey")) return badRequest("Missing edit key");
     		editKey = params.get("editKey").asText();
-    		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
     		if (!editKey.equals(assignmentNode.get("editKey").asText())) 
-    			return badRequest("editKey " + editKey + " does not match");    		
-    	} else { // Clone
-    		assignmentID = Util.createPublicUID();
-        	params.put("assignmentID", assignmentID);     		
-    		editKey = Util.createPrivateUID();
-        	params.put("editKey", editKey);
+    			return badRequest("Edit key does not match");
     	}
+    	else { // New assignment or clone 
+    		assignmentID = Util.createPublicUID();
+        	params.put("assignmentID", assignmentID);
+        	if (params.has("editKey"))
+        		editKey = params.get("editKey").asText();
+        	else { // LTI assignments have an edit key
+        		editKey = Util.createPrivateUID();
+        		params.put("editKey", editKey);
+        	}
+        	assignmentNode = null;
+    	}
+    	
     	params.remove("privateURL");
     	params.remove("publicURL");
     	params.remove("error");        	
@@ -302,7 +286,6 @@ public class Assignment extends Controller {
     	s3conn.writeJsonObjectToDynamoDB("CodeCheckAssignments", params);
     	
    		if (lti != null) {
-   			// TODO: How do we know it's not already saved?
    			ObjectNode res = JsonNodeFactory.instance.objectNode();
    			res.set("resourceID", lti.get("resourceID"));
    			res.put("assignmentID", assignmentID);
@@ -314,14 +297,15 @@ public class Assignment extends Controller {
 	   		 * url=assignment URL (with id=...)
 	   		 * Util.getParams(launchPresentationReturnURL)
 	   		 */
+   			String assignmentURL = Util.prefix(request) + "lti/assignment?id=" + assignmentID;
    			String launchPresentationReturnURL = lti.get("launchPresentationReturnURL").asText();
    			launchPresentationReturnURL = launchPresentationReturnURL
    					+ (launchPresentationReturnURL.contains("?") ? "&" : "?")     					
    					+ "return_type=lti_launch_url"
-   					+ "&url=" + URLEncoder.encode(launchPresentationReturnURL, "UTF-8" /* StandardCharsets.UTF_8 */); // TODO
+   					+ "&url=" + URLEncoder.encode(assignmentURL, "UTF-8" /* StandardCharsets.UTF_8 */); // TODO
    			new URL(launchPresentationReturnURL).openStream().close();
    		} else {   		
-   	    	String prefix = prefix(request);
+   	    	String prefix = Util.prefix(request);
    			String publicURL = prefix + "assignment/" + assignmentID;
    	    	String privateURL = prefix + "private/assignment/" + assignmentID + "/" + editKey;
    			params.put("privateURL", privateURL);
@@ -330,16 +314,12 @@ public class Assignment extends Controller {
     	return ok(params);
 	}
 	
-	public Result saveWork(Http.Request request, String assignmentID, String ccid, String editKey) throws IOException, NoSuchAlgorithmException {
-		//TODO: Do we need some level of security? Want to avoid spamming
+	public Result saveWork(Http.Request request) throws IOException, NoSuchAlgorithmException {
 		ObjectNode contents = (ObjectNode) request.body().asJson();
     	ObjectNode result = JsonNodeFactory.instance.objectNode();
     	result.put("submittedAt", Instant.now().toString());    	
-    	
-    	contents.put("assignmentID", assignmentID);
-		contents.put("workID", ccid + "/" + editKey); 
 
 		s3conn.writeNewerJsonObjectToDynamoDB("CodeCheckWork", contents, "assignmentID", "submittedAt");
 		return ok(result); 
-	}	
+	}		
 }

@@ -40,23 +40,24 @@ POST /codecheck/check						controllers.Check.checkHTML(request: Request)
 
 # Assignments
 # Student starting
-GET  /assignment/:assignmentID                      controllers.Assignment.work(request: Request, assignmentID: String, ccid: String = null, key: String = null, editable: Boolean = true, newid: String ?= null)
+GET  /assignment/:assignmentID                      controllers.Assignment.work(request: Request, assignmentID: String, ccid: String = null, key: String = null, isStudent: Boolean = true, newid: String ?= null)
 # Student resuming
-GET  /private/resume/:assignmentID/:ccid/:key       controllers.Assignment.work(request: Request, assignmentID: String, ccid: String, key: String, editable: Boolean = true, newid: String ?= null)
-# Instructor viewing student submission
-GET  /private/submission/:assignmentID/:ccid/:key   controllers.Assignment.work(request: Request, assignmentID: String, ccid: String, key: String, editable: Boolean = false, newid: String ?= null)
-# Viewing assignment for demonstration/cloning
-GET  /viewAssignment/:assignmentID                  controllers.Assignment.work(request: Request, assignmentID: String, ccid: String = null, key: String = null, editable: Boolean = false, newid: String ?= null)
+GET  /private/resume/:assignmentID/:ccid/:key       controllers.Assignment.work(request: Request, assignmentID: String, ccid: String, key: String, isStudent: Boolean = true, newid: String ?= null)
+# Instructor viewing a student submission
+GET  /private/submission/:assignmentID/:ccid/:key   controllers.Assignment.work(request: Request, assignmentID: String, ccid: String, key: String, isStudent: Boolean = false, newid: String ?= null)
+# Instructor viewing assignment for review/cloning
+GET  /viewAssignment/:assignmentID                  controllers.Assignment.work(request: Request, assignmentID: String, ccid: String = null, key: String = null, isStudent: Boolean = false, newid: String ?= null)
 # Make new assignment
 GET  /newAssignment                                 controllers.Assignment.edit(request: Request, assignmentID: String = null, key: String = null)
-# Copy existing assignment (TODO: Should anyone be able to copy existing?)
+# Copy existing assignment (TODO: Should anyone be able to copy existing? Maybe need cloneable property)
 GET  /copyAssignment/:assignmentID                  controllers.Assignment.edit(request: Request, assignmentID: String, key: String = null)
 # Edit existing assignment
-GET  /private/editAssignment/:assignmentID/:key         controllers.Assignment.edit(request: Request, assignmentID: String, key: String)
-
+GET  /private/editAssignment/:assignmentID/:key     controllers.Assignment.edit(request: Request, assignmentID: String, key: String)
+# View submissions
 GET  /private/assignment/:assignmentID/:key         controllers.Assignment.view(request: Request, assignmentID: String, key: String)
 
 POST /saveAssignment                           controllers.Assignment.saveAssignment(request: Request)
-POST /saveWork/:assignmentID/:ccid/:key        controllers.Assignment.saveWork(request: Request, assignmentID: String, ccid: String, key: String)
-
-POST  /lti/assignment                          controllers.LTIAssignment.launch(request: Request)
+POST /saveWork                                 controllers.Assignment.saveWork(request: Request)
+POST /lti/assignment                           controllers.LTIAssignment.launch(request: Request)
+POST /lti/saveWork                             controllers.LTIAssignment.saveWork(request: Request)
+POST /lti/viewSubmissions                      controllers.LTIAssignment.viewSubmissions(request: Request)

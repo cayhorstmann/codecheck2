@@ -1,5 +1,6 @@
 package models;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -50,6 +51,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import play.Logger;
+import play.mvc.Http;
 
 public class Util {
 	private static Random generator = new Random();
@@ -577,5 +579,44 @@ public class Util {
 			// Return empty map
 		}
 		return params;
+	}
+
+	public static String prefix(Http.Request request) {
+		return (request.secure() ? "https://" : "http://") + request.host() + "/";
+	}
+
+	public static boolean exists(String url) {
+		boolean result = false;
+		try {
+			HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+			try {
+				conn.connect();
+				result = conn.getHeaderField(null).contains("200");
+			} finally {
+				conn.disconnect();
+			}
+		} catch (Exception ex) {
+		}
+		return result;
+	}
+
+	public static <T> Iterable<T> iterable(Iterator<T> iterator) { 
+	    return new Iterable<T>() { 
+	        public Iterator<T> iterator() { return iterator; } 
+	    }; 
+	}
+	
+	public static byte[] readAllBytes(InputStream in) throws IOException {
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		copy(in, out);
+		out.close();
+		return out.toByteArray();
+	}
+	
+	public static void copy(InputStream in, OutputStream out) throws IOException {
+		final int BLOCKSIZE = 1024;
+		byte[] bytes = new byte[BLOCKSIZE];
+		int len;
+		while ((len = in.read(bytes)) != -1) out.write(bytes, 0, len);
 	}
 }

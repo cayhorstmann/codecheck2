@@ -1,15 +1,28 @@
 package controllers;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.util.AbstractMap;
+import java.util.Base64;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import javax.inject.Inject;
+import javax.net.ssl.HttpsURLConnection;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -18,22 +31,44 @@ import net.oauth.OAuthConsumer;
 import net.oauth.OAuthMessage;
 import net.oauth.OAuthValidator;
 import net.oauth.SimpleOAuthValidator;
-
+import oauth.signpost.basic.DefaultOAuthConsumer;
+import oauth.signpost.exception.OAuthCommunicationException;
+import oauth.signpost.exception.OAuthExpectationFailedException;
+import oauth.signpost.exception.OAuthMessageSignerException;
+import oauth.signpost.http.HttpParameters;
 import models.Util;
 import models.S3Connection;
 import play.Logger;
+import play.libs.Json;
 import play.mvc.Controller;
 import play.mvc.Http;
 import play.mvc.Result;
+import play.mvc.Security;
 
 public class LTIAssignment extends Controller {
 	@Inject private S3Connection s3conn;
-	private Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
+	private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
 	
-	public static boolean isInstructor(String role) {
+	public static boolean isInstructor(Map<String, String[]> postParams) {
+		String role = Util.getParam(postParams, "roles");
 		return role != null && (role.contains("Faculty") || role.contains("TeachingAssistant") || role.contains("Instructor"));
 	}
 
+	/*
+	 
+Student:
+  No resource or assignment IDs don't match => fail
+  Otherwise => work
+Instructor:
+  No resource?
+    Without assignment ID => create with edit key = context + user ID  
+    With assignment ID: add resource->assignment mapping => view
+  Resource?
+    Without assignment ID => view resource assignment ID
+    With assignment ID: If don't match, update, then view assignment ID
+  	 
+	 */
+	
     public Result launch(Http.Request request) throws IOException {    
 	 	Map<String, String[]> postParams = request.body().asFormUrlEncoded();
 	 	logger.info("LTIAssignment.launch: " + Util.paramsToString(postParams));
@@ -41,10 +76,6 @@ public class LTIAssignment extends Controller {
 	 		return badRequest("Failed OAuth validation").withNewSession();
 	 	}	 	
 	 	
-    	String lisOutcomeServiceURL = Util.getParam(postParams, "lis_outcome_service_url");
-    	String lisResultSourcedId = Util.getParam(postParams, "lis_result_sourcedid");
-    	String oauthConsumerKey = Util.getParam(postParams, "oauth_consumer_key");
-    	
     	String userID = Util.getParam(postParams, "user_id");
 		if (Util.isEmpty(userID)) return badRequest("No user id");
 
@@ -52,54 +83,79 @@ public class LTIAssignment extends Controller {
 		String contextID = Util.getParam(postParams, "context_id");
 		String resourceLinkID = Util.getParam(postParams, "resource_link_id");
 		String resourceID = toolConsumerID + "/" + contextID + "/" + resourceLinkID;
-		
-		String role = Util.getParam(postParams, "roles");
-		String launchPresentationReturnURL = Util.getParam(postParams, "launch_presentation_return_url");
-	    String assignmentID = request.queryString("id").orElse(null);
-	    if (assignmentID == null) {
-	    	ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckResources", "resourceID", resourceID); 
-	    	if (resourceNode.has("assignmentID"))
-	    		resourceNode.get("assignmentID").asText();
-	    }
-		
-	    boolean isInstructor = isInstructor(role); 
-	    
-	    ObjectNode ltiNode = JsonNodeFactory.instance.objectNode();
-	    ltiNode.put("launchPresentationReturnURL", launchPresentationReturnURL);
+
+		ObjectNode ltiNode = JsonNodeFactory.instance.objectNode();
 	    ltiNode.put("resourceID", resourceID);
+    	ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckLTIResources", "resourceID", resourceID); 
+		
+	    String assignmentID = request.queryString("id").orElse(null);
+    	String resourceAssignmentID = resourceNode == null ? null : resourceNode.get("assignmentID").asText(); 
 	    
-		if (assignmentID == null) {
-			if (isInstructor)		
-				return ok(views.html.editAssignment.render("{}", ltiNode.toString()))
-						.addingToSession(request, "user", userID);
-			else {
-				String result = "No assignment id and no assignment for " + resourceID;
-				logger.info(result);
-				return badRequest(result);
-			}
-		}
-		
-		if (Util.isEmpty(lisOutcomeServiceURL)) 
-          	return badRequest("lis_outcome_service_url missing.");
-		else
-			ltiNode.put("lisOutcomeServiceURL", lisOutcomeServiceURL);
-		
-		if (!isInstructor && Util.isEmpty(lisResultSourcedId)) 
-			return badRequest("lis_result_sourcedid missing.");
-		else
-			ltiNode.put("lisResultSourcedId", lisResultSourcedId);
-		ltiNode.put("oauthConsumerKey", oauthConsumerKey);
-		// TODO: What else in the ltiNode
-		String assignment = s3conn.readJsonStringFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
-		String work = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", assignmentID, "workID", userID);
-		if (!isInstructor) work = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", assignmentID);
-		// TODO: Set editable flag depending on instructor
-		// TODO: In view, hide display of ccid options when lti
-		return ok(views.html.workAssignment.render(assignment, work, userID, ltiNode.toString()))
-			.addingToSession(request, "user", userID);
+	    if (isInstructor(postParams)) {		
+		    if (assignmentID == null && resourceAssignmentID == null) { // Create new assignment
+			    String launchPresentationReturnURL = Util.getParam(postParams, "launch_presentation_return_url");
+			    ltiNode.put("launchPresentationReturnURL", launchPresentationReturnURL);
+
+	    		String assignment = "{ editKey: " + toolConsumerID + "/" + userID + "}";
+				return ok(views.html.editAssignment.render(assignment, ltiNode.toString()))
+						.addingToSession(request, "user", toolConsumerID + "/" + userID);  		    		
+		    }
+		    else if (assignmentID == null && resourceAssignmentID != null) 
+		    	assignmentID = resourceAssignmentID;
+		    else if (assignmentID != null && !assignmentID.equals(resourceAssignmentID)) {
+		    	ObjectNode res = JsonNodeFactory.instance.objectNode();
+	   			res.put("resourceID", resourceID);
+	   			res.put("assignmentID", assignmentID);
+	   			s3conn.writeJsonObjectToDynamoDB("CodeCheckLTIResources", res);
+		    }
+			ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+			if (assignmentNode == null)
+				return badRequest("No assignment " + assignmentID);
+	    	assignmentNode.remove("editKey");
+			
+			assignmentNode.put("isStudent", false);
+	    	assignmentNode.put("sentAt", Instant.now().toString());				
+	    	String work = "{ problems: {} }";
+			return ok(views.html.workAssignment.render(assignmentNode.toString(), work, userID, "undefined" /* lti */));		    
+	    } else { // Student
+		    if (resourceNode == null) 
+	    		return badRequest("No resource with ID " + resourceID);	    		
+	    	else if (assignmentID != null && !assignmentID.equals(resourceAssignmentID))
+	    		return badRequest("Assignment IDs do not match");
+	    	else {
+	    		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", resourceAssignmentID);
+	        	assignmentNode.remove("editKey");
+
+	    		String lisOutcomeServiceURL = Util.getParam(postParams, "lis_outcome_service_url");
+	        	String lisResultSourcedId = Util.getParam(postParams, "lis_result_sourcedid");
+	        	String oauthConsumerKey = Util.getParam(postParams, "oauth_consumer_key");
+	        	
+	    	    if (Util.isEmpty(lisOutcomeServiceURL)) 
+	              	return badRequest("lis_outcome_service_url missing.");
+	    		else
+	    			ltiNode.put("lisOutcomeServiceURL", lisOutcomeServiceURL);
+	    		
+	    		if (Util.isEmpty(lisResultSourcedId)) 
+	    			return badRequest("lis_result_sourcedid missing.");
+	    		else
+	    			ltiNode.put("lisResultSourcedId", lisResultSourcedId);
+	    		ltiNode.put("oauthConsumerKey", oauthConsumerKey);
+	    		
+				String work = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", resourceID, "workID", userID);
+				if (work == null) 
+					work = "{ assignmentID: \"" + resourceID + "\", workID: \"" + userID + "\", problems: {} }";
+	    		
+	    		assignmentNode.put("isStudent", true);
+	        	assignmentNode.put("editKeySaved", true);
+	        	assignmentNode.put("sentAt", Instant.now().toString());		
+
+	        	return ok(views.html.workAssignment.render(assignmentNode.toString(), work, userID /* TODO: Why??? */, ltiNode.toString()))
+					.addingToSession(request, "user", toolConsumerID + "/" + userID); 
+	    	}	    	
+	    }
  	}		
     
-    public boolean validate(Http.Request request) {
+    private boolean validate(Http.Request request) {
     	final String OAUTH_KEY_PARAMETER = "oauth_consumer_key";
     	
     	Map<String, String[]> postParams = request.body().asFormUrlEncoded();
@@ -128,7 +184,7 @@ public class LTIAssignment extends Controller {
         }
     }
             
-	public String getSharedSecret(String oauthConsumerKey) {
+	private String getSharedSecret(String oauthConsumerKey) {
 		String sharedSecret = "";
 		try {
 			ObjectNode result = s3conn.readJsonObjectFromDynamoDB("CodeCheckLTICredentials", "oauth_consumer_key", oauthConsumerKey);
@@ -140,4 +196,141 @@ public class LTIAssignment extends Controller {
 		}		
 		return sharedSecret;
 	}	    
+
+	@Security.Authenticated(Secured.class)
+	public Result saveWork(Http.Request request) throws IOException, NoSuchAlgorithmException {
+		ObjectNode requestNode = (ObjectNode) request.body().asJson();
+    	ObjectNode result = JsonNodeFactory.instance.objectNode();
+    	result.put("submittedAt", Instant.now().toString());    	
+
+		s3conn.writeNewerJsonObjectToDynamoDB("CodeCheckWork", (ObjectNode) requestNode.get("work"), "assignmentID", "submittedAt");
+		submitGradeToLMS(requestNode);
+		return ok(result); 
+	}	
+
+	@Security.Authenticated(Secured.class)
+	public Result viewSubmissions() {
+		return null;
+	}
+	
+	private Result submitGradeToLMS(ObjectNode params) throws IOException {
+        String resourceID = params.get("resourceID").asText();
+        String userID = params.get("resourceID").asText();
+        String outcomeServiceUrl = params.get("lisOutcomeServiceUrl").asText();
+		String sourcedId = params.get("lisResultSourcedId").asText();
+		String oauthConsumerKey = params.get("oauthConsumerKey").asText();
+		
+        if (outcomeServiceUrl == null || outcomeServiceUrl.equals("")
+                || sourcedId == null || sourcedId.equals("")) {
+        	String result = "Missing lis_outcome_service_url or lis_result_sourcedid";
+        	logger.info(result);
+            return badRequest(result);
+        }
+	
+    	ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckResources", "resourceID", resourceID); 
+	    String assignmentID = resourceNode.get("assignmentID").asText(); 
+        
+		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+		double score = Assignment.score(userID, assignmentNode, (ObjectNode) params.get("work"));
+		// TODO: Compute score from work scores, assignment
+		
+        try {
+    		String xmlString1 = "<?xml version = \"1.0\" encoding = \"UTF-8\"?> <imsx_POXEnvelopeRequest xmlns = \"http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0\"> <imsx_POXHeader> <imsx_POXRequestHeaderInfo> <imsx_version>V1.0</imsx_version> <imsx_messageIdentifier>" 
+                + System.currentTimeMillis() + "</imsx_messageIdentifier> </imsx_POXRequestHeaderInfo> </imsx_POXHeader> <imsx_POXBody> <replaceResultRequest> <resultRecord> <sourcedGUID> <sourcedId>";
+    		String xmlString2 = "</sourcedId> </sourcedGUID> <result> <resultScore> <language>en</language> <textString>";
+    		String xmlString3 = "</textString> </resultScore> </result> </resultRecord> </replaceResultRequest> </imsx_POXBody> </imsx_POXEnvelopeRequest>";        	
+    		String xmlString = xmlString1 + sourcedId + xmlString2 + score + xmlString3;        	
+    			
+            passbackGradeToLMS(outcomeServiceUrl, xmlString, oauthConsumerKey, 
+            		getSharedSecret(oauthConsumerKey)); 
+    		
+    		// org.imsglobal.pox.IMSPOXRequest.sendReplaceResult(outcomeServiceUrl, oauthConsumerKey, getSharedSecret(oauthConsumerKey), sourcedId, "" + score);
+
+        } catch (Exception e) {
+    		logger.info("score: " + score);        
+            logger.info(Util.getStackTrace(e));
+            return badRequest(e.getMessage());
+        }
+    
+        ObjectNode responseNode = JsonNodeFactory.instance.objectNode();
+        responseNode.put("score", score);
+        return ok(responseNode.toString());
+    }
+
+	/**
+	 * Pass back the grade to Canvas. If the <code>xml</code> is set up with
+	 * fetch URL string, then also pass back the URL to the codecheck report.
+	 * 
+	 * @param gradePassbackURL
+	 *            the grade passback URL from the LTI launch
+	 * @param xml
+	 *            the data to send off, with the sourcedId, score, and possibly
+	 *            the fetchURL
+	 * @param oauthKey
+	 *            the oauth consumer key
+	 * @param oauthSecret
+	 *            the oauth secret key
+	 * @throws NoSuchAlgorithmException 
+	 */
+	private static void passbackGradeToLMS(String gradePassbackURL,
+			String xml, String oauthKey, String oauthSecret)
+			throws URISyntaxException, IOException,
+			OAuthMessageSignerException, OAuthExpectationFailedException,
+			OAuthCommunicationException, NoSuchAlgorithmException {
+		// Create an oauth consumer in order to sign the grade that will be sent.
+		DefaultOAuthConsumer consumer = new DefaultOAuthConsumer(oauthKey, oauthSecret);
+
+		consumer.setTokenWithSecret(null, null);
+
+		// This is the URL that we will send the grade to so it can go back to
+		// Canvas
+		URL url = new URL(gradePassbackURL);
+
+		// This is the part where we send the HTTP request
+		HttpsURLConnection request = (HttpsURLConnection) url.openConnection();
+
+		// Set http request to POST
+		request.setRequestMethod("POST");
+
+		// Set the content type to accept xml
+		request.setRequestProperty("Content-Type", "application/xml");
+		//request.setRequestProperty("Authorization", "OAuth"); // Needed for Moodle???
+		
+		// Set the content-length to be the length of the xml
+		byte[] xmlBytes = xml.getBytes("UTF-8"); 
+		request.setRequestProperty("Content-Length",
+				Integer.toString(xmlBytes.length));
+		// https://stackoverflow.com/questions/28204736/how-can-i-send-oauth-body-hash-using-signpost
+		MessageDigest md = MessageDigest.getInstance("SHA1");
+		String bodyHash = Base64.getEncoder().encodeToString(md.digest(xmlBytes));
+		HttpParameters params = new HttpParameters();
+        params.put("oauth_body_hash", URLEncoder.encode(bodyHash, "UTF-8"));
+        //params.put("realm", gradePassbackURL); // http://zewaren.net/site/?q=node/123
+        consumer.setAdditionalParameters(params);
+        
+		consumer.sign(request); // Throws OAuthMessageSignerException,
+				// OAuthExpectationFailedException,
+				// OAuthCommunicationException		
+		logger.info("Request after signing: {}", consumer.getRequestParameters());
+		logger.info("XML: {}", xml);
+
+
+		// POST the xml to the grade passback url
+		request.setDoOutput(true);
+		OutputStream out = request.getOutputStream();
+		out.write(xmlBytes);
+		out.close();
+
+		// request.connect();
+		logger.info(request.getResponseCode() + " " + request.getResponseMessage());
+		try {
+			InputStream in = request.getInputStream();
+			String body = new String(Util.readAllBytes(in), "UTF-8");
+			logger.info("Response body received from LMS: " + body);
+		} catch (Exception e) {			
+			InputStream in = request.getErrorStream();
+			String body = new String(Util.readAllBytes(in), "UTF-8");
+			logger.info("Response error received from LMS: " + body);
+		}
+	}
 }

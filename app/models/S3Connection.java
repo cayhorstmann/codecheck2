@@ -30,6 +30,7 @@ import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
 import com.amazonaws.services.dynamodbv2.document.RangeKeyCondition;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.document.spec.PutItemSpec;
+import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
@@ -177,12 +178,16 @@ public class S3Connection {
 	public String readJsonStringFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue) throws IOException {
     	DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
     	Table table = dynamoDB.getTable(tableName); 
-    	ItemCollection<QueryOutcome> items = table.query(primaryKeyName, primaryKeyValue); 
-    	Iterator<Item> iterator = items.iterator();
-    	if (iterator.hasNext())
-    		return iterator.next().toJSON();
-    	else
+    	ItemCollection<QueryOutcome> items = table.query(primaryKeyName, primaryKeyValue);
+    	try {
+	    	Iterator<Item> iterator = items.iterator();
+	    	if (iterator.hasNext())
+	    		return iterator.next().toJSON();
+	    	else
+	    		return null;
+    	} catch (ResourceNotFoundException ex) {
     		return null;
+    	}
     }	
     
     public ObjectNode readJsonObjectFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName, String sortKeyValue) throws IOException {
@@ -194,12 +199,16 @@ public class S3Connection {
     	DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
     	Table table = dynamoDB.getTable(tableName); 
 		ItemCollection<QueryOutcome> items = table.query(primaryKeyName, primaryKeyValue, 
-				new RangeKeyCondition(sortKeyName).eq(sortKeyValue)); 
-		Iterator<Item> iterator = items.iterator();
-    	if (iterator.hasNext())
-    		return iterator.next().toJSON();
-    	else
-    		return null;
+				new RangeKeyCondition(sortKeyName).eq(sortKeyValue));
+		try {
+			Iterator<Item> iterator = items.iterator();
+	    	if (iterator.hasNext())
+	    		return iterator.next().toJSON();
+	    	else
+	    		return null;
+		} catch (ResourceNotFoundException ex) {
+			return null;
+		}
     }
     
     public Map<String, ObjectNode> readJsonObjectsFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName) throws IOException {
