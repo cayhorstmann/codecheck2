@@ -46,7 +46,7 @@ import play.mvc.Result;
 public class Assignment extends Controller {
 	@Inject private S3Connection s3conn;
 	
-	private static ArrayNode parseAssignment(String assignment) {
+	public static ArrayNode parseAssignment(String assignment) {
         if (assignment == null || assignment.trim().isEmpty()) 
         	throw new IllegalArgumentException("No assignments");
     	ArrayNode groupsNode = JsonNodeFactory.instance.arrayNode();
@@ -131,7 +131,7 @@ public class Assignment extends Controller {
 		for (JsonNode p : problems) {
 			ObjectNode problem = (ObjectNode) p;
 			String problemKey = key(problem);
-			if (problems.has(problemKey))
+			if (submissions.has(problemKey))
 				result += problem.get("weight").asDouble() * submissions.get(problemKey).get("score").asDouble();
 		}
 		return result;
@@ -143,21 +143,20 @@ public class Assignment extends Controller {
 	 * assignmentID != null, editKey == null: clone assignment
 	 */
     public Result edit(Http.Request request, String assignmentID, String editKey) throws IOException {
-    	String assignment;
+    	ObjectNode assignmentNode;
     	if (assignmentID == null) {
-    		assignment = "{}";
+    		assignmentNode = JsonNodeFactory.instance.objectNode();
     	} else {
-    		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+    		assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
     		if (editKey == null) { // Clone
     			assignmentNode.remove("editKey");
     			assignmentNode.remove("assignmentID");
     		}
     		else if (!editKey.equals(assignmentNode.get("editKey").asText())) 
     			return badRequest("editKey " + editKey + " does not match");
-    		assignment = assignmentNode.toString(); 
     	} 
-    	String lti = "undefined";
-    	return ok(views.html.editAssignment.render(assignment, lti));     	    	
+    	assignmentNode.put("saveURL", "/saveAssignment");
+    	return ok(views.html.editAssignment.render(assignmentNode.toString()));     	    	
     }
     
     /*
@@ -176,23 +175,21 @@ public class Assignment extends Controller {
             Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
             ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
         }
-    	boolean editKeySaved = false;
-    	String work = null;
-    	if (isStudent) {
-    		if (editKey != null)
-    		    work = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", assignmentID, "workID", ccid + "/" + editKey);
-    		if (work == null) { 
-        		editKey = Util.createPrivateUID();
-    			work = "{ assignmentID: \"" + assignmentID + "\", workID: \"" + ccid + "/" + editKey + "\", problems: {} }";
-    		}
-    		else
-    			editKeySaved = true;
+    	boolean editKeySaved;
+    	String work;
+    	if (editKey == null) { 
+       		editKey = Util.createPrivateUID();
+       		editKeySaved = false;
+       		work = "{ assignmentID: \"" + assignmentID + "\", workID: \"" + ccid + "/" + editKey + "\", problems: {} }";
     	}
-    	else work = "{ problems: {} }";
-    	    	
+    	else { 
+   		    work = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", assignmentID, "workID", ccid + "/" + editKey);
+   		    if (work == null) return badRequest("Work not found");  
+   			editKeySaved = true;
+    	}
+
     	ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
-    	if (assignmentNode == null)
-    		badRequest("No assignment " + assignmentID);
+    	if (assignmentNode == null) badRequest("No assignment " + assignmentID);
     	String prefix = Util.prefix(request);
     	assignmentNode.remove("editKey");
     	assignmentNode.put("isStudent", isStudent);
@@ -211,48 +208,41 @@ public class Assignment extends Controller {
     	else // Instructor--no cookie
     		return ok(views.html.workAssignment.render(assignmentNode.toString(), work, ccid, lti));    	
     }
-    
-	public Result view(Http.Request request, String assignmentID, String editKey)
+	public Result viewSubmissions(Http.Request request, String assignmentID, String editKey)
 		throws IOException {
 		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
 		if (!assignmentNode.get("editKey").asText().equals(editKey))
 			throw new IllegalArgumentException("Edit key does not match");
 
-		ObjectNode submissions = JsonNodeFactory.instance.objectNode();
+		ArrayNode submissions = JsonNodeFactory.instance.arrayNode();
 
     	Map<String, ObjectNode> itemMap = s3conn.readJsonObjectsFromDynamoDB("CodeCheckWork", "assignmentID", assignmentID, "workID");
 
-		for (String submissionKey : itemMap.keySet()) {
+    	for (String submissionKey : itemMap.keySet()) {
 			String[] parts = submissionKey.split("/");
 			String ccid = parts[0];
 			String submissionEditKey = parts[1];
-			if (!submissions.has(ccid)) submissions.set(ccid, JsonNodeFactory.instance.objectNode());
-			ObjectNode submissionsForCcid = (ObjectNode) submissions.get(ccid);
 			
 			ObjectNode work = itemMap.get(submissionKey);
 			ObjectNode submissionData = JsonNodeFactory.instance.objectNode();
-			submissionData.put("score", score(ccid, assignmentNode, work));
+			submissionData.put("opaqueID", ccid);
+			submissionData.put("score", Assignment.score(ccid, assignmentNode, work));
 			submissionData.set("submittedAt", work.get("submittedAt"));
-			submissionsForCcid.set(submissionEditKey, submissionData);
+			submissionData.put("viewURL", "/private/submission/" + assignmentID + "/" + ccid + "/" + submissionEditKey); 
+			submissions.add(submissionData);			
 		}
 		String editURL = "/private/editAssignment/" + assignmentID + "/" + editKey;
 		
-		return ok(views.html.viewSubmissions.render(assignmentID, assignmentNode.toString(), submissions.toString(), editURL)); 
+		return ok(views.html.viewSubmissions.render(submissions.toString(), editURL)); 
 	}
 
 	/*
 	 * Save existing: request.assignmentID, request.editKey exist
 	 * New or cloned: Neither request.assignmentID nor request.editKey exist
 	 */
-	
 	public Result saveAssignment(Http.Request request) throws IOException {		
         ObjectNode params = (ObjectNode) request.body().asJson();
-        ObjectNode lti = null;
-        if (params.has("lti")) {
-        	lti = (ObjectNode) params.get("lti");
-        	params.remove("lti");
-        }        	
-        	
+
         String assignment = params.get("problems").asText();
     	params.set("problems", parseAssignment(assignment));
     	String assignmentID;
@@ -285,33 +275,13 @@ public class Assignment extends Controller {
     	
     	s3conn.writeJsonObjectToDynamoDB("CodeCheckAssignments", params);
     	
-   		if (lti != null) {
-   			ObjectNode res = JsonNodeFactory.instance.objectNode();
-   			res.set("resourceID", lti.get("resourceID"));
-   			res.put("assignmentID", assignmentID);
-   			s3conn.writeJsonObjectToDynamoDB("CodeCheckLTIResources", res);
-   			
-	   		/*
-	   		 * Call launchPresentationReturnURL with:
-	   		 * return_type=lti_launch_url
-	   		 * url=assignment URL (with id=...)
-	   		 * Util.getParams(launchPresentationReturnURL)
-	   		 */
-   			String assignmentURL = Util.prefix(request) + "lti/assignment?id=" + assignmentID;
-   			String launchPresentationReturnURL = lti.get("launchPresentationReturnURL").asText();
-   			launchPresentationReturnURL = launchPresentationReturnURL
-   					+ (launchPresentationReturnURL.contains("?") ? "&" : "?")     					
-   					+ "return_type=lti_launch_url"
-   					+ "&url=" + URLEncoder.encode(assignmentURL, "UTF-8" /* StandardCharsets.UTF_8 */); // TODO
-   			new URL(launchPresentationReturnURL).openStream().close();
-   		} else {   		
-   	    	String prefix = Util.prefix(request);
-   			String publicURL = prefix + "assignment/" + assignmentID;
-   	    	String privateURL = prefix + "private/assignment/" + assignmentID + "/" + editKey;
-   			params.put("privateURL", privateURL);
-   			params.put("publicURL", publicURL);
-   		}
-    	return ok(params);
+    	String prefix = Util.prefix(request);
+		String publicURL = prefix + "assignment/" + assignmentID;
+    	String privateURL = prefix + "private/assignment/" + assignmentID + "/" + editKey;
+		params.put("privateURL", privateURL);
+		params.put("publicURL", publicURL);
+
+		return ok(params);
 	}
 	
 	public Result saveWork(Http.Request request) throws IOException, NoSuchAlgorithmException {

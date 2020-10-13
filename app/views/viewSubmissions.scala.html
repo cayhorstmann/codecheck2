@@ -1,4 +1,4 @@
-@(assignmentID: String, assignment: String, submissions: String, editURL: String)
+@(submissions: String, editURL: String)
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -6,8 +6,6 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <link rel="stylesheet" href="/assets/codecheck.css"/>
     <script type="text/javascript">//<![CDATA[
-    const assignmentID = '@assignmentID'
-    const assignmentData = @Html(assignment)    
     const submissionData = @Html(submissions)
     const editURL = '@editURL'
     //]]></script>

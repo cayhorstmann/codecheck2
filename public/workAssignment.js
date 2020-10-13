@@ -43,7 +43,6 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateScoreDisplay(workKey) {
-    if (!assignment.isStudent) return
     const score = work.problems[workKey].score
     const button = document.getElementById('button-' + workKey)
     updateScore(button, score)
@@ -185,11 +184,16 @@ window.addEventListener('DOMContentLoaded', () => {
       activateButtons()
       document.getElementById('studentInstructions').style.display = 'none'
     }       
+    document.getElementById('instructorInstructions').style.display = 'none'
   } else { // Instructor view
     if ('cloneURL' in assignment) 
       document.getElementById('abovebuttons').appendChild(createButton('hc-command', 'Clone', () => {
         window.open(assignment.cloneURL, '_blank')        
       }))
+    if ('viewSubmissionsURL' in assignment) 
+      document.getElementById('viewSubmissions').appendChild(createButton('hc-command', 'View submissions', () => {
+          window.open(assignment.viewSubmissionsURL, '_blank')        
+        }))    
     activateButtons()
     document.getElementById('studentInstructions').style.display = 'none'
   }

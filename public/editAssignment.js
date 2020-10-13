@@ -37,15 +37,16 @@ window.addEventListener('DOMContentLoaded', () => {
     responseDiv.style.display = 'none'
     urlsDl.style.display = 'none'
     try {
-      request = {
-        assignmentID: assignment.assignmentID,
-        editKey: assignment.editKey, // undefined when cloned
-        problems: document.getElementById('problems').value,
-        deadlineDate: document.getElementById('deadlineDate').value,
-        deadlineTime: document.getElementById('deadlineTime').value,
-        lti
-      }
-      response = await postData('/saveAssignment', request)
+      let request = {
+          assignmentID: assignment.assignmentID,
+          editKey: assignment.editKey, // undefined when cloned
+          problems: document.getElementById('problems').value,
+          deadlineDate: document.getElementById('deadlineDate').value,
+          deadlineTime: document.getElementById('deadlineTime').value
+        }
+      if ('launchPresentationReturnURL' in assignment)
+        request.launchPresentationReturnURL = assignment.launchPresentationReturnURL
+      let response = await postData(assignment.saveURL, request)
       if (response.error !== undefined) {
         responseDiv.textContent = `Error: ${response.error}`
         responseDiv.style.display = 'block'

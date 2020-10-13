@@ -7,6 +7,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
@@ -23,6 +24,7 @@ import javax.inject.Inject;
 import javax.net.ssl.HttpsURLConnection;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -53,7 +55,151 @@ public class LTIAssignment extends Controller {
 		String role = Util.getParam(postParams, "roles");
 		return role != null && (role.contains("Faculty") || role.contains("TeachingAssistant") || role.contains("Instructor"));
 	}
+	
+    public Result config(Http.Request request) throws UnknownHostException {
+        String host = request.host();
+        if (host.endsWith("/")) host = host.substring(0, host.length() - 1);
+        return ok(views.xml.lti_config.render(host)).as("application/xml");			
+    }     
 
+    /*
+     * Called from Canvas and potentially other LMS with a "resource selection" interface
+     */
+    public Result createAssignment(Http.Request request) throws UnsupportedEncodingException {    
+	 	Map<String, String[]> postParams = request.body().asFormUrlEncoded();
+	 	if (!validate(request)) {
+	 		return badRequest("Failed OAuth validation").withNewSession();
+	 	}	 	
+	 	
+		if (!isInstructor(postParams)) 
+			return badRequest("Instructor role is required to create an assignment.");
+    	String userID = Util.getParam(postParams, "user_id");
+		if (Util.isEmpty(userID)) 
+			return badRequest("No user id");
+
+		String contextID = Util.getParam(postParams, "context_id");
+		String resourceLinkID = Util.getParam(postParams, "resource_link_id");
+		String toolConsumerID = Util.getParam(postParams, "tool_consumer_instance_guid");
+		String resourceID = toolConsumerID + "/" + contextID + "/" + resourceLinkID;
+
+		ObjectNode assignmentNode = JsonNodeFactory.instance.objectNode();
+		
+		String launchPresentationReturnURL = Util.getParam(postParams, "launch_presentation_return_url");
+	    assignmentNode.put("launchPresentationReturnURL", launchPresentationReturnURL);
+
+		return ok(views.html.editAssignment.render(assignmentNode.toString()))
+				.addingToSession(request, "user", toolConsumerID + "/" + userID)
+				.addingToSession(request, "resource", resourceID);  		    		
+ 	}
+    
+	@Security.Authenticated(Secured.class)
+	public Result saveAssignment(Http.Request request) throws IOException {		
+    	String editKey = request.session().get("user").orElseThrow();    	
+    	String resourceID = request.session().get("resourceID").orElseThrow();
+
+    	ObjectNode params = (ObjectNode) request.body().asJson();
+        	
+        String assignmentText = params.get("problems").asText();
+    	params.set("problems", Assignment.parseAssignment(assignmentText));
+
+    	ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckLTIResources", "resourceID", resourceID); 
+
+    	String assignmentID;
+    	if (resourceNode == null) { // New assignment 
+    		assignmentID = Util.createPublicUID();
+        	params.put("assignmentID", assignmentID);
+       		params.put("editKey", editKey);
+    		ObjectNode res = JsonNodeFactory.instance.objectNode();
+       		res.put("resourceID", resourceID);
+       		res.put("assignmentID", assignmentID);
+       		s3conn.writeJsonObjectToDynamoDB("CodeCheckLTIResources", res);
+    	} else {
+    		assignmentID = params.get("assignmentID").asText();
+    		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+    		if (assignmentNode == null) return badRequest("Assignment not found");
+    		if (!editKey.equals(assignmentNode.get("editKey").asText())) 
+    			return badRequest("Edit key does not match");
+    	}
+
+    	String launchPresentationReturnURL = params.has("launchPresentationReturnURL") ? 
+    			params.get("launchPresentationReturnURL").asText() : null;
+    	params.remove("launchPresentationReturnURL");
+
+    	s3conn.writeJsonObjectToDynamoDB("CodeCheckAssignments", params);
+    	
+    	if (launchPresentationReturnURL != null) {
+	   		/*
+	   		 * Call launchPresentationReturnURL with:
+	   		 * return_type=lti_launch_url
+	   		 * url=assignment URL (with id=...)
+	   		 * Util.getParams(launchPresentationReturnURL)
+	   		 */
+			String assignmentURL = Util.prefix(request) + "lti/assignment?id=" + assignmentID;
+			launchPresentationReturnURL = launchPresentationReturnURL
+					+ (launchPresentationReturnURL.contains("?") ? "&" : "?")     					
+					+ "return_type=lti_launch_url"
+					+ "&url=" + URLEncoder.encode(assignmentURL, "UTF-8" /* StandardCharsets.UTF_8 */); // TODO
+			new URL(launchPresentationReturnURL).openStream().close();
+			// TODO: Capture output from above and return?
+    	}
+    	return ok("Assignment added");
+	}
+
+	@Security.Authenticated(Secured.class)
+	public Result viewSubmissions(Http.Request request) throws IOException {		
+    	String resourceID = request.session().get("resourceID").orElseThrow();
+    	ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckLTIResources", "resourceID", resourceID); 
+    	if (resourceNode == null) return badRequest("No resource");
+
+    	String assignmentID = resourceNode.get("assignmentID").asText();    	
+		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+
+    	Map<String, ObjectNode> itemMap = s3conn.readJsonObjectsFromDynamoDB("CodeCheckWork", "assignmentID", resourceID, "workID");
+
+		ArrayNode submissions = JsonNodeFactory.instance.arrayNode();
+		for (String workID : itemMap.keySet()) {
+			ObjectNode work = itemMap.get(workID);
+			ObjectNode submissionData = JsonNodeFactory.instance.objectNode();
+			submissionData.put("opaqueID", workID);
+			submissionData.put("score", Assignment.score(workID, assignmentNode, work));
+			submissionData.set("submittedAt", work.get("submittedAt"));
+			submissionData.put("viewURL", "/lti/viewSubmission/" + workID); 
+			submissions.add(submissionData);
+		}
+		// TODO
+		String editURL = "/lti/editAssignment";
+		
+		return ok(views.html.viewSubmissions.render(submissions.toString(), editURL)); 	
+	}
+	
+	@Security.Authenticated(Secured.class)
+	public Result viewSubmission(Http.Request request, String workID) throws IOException {
+    	String resourceID = request.session().get("resourceID").orElseThrow();
+    	String work = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", resourceID, "workID", workID);
+    	if (work == null) return badRequest("Work not found");
+    	ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckLTIResources", "resourceID", resourceID); 
+    	if (resourceNode == null) return badRequest("Resource not found");
+    	String assignmentID = resourceNode.get("assignmentID").asText();    	
+		String assignment = s3conn.readJsonStringFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+    	if (assignment == null) return badRequest("Assignment not found");
+    	return ok(views.html.workAssignment.render(assignment, work, workID, "undefined"));
+	}
+	
+	@Security.Authenticated(Secured.class)
+	public Result editAssignment(Http.Request request) throws IOException {
+    	String editKey = request.session().get("user").orElseThrow();    	
+    	String resourceID = request.session().get("resourceID").orElseThrow();
+    	ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckLTIResources", "resourceID", resourceID); 
+    	if (resourceNode == null) return badRequest("Resource not found");
+    	String assignmentID = resourceNode.get("assignmentID").asText();    	
+		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+    	if (assignmentNode == null) return badRequest("Assignment not found");
+		if (!editKey.equals(assignmentNode.get("editKey").asText())) 
+			return badRequest("Edit key does not match");
+    	assignmentNode.put("saveURL", "/lti/saveAssignment");		
+		return ok(views.html.editAssignment.render(assignmentNode.toString()));		
+	}
+	
 	/*
 	 
 Student:
@@ -93,12 +239,15 @@ Instructor:
 	    
 	    if (isInstructor(postParams)) {		
 		    if (assignmentID == null && resourceAssignmentID == null) { // Create new assignment
+		    	ObjectNode assignmentNode = JsonNodeFactory.instance.objectNode();
+		    	assignmentNode.put("saveURL", "/lti/saveAssignment");
 			    String launchPresentationReturnURL = Util.getParam(postParams, "launch_presentation_return_url");
-			    ltiNode.put("launchPresentationReturnURL", launchPresentationReturnURL);
+			    if (launchPresentationReturnURL != null)
+			    	assignmentNode.put("launchPresentationReturnURL", launchPresentationReturnURL);
 
-	    		String assignment = "{ editKey: " + toolConsumerID + "/" + userID + "}";
-				return ok(views.html.editAssignment.render(assignment, ltiNode.toString()))
-						.addingToSession(request, "user", toolConsumerID + "/" + userID);  		    		
+				return ok(views.html.editAssignment.render(assignmentNode.toString()))
+						.addingToSession(request, "user", toolConsumerID + "/" + userID)
+						.addingToSession(request, "resource", resourceID);  		    		
 		    }
 		    else if (assignmentID == null && resourceAssignmentID != null) 
 		    	assignmentID = resourceAssignmentID;
@@ -114,9 +263,12 @@ Instructor:
 	    	assignmentNode.remove("editKey");
 			
 			assignmentNode.put("isStudent", false);
+			assignmentNode.put("viewSubmissionsURL", "/lti/viewSubmissions");
 	    	assignmentNode.put("sentAt", Instant.now().toString());				
 	    	String work = "{ problems: {} }";
-			return ok(views.html.workAssignment.render(assignmentNode.toString(), work, userID, "undefined" /* lti */));		    
+			return ok(views.html.workAssignment.render(assignmentNode.toString(), work, userID, "undefined" /* lti */))
+					.addingToSession(request, "user", toolConsumerID + "/" + userID)
+					.addingToSession(request, "resource", resourceID);					
 	    } else { // Student
 		    if (resourceNode == null) 
 	    		return badRequest("No resource with ID " + resourceID);	    		
@@ -149,8 +301,8 @@ Instructor:
 	        	assignmentNode.put("editKeySaved", true);
 	        	assignmentNode.put("sentAt", Instant.now().toString());		
 
-	        	return ok(views.html.workAssignment.render(assignmentNode.toString(), work, userID /* TODO: Why??? */, ltiNode.toString()))
-					.addingToSession(request, "user", toolConsumerID + "/" + userID); 
+	        	return ok(views.html.workAssignment.render(assignmentNode.toString(), work, userID, ltiNode.toString()))
+						.addingToSession(request, "user", toolConsumerID + "/" + userID); 
 	    	}	    	
 	    }
  	}		
@@ -199,6 +351,7 @@ Instructor:
 
 	@Security.Authenticated(Secured.class)
 	public Result saveWork(Http.Request request) throws IOException, NoSuchAlgorithmException {
+		//TODO: Check that the resourceID and workID matches? Or just put it?
 		ObjectNode requestNode = (ObjectNode) request.body().asJson();
     	ObjectNode result = JsonNodeFactory.instance.objectNode();
     	result.put("submittedAt", Instant.now().toString());    	
@@ -207,11 +360,6 @@ Instructor:
 		submitGradeToLMS(requestNode);
 		return ok(result); 
 	}	
-
-	@Security.Authenticated(Secured.class)
-	public Result viewSubmissions(Http.Request request) {
-		return null;
-	}
 	
 	private Result submitGradeToLMS(ObjectNode params) throws IOException {
         String resourceID = params.get("resourceID").asText();
@@ -232,7 +380,6 @@ Instructor:
         
 		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
 		double score = Assignment.score(userID, assignmentNode, (ObjectNode) params.get("work"));
-		// TODO: Compute score from work scores, assignment
 		
         try {
     		String xmlString1 = "<?xml version = \"1.0\" encoding = \"UTF-8\"?> <imsx_POXEnvelopeRequest xmlns = \"http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0\"> <imsx_POXHeader> <imsx_POXRequestHeaderInfo> <imsx_version>V1.0</imsx_version> <imsx_messageIdentifier>" 
@@ -332,5 +479,5 @@ Instructor:
 			String body = new String(Util.readAllBytes(in), "UTF-8");
 			logger.info("Response error received from LMS: " + body);
 		}
-	}
+	}		
 }

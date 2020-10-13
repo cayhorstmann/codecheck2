@@ -37,7 +37,9 @@ window.addEventListener('DOMContentLoaded', () => {
     return [...a].sort()
   }
   
-  
+  /*
+  TODO: Sort table by clicking on column...
+  */  
   
   const body = document.querySelector('body')
   append(body, 'h1', 'Assignment Submissions')
@@ -50,42 +52,35 @@ window.addEventListener('DOMContentLoaded', () => {
     const table = append(body, 'table')
     table.id = 'submissions'
     let tr = append(table, 'tr')
-    append(tr, 'th', 'Student ID')
-    append(tr, 'th', 'Submission')
-    append(tr, 'th', 'Student').style.display = 'none'
+    append(tr, 'th', 'Your Student Info').style.display = 'none'
+    append(tr, 'th', 'Opaque ID')
     append(tr, 'th', 'Score')
     append(tr, 'th', 'Submitted At')
-    let ccidCount = 0
-    for (const ccid in submissionData) {
-      ccidCount++
-      for (const submissionKey in submissionData[ccid]) {
-        tr = append(table, 'tr')
-        append(tr, 'td', ccid).classList.add('ccid')
-        const a = document.createElement('a')
-        a.href = `/private/submission/${assignmentID}/${ccid}/${submissionKey}`
-        a.target = '_blank'
-        a.textContent = submissionKey
-        append(tr, 'td', a).classList.add('ccurl')
-        const submission = submissionData[ccid][submissionKey]
-        append(tr, 'td').style.display = 'none'     
-        append(tr, 'td', percent(submission.score))
-        append(tr, 'td', new Date(submission.submittedAt).toLocaleString()) 
-      }
+    for (const submission of submissionData) {
+      tr = append(table, 'tr')
+      append(tr, 'td').style.display = 'none'     
+      append(tr, 'td', submission.opaqueID).classList.add('ccid')
+      append(tr, 'td', percent(submission.score))
+      const a = document.createElement('a')
+      a.href = submission.viewURL
+      a.target = '_blank'
+      a.textContent = new Date(submission.submittedAt).toLocaleString()
+      append(tr, 'td', a)
     }
     const rosterDiv = append(body, 'div')
     append(rosterDiv, 'h2', 'Roster information')
-    append(rosterDiv, 'p', 'Enter lines with CodeCheck IDs and corresponding student IDs/names here')
+    append(rosterDiv, 'p', 'Enter lines with CodeCheck student IDs and your corresponding student IDs/names here')
     const rosterTextArea = append(rosterDiv, 'textarea')
-    rosterTextArea.rows = ccidCount
+    rosterTextArea.rows = submissionData.length
     rosterTextArea.cols = 80
     rosterDiv.appendChild(createButton('hc-command', 'Add to Table', () => {
       for (line of rosterTextArea.value.split("\n").map(s => s.trim()).filter(s => s != '')) {
         let ccid = line.split(/\s+/)[0]
         let info = line.substring(ccid.length).trim()
         for (const row of table.querySelectorAll('tr')) {
-          row.children[2].style.display = ''
-          if (row.children[0].textContent === ccid)
-            row.children[2].textContent = info
+          row.children[0].style.display = ''
+          if (row.children[1].textContent === ccid)
+            row.children[0].textContent = info
         } 
       }               
     }))  

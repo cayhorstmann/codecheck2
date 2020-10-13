@@ -39,25 +39,45 @@ GET	 /codecheck/files/:problem	controllers.Files.filesHTML(request: Request, rep
 POST /codecheck/check						controllers.Check.checkHTML(request: Request)
 
 # Assignments
-# Student starting
+# Student starts
 GET  /assignment/:assignmentID                      controllers.Assignment.work(request: Request, assignmentID: String, ccid: String = null, key: String = null, isStudent: Boolean = true, newid: String ?= null)
-# Student resuming
+# Student resumes
 GET  /private/resume/:assignmentID/:ccid/:key       controllers.Assignment.work(request: Request, assignmentID: String, ccid: String, key: String, isStudent: Boolean = true, newid: String ?= null)
-# Instructor viewing a student submission
+# Instructor views a student submission
 GET  /private/submission/:assignmentID/:ccid/:key   controllers.Assignment.work(request: Request, assignmentID: String, ccid: String, key: String, isStudent: Boolean = false, newid: String ?= null)
-# Instructor viewing assignment for review/cloning
+# Instructor views an assignment for review/cloning
 GET  /viewAssignment/:assignmentID                  controllers.Assignment.work(request: Request, assignmentID: String, ccid: String = null, key: String = null, isStudent: Boolean = false, newid: String ?= null)
-# Make new assignment
+# Instructor makes new assignment
 GET  /newAssignment                                 controllers.Assignment.edit(request: Request, assignmentID: String = null, key: String = null)
-# Copy existing assignment (TODO: Should anyone be able to copy existing? Maybe need cloneable property)
+# Instructor copies existing assignment 
 GET  /copyAssignment/:assignmentID                  controllers.Assignment.edit(request: Request, assignmentID: String, key: String = null)
-# Edit existing assignment
+# Instructor edits existing assignment
 GET  /private/editAssignment/:assignmentID/:key     controllers.Assignment.edit(request: Request, assignmentID: String, key: String)
-# View submissions
-GET  /private/assignment/:assignmentID/:key         controllers.Assignment.view(request: Request, assignmentID: String, key: String)
+# Instructor views submissions
+GET  /private/assignment/:assignmentID/:key         controllers.Assignment.viewSubmissions(request: Request, assignmentID: String, key: String)
 
-POST /saveAssignment                           controllers.Assignment.saveAssignment(request: Request)
-POST /saveWork                                 controllers.Assignment.saveWork(request: Request)
-POST /lti/assignment                           controllers.LTIAssignment.launch(request: Request)
-POST /lti/saveWork                             controllers.LTIAssignment.saveWork(request: Request)
-POST /lti/viewSubmissions                      controllers.LTIAssignment.viewSubmissions(request: Request)
+# Instructor saves assignment
+POST /saveAssignment         controllers.Assignment.saveAssignment(request: Request)
+# Student saves work
+POST /saveWork               controllers.Assignment.saveWork(request: Request)
+
+# LTI Launch 
+POST /lti/assignment         controllers.LTIAssignment.launch(request: Request)
+# Student saves work 
+POST /lti/saveWork           controllers.LTIAssignment.saveWork(request: Request)
+# Instructor views submissions
+POST /lti/viewSubmissions    controllers.LTIAssignment.viewSubmissions(request: Request)
+# Canvas call to createAssignment (resource selection)
+POST /lti/createAssignment   controllers.LTIAssignment.createAssignment(request: Request)
+# Instructor saves assignment
+POST /lti/saveAssignment     controllers.LTIAssignment.saveAssignment(request: Request)
+
+# Instructor views submissions
+GET  /lti/viewSubmissions    controllers.LTIAssignment.viewSubmissions(request: Request)
+# Instructor views a submission
+GET  /lti/viewSubmission/:workID controllers.LTIAssignment.viewSubmission(request: Request, workID: String)
+# Instructor edits current assignment
+GET  /lti/editAssignment     controllers.LTIAssignment.editAssignment(request: Request)
+
+# Shows LMS config XML
+GET /lti/config              controllers.LTIAssignment.config(request: Request)
