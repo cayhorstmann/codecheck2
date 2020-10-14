@@ -52,7 +52,7 @@ window.addEventListener('DOMContentLoaded', () => {
         responseDiv.style.display = 'block'
       } else {
         assignment.assignmentID = response.assignmentID
-        if (lti === undefined) {
+        if ('publicURL' in response) {
           document.getElementById('publicURL').textContent = response.publicURL
           document.getElementById('privateURL').textContent = response.privateURL
           urlsDl.style.display = 'block'
