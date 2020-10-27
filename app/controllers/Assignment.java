@@ -9,17 +9,17 @@ package controllers;
  A problem contains one or more questions. Each question has a globally unique qid. 
  The max scores of a problem must add up to 1.0. It's up the problem to weigh 
  questions. 
-
- The key of a problem URL is:
- - The qid for problems containing a single question in the book repo 
-   (interactive or CodeCheck in Wiley repo)
- - The URL otherwise
- (Note that one can get the key of a URL, but to go from a book database qid to
- the URL, it is not clear whether the URL is a CodeCheck URL or an interactivities URL. )
-
- Student work on an assignment is a map from qids to scores and states. If the key 
- of the enclosing problem is different from the qid, it must be included in the
- work record. This is necessary for weighing, and to deal with changing assignments.
+ 
+ The problem ID is normally the problem URL. However, for interactive or CodeCheck 
+ problems in the textbook repo, it is the qid of the single question in the problem.
+ 
+ A submission contains work on one or more questions. Work is a map from qids to 
+ scores, states, and the problem ID (unless it can be determined automatically that 
+ a question belongs to a problem.) The problem ID is necessary for weighing and  
+ changes in assignments. 
+   
+ If the key of the enclosing problem is different from the qid, it must be included in the
+ work record. 
  
  Tables:
  
@@ -165,9 +165,14 @@ public class Assignment extends Controller {
         return groupsNode;
     }
     
-    private static String pid(ObjectNode problem) {
-    	if (problem.has("qid")) return problem.get("qid").asText();
-		else return problem.get("URL").asText();
+    private static boolean containsQuestion(ObjectNode problem, String qid, ObjectNode submission) {    	
+    	// Textbook repo
+    	if (problem.has("qid")) return problem.get("qid").asText().equals(qid);
+    	String problemURL = problem.get("URL").asText();
+    	if (submission.has("pid")) return problemURL.equals(submission.get("pid").asText());    	
+		// Some legacy CodeCheck questions have butchered keys such as 0101407088y6iesgt3rs6k7h0w45haxajn 
+    	return problemURL.endsWith(qid);
+    	// TODO: return problemURL.equals(qid);
 	}
 		  	 
 	public static double score(String ccid, ObjectNode assignment, ObjectNode work) {
@@ -176,12 +181,10 @@ public class Assignment extends Controller {
 		ArrayNode problems = (ArrayNode) groups.get(ccid.hashCode() % groups.size());
 		ObjectNode submissions = (ObjectNode) work.get("problems");
 		for (String qid : Util.iterable(submissions.fieldNames())) {
-			String submissionPid = qid;
 			ObjectNode submission = (ObjectNode) submissions.get(qid);
-			if (submission.has("pid")) submissionPid = submission.get("pid").asText();
 			for (JsonNode p : problems) {
 				ObjectNode problem = (ObjectNode) p;
-				if (pid(problem).equals(submissionPid))	
+				if (containsQuestion(problem, qid, submission))	
 					result += problem.get("weight").asDouble() * submission.get("score").asDouble();
 			}	
 		}

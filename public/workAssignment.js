@@ -15,13 +15,22 @@ window.addEventListener('DOMContentLoaded', () => {
     return problem.qid !== undefined ? problem.qid : problem.URL
   }
   
+  function containsQuestion(problem, qid, submission) {
+      // Textbook repo
+      if ('qid' in problem) return problem.qid === qid
+      if ('pid' in submission) return problem.URL === submission.pid
+      // Some legacy CodeCheck questions have butchered keys such as 0101407088y6iesgt3rs6k7h0w45haxajn 
+      return problem.URL.endsWith(qid)
+      // TODO: return problem.URL === qid
+  }
+  
   function score(problems, work) {
     let score = 0
     for (const qid in work.problems) {
-      const submissionPid = 'pid' in work.problems[qid] ? work.problems[qid].pid : qid
+      const q = work.problems[qid]
       for (const p of problems)
-        if (problemPid(p) === submissionPid) 
-          score += work.problems[qid].score * p.weight
+        if (containsQuestion(p, qid, q)) 
+          score += p.weight * q.score
     }
     return score
   }
@@ -167,6 +176,7 @@ window.addEventListener('DOMContentLoaded', () => {
   if (assignment.isStudent) {
     updateScore(document.querySelector('h1'), score(problems, work))  
     if (lti === undefined) {
+      document.getElementById('studentLTIInstructions').style.display = 'none'
       document.getElementById('returnToWorkURL').textContent = assignment.returnToWorkURL
     
       document.getElementById('returnToWork').appendChild(createButton('hc-command', 'Copy', () => { 
@@ -182,8 +192,8 @@ window.addEventListener('DOMContentLoaded', () => {
         savedCopyCheckbox.checked = false
       }      
     } else {
-      activateButtons()
       document.getElementById('studentInstructions').style.display = 'none'
+      activateButtons()
     }       
     document.getElementById('instructorInstructions').style.display = 'none'
   } else { // Instructor view
@@ -197,6 +207,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }))    
     activateButtons()
     document.getElementById('studentInstructions').style.display = 'none'
+    document.getElementById('studentLTIInstructions').style.display = 'none'
   }
     
   savedCopyCheckbox.addEventListener('change', () => {    
