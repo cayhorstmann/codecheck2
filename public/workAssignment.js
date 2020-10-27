@@ -74,7 +74,6 @@ window.addEventListener('DOMContentLoaded', () => {
       updateScoreDisplay();
     } else {
       iframe.contentWindow.postMessage({ request, param: null }, '*')
-      console.log('No work for problem with qid ' + qid)
     }
   }
 

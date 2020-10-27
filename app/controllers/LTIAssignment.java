@@ -279,7 +279,7 @@ Instructor:
 	        	assignmentNode.remove("editKey");
 
 	    		String lisOutcomeServiceURL = Util.getParam(postParams, "lis_outcome_service_url");
-	        	String lisResultSourcedId = Util.getParam(postParams, "lis_result_sourcedid");
+	        	String lisResultSourcedID = Util.getParam(postParams, "lis_result_sourcedid");
 	        	String oauthConsumerKey = Util.getParam(postParams, "oauth_consumer_key");
 	        	
 	    	    if (Util.isEmpty(lisOutcomeServiceURL)) 
@@ -287,10 +287,10 @@ Instructor:
 	    		else
 	    			ltiNode.put("lisOutcomeServiceURL", lisOutcomeServiceURL);
 	    		
-	    		if (Util.isEmpty(lisResultSourcedId)) 
+	    		if (Util.isEmpty(lisResultSourcedID)) 
 	    			return badRequest("lis_result_sourcedid missing.");
 	    		else
-	    			ltiNode.put("lisResultSourcedId", lisResultSourcedId);
+	    			ltiNode.put("lisResultSourcedID", lisResultSourcedID);
 	    		ltiNode.put("oauthConsumerKey", oauthConsumerKey);
 	    		
 				String work = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", resourceID, "workID", userID);
@@ -364,17 +364,10 @@ Instructor:
 	private Result submitGradeToLMS(ObjectNode params) throws IOException {
         String resourceID = params.get("resourceID").asText();
         String userID = params.get("resourceID").asText();
-        String outcomeServiceUrl = params.get("lisOutcomeServiceUrl").asText();
-		String sourcedId = params.get("lisResultSourcedId").asText();
+        String outcomeServiceUrl = params.get("lisOutcomeServiceURL").asText();
+		String sourcedId = params.get("lisResultSourcedID").asText();
 		String oauthConsumerKey = params.get("oauthConsumerKey").asText();
 		
-        if (outcomeServiceUrl == null || outcomeServiceUrl.equals("")
-                || sourcedId == null || sourcedId.equals("")) {
-        	String result = "Missing lis_outcome_service_url or lis_result_sourcedid";
-        	logger.info(result);
-            return badRequest(result);
-        }
-	
     	ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckResources", "resourceID", resourceID); 
 	    String assignmentID = resourceNode.get("assignmentID").asText(); 
         
