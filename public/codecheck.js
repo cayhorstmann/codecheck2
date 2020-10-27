@@ -147,24 +147,24 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function inIframe() {
     try {
-      return window.self !== window.top;
+      return window.self !== window.top
     } catch (e) {
-      return true;
+      return true
     }	
   }
 
   function highlightLine(file, line, message) {
-    let totalLines = 0;
+    let totalLines = 0
     let fileDiv = document.getElementById(file);
     if (fileDiv == null) return // This happens if there is an error in a tester
-    let editorDivs = fileDiv.getElementsByClassName('editor');
-    let editors = [];
+    let editorDivs = fileDiv.getElementsByClassName('editor')
+    let editors = []
     for (let k = 0; k < editorDivs.length; k++)
-      editors.push(ace.edit(editorDivs[k]));
+      editors.push(ace.edit(editorDivs[k]))
     for (let k = 0; k < editors.length; k++) {
       let editorSession = editors[k].getSession();
       let length = editorSession.getDocument().getLength() 
-      totalLines += length;
+      totalLines += length
       if (totalLines >= line) {
         let annotations = editorSession.getAnnotations()
         annotations.push({
@@ -173,16 +173,34 @@ document.addEventListener('DOMContentLoaded', function () {
           type: "error"
         })
         editorSession.setAnnotations(annotations);
-        return;
+        return
       }
     }    
-  };
+  }
 
   function clearErrorAnnotations () {
     let editorDivs = document.getElementsByClassName('editor');
     for (let k = 0; k < editorDivs.length; k++)
       ace.edit(editorDivs[k]).getSession().clearAnnotations()
-  };
+  }
+  
+  function questionID(form) {
+    let inputs = form.getElementsByTagName('input');
+    let problem = ''
+    let repo = ''
+    for (const input of inputs) {
+      let name = inputs[i].getAttribute('name')
+      if (name === 'problem')  
+        problem = input.getAttribute('value')
+      else if (name === 'repo')
+        repo = input.getAttribute('value')
+    }
+    if (repo === 'wiley') return problem  
+    else return window.location.href
+  }
+
+  let form = document.getElementsByTagName('form')[0]
+  let qid = questionID(form)
 
   function successfulSubmission(data) {
     let submitButton = document.getElementById('submit');        
@@ -209,14 +227,14 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     
     if (inIframe()) {      
-      const param = { state: getStudentWork(), score: getNumericScore() }
+      const param = { qid, state: getStudentWork(), score: getNumericScore() }
       const data = { query: 'send', param }
       console.log('Posting to parent', data)
       window.parent.postMessage(data, '*' )
     }
   }
 
-  let form = document.getElementsByTagName('form')[0]
+
   form.addEventListener('submit', function(e) {
     e.preventDefault();
     let submitButton = document.getElementById('submit');        
@@ -276,7 +294,8 @@ document.addEventListener('DOMContentLoaded', function () {
     */    
     resizeObserver.observe(document.body.children[0])
     resizeObserver.observe(document.body.children[1])
-    const data = { query: 'retrieve' }  
+    
+    const data = { query: 'retrieve', param: { qid } }  
     console.log('Posting to parent', data)
     window.parent.postMessage(data, '*' )
   }  

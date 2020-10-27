@@ -95,7 +95,7 @@ public class LTIAssignment extends Controller {
 	@Security.Authenticated(Secured.class)
 	public Result saveAssignment(Http.Request request) throws IOException {		
     	String editKey = request.session().get("user").get(); // TODO orElseThrow();    	
-    	String resourceID = request.session().get("resourceID").get(); // TODO orElseThrow();
+    	String resourceID = request.session().get("resource").get(); // TODO orElseThrow();
 
     	ObjectNode params = (ObjectNode) request.body().asJson();
         	
@@ -147,7 +147,7 @@ public class LTIAssignment extends Controller {
 
 	@Security.Authenticated(Secured.class)
 	public Result viewSubmissions(Http.Request request) throws IOException {		
-    	String resourceID = request.session().get("resourceID").get(); // TODO orElseThrow();
+    	String resourceID = request.session().get("resource").get(); // TODO orElseThrow();
     	ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckLTIResources", "resourceID", resourceID); 
     	if (resourceNode == null) return badRequest("No resource");
 
@@ -174,7 +174,7 @@ public class LTIAssignment extends Controller {
 	
 	@Security.Authenticated(Secured.class)
 	public Result viewSubmission(Http.Request request, String workID) throws IOException {
-    	String resourceID = request.session().get("resourceID").get(); // TODO orElseThrow();
+    	String resourceID = request.session().get("resource").get(); // TODO orElseThrow();
     	String work = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", resourceID, "workID", workID);
     	if (work == null) return badRequest("Work not found");
     	ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckLTIResources", "resourceID", resourceID); 
@@ -188,7 +188,7 @@ public class LTIAssignment extends Controller {
 	@Security.Authenticated(Secured.class)
 	public Result editAssignment(Http.Request request) throws IOException {
     	String editKey = request.session().get("user").get(); // TODO orElseThrow();    	
-    	String resourceID = request.session().get("resourceID").get(); // TODO orElseThrow();
+    	String resourceID = request.session().get("resource").get(); // TODO orElseThrow();
     	ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckLTIResources", "resourceID", resourceID); 
     	if (resourceNode == null) return badRequest("Resource not found");
     	String assignmentID = resourceNode.get("assignmentID").asText();    	

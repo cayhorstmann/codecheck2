@@ -1,5 +1,55 @@
 package controllers;
 
+/*
+ An assignment is made up of problems. A problem is provided in a URL 
+ that is displayed in an iframe. (In the future, maybe friendly problems 
+ could coexist on a page or shared iframe for efficiency.) An assignment 
+ weighs its problems.
+ 
+ A problem contains one or more questions. Each question has a globally unique qid. 
+ The max scores of a problem must add up to 1.0. It's up the problem to weigh 
+ questions. 
+
+ The key of a problem URL is:
+ - The qid for problems containing a single question in the book repo 
+   (interactive or CodeCheck in Wiley repo)
+ - The URL otherwise
+ (Note that one can get the key of a URL, but to go from a book database qid to
+ the URL, it is not clear whether the URL is a CodeCheck URL or an interactivities URL. )
+
+ Student work on an assignment is a map from qids to scores and states. If the key 
+ of the enclosing problem is different from the qid, it must be included in the
+ work record. This is necessary for weighing, and to deal with changing assignments.
+ 
+ Tables:
+ 
+ CodeCheckWork
+   assignmentID [partition key]
+   workID [sort key] // ccid + editKey or LTI resourceID
+   problems
+     map from qids to { state, score, pid? }
+   submittedAt
+   lastProblem
+   
+ CodeCheckAssignment
+   assignmentID [primary key]
+   deadlineDate
+   deadlineTime
+   editKey
+   problems
+     array of // One per group
+       array of { URL, qid?, weight } // qid for book repo
+  
+ CodeCheckLTIResources
+   resourceID [primary key] // LTI tool consumer ID + course ID + resource ID 
+   assignmentID 
+   
+ CodeCheckLTICredentials
+   oauth_consumer_key [primary key]
+   shared_secret
+   
+ */
+
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -115,12 +165,9 @@ public class Assignment extends Controller {
         return groupsNode;
     }
     
-    private static String key(ObjectNode problem) {
+    private static String pid(ObjectNode problem) {
     	if (problem.has("qid")) return problem.get("qid").asText();
-		else {
-			String url = problem.get("URL").asText();
-			return url.substring(url.lastIndexOf("/") + 1).replaceAll("[^A-Za-z_-]", "");
-		}
+		else return problem.get("URL").asText();
 	}
 		  	 
 	public static double score(String ccid, ObjectNode assignment, ObjectNode work) {
@@ -128,11 +175,15 @@ public class Assignment extends Controller {
 		ArrayNode groups = (ArrayNode) assignment.get("problems");
 		ArrayNode problems = (ArrayNode) groups.get(ccid.hashCode() % groups.size());
 		ObjectNode submissions = (ObjectNode) work.get("problems");
-		for (JsonNode p : problems) {
-			ObjectNode problem = (ObjectNode) p;
-			String problemKey = key(problem);
-			if (submissions.has(problemKey))
-				result += problem.get("weight").asDouble() * submissions.get(problemKey).get("score").asDouble();
+		for (String qid : Util.iterable(submissions.fieldNames())) {
+			String submissionPid = qid;
+			ObjectNode submission = (ObjectNode) submissions.get(qid);
+			if (submission.has("pid")) submissionPid = submission.get("pid").asText();
+			for (JsonNode p : problems) {
+				ObjectNode problem = (ObjectNode) p;
+				if (pid(problem).equals(submissionPid))	
+					result += problem.get("weight").asDouble() * submission.get("score").asDouble();
+			}	
 		}
 		return result;
 	}

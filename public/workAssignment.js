@@ -2,6 +2,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const responseDiv = document.getElementById('response')
   const savedCopyCheckbox = document.querySelector('#savedcopy > input')
   const buttonDiv = document.createElement('div')
+  const iframePid = new Map()
 
   function hash(s) {
     let r = 0
@@ -10,21 +11,17 @@ window.addEventListener('DOMContentLoaded', () => {
     return r      
   }
   
-  /*
-  TODO: Baking in assumption that problem source is ebook or CodeCheck. What if someone else
-  has a problem source? MD5 hash the problem URL? */
-  function key(problem) {
-    return problem.qid !== undefined ? problem.qid
-      : problem.URL.substring(problem.URL.lastIndexOf("/") + 1).replace(/[^A-Za-z_-]/, '')
+  function problemPid(problem) {
+    return problem.qid !== undefined ? problem.qid : problem.URL
   }
   
   function score(problems, work) {
     let score = 0
-    for (const problem of problems) {
-      const workKey = key(problem)
-      if (workKey in work.problems) {
-        score += work.problems[workKey].score * problem.weight
-      }
+    for (const qid in work.problems) {
+      const submissionPid = 'pid' in work.problems[qid] ? work.problems[qid].pid : qid
+      for (const p of problems)
+        if (problemPid(p) === submissionPid) 
+          score += work.problems[qid].score * p.weight
     }
     return score
   }
@@ -55,15 +52,24 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   function restoreStateOfProblem(iframe, request) {
-    let workKey = iframe.id.replace('problem-', '')   
-    iframe.contentWindow.postMessage({ request, param: work.problems[workKey].state }, '*');
-    updateScoreDisplay(workKey);
+    let qid = request.param.qid
+    if (qid === undefined) qid = iframePid.get(iframe)
+    if (qid in work.problems) {
+      iframe.contentWindow.postMessage({ request, param: work.problems[qid].state }, '*');
+      updateScoreDisplay(workKey);
+    } else {
+      iframe.contentWindow.postMessage({ request, param: null }, '*')
+      console.log('No work for problem with qid ' + qid)
+    }
   }
 
   async function sendScoreAndState(iframe, request) {    
     if (!assignment.isStudent) return // Viewing as instructor
-    let workKey = iframe.id.replace('problem-', '')   
-    work.problems[workKey] = request.param
+    let qid = request.param.qid
+    let pid = iframePid.get(iframe)  
+    if (qid === undefined) qid = pid
+    work.problems[qid] = request.param
+    if (qid != pid) work.problems[qid].pid = pid
     updateScoreDisplay(workKey);     
     try {
       responseDiv.textContent = ''
@@ -93,10 +99,6 @@ window.addEventListener('DOMContentLoaded', () => {
   
   assignment.receivedAt = Date.now()  
   const problems = assignment.problems[hash(studentID) % assignment.problems.length]  
-  for (const problem of problems) {
-    const k = key(problem)
-    if (! (k in work.problems)) work.problems[k] = { score: 0, state: null }  
-  } 
   
   window.addEventListener("message", event => {
     let iframe = sendingIframe(event)
@@ -137,9 +139,8 @@ window.addEventListener('DOMContentLoaded', () => {
     allWeightsSame = Math.abs(problems[0].weight - problems[i].weight) < 0.001   
 
   for (let i = 0; i < problems.length; i++) {
-    const workKey = key(problems[i])
     const iframe = document.createElement('iframe')    
-    iframe.id = 'problem-' + workKey
+    iframePid.set(iframe, problemPid(problems[i]))
     iframe.className = 'exercise-iframe'
     iframe.src = problems[i].URL 
     document.body.appendChild(iframe)

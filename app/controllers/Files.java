@@ -38,7 +38,7 @@ public class Files extends Controller {
    private static String fileOuterDivAfter = "</div>\n";
 	
    private static String after = "<div><input id=\"submit\" type=\"submit\"/>\n" 
-      + "<input type=\"hidden\" name=\"repo\" value=\"{0}\">\n" 
+      + "<input type=\"hidden\" name=\"repo\" value=\"{0}\"/>\n" 
       + "<input type=\"hidden\" name=\"problem\" value=\"{1}\"/>\n";
    private static String formEnd = "</form>\n<div id=\"codecheck-submit-response\"></div>\n";
    private static String bodyEnd = "</body></html>";
