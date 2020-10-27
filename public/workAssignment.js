@@ -67,8 +67,8 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   function restoreStateOfProblem(iframe, request) {
-    let qid = request.param.qid
-    if (qid === undefined) qid = iframePid.get(iframe)
+    let qid = 'param' in request && 'qid' in request.param ? request.param.qid :
+      iframePid.get(iframe)
     if (qid in work.problems) {
       iframe.contentWindow.postMessage({ request, param: work.problems[qid].state }, '*');
       updateScoreDisplay();
