@@ -48,10 +48,15 @@ window.addEventListener('DOMContentLoaded', () => {
     e.textContent = text.substring(0, index) + ' (' + percent(score) + ')'
   }
 
-  function updateScoreDisplay(workKey) {
-    const score = work.problems[workKey].score
-    const button = document.getElementById('button-' + workKey)
-    updateScore(button, score)
+  function updateScoreDisplay() {
+    for (const p of problems)
+      let score = 0
+      for (const qid in work.problems) {
+        const q = work.problems[qid]
+        if (containsQuestion(p, qid, q)) 
+          score += q.score
+        updateScore(p.button, score)          
+      }
   }
   
   function adjustDocHeight(iframe, request) {
@@ -65,7 +70,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (qid === undefined) qid = iframePid.get(iframe)
     if (qid in work.problems) {
       iframe.contentWindow.postMessage({ request, param: work.problems[qid].state }, '*');
-      updateScoreDisplay(workKey);
+      updateScoreDisplay();
     } else {
       iframe.contentWindow.postMessage({ request, param: null }, '*')
       console.log('No work for problem with qid ' + qid)
@@ -79,7 +84,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (qid === undefined) qid = pid
     work.problems[qid] = request.param
     if (qid != pid) work.problems[qid].pid = pid
-    updateScoreDisplay(workKey);     
+    updateScoreDisplay();     
     try {
       responseDiv.textContent = ''
       work.submittedAt = new Date(Date.now() - assignment.receivedAt + Date.parse(assignment.sentAt)).toISOString()
@@ -107,6 +112,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   
   assignment.receivedAt = Date.now()  
+  //TODO: Why not done at server
   const problems = assignment.problems[hash(studentID) % assignment.problems.length]  
   
   window.addEventListener("message", event => {
@@ -167,7 +173,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const button = createButton('hc-step', '' + (i + 1), action)
     button.classList.add('hc-disabled')
-    button.id = 'button-' + workKey
+    problems[i].button = button
     buttonDiv.appendChild(button)
     button.textContent = "" + (i + 1)
     if (!allWeightsSame) button.title = `Weight: ${percent(problems[i].weight)}` 
