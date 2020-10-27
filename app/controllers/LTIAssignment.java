@@ -367,7 +367,7 @@ Instructor:
 		String sourcedId = params.get("lisResultSourcedID").asText();
 		String oauthConsumerKey = params.get("oauthConsumerKey").asText();
 		
-    	ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckResources", "resourceID", resourceID); 
+    	ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckLTIResources", "resourceID", resourceID); 
 	    String assignmentID = resourceNode.get("assignmentID").asText(); 
         
 		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
