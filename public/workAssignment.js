@@ -49,7 +49,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateScoreDisplay() {
-    for (const p of problems)
+    for (const p of problems) {
       let score = 0
       for (const qid in work.problems) {
         const q = work.problems[qid]
@@ -57,6 +57,7 @@ window.addEventListener('DOMContentLoaded', () => {
           score += q.score
         updateScore(p.button, score)          
       }
+    }
   }
   
   function adjustDocHeight(iframe, request) {
