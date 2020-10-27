@@ -107,8 +107,8 @@ window.addEventListener('DOMContentLoaded', () => {
       btn.classList.remove('hc-disabled')
     }
     buttonDiv.children[0].classList.add('active')
-    buttonDiv.children[0].click()
-    //document.getElementsByTagName('iframe')[0].style.display = 'block'                   
+    //buttonDiv.children[0].click()
+    document.getElementsByTagName('iframe')[0].style.display = 'block'                   
   }
   
   assignment.receivedAt = Date.now()  

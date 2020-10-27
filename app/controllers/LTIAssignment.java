@@ -265,7 +265,7 @@ Instructor:
 			assignmentNode.put("isStudent", false);
 			assignmentNode.put("viewSubmissionsURL", "/lti/viewSubmissions");
 	    	assignmentNode.put("sentAt", Instant.now().toString());				
-	    	String work = "{ problems: {} }";
+	    	String work = "{ assignmentID: '" + resourceID + "', workID: '" + userID + "', problems: {} }";
 			return ok(views.html.workAssignment.render(assignmentNode.toString(), work, userID, "undefined" /* lti */))
 					.addingToSession(request, "user", toolConsumerID + "/" + userID)
 					.addingToSession(request, "resource", resourceID);					
@@ -295,7 +295,7 @@ Instructor:
 	    		
 				String work = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", resourceID, "workID", userID);
 				if (work == null) 
-					work = "{ assignmentID: \"" + resourceID + "\", workID: \"" + userID + "\", problems: {} }";
+					work = "{ assignmentID: '" + resourceID + "', workID: '" + userID + "', problems: {} }";
 	    		
 	    		assignmentNode.put("isStudent", true);
 	        	assignmentNode.put("editKeySaved", true);
@@ -357,11 +357,12 @@ Instructor:
     	result.put("submittedAt", Instant.now().toString());    	
 
 		s3conn.writeNewerJsonObjectToDynamoDB("CodeCheckWork", (ObjectNode) requestNode.get("work"), "assignmentID", "submittedAt");
-		submitGradeToLMS(requestNode);
+		double score = submitGradeToLMS(requestNode);
+    	result.put("score", score);    	
 		return ok(result); 
 	}	
 	
-	private Result submitGradeToLMS(ObjectNode params) throws IOException {
+	private double submitGradeToLMS(ObjectNode params) throws IOException {
         String resourceID = params.get("resourceID").asText();
         String outcomeServiceUrl = params.get("lisOutcomeServiceURL").asText();
 		String sourcedId = params.get("lisResultSourcedID").asText();
@@ -390,10 +391,7 @@ Instructor:
             logger.info(Util.getStackTrace(e));
             return badRequest(e.getMessage());
         }
-    
-        ObjectNode responseNode = JsonNodeFactory.instance.objectNode();
-        responseNode.put("score", score);
-        return ok(responseNode.toString());
+        return score;
     }
 
 	/**
