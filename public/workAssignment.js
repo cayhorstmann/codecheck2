@@ -113,7 +113,7 @@ window.addEventListener('DOMContentLoaded', () => {
   
   assignment.receivedAt = Date.now()  
   //TODO: Why not done at server
-  const problems = assignment.problems[hash(studentID) % assignment.problems.length]  
+  const problems = assignment.problems[hash(work.workID) % assignment.problems.length]  
   
   window.addEventListener("message", event => {
     let iframe = sendingIframe(event)

@@ -161,7 +161,7 @@ public class LTIAssignment extends Controller {
 			ObjectNode work = itemMap.get(workID);
 			ObjectNode submissionData = JsonNodeFactory.instance.objectNode();
 			submissionData.put("opaqueID", workID);
-			submissionData.put("score", Assignment.score(workID, assignmentNode, work));
+			submissionData.put("score", Assignment.score(assignmentNode, work));
 			submissionData.set("submittedAt", work.get("submittedAt"));
 			submissionData.put("viewURL", "/lti/viewSubmission/" + workID); 
 			submissions.add(submissionData);
@@ -363,7 +363,6 @@ Instructor:
 	
 	private Result submitGradeToLMS(ObjectNode params) throws IOException {
         String resourceID = params.get("resourceID").asText();
-        String userID = params.get("resourceID").asText();
         String outcomeServiceUrl = params.get("lisOutcomeServiceURL").asText();
 		String sourcedId = params.get("lisResultSourcedID").asText();
 		String oauthConsumerKey = params.get("oauthConsumerKey").asText();
@@ -372,7 +371,7 @@ Instructor:
 	    String assignmentID = resourceNode.get("assignmentID").asText(); 
         
 		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
-		double score = Assignment.score(userID, assignmentNode, (ObjectNode) params.get("work"));
+		double score = Assignment.score(assignmentNode, (ObjectNode) params.get("work"));
 		
         try {
     		String xmlString1 = "<?xml version = \"1.0\" encoding = \"UTF-8\"?> <imsx_POXEnvelopeRequest xmlns = \"http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0\"> <imsx_POXHeader> <imsx_POXRequestHeaderInfo> <imsx_version>V1.0</imsx_version> <imsx_messageIdentifier>" 

@@ -26,7 +26,7 @@ package controllers;
  CodeCheckWork
    assignmentID [partition key]
    workID [sort key] // ccid + editKey or LTI resourceID
-   problems
+   problems // TODO: Should have been named questions
      map from qids to { state, score, pid? }
    submittedAt
    lastProblem
@@ -175,10 +175,11 @@ public class Assignment extends Controller {
     	// TODO: return problemURL.equals(qid);
 	}
 		  	 
-	public static double score(String ccid, ObjectNode assignment, ObjectNode work) {
+	public static double score(ObjectNode assignment, ObjectNode work) {
 		double result = 0;
 		ArrayNode groups = (ArrayNode) assignment.get("problems");
-		ArrayNode problems = (ArrayNode) groups.get(ccid.hashCode() % groups.size());
+		String workID = work.get("workID").asText();
+		ArrayNode problems = (ArrayNode) groups.get(workID.hashCode() % groups.size());
 		ObjectNode submissions = (ObjectNode) work.get("problems");
 		for (String qid : Util.iterable(submissions.fieldNames())) {
 			ObjectNode submission = (ObjectNode) submissions.get(qid);
@@ -280,7 +281,7 @@ public class Assignment extends Controller {
 			ObjectNode work = itemMap.get(submissionKey);
 			ObjectNode submissionData = JsonNodeFactory.instance.objectNode();
 			submissionData.put("opaqueID", ccid);
-			submissionData.put("score", Assignment.score(ccid, assignmentNode, work));
+			submissionData.put("score", Assignment.score(assignmentNode, work));
 			submissionData.set("submittedAt", work.get("submittedAt"));
 			submissionData.put("viewURL", "/private/submission/" + assignmentID + "/" + ccid + "/" + submissionEditKey); 
 			submissions.add(submissionData);			
