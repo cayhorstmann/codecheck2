@@ -108,7 +108,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     buttonDiv.children[0].classList.add('active')
     //buttonDiv.children[0].click()
-    document.getElementsByTagName('iframe')[0].style.display = 'block'                   
+    //document.getElementsByTagName('iframe')[0].style.display = 'block'                   
   }
   
   assignment.receivedAt = Date.now()  
