@@ -61,6 +61,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   
   function adjustDocHeight(iframe, request) {
+    console.log({pid: iframePid.get(iframe), oldHeight: iframe.height, newHeight: request.param.docHeight })
     const newHeight = request.param.docHeight;
     if (iframe.height < newHeight)
       iframe.style.height = newHeight + 'px'
