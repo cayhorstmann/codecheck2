@@ -61,9 +61,9 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   
   function adjustDocHeight(iframe, request) {
-    console.log({pid: iframePid.get(iframe), oldHeight: iframe.height, newHeight: request.param.docHeight })
+    console.log({pid: iframePid.get(iframe), oldHeight: iframe.scrollHeight, newHeight: request.param.docHeight })
     const newHeight = request.param.docHeight;
-    if (iframe.height < newHeight)
+    if (iframe.scrollHeight < newHeight)
       iframe.style.height = newHeight + 'px'
   }
 
@@ -108,7 +108,7 @@ window.addEventListener('DOMContentLoaded', () => {
       btn.classList.remove('hc-disabled')
     }
     buttonDiv.children[0].classList.add('active')
-    buttonDiv.children[0].click()
+    setTimeout(() => buttonDiv.children[0].click(), 1000)
     //document.getElementsByTagName('iframe')[0].style.display = 'block'                   
   }
   
