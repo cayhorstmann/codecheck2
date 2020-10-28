@@ -107,7 +107,7 @@ window.addEventListener('DOMContentLoaded', () => {
       btn.classList.remove('hc-disabled')
     }
     buttonDiv.children[0].classList.add('active')
-    //buttonDiv.children[0].click()
+    buttonDiv.children[0].click()
     //document.getElementsByTagName('iframe')[0].style.display = 'block'                   
   }
   

@@ -357,12 +357,17 @@ Instructor:
     	result.put("submittedAt", Instant.now().toString());    	
 
 		s3conn.writeNewerJsonObjectToDynamoDB("CodeCheckWork", (ObjectNode) requestNode.get("work"), "assignmentID", "submittedAt");
-		double score = submitGradeToLMS(requestNode);
-    	result.put("score", score);    	
-		return ok(result); 
+		try {
+			double score = submitGradeToLMS(requestNode);
+	    	result.put("score", score);    	
+			return ok(result);
+        } catch (Exception e) {
+            logger.info(Util.getStackTrace(e));
+            return badRequest(e.getMessage());
+        }
 	}	
 	
-	private double submitGradeToLMS(ObjectNode params) throws IOException {
+	private double submitGradeToLMS(ObjectNode params) throws IOException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, NoSuchAlgorithmException, URISyntaxException {
         String resourceID = params.get("resourceID").asText();
         String outcomeServiceUrl = params.get("lisOutcomeServiceURL").asText();
 		String sourcedId = params.get("lisResultSourcedID").asText();
@@ -374,23 +379,17 @@ Instructor:
 		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
 		double score = Assignment.score(assignmentNode, (ObjectNode) params.get("work"));
 		
-        try {
-    		String xmlString1 = "<?xml version = \"1.0\" encoding = \"UTF-8\"?> <imsx_POXEnvelopeRequest xmlns = \"http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0\"> <imsx_POXHeader> <imsx_POXRequestHeaderInfo> <imsx_version>V1.0</imsx_version> <imsx_messageIdentifier>" 
-                + System.currentTimeMillis() + "</imsx_messageIdentifier> </imsx_POXRequestHeaderInfo> </imsx_POXHeader> <imsx_POXBody> <replaceResultRequest> <resultRecord> <sourcedGUID> <sourcedId>";
-    		String xmlString2 = "</sourcedId> </sourcedGUID> <result> <resultScore> <language>en</language> <textString>";
-    		String xmlString3 = "</textString> </resultScore> </result> </resultRecord> </replaceResultRequest> </imsx_POXBody> </imsx_POXEnvelopeRequest>";        	
-    		String xmlString = xmlString1 + sourcedId + xmlString2 + score + xmlString3;        	
-    			
-            passbackGradeToLMS(outcomeServiceUrl, xmlString, oauthConsumerKey, 
-            		getSharedSecret(oauthConsumerKey)); 
-    		
-    		// org.imsglobal.pox.IMSPOXRequest.sendReplaceResult(outcomeServiceUrl, oauthConsumerKey, getSharedSecret(oauthConsumerKey), sourcedId, "" + score);
+		String xmlString1 = "<?xml version = \"1.0\" encoding = \"UTF-8\"?> <imsx_POXEnvelopeRequest xmlns = \"http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0\"> <imsx_POXHeader> <imsx_POXRequestHeaderInfo> <imsx_version>V1.0</imsx_version> <imsx_messageIdentifier>" 
+            + System.currentTimeMillis() + "</imsx_messageIdentifier> </imsx_POXRequestHeaderInfo> </imsx_POXHeader> <imsx_POXBody> <replaceResultRequest> <resultRecord> <sourcedGUID> <sourcedId>";
+		String xmlString2 = "</sourcedId> </sourcedGUID> <result> <resultScore> <language>en</language> <textString>";
+		String xmlString3 = "</textString> </resultScore> </result> </resultRecord> </replaceResultRequest> </imsx_POXBody> </imsx_POXEnvelopeRequest>";        	
+		String xmlString = xmlString1 + sourcedId + xmlString2 + score + xmlString3;        	
+			
+        passbackGradeToLMS(outcomeServiceUrl, xmlString, oauthConsumerKey, 
+        		getSharedSecret(oauthConsumerKey)); 
+		
+		// org.imsglobal.pox.IMSPOXRequest.sendReplaceResult(outcomeServiceUrl, oauthConsumerKey, getSharedSecret(oauthConsumerKey), sourcedId, "" + score);
 
-        } catch (Exception e) {
-    		logger.info("score: " + score);        
-            logger.info(Util.getStackTrace(e));
-            return badRequest(e.getMessage());
-        }
         return score;
     }
 
