@@ -85,6 +85,7 @@ if (window.self !== window.top) { // iframe
         const param = { state: request.data[0].state.data, score: request.data[0].results[0].score, qid: request.data[0].activityId }
         const data = { query: 'send', param }
         window.parent.postMessage(data, '*' )
+        sendDocHeight()
       },
     }
   }
@@ -106,8 +107,23 @@ if (window.self !== window.top) { // iframe
       return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16)
     })
   }
-  
+
   let element = undefined
+  let docHeight = 0
+  
+  function sendDocHeight() {
+    const SEND_DOCHEIGHT_DELAY = 100
+    if (window.EPUB.Education.version === 1) return // TODO
+    setTimeout(() => { 
+      const container = element.closest('li').parentNode
+      let newDocHeight = container.scrollHeight + container.offsetTop
+      if (docHeight != newDocHeight) {
+        docHeight = newDocHeight
+        const data = { query: 'docHeight', param: { docHeight } }
+        window.parent.postMessage(data, '*' )
+      } 
+    }, SEND_DOCHEIGHT_DELAY)
+  }
   
   window.addEventListener('load', event => {
     const interactiveElements = [...document.querySelectorAll('div, ol')].
@@ -117,22 +133,10 @@ if (window.self !== window.top) { // iframe
             return cl && (ty === 'div' && cl.indexOf('horstmann_') == 0 || ty === 'ol' && (cl.indexOf('multiple-choice') == 0 || cl.indexOf('horstmann_ma') == 0))
           })    
     element = interactiveElements[0]
-
+    sendDocHeight()
     document.body.style.overflow = 'hidden'         
-    const resizeObserver = new ResizeObserver(entries => {
-      if (window.EPUB.Education.version !== 1) { // TODO
-        const FUDGE = 50
-        const docHeight = document.body.children[0].scrollHeight + FUDGE
-        const data = { query: 'docHeight', param: { docHeight } }
-        window.parent.postMessage(data, '*' )
-      }
-    })
-    /* 
-       Weirdly, when listening to document.body or 
-       document.documentElement, the document height keeps
-       getting increased
-    */    
-    resizeObserver.observe(document.body.children[0])
+    const mutationObserver = new MutationObserver(sendDocHeight);
+    mutationObserver.observe(element, { childList: true, subtree: true })
   })
 
   window.addEventListener("message", event => {    

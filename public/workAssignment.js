@@ -158,10 +158,11 @@ window.addEventListener('DOMContentLoaded', () => {
     const iframe = document.createElement('iframe')    
     iframePid.set(iframe, problemPid(problems[i]))
     iframe.className = 'exercise-iframe'
-    iframe.src = problems[i].URL 
+    //iframe.src = problems[i].URL 
     document.body.appendChild(iframe)
     iframe.style.display = 'none'
     const action = () => {
+      if (!iframe.src) iframe.src = problems[i].URL 
       if (!savedCopyCheckbox.checked) return
       for (const f of document.getElementsByClassName('exercise-iframe'))
         if (f !== iframe) f.style.display = 'none'
