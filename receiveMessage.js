@@ -112,6 +112,7 @@ if (window.self !== window.top) { // iframe
   let docHeight = 0
   
   function sendDocHeight() {
+    window.scrollTo(0, 0)
     const SEND_DOCHEIGHT_DELAY = 100
     if (window.EPUB.Education.version === 1) return // TODO
     setTimeout(() => { 

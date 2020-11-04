@@ -189,19 +189,19 @@ window.addEventListener('DOMContentLoaded', () => {
         activateButtons()
         document.getElementById('savedcopy').style.display = 'none'
       } else {
-        document.getElementById('submitLTIButton').appendChild(createButton('hc-command', 'Send Score to Learning Management System', async () => {
-          try {
-            responseDiv.textContent = ''
-            let request = { ...lti, workID: work.workID }
-            let response = await postData("/lti/sendScore", request)
-            updateScore(document.querySelector('h1'), response.score)
-          } catch (e) {
-            responseDiv.textContent = `Error: ${e.message}` 
-          }  
-        }))  
         savedCopyCheckbox.checked = false
       }      
     } else {
+      document.getElementById('submitLTIButton').appendChild(createButton('hc-command', 'Send Score to Learning Management System', async () => {
+        try {
+          responseDiv.textContent = ''
+          let request = { ...lti, workID: work.workID }
+          let response = await postData("/lti/sendScore", request)
+          updateScore(document.querySelector('h1'), response.score)
+        } catch (e) {
+          responseDiv.textContent = `Error: ${e.message}` 
+        }  
+      }))  
       document.getElementById('studentInstructions').style.display = 'none'
       activateButtons()
     }       
