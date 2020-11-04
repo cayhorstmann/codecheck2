@@ -142,14 +142,6 @@ window.addEventListener('DOMContentLoaded', () => {
   buttonDiv.id = 'buttons'
   document.body.appendChild(buttonDiv)
   
-    /*  TODO when inside LTI
-        <p>
-            When you are done, click <button onclick="submitGrades()">Record my score</button> to save your score in the gradebook.
-        </p>
-        
-        If instructor, add link to view/maybe edit
-    */        
-
   let allWeightsSame = true
   for (let i = 1; allWeightsSame && i < problems.length; i++) 
     allWeightsSame = Math.abs(problems[0].weight - problems[i].weight) < 0.001   
@@ -196,7 +188,17 @@ window.addEventListener('DOMContentLoaded', () => {
       if (assignment.editKeySaved) {
         activateButtons()
         document.getElementById('savedcopy').style.display = 'none'
-      } else {  
+      } else {
+        document.getElementById('').appendChild(createButton('hc-command', 'Send Score to Learning Management System', () => {
+          try {
+            responseDiv.textContent = ''
+            let request = { ...lti, workID: work.workID }
+            let response = await postData("/lti/sendScore", request)
+            updateScore(document.querySelector('h1'), response.score)
+          } catch (e) {
+            responseDiv.textContent = `Error: ${e.message}` 
+          }  
+        }))  
         savedCopyCheckbox.checked = false
       }      
     } else {

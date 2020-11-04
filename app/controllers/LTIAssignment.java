@@ -231,8 +231,7 @@ Instructor:
 		String resourceID = toolConsumerID + "/" + contextID + "/" + resourceLinkID;
 
 		ObjectNode ltiNode = JsonNodeFactory.instance.objectNode();
-	    ltiNode.put("resourceID", resourceID);
-    	ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckLTIResources", "resourceID", resourceID); 
+	    ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckLTIResources", "resourceID", resourceID); 
 		
 	    String assignmentID = request.queryString("id").orElse(null);
     	String resourceAssignmentID = resourceNode == null ? null : resourceNode.get("assignmentID").asText(); 
@@ -358,7 +357,8 @@ Instructor:
 
 		s3conn.writeNewerJsonObjectToDynamoDB("CodeCheckWork", (ObjectNode) requestNode.get("work"), "assignmentID", "submittedAt");
 		try {
-			double score = submitGradeToLMS(requestNode);
+			String resourceID = request.session().get("resource").get(); // TODO orElseThrow();
+			double score = submitGradeToLMS(resourceID, requestNode, (ObjectNode) requestNode.get("work"));
 	    	result.put("score", score);    	
 			return ok(result);
         } catch (Exception e) {
@@ -367,8 +367,40 @@ Instructor:
         }
 	}	
 	
-	private double submitGradeToLMS(ObjectNode params) throws IOException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, NoSuchAlgorithmException, URISyntaxException {
-        String resourceID = params.get("resourceID").asText();
+	// Needs in request:
+	// LTI stuff
+	/*
+	 *  const studentID = 'ce84b75376544380ad2d933b0b5d0933'
+    const assignment = {"deadlineTime":"23:59","deadlineDate":"","assignmentID":"2010140721rjdzuhv4nv9d4bjiourush0p","problems":[[{"weight":0.2,"qid":"ebook-bjeo-6-ch02-sec03-int1-1","URL":"https://www.interactivities.ws/ebook-bjeo-6-ch02-sec03-int1-1.xhtml"},{"weight":0.2,"qid":"ebook-bjeo-7-ch02-sec03-exampletable-1","URL":"https://www.interactivities.ws/ebook-bjeo-7-ch02-sec03-exampletable-1.xhtml"},{"weight":0.2,"URL":"https://codecheck.it/files/2010140707bejqbxeee69ytosr8y3dbuqyi"},{"weight":0.2,"URL":"https://codecheck.it/files/20101407088y6iesgt3rs6k7h0w45haxajn"},{"weight":0.2,"URL":"https://codecheck.it/files/20101407093e6bham9940egnf4p0p2yg0oi"}]],"isStudent":true,"editKeySaved":true,"sentAt":"2020-11-04T08:24:10.660Z"}
+    let work = {"submittedAt":"2020-10-27T14:54:38.981Z","assignmentID":"375fd6b5351f43a69d06efa6952583f5/12790835b98e48d4ad84e8d37813355d/_647177_1","workID":"ce84b75376544380ad2d933b0b5d0933","problems":{"https://codecheck.it/files/20101407088y6iesgt3rs6k7h0w45haxajn":{"score":0,"state":[{"code":"      note = note.replace(\"a\", \"i\");\n      note = note.replace(\"i\", \"a\");","problemName":"Note.java-2"}]},"ebook-bjeo-6-ch02-sec03-int1-1":{"score":1,"state":{"lastStep":4,"toRemove":[],"correct":5,"errors":0}},"ebook-bjeo-7-ch02-sec03-exampletable-1":{"score":0.75,"state":{"lastStep":2,"correct":3,"errors":0}}}}
+    const lti = {"resourceID":"375fd6b5351f43a69d06efa6952583f5/12790835b98e48d4ad84e8d37813355d/_647177_1","lisOutcomeServiceURL":"https://learn.pfh.de/webapps/gradebook/lti11grade","lisResultSourcedID":"bbgc1551985gi160469","oauthConsumerKey":"horstmann@pfh.de"}
+    
+	 */
+	
+	@Security.Authenticated(Secured.class)
+	public Result sendScore(Http.Request request) throws IOException, NoSuchAlgorithmException {
+		ObjectNode requestNode = (ObjectNode) request.body().asJson();
+    	ObjectNode result = JsonNodeFactory.instance.objectNode();
+    	result.put("submittedAt", Instant.now().toString());    	
+		try {
+	    	// Load work and add to requestNode
+			// TODO: Better to get resourceID from session or from LTI object???
+	    	String resourceID = request.session().get("resource").get(); // TODO orElseThrow();
+	    	String workID = requestNode.get("workID").asText();
+	    	ObjectNode work = s3conn.readJsonObjectFromDynamoDB("CodeCheckWork", "assignmentID", resourceID, "workID", workID);
+	    	if (work == null) return badRequest("Work not found");
+			double score = submitGradeToLMS(resourceID, requestNode, work);
+	    	result.put("score", score);    	
+			return ok(result);
+        } catch (Exception e) {
+            logger.info(Util.getStackTrace(e));
+            return badRequest(e.getMessage());
+        }
+	}	
+	
+	
+	private double submitGradeToLMS(String resourceID, ObjectNode params, ObjectNode work) 
+			throws IOException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, NoSuchAlgorithmException, URISyntaxException {
         String outcomeServiceUrl = params.get("lisOutcomeServiceURL").asText();
 		String sourcedId = params.get("lisResultSourcedID").asText();
 		String oauthConsumerKey = params.get("oauthConsumerKey").asText();
@@ -377,7 +409,7 @@ Instructor:
 	    String assignmentID = resourceNode.get("assignmentID").asText(); 
         
 		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
-		double score = Assignment.score(assignmentNode, (ObjectNode) params.get("work"));
+		double score = Assignment.score(assignmentNode, work);
 		
 		String xmlString1 = "<?xml version = \"1.0\" encoding = \"UTF-8\"?> <imsx_POXEnvelopeRequest xmlns = \"http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0\"> <imsx_POXHeader> <imsx_POXRequestHeaderInfo> <imsx_version>V1.0</imsx_version> <imsx_messageIdentifier>" 
             + System.currentTimeMillis() + "</imsx_messageIdentifier> </imsx_POXRequestHeaderInfo> </imsx_POXHeader> <imsx_POXBody> <replaceResultRequest> <resultRecord> <sourcedGUID> <sourcedId>";
