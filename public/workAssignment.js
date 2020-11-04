@@ -189,7 +189,7 @@ window.addEventListener('DOMContentLoaded', () => {
         activateButtons()
         document.getElementById('savedcopy').style.display = 'none'
       } else {
-        document.getElementById('').appendChild(createButton('hc-command', 'Send Score to Learning Management System', () => {
+        document.getElementById('').appendChild(createButton('hc-command', 'Send Score to Learning Management System', async () => {
           try {
             responseDiv.textContent = ''
             let request = { ...lti, workID: work.workID }
