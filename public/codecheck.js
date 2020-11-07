@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', function () {
     let problem = ''
     let repo = ''
     for (const input of inputs) {
-      let name = inputs[i].getAttribute('name')
+      let name = input.getAttribute('name')
       if (name === 'problem')  
         problem = input.getAttribute('value')
       else if (name === 'repo')
