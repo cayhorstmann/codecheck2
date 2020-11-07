@@ -62,7 +62,10 @@ POST /saveAssignment         controllers.Assignment.saveAssignment(request: Requ
 POST /saveWork               controllers.Assignment.saveWork(request: Request)
 
 # LTI Launch 
-POST /lti/assignment         controllers.LTIAssignment.launch(request: Request)
+POST /lti/assignment           controllers.LTIAssignment.launch(request: Request, assignmentID: String = null)
+# LTI Launch with POST to student URL
+POST /assignment/:assignmentID controllers.LTIAssignment.launch(request: Request, assignmentID: String)
+
 # Student saves work 
 POST /lti/saveWork           controllers.LTIAssignment.saveWork(request: Request)
 # Student request sending score to LMS

@@ -225,7 +225,7 @@ Instructor:
   	 
 	 */
 	
-    public Result launch(Http.Request request) throws IOException {    
+    public Result launch(Http.Request request, String assignmentID) throws IOException {    
 	 	Map<String, String[]> postParams = request.body().asFormUrlEncoded();
 	 	logger.info("LTIAssignment.launch: " + Util.paramsToString(postParams));
 	 	if (!validate(request)) {
@@ -243,7 +243,8 @@ Instructor:
 		ObjectNode ltiNode = JsonNodeFactory.instance.objectNode();
 	    ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckLTIResources", "resourceID", resourceID); 
 		
-	    String assignmentID = request.queryString("id").orElse(null);
+	    if (assignmentID == null)
+	    	assignmentID = request.queryString("id").orElse(null);
     	String resourceAssignmentID = resourceNode == null ? null : resourceNode.get("assignmentID").asText(); 
 	    
 	    if (isInstructor(postParams)) {		
