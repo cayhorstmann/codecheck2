@@ -198,6 +198,20 @@ document.addEventListener('DOMContentLoaded', function () {
     if (repo === 'wiley') return problem  
     else return window.location.href
   }
+  
+  let docHeight = 0  
+  function sendDocHeight() {
+    window.scrollTo(0, 0)
+    const SEND_DOCHEIGHT_DELAY = 100
+    setTimeout(() => { 
+      let newDocHeight = document.documentElement.scrollHeight + document.documentElement.offsetTop
+      if (docHeight != newDocHeight) {
+        docHeight = newDocHeight
+        const data = { query: 'docHeight', param: { docHeight } }
+        window.parent.postMessage(data, '*' )
+      } 
+    }, SEND_DOCHEIGHT_DELAY)
+  }  
 
   let form = document.getElementsByTagName('form')[0]
   let qid = questionID(form)
@@ -281,19 +295,8 @@ document.addEventListener('DOMContentLoaded', function () {
   if (inIframe()) {
     document.body.style.height = '100%'
     document.body.style.overflow = 'hidden' 
-    const resizeObserver = new ResizeObserver(entries => {
-      const docHeight = document.documentElement.scrollHeight 
-      const data = { query: 'docHeight', param: { docHeight } }
-      console.log('Posting to parent', data)
-      window.parent.postMessage(data, '*' )
-    })
-    /* 
-       Weirdly, when listening to document.body or 
-       document.documentElement, the document height keeps
-       getting increased
-    */    
-    resizeObserver.observe(document.body.children[0])
-    resizeObserver.observe(document.body.children[1])
+    const mutationObserver = new MutationObserver(sendDocHeight);
+    mutationObserver.observe(document.documentElement, { childList: true, subtree: true })    
     
     const data = { query: 'retrieve', param: { qid } }  
     console.log('Posting to parent', data)
