@@ -192,7 +192,7 @@ window.addEventListener('DOMContentLoaded', () => {
         savedCopyCheckbox.checked = false
       }      
     } else {
-      document.getElementById('submitLTIButton').appendChild(createButton('hc-command', 'Send Score to Learning Management System', async () => {
+      document.getElementById('submitLTIButton').appendChild(createButton('hc-command', 'Resend Score', async () => {
         try {
           responseDiv.textContent = ''
           let request = { ...lti, workID: work.workID }
