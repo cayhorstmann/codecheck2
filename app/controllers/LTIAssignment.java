@@ -44,8 +44,18 @@ import play.Logger;
 import play.libs.Json;
 import play.mvc.Controller;
 import play.mvc.Http;
+import play.mvc.Http.Session;
 import play.mvc.Result;
 import play.mvc.Security;
+
+   
+/*
+ * 
+Session cookies (LTI only)
+  "user": toolConsumerID + "/" + userID (needs toolConsumerID because it's used for secure identification)
+  "resource": toolConsumerID + "/" + contextID + "/" + resourceLinkID
+*/
+
 
 public class LTIAssignment extends Controller {
 	@Inject private S3Connection s3conn;
@@ -92,7 +102,7 @@ public class LTIAssignment extends Controller {
 				.addingToSession(request, "resource", resourceID);  		    		
  	}
     
-	@Security.Authenticated(Secured.class)
+	@Security.Authenticated(Secured.class) // Instructor
 	public Result saveAssignment(Http.Request request) throws IOException {		
     	String editKey = request.session().get("user").get(); // TODO orElseThrow();    	
     	String resourceID = request.session().get("resource").get(); // TODO orElseThrow();
@@ -118,7 +128,7 @@ public class LTIAssignment extends Controller {
     		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
     		if (assignmentNode == null) return badRequest("Assignment not found");
     		if (!editKey.equals(assignmentNode.get("editKey").asText())) 
-    			return badRequest("Edit key does not match");
+    			return badRequest("Edit keys do not match");
     	}
 
     	String launchPresentationReturnURL = params.has("launchPresentationReturnURL") ? 
@@ -145,7 +155,7 @@ public class LTIAssignment extends Controller {
     	return ok("Assignment added");
 	}
 
-	@Security.Authenticated(Secured.class)
+	@Security.Authenticated(Secured.class) // Instructor
 	public Result viewSubmissions(Http.Request request) throws IOException {		
     	String resourceID = request.session().get("resource").get(); // TODO orElseThrow();
     	ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckLTIResources", "resourceID", resourceID); 
@@ -172,7 +182,7 @@ public class LTIAssignment extends Controller {
 		return ok(views.html.viewSubmissions.render(submissions.toString(), editURL)); 	
 	}
 	
-	@Security.Authenticated(Secured.class)
+	@Security.Authenticated(Secured.class) // Instructor
 	public Result viewSubmission(Http.Request request, String workID) throws IOException {
     	String resourceID = request.session().get("resource").get(); // TODO orElseThrow();
     	String work = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", resourceID, "workID", workID);
@@ -185,7 +195,7 @@ public class LTIAssignment extends Controller {
     	return ok(views.html.workAssignment.render(assignment, work, workID, "undefined"));
 	}
 	
-	@Security.Authenticated(Secured.class)
+	@Security.Authenticated(Secured.class) // Instructor
 	public Result editAssignment(Http.Request request) throws IOException {
     	String editKey = request.session().get("user").get(); // TODO orElseThrow();    	
     	String resourceID = request.session().get("resource").get(); // TODO orElseThrow();
@@ -195,7 +205,7 @@ public class LTIAssignment extends Controller {
 		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
     	if (assignmentNode == null) return badRequest("Assignment not found");
 		if (!editKey.equals(assignmentNode.get("editKey").asText())) 
-			return badRequest("Edit key does not match");
+			return badRequest("Edit keys don't match");
     	assignmentNode.put("saveURL", "/lti/saveAssignment");		
 		return ok(views.html.editAssignment.render(assignmentNode.toString()));		
 	}
@@ -301,7 +311,8 @@ Instructor:
 	        	assignmentNode.put("sentAt", Instant.now().toString());		
 
 	        	return ok(views.html.workAssignment.render(assignmentNode.toString(), work, userID, ltiNode.toString()))
-						.addingToSession(request, "user", toolConsumerID + "/" + userID); 
+						.addingToSession(request, "user", toolConsumerID + "/" + userID)
+						.addingToSession(request, "resource", resourceID);
 	    	}	    	
 	    }
  	}		
@@ -348,16 +359,20 @@ Instructor:
 		return sharedSecret;
 	}	    
 
-	@Security.Authenticated(Secured.class)
+	@Security.Authenticated(Secured.class) // Student
 	public Result saveWork(Http.Request request) throws IOException, NoSuchAlgorithmException {
 		//TODO: Check that the resourceID and workID matches? Or just put it?
-		ObjectNode requestNode = (ObjectNode) request.body().asJson();
-    	ObjectNode result = JsonNodeFactory.instance.objectNode();
-    	result.put("submittedAt", Instant.now().toString());    	
-
-		s3conn.writeNewerJsonObjectToDynamoDB("CodeCheckWork", (ObjectNode) requestNode.get("work"), "assignmentID", "submittedAt");
 		try {
+	    	String toolAndUserID = request.session().get("user").get(); // TODO orElseThrow();
 			String resourceID = request.session().get("resource").get(); // TODO orElseThrow();
+			ObjectNode requestNode = (ObjectNode) request.body().asJson();
+			ObjectNode workNode = (ObjectNode) requestNode.get("work");
+	    	if (!toolAndUserID.endsWith("/" + workNode.get("workID").asText()))
+	    		throw new IllegalStateException("user " + toolAndUserID + " does not match request");
+	    	ObjectNode result = JsonNodeFactory.instance.objectNode();
+	    	result.put("submittedAt", Instant.now().toString());    	
+	
+			s3conn.writeNewerJsonObjectToDynamoDB("CodeCheckWork", workNode, "assignmentID", "submittedAt");
 			double score = submitGradeToLMS(resourceID, requestNode, (ObjectNode) requestNode.get("work"));
 	    	result.put("score", score);    	
 			return ok(result);
@@ -367,29 +382,20 @@ Instructor:
         }
 	}	
 	
-	// Needs in request:
-	// LTI stuff
-	/*
-	 *  const studentID = 'ce84b75376544380ad2d933b0b5d0933'
-    const assignment = {"deadlineTime":"23:59","deadlineDate":"","assignmentID":"2010140721rjdzuhv4nv9d4bjiourush0p","problems":[[{"weight":0.2,"qid":"ebook-bjeo-6-ch02-sec03-int1-1","URL":"https://www.interactivities.ws/ebook-bjeo-6-ch02-sec03-int1-1.xhtml"},{"weight":0.2,"qid":"ebook-bjeo-7-ch02-sec03-exampletable-1","URL":"https://www.interactivities.ws/ebook-bjeo-7-ch02-sec03-exampletable-1.xhtml"},{"weight":0.2,"URL":"https://codecheck.it/files/2010140707bejqbxeee69ytosr8y3dbuqyi"},{"weight":0.2,"URL":"https://codecheck.it/files/20101407088y6iesgt3rs6k7h0w45haxajn"},{"weight":0.2,"URL":"https://codecheck.it/files/20101407093e6bham9940egnf4p0p2yg0oi"}]],"isStudent":true,"editKeySaved":true,"sentAt":"2020-11-04T08:24:10.660Z"}
-    let work = {"submittedAt":"2020-10-27T14:54:38.981Z","assignmentID":"375fd6b5351f43a69d06efa6952583f5/12790835b98e48d4ad84e8d37813355d/_647177_1","workID":"ce84b75376544380ad2d933b0b5d0933","problems":{"https://codecheck.it/files/20101407088y6iesgt3rs6k7h0w45haxajn":{"score":0,"state":[{"code":"      note = note.replace(\"a\", \"i\");\n      note = note.replace(\"i\", \"a\");","problemName":"Note.java-2"}]},"ebook-bjeo-6-ch02-sec03-int1-1":{"score":1,"state":{"lastStep":4,"toRemove":[],"correct":5,"errors":0}},"ebook-bjeo-7-ch02-sec03-exampletable-1":{"score":0.75,"state":{"lastStep":2,"correct":3,"errors":0}}}}
-    const lti = {"resourceID":"375fd6b5351f43a69d06efa6952583f5/12790835b98e48d4ad84e8d37813355d/_647177_1","lisOutcomeServiceURL":"https://learn.pfh.de/webapps/gradebook/lti11grade","lisResultSourcedID":"bbgc1551985gi160469","oauthConsumerKey":"horstmann@pfh.de"}
-    
-	 */
-	
-	@Security.Authenticated(Secured.class)
+	@Security.Authenticated(Secured.class) // Student
 	public Result sendScore(Http.Request request) throws IOException, NoSuchAlgorithmException {
 		ObjectNode requestNode = (ObjectNode) request.body().asJson();
     	ObjectNode result = JsonNodeFactory.instance.objectNode();
     	result.put("submittedAt", Instant.now().toString());    	
 		try {
-	    	// Load work and add to requestNode
-			// TODO: Better to get resourceID from session or from LTI object???
-	    	String resourceID = request.session().get("resource").get(); // TODO orElseThrow();
-	    	String workID = requestNode.get("workID").asText();
-	    	ObjectNode work = s3conn.readJsonObjectFromDynamoDB("CodeCheckWork", "assignmentID", resourceID, "workID", workID);
-	    	if (work == null) return badRequest("Work not found");
-			double score = submitGradeToLMS(resourceID, requestNode, work);
+	    	String toolAndUserID = request.session().get("user").get(); // TODO orElseThrow();    	
+			String resourceID = request.session().get("resource").get(); // TODO orElseThrow();
+			String workID = requestNode.get("workID").asText();
+	    	if (!toolAndUserID.endsWith("/" + workID))
+	    		throw new IllegalStateException("user " + toolAndUserID + " does not match request");
+	    	ObjectNode workNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckWork", "assignmentID", resourceID, "workID", workID);
+	    	if (workNode == null) return badRequest("Work not found");
+			double score = submitGradeToLMS(resourceID, requestNode, workNode);
 	    	result.put("score", score);    	
 			return ok(result);
         } catch (Exception e) {

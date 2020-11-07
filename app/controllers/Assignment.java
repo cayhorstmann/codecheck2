@@ -25,7 +25,7 @@ package controllers;
  
  CodeCheckWork
    assignmentID [partition key]
-   workID [sort key] // ccid + editKey or LTI resourceID
+   workID [sort key] // ccid + editKey or LTI userID
    problems // TODO: Should have been named questions
      map from qids to { state, score, pid? }
    submittedAt
@@ -35,7 +35,7 @@ package controllers;
    assignmentID [primary key]
    deadlineDate
    deadlineTime
-   editKey
+   editKey // for LTI assignments: tool consumer ID + user ID
    problems
      array of // One per group
        array of { URL, qid?, weight } // qid for book repo
@@ -47,8 +47,8 @@ package controllers;
  CodeCheckLTICredentials
    oauth_consumer_key [primary key]
    shared_secret
-   
- */
+
+*/
 
 import java.io.IOException;
 import java.net.URL;

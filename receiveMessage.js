@@ -117,6 +117,8 @@ if (window.self !== window.top) { // iframe
     if (window.EPUB.Education.version === 1) return // TODO
     setTimeout(() => { 
       const container = element.closest('li').parentNode
+        // When using container = document.documentElement, the document grows without bound
+        // TODO: Why does this work in codecheck.js but not here?
       let newDocHeight = container.scrollHeight + container.offsetTop
       if (docHeight != newDocHeight) {
         docHeight = newDocHeight
@@ -135,7 +137,8 @@ if (window.self !== window.top) { // iframe
           })    
     element = interactiveElements[0]
     sendDocHeight()
-    document.body.style.overflow = 'hidden'         
+    document.body.style.overflow = 'hidden'
+    // ResizeObserver did not work         
     const mutationObserver = new MutationObserver(sendDocHeight);
     mutationObserver.observe(element, { childList: true, subtree: true })
   })
