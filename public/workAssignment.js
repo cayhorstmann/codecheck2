@@ -107,8 +107,10 @@ window.addEventListener('DOMContentLoaded', () => {
     for (const btn of buttonDiv.children) {
       btn.classList.remove('hc-disabled')
     }
-    buttonDiv.children[0].classList.add('active')
-    setTimeout(() => buttonDiv.children[0].click(), 1000)
+    const tab = 'tab' in work ? work.tab : 0  
+    //TODO: Initial button might not be zero
+    buttonDiv.children[tab].classList.add('active')
+    setTimeout(() => buttonDiv.children[tab].click(), 1000)
     //document.getElementsByTagName('iframe')[0].style.display = 'block'                   
   }
   
@@ -162,7 +164,8 @@ window.addEventListener('DOMContentLoaded', () => {
       for (const btn of buttonDiv.children)
         if (btn !== button)
           btn.classList.remove('active')
-      button.classList.add('active')  
+      button.classList.add('active')
+      work.tab = i  
     }    
 
     const button = createButton('hc-step', '' + (i + 1), action)

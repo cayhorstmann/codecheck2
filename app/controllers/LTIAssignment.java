@@ -97,7 +97,8 @@ public class LTIAssignment extends Controller {
 		String launchPresentationReturnURL = Util.getParam(postParams, "launch_presentation_return_url");
 	    assignmentNode.put("launchPresentationReturnURL", launchPresentationReturnURL);
 
-		return ok(views.html.editAssignment.render(assignmentNode.toString()))
+		return ok(views.html.editAssignment.render(assignmentNode.toString(), false))
+				.withNewSession()
 				.addingToSession(request, "user", toolConsumerID + "/" + userID)
 				.addingToSession(request, "resource", resourceID);  		    		
  	}
@@ -207,7 +208,7 @@ public class LTIAssignment extends Controller {
 		if (!editKey.equals(assignmentNode.get("editKey").asText())) 
 			return badRequest("Edit keys don't match");
     	assignmentNode.put("saveURL", "/lti/saveAssignment");		
-		return ok(views.html.editAssignment.render(assignmentNode.toString()));		
+		return ok(views.html.editAssignment.render(assignmentNode.toString(), false));		
 	}
 	
 	/*
@@ -255,7 +256,8 @@ Instructor:
 			    if (launchPresentationReturnURL != null)
 			    	assignmentNode.put("launchPresentationReturnURL", launchPresentationReturnURL);
 
-				return ok(views.html.editAssignment.render(assignmentNode.toString()))
+				return ok(views.html.editAssignment.render(assignmentNode.toString(), false))
+						.withNewSession()
 						.addingToSession(request, "user", toolConsumerID + "/" + userID)
 						.addingToSession(request, "resource", resourceID);  		    		
 		    }
@@ -277,6 +279,7 @@ Instructor:
 	    	assignmentNode.put("sentAt", Instant.now().toString());				
 	    	String work = "{ assignmentID: '" + resourceID + "', workID: '" + userID + "', problems: {} }";
 			return ok(views.html.workAssignment.render(assignmentNode.toString(), work, userID, "undefined" /* lti */))
+					.withNewSession()
 					.addingToSession(request, "user", toolConsumerID + "/" + userID)
 					.addingToSession(request, "resource", resourceID);					
 	    } else { // Student
@@ -312,6 +315,7 @@ Instructor:
 	        	assignmentNode.put("sentAt", Instant.now().toString());		
 
 	        	return ok(views.html.workAssignment.render(assignmentNode.toString(), work, userID, ltiNode.toString()))
+	        			.withNewSession()
 						.addingToSession(request, "user", toolConsumerID + "/" + userID)
 						.addingToSession(request, "resource", resourceID);
 	    	}	    	

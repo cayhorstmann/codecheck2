@@ -1,4 +1,4 @@
-@(assignment: String)
+@(assignment: String, askForDeadline: Boolean)
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -6,7 +6,8 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <link rel="stylesheet" href="/assets/codecheck.css"/>
     <script type="text/javascript">//<![CDATA[
-    const assignment = @Html(assignment)    
+    const assignment = @Html(assignment)
+    const askForDeadline = @askForDeadline
     //]]></script>
     <script src="/assets/main.js" type="text/javascript"></script>
     <script src="/assets/editAssignment.js" type="text/javascript"></script>    
@@ -16,9 +17,11 @@
  <h1>Edit Assignment</h1>
  <p>Enter problem URLs or IDs, one per line:</p>
  <textarea style="display: block; width: 90%;" id="problems" rows="10"></textarea>
+ <div id="deadlineDiv">
  <p>Deadline (<b>In UTC</b>):</p>
  <input type="date" id="deadlineDate" />  <input type="time" id="deadlineTime" value="23:59"/>
  <p>Leave date blank for no deadline.</p>
+ </div>
  <div id='saveButtonDiv'></div>
  <div id="response" class="message" style='display: none'></div>
  <dl id="urls">

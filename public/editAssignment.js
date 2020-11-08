@@ -21,11 +21,16 @@ window.addEventListener('DOMContentLoaded', () => {
   urlsDl.style.display = 'none'
   if ('problems' in assignment)  
     document.getElementById('problems').value = format(assignment.problems)
-  if ('deadlineDate' in assignment)  
-    document.getElementById('deadlineDate').value = assignment.deadlineDate
-  if ('deadlineTime' in assignment)  
-    document.getElementById('deadlineTime').value = assignment.deadlineTime
-
+  if (askForDeadline) {
+    if ('deadlineDate' in assignment)  
+      document.getElementById('deadlineDate').value = assignment.deadlineDate
+    if ('deadlineTime' in assignment)  
+      document.getElementById('deadlineTime').value = assignment.deadlineTime
+  } else {  
+    const deadlineDiv = document.getElementById('deadlineDiv')
+    deadlineDiv.style.display = 'none'
+  }
+  
   const privateURLSpan = document.getElementById('privateURL')
   privateURLSpan.parentNode.appendChild(createButton('hc-command', 'Copy', () => { 
     window.getSelection().selectAllChildren(privateURLSpan); 
@@ -41,9 +46,11 @@ window.addEventListener('DOMContentLoaded', () => {
           assignmentID: assignment.assignmentID,
           editKey: assignment.editKey, // undefined when cloned
           problems: document.getElementById('problems').value,
-          deadlineDate: document.getElementById('deadlineDate').value,
-          deadlineTime: document.getElementById('deadlineTime').value
         }
+      if (askForDeadline) {
+        request.deadlineDate = document.getElementById('deadlineDate').value
+        request.deadlineTime = document.getElementById('deadlineTime').value        
+      }
       if ('launchPresentationReturnURL' in assignment)
         request.launchPresentationReturnURL = assignment.launchPresentationReturnURL
       let response = await postData(assignment.saveURL, request)

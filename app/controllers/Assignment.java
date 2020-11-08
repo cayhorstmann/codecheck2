@@ -211,7 +211,7 @@ public class Assignment extends Controller {
     			return badRequest("editKey " + editKey + " does not match");
     	} 
     	assignmentNode.put("saveURL", "/saveAssignment");
-    	return ok(views.html.editAssignment.render(assignmentNode.toString()));     	    	
+    	return ok(views.html.editAssignment.render(assignmentNode.toString(), true));     	    	
     }
     
     /*
@@ -232,6 +232,11 @@ public class Assignment extends Controller {
         }
     	boolean editKeySaved;
     	String work;
+    	if (editKey == null && isStudent) {
+    		Optional<Http.Cookie> editKeyCookie = request.getCookie("cckey");
+            editKey = editKeyCookie.map(Http.Cookie::value).orElse(null);
+       		editKeySaved = false; // TODO: ???
+    	}
     	if (editKey == null) { 
        		editKey = Util.createPrivateUID();
        		editKeySaved = false;
@@ -257,8 +262,9 @@ public class Assignment extends Controller {
     		assignmentNode.put("returnToWorkURL", returnToWorkURL); 
         	assignmentNode.put("editKeySaved", editKeySaved);
         	assignmentNode.put("sentAt", Instant.now().toString());
-        	Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withPath("/").withMaxAge(Duration.ofDays(180)).build();
-        	return ok(views.html.workAssignment.render(assignmentNode.toString(), work, ccid, lti)).withCookies(newCookie);
+        	Http.Cookie newCookie1 = Http.Cookie.builder("ccid", ccid).withPath("/").withMaxAge(Duration.ofDays(180)).build();
+        	Http.Cookie newCookie2 = Http.Cookie.builder("cckey", editKey).withPath("/").withMaxAge(Duration.ofDays(180)).build();
+        	return ok(views.html.workAssignment.render(assignmentNode.toString(), work, ccid, lti)).withCookies(newCookie1, newCookie2);
     	}
     	else // Instructor--no cookie
     		return ok(views.html.workAssignment.render(assignmentNode.toString(), work, ccid, lti));    	
