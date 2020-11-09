@@ -137,23 +137,28 @@ public class LTIAssignment extends Controller {
     	params.remove("launchPresentationReturnURL");
 
     	s3conn.writeJsonObjectToDynamoDB("CodeCheckAssignments", params);
-    	
+
+    	ObjectNode result = JsonNodeFactory.instance.objectNode();
+		String assignmentURL = Util.prefix(request) + "lti/assignment?id=" + assignmentID;
+    	result.put("assignmentURL", assignmentURL);    	
+
+   		/*
+   		 * Call launchPresentationReturnURL with:
+   		 * return_type=lti_launch_url
+   		 * url=assignment URL (with id=...)
+   		 * Util.getParams(launchPresentationReturnURL)
+   		 */
+    	/*
     	if (launchPresentationReturnURL != null) {
-	   		/*
-	   		 * Call launchPresentationReturnURL with:
-	   		 * return_type=lti_launch_url
-	   		 * url=assignment URL (with id=...)
-	   		 * Util.getParams(launchPresentationReturnURL)
-	   		 */
-			String assignmentURL = Util.prefix(request) + "lti/assignment?id=" + assignmentID;
 			launchPresentationReturnURL = launchPresentationReturnURL
 					+ (launchPresentationReturnURL.contains("?") ? "&" : "?")     					
 					+ "return_type=lti_launch_url"
-					+ "&url=" + URLEncoder.encode(assignmentURL, "UTF-8" /* StandardCharsets.UTF_8 */); // TODO
+					+ "&url=" + URLEncoder.encode(assignmentURL, "UTF-8"); // TODO StandardCharsets.UTF_8 
 			new URL(launchPresentationReturnURL).openStream().close();
 			// TODO: Capture output from above and return?
     	}
-    	return ok("Assignment added");
+	*/
+    	return ok(result); // TODO: Maybe we need to let the client redirect ???
 	}
 
 	@Security.Authenticated(Secured.class) // Instructor

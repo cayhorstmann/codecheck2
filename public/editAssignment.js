@@ -51,8 +51,10 @@ window.addEventListener('DOMContentLoaded', () => {
         request.deadlineDate = document.getElementById('deadlineDate').value
         request.deadlineTime = document.getElementById('deadlineTime').value        
       }
+      /*
       if ('launchPresentationReturnURL' in assignment)
         request.launchPresentationReturnURL = assignment.launchPresentationReturnURL
+      */
       let response = await postData(assignment.saveURL, request)
       if (response.error !== undefined) {
         responseDiv.textContent = `Error: ${response.error}`
@@ -64,6 +66,29 @@ window.addEventListener('DOMContentLoaded', () => {
           document.getElementById('privateURL').textContent = response.privateURL
           urlsDl.style.display = 'block'
         }
+        if ('assignmentURL' in response) {
+          if ('launchPresentationReturnURL' in assignment) {
+            const params = new URLSearchParams()
+            params.append('return_type', 'lti_launch_url')
+            params.append('url', response.assignmentURL)
+            const url =  launchPresentationReturnURL
+              + (launchPresentationReturnURL.contains("?") ? "&" : "?")
+              + params.toString()
+            window.location.href = url
+          } else {
+            responseDiv.textContent = `Assignment URL: ${response.assignmentURL}`
+            responseDiv.style.display = 'block'          
+          }
+        }
+        /*
+      if (launchPresentationReturnURL != null) {
+      launchPresentationReturnURL =                
+          + "return_type=lti_launch_url"
+          + "&url=" + URLEncoder.encode(assignmentURL, "UTF-8"); // TODO StandardCharsets.UTF_8 
+      new URL(launchPresentationReturnURL).openStream().close();
+      // TODO: Capture output from above and return?
+      }
+  */
       }
     } catch (e) {
       responseDiv.textContent = `Error: ${e.message}`            
