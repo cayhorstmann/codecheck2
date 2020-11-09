@@ -220,7 +220,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }))    
     if ('editAssignmentURL' in assignment)
       document.getElementById('viewSubmissions').appendChild(createButton('hc-command', 'Edit assignment', () => {
-          window.open(assignment.viewSubmissionsURL, '_blank')        
+          window.open(assignment.editAssignmentURL, '_blank')        
         }))    
     activateButtons()
     document.getElementById('studentInstructions').style.display = 'none'

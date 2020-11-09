@@ -72,7 +72,7 @@ window.addEventListener('DOMContentLoaded', () => {
             params.append('return_type', 'lti_launch_url')
             params.append('url', response.assignmentURL)
             const url =  assignment.launchPresentationReturnURL
-              + (assignment.launchPresentationReturnURL.contains("?") ? "&" : "?")
+              + (assignment.launchPresentationReturnURL.includes("?") ? "&" : "?")
               + params.toString()
             window.location.href = url
           } else {
