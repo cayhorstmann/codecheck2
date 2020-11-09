@@ -22,27 +22,27 @@ package controllers;
  work record. 
  
  Tables:
- 
- CodeCheckWork
-   assignmentID [partition key]
-   workID [sort key] // ccid + editKey or LTI userID
-   problems // TODO: Should have been named questions
-     map from qids to { state, score, pid? }
-   submittedAt
-   lastProblem
    
  CodeCheckAssignment
    assignmentID [primary key]
    deadlineDate
    deadlineTime
-   editKey // for LTI assignments: tool consumer ID + user ID
+   editKey // LTI: tool consumer ID + user ID
    problems
      array of // One per group
        array of { URL, qid?, weight } // qid for book repo
   
  CodeCheckLTIResources
    resourceID [primary key] // LTI tool consumer ID + course ID + resource ID 
-   assignmentID 
+   assignmentID
+   
+ CodeCheckWork
+   assignmentID [partition key] // non-LTI: assignmentID in CodeCheckAssignments, LTI: tool consumer ID + course ID + resource ID, TODO: Should have been named resourceID  
+   workID [sort key] // non-LTI: ccid + editKey, LTI: userID
+   problems // TODO: Should have been named questions
+     map from qids to { state, score, pid? }
+   submittedAt
+   lastProblem    
    
  CodeCheckLTICredentials
    oauth_consumer_key [primary key]
@@ -292,9 +292,7 @@ public class Assignment extends Controller {
 			submissionData.put("viewURL", "/private/submission/" + assignmentID + "/" + ccid + "/" + submissionEditKey); 
 			submissions.add(submissionData);			
 		}
-		String editURL = "/private/editAssignment/" + assignmentID + "/" + editKey;
-		
-		return ok(views.html.viewSubmissions.render(submissions.toString(), editURL)); 
+		return ok(views.html.viewSubmissions.render(submissions.toString())); 
 	}
 
 	/*

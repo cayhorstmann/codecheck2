@@ -84,6 +84,5 @@ window.addEventListener('DOMContentLoaded', () => {
         } 
       }               
     }))  
-  }
-  buttonDiv.append(createButton('hc-command', 'Edit Assignment', () => window.open(editURL)))  
+  }  
 })

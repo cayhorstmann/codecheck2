@@ -198,7 +198,7 @@ window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('submitLTIButton').appendChild(createButton('hc-command', 'Resend Score', async () => {
         try {
           responseDiv.textContent = ''
-          let request = { ...lti, workID: work.workID }
+          let request = { ...lti, workID: work.workID, resourceID: work.assignmentID }
           let response = await postData("/lti/sendScore", request)
           updateScore(document.querySelector('h1'), response.score)
         } catch (e) {
@@ -214,8 +214,12 @@ window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('abovebuttons').appendChild(createButton('hc-command', 'Clone', () => {
         window.open(assignment.cloneURL, '_blank')        
       }))
-    if ('viewSubmissionsURL' in assignment) 
+    if ('viewSubmissionsURL' in assignment)
       document.getElementById('viewSubmissions').appendChild(createButton('hc-command', 'View submissions', () => {
+          window.open(assignment.viewSubmissionsURL, '_blank')        
+        }))    
+    if ('editAssignmentURL' in assignment)
+      document.getElementById('viewSubmissions').appendChild(createButton('hc-command', 'Edit assignment', () => {
           window.open(assignment.viewSubmissionsURL, '_blank')        
         }))    
     activateButtons()

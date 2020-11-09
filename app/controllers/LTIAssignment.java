@@ -78,7 +78,7 @@ public class LTIAssignment extends Controller {
     public Result createAssignment(Http.Request request) throws UnsupportedEncodingException {    
 	 	Map<String, String[]> postParams = request.body().asFormUrlEncoded();
 	 	if (!validate(request)) {
-	 		return badRequest("Failed OAuth validation").withNewSession();
+	 		return badRequest("Failed OAuth validation");
 	 	}	 	
 	 	
 		if (!isInstructor(postParams)) 
@@ -97,14 +97,12 @@ public class LTIAssignment extends Controller {
 		String launchPresentationReturnURL = Util.getParam(postParams, "launch_presentation_return_url");
 	    assignmentNode.put("launchPresentationReturnURL", launchPresentationReturnURL);
 
-		return ok(views.html.editAssignment.render(assignmentNode.toString(), false))
-				.withNewSession()
-				.addingToSession(request, "user", toolConsumerID + "/" + userID)
-				.addingToSession(request, "resource", resourceID);  		    		
+		return ok(views.html.editAssignment.render(assignmentNode.toString(), false));
  	}
     
 	@Security.Authenticated(Secured.class) // Instructor
 	public Result saveAssignment(Http.Request request) throws IOException {		
+		// TODO Eliminate session
     	String editKey = request.session().get("user").get(); // TODO orElseThrow();    	
     	String resourceID = request.session().get("resource").get(); // TODO orElseThrow();
 
@@ -163,6 +161,7 @@ public class LTIAssignment extends Controller {
 
 	@Security.Authenticated(Secured.class) // Instructor
 	public Result viewSubmissions(Http.Request request) throws IOException {		
+		// TODO eliminate session
     	String resourceID = request.session().get("resource").get(); // TODO orElseThrow();
     	ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckLTIResources", "resourceID", resourceID); 
     	if (resourceNode == null) return badRequest("No resource");
@@ -182,14 +181,12 @@ public class LTIAssignment extends Controller {
 			submissionData.put("viewURL", "/lti/viewSubmission/" + workID); 
 			submissions.add(submissionData);
 		}
-		// TODO
-		String editURL = "/lti/editAssignment";
-		
-		return ok(views.html.viewSubmissions.render(submissions.toString(), editURL)); 	
+		return ok(views.html.viewSubmissions.render(submissions.toString())); 	
 	}
 	
 	@Security.Authenticated(Secured.class) // Instructor
 	public Result viewSubmission(Http.Request request, String workID) throws IOException {
+		// TODO eliminate session
     	String resourceID = request.session().get("resource").get(); // TODO orElseThrow();
     	String work = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", resourceID, "workID", workID);
     	if (work == null) return badRequest("Work not found");
@@ -203,6 +200,7 @@ public class LTIAssignment extends Controller {
 	
 	@Security.Authenticated(Secured.class) // Instructor
 	public Result editAssignment(Http.Request request) throws IOException {
+		// TODO eliminate session
     	String editKey = request.session().get("user").get(); // TODO orElseThrow();    	
     	String resourceID = request.session().get("resource").get(); // TODO orElseThrow();
     	ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckLTIResources", "resourceID", resourceID); 
@@ -235,7 +233,7 @@ Instructor:
 	 	Map<String, String[]> postParams = request.body().asFormUrlEncoded();
 	 	logger.info("LTIAssignment.launch: " + Util.paramsToString(postParams));
 	 	if (!validate(request)) {
-	 		return badRequest("Failed OAuth validation").withNewSession();
+	 		return badRequest("Failed OAuth validation");
 	 	}	 	
 	 	
     	String userID = Util.getParam(postParams, "user_id");
@@ -262,9 +260,9 @@ Instructor:
 			    	assignmentNode.put("launchPresentationReturnURL", launchPresentationReturnURL);
 
 				return ok(views.html.editAssignment.render(assignmentNode.toString(), false))
-						.withNewSession()
-						.addingToSession(request, "user", toolConsumerID + "/" + userID)
-						.addingToSession(request, "resource", resourceID);  		    		
+					.withNewSession()
+					.addingToSession(request, "user", toolConsumerID + "/" + userID)
+					.addingToSession(request, "resource", resourceID);  		
 		    }
 		    else if (assignmentID == null && resourceAssignmentID != null) 
 		    	assignmentID = resourceAssignmentID;
@@ -281,12 +279,13 @@ Instructor:
 			
 			assignmentNode.put("isStudent", false);
 			assignmentNode.put("viewSubmissionsURL", "/lti/viewSubmissions");
+			assignmentNode.put("editAssignmentURL", "/lti/editAssignment");
 	    	assignmentNode.put("sentAt", Instant.now().toString());				
 	    	String work = "{ assignmentID: '" + resourceID + "', workID: '" + userID + "', problems: {} }";
 			return ok(views.html.workAssignment.render(assignmentNode.toString(), work, userID, "undefined" /* lti */))
-					.withNewSession()
-					.addingToSession(request, "user", toolConsumerID + "/" + userID)
-					.addingToSession(request, "resource", resourceID);					
+				.withNewSession()
+				.addingToSession(request, "user", toolConsumerID + "/" + userID)
+				.addingToSession(request, "resource", resourceID);  					
 	    } else { // Student
 		    if (resourceNode == null) 
 	    		return badRequest("No resource with ID " + resourceID);	    		
@@ -319,10 +318,7 @@ Instructor:
 	        	assignmentNode.put("editKeySaved", true);
 	        	assignmentNode.put("sentAt", Instant.now().toString());		
 
-	        	return ok(views.html.workAssignment.render(assignmentNode.toString(), work, userID, ltiNode.toString()))
-	        			.withNewSession()
-						.addingToSession(request, "user", toolConsumerID + "/" + userID)
-						.addingToSession(request, "resource", resourceID);
+	        	return ok(views.html.workAssignment.render(assignmentNode.toString(), work, userID, ltiNode.toString()));
 	    	}	    	
 	    }
  	}		
@@ -369,21 +365,16 @@ Instructor:
 		return sharedSecret;
 	}	    
 
-	@Security.Authenticated(Secured.class) // Student
+	// TODO @Security.Authenticated(Secured.class) // Student
 	public Result saveWork(Http.Request request) throws IOException, NoSuchAlgorithmException {
-		//TODO: Check that the resourceID and workID matches? Or just put it?
 		try {
-	    	String toolAndUserID = request.session().get("user").get(); // TODO orElseThrow();
-			String resourceID = request.session().get("resource").get(); // TODO orElseThrow();
 			ObjectNode requestNode = (ObjectNode) request.body().asJson();
 			ObjectNode workNode = (ObjectNode) requestNode.get("work");
-	    	if (!toolAndUserID.endsWith("/" + workNode.get("workID").asText()))
-	    		throw new IllegalStateException("user " + toolAndUserID + " does not match request");
 	    	ObjectNode result = JsonNodeFactory.instance.objectNode();
 	    	result.put("submittedAt", Instant.now().toString());    	
 	
 			s3conn.writeNewerJsonObjectToDynamoDB("CodeCheckWork", workNode, "assignmentID", "submittedAt");
-			double score = submitGradeToLMS(resourceID, requestNode, (ObjectNode) requestNode.get("work"));
+			double score = submitGradeToLMS(requestNode, (ObjectNode) requestNode.get("work"));
 	    	result.put("score", score);    	
 			return ok(result);
         } catch (Exception e) {
@@ -392,20 +383,17 @@ Instructor:
         }
 	}	
 	
-	@Security.Authenticated(Secured.class) // Student
+	// TODO @Security.Authenticated(Secured.class) // Student
 	public Result sendScore(Http.Request request) throws IOException, NoSuchAlgorithmException {
 		ObjectNode requestNode = (ObjectNode) request.body().asJson();
     	ObjectNode result = JsonNodeFactory.instance.objectNode();
     	result.put("submittedAt", Instant.now().toString());    	
 		try {
-	    	String toolAndUserID = request.session().get("user").get(); // TODO orElseThrow();    	
-			String resourceID = request.session().get("resource").get(); // TODO orElseThrow();
 			String workID = requestNode.get("workID").asText();
-	    	if (!toolAndUserID.endsWith("/" + workID))
-	    		throw new IllegalStateException("user " + toolAndUserID + " does not match request");
+			String resourceID = requestNode.get("resourceID").asText();
 	    	ObjectNode workNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckWork", "assignmentID", resourceID, "workID", workID);
 	    	if (workNode == null) return badRequest("Work not found");
-			double score = submitGradeToLMS(resourceID, requestNode, workNode);
+			double score = submitGradeToLMS(requestNode, workNode);
 	    	result.put("score", score);    	
 			return ok(result);
         } catch (Exception e) {
@@ -415,12 +403,13 @@ Instructor:
 	}	
 	
 	
-	private double submitGradeToLMS(String resourceID, ObjectNode params, ObjectNode work) 
+	private double submitGradeToLMS(ObjectNode params, ObjectNode work) 
 			throws IOException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, NoSuchAlgorithmException, URISyntaxException {
         String outcomeServiceUrl = params.get("lisOutcomeServiceURL").asText();
 		String sourcedId = params.get("lisResultSourcedID").asText();
 		String oauthConsumerKey = params.get("oauthConsumerKey").asText();
-		
+
+		String resourceID = work.get("assignmentID").asText();
     	ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckLTIResources", "resourceID", resourceID); 
 	    String assignmentID = resourceNode.get("assignmentID").asText(); 
         
