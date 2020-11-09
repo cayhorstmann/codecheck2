@@ -223,6 +223,14 @@ public class Assignment extends Controller {
     public Result work(Http.Request request, String assignmentID, String ccid, String editKey, 
     		boolean isStudent, String newid) 
     		throws IOException, GeneralSecurityException {
+    	ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+    	if (assignmentNode == null) badRequest("No assignment " + assignmentID);
+    	String prefix = Util.prefix(request);
+    	assignmentNode.remove("editKey");
+    	assignmentNode.put("isStudent", isStudent);
+    	if (!isStudent && editKey == null) 
+    		assignmentNode.put("cloneURL", "/copyAssignment/" + assignmentID);	    	
+    	
     	if (newid != null) {
     		ccid = Util.isPronouncableUID(newid) ? newid : Util.createPronouncableUID();
     	}
@@ -230,9 +238,8 @@ public class Assignment extends Controller {
             Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
             ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
         }
-    	boolean editKeySaved;
+    	boolean editKeySaved = true;
     	String work = null;
-		editKeySaved = true;
     	if (editKey == null) {
     		Optional<Http.Cookie> editKeyCookie = request.getCookie("cckey");
             editKey = editKeyCookie.map(Http.Cookie::value).orElse(null);
@@ -245,14 +252,6 @@ public class Assignment extends Controller {
    		    work = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", assignmentID, "workID", ccid + "/" + editKey);
     	if (work == null)
        		work = "{ assignmentID: \"" + assignmentID + "\", workID: \"" + ccid + "/" + editKey + "\", problems: {} }";
-
-    	ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
-    	if (assignmentNode == null) badRequest("No assignment " + assignmentID);
-    	String prefix = Util.prefix(request);
-    	assignmentNode.remove("editKey");
-    	assignmentNode.put("isStudent", isStudent);
-    	if (!isStudent && editKey == null) 
-    		assignmentNode.put("cloneURL", "/copyAssignment/" + assignmentID);	
     	
     	String lti = "undefined";
     	if (isStudent) {    		
