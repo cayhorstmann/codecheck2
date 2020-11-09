@@ -231,22 +231,20 @@ public class Assignment extends Controller {
             ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
         }
     	boolean editKeySaved;
-    	String work;
-    	if (editKey == null && isStudent) {
+    	String work = null;
+		editKeySaved = true;
+    	if (editKey == null) {
     		Optional<Http.Cookie> editKeyCookie = request.getCookie("cckey");
             editKey = editKeyCookie.map(Http.Cookie::value).orElse(null);
-       		editKeySaved = false; // TODO: ???
+            if (editKey == null) {
+            	editKey = Util.createPrivateUID();
+            	editKeySaved = false;
+            }
     	}
-    	if (editKey == null) { 
-       		editKey = Util.createPrivateUID();
-       		editKeySaved = false;
-       		work = "{ assignmentID: \"" + assignmentID + "\", workID: \"" + ccid + "/" + editKey + "\", problems: {} }";
-    	}
-    	else { 
+    	if (editKeySaved) 
    		    work = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", assignmentID, "workID", ccid + "/" + editKey);
-   		    if (work == null) return badRequest("Work not found");  
-   			editKeySaved = true;
-    	}
+    	if (work == null)
+       		work = "{ assignmentID: \"" + assignmentID + "\", workID: \"" + ccid + "/" + editKey + "\", problems: {} }";
 
     	ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
     	if (assignmentNode == null) badRequest("No assignment " + assignmentID);
