@@ -200,6 +200,7 @@ window.addEventListener('DOMContentLoaded', () => {
           responseDiv.textContent = ''
           let request = { ...lti, workID: work.workID, resourceID: work.assignmentID }
           let response = await postData("/lti/sendScore", request)
+          responseDiv.textContent = `Score of ${percent(score)} submitted`
           updateScore(document.querySelector('h1'), response.score)
         } catch (e) {
           responseDiv.textContent = `Error: ${e.message}` 
@@ -211,15 +212,15 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('instructorInstructions').style.display = 'none'
   } else { // Instructor view
     if ('cloneURL' in assignment) 
-      document.getElementById('abovebuttons').appendChild(createButton('hc-command', 'Clone', () => {
+      document.getElementById('viewingAsInstructor').appendChild(createButton('hc-command', 'Clone', () => {
         window.open(assignment.cloneURL, '_blank')        
       }))
     if ('viewSubmissionsURL' in assignment)
-      document.getElementById('viewSubmissions').appendChild(createButton('hc-command', 'View submissions', () => {
+      document.getElementById('viewingAsInstructor').appendChild(createButton('hc-command', 'View submissions', () => {
           window.open(assignment.viewSubmissionsURL, '_blank')        
         }))    
     if ('editAssignmentURL' in assignment)
-      document.getElementById('viewSubmissions').appendChild(createButton('hc-command', 'Edit assignment', () => {
+      document.getElementById('viewingAsInstructor').appendChild(createButton('hc-command', 'Edit assignment', () => {
           window.open(assignment.editAssignmentURL, '_blank')        
         }))    
     activateButtons()

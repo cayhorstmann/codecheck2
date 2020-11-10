@@ -266,6 +266,7 @@ public class Assignment extends Controller {
     	else // Instructor--no cookie
     		return ok(views.html.workAssignment.render(assignmentNode.toString(), work, ccid, lti));    	
     }
+    
 	public Result viewSubmissions(Http.Request request, String assignmentID, String editKey)
 		throws IOException {
 		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
