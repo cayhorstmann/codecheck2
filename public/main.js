@@ -16,8 +16,10 @@ async function postData(url = '', data = {}) {
   });
   if (response.ok)
     return await response.json() // parses JSON response into native JavaScript objects
-  else 
-    throw new Error(`${response.status} ${response.statusText}`)
+  else {
+    const body = await response.text()
+    throw new Error(`${response.status} ${response.statusText}: ${body}`)
+  }
 }
 
 function createButton(clazz, label, action) {

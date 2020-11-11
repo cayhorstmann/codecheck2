@@ -200,7 +200,7 @@ window.addEventListener('DOMContentLoaded', () => {
           responseDiv.textContent = ''
           let request = { ...lti, workID: work.workID, resourceID: work.assignmentID }
           let response = await postData("/lti/sendScore", request)
-          responseDiv.textContent = `Score of ${percent(score)} submitted`
+          responseDiv.textContent = `Score of ${percent(response.score)} submitted`
           updateScore(document.querySelector('h1'), response.score)
         } catch (e) {
           responseDiv.textContent = `Error: ${e.message}` 
