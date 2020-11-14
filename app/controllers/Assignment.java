@@ -207,8 +207,11 @@ public class Assignment extends Controller {
     			assignmentNode.remove("editKey");
     			assignmentNode.remove("assignmentID");
     		}
-    		else if (!editKey.equals(assignmentNode.get("editKey").asText())) 
-    			return badRequest("editKey " + editKey + " does not match");
+    		else { // Edit existing assignment
+    			if (!editKey.equals(assignmentNode.get("editKey").asText()))     		
+    				return badRequest("editKey " + editKey + " does not match");
+    			assignmentNode.put("viewSubmissionsURL", "/viewSubmissions/" + assignmentID + "/" + editKey);
+    		}
     	} 
     	assignmentNode.put("saveURL", "/saveAssignment");
     	return ok(views.html.editAssignment.render(assignmentNode.toString(), true));     	    	

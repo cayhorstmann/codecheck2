@@ -53,8 +53,9 @@ GET  /newAssignment                                 controllers.Assignment.edit(
 GET  /copyAssignment/:assignmentID                  controllers.Assignment.edit(request: Request, assignmentID: String, key: String = null)
 # Instructor edits existing assignment
 GET  /private/editAssignment/:assignmentID/:key     controllers.Assignment.edit(request: Request, assignmentID: String, key: String)
+GET  /private/assignment/:assignmentID/:key         controllers.Assignment.edit(request: Request, assignmentID: String, key: String)
 # Instructor views submissions
-GET  /private/assignment/:assignmentID/:key         controllers.Assignment.viewSubmissions(request: Request, assignmentID: String, key: String)
+GET  /private/viewSubmissions/:assignmentID/:key    controllers.Assignment.viewSubmissions(request: Request, assignmentID: String, key: String)
 
 # Instructor saves assignment
 POST /saveAssignment         controllers.Assignment.saveAssignment(request: Request)
