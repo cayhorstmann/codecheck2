@@ -210,7 +210,8 @@ public class Assignment extends Controller {
     		else { // Edit existing assignment
     			if (!editKey.equals(assignmentNode.get("editKey").asText()))     		
     				return badRequest("editKey " + editKey + " does not match");
-    			assignmentNode.put("viewSubmissionsURL", "/viewSubmissions/" + assignmentID + "/" + editKey);
+    			// TODO: Check if there are any submissions?
+    			assignmentNode.put("viewSubmissionsURL", "/private/viewSubmissions/" + assignmentID + "/" + editKey);
     		}
     	} 
     	assignmentNode.put("saveURL", "/saveAssignment");
