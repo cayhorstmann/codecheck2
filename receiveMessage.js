@@ -116,7 +116,7 @@ if (window.self !== window.top) { // iframe
     const SEND_DOCHEIGHT_DELAY = 100
     if (window.EPUB.Education.version === 1) return // TODO
     setTimeout(() => { 
-      const container = element.closest('li').parentNode
+      const container = element === undefined ? document.body : element.closest('li').parentNode
         // When using container = document.documentElement, the document grows without bound
         // TODO: Why does this work in codecheck.js but not here?
       let newDocHeight = container.scrollHeight + container.offsetTop
@@ -134,16 +134,17 @@ if (window.self !== window.top) { // iframe
             const ty = e.tagName
             const cl = e.getAttribute('class')
             return cl && (ty === 'div' && cl.indexOf('horstmann_') == 0 || ty === 'ol' && (cl.indexOf('multiple-choice') == 0 || cl.indexOf('horstmann_ma') == 0))
-          })    
-    element = interactiveElements[0]
-    sendDocHeight()
-    document.body.style.overflow = 'hidden'
-    // ResizeObserver did not work         
-    const mutationObserver = new MutationObserver(sendDocHeight);
-    mutationObserver.observe(element, { childList: true, subtree: true })
+          })
+      element = interactiveElements[0]
+      sendDocHeight()
+      document.body.style.overflow = 'hidden'
+      // ResizeObserver did not work         
+      const mutationObserver = new MutationObserver(sendDocHeight);
+    mutationObserver.observe(element === undefined ? document.body : element, { childList: true, subtree: true })    
   })
 
-  window.addEventListener("message", event => {    
+  window.addEventListener("message", event => {
+    if (!(event.data instanceof Object)) return
     if ('request' in event.data) { // It's a response
       const request = event.data.request    
       if (request.query === 'retrieve') { // LTIHub v2        

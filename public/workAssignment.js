@@ -68,8 +68,8 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   function restoreStateOfProblem(iframe, request) {
-    let qid = 'param' in request && 'qid' in request.param ? request.param.qid :
-      iframePid.get(iframe)
+    let qid = request.param.qid
+    if (qid === undefined) qid = iframePid.get(iframe)
     if (qid in work.problems) {
       iframe.contentWindow.postMessage({ request, param: work.problems[qid].state }, '*');
       updateScoreDisplay();
@@ -80,8 +80,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
   async function sendScoreAndState(iframe, request) {    
     if (!assignment.isStudent) return // Viewing as instructor
-    let qid = request.param.qid
     let pid = iframePid.get(iframe)  
+    let qid = request.param.qid
     if (qid === undefined) qid = pid
     work.problems[qid] = request.param
     if (qid != pid) work.problems[qid].pid = pid
@@ -180,7 +180,8 @@ window.addEventListener('DOMContentLoaded', () => {
     updateScore(document.querySelector('h1'), score(problems, work))  
     if (lti === undefined) {
       document.getElementById('studentLTIInstructions').style.display = 'none'
-      document.getElementById('returnToWorkURL').textContent = assignment.returnToWorkURL
+      const returnToWorkURLSpan = document.getElementById('returnToWorkURL') 
+      returnToWorkURLSpan.textContent = assignment.returnToWorkURL
     
       document.getElementById('returnToWork').appendChild(createButton('hc-command', 'Copy', () => { 
         window.getSelection().selectAllChildren(returnToWorkURLSpan) 
