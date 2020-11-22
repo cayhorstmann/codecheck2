@@ -48,6 +48,14 @@ package controllers;
    oauth_consumer_key [primary key]
    shared_secret
 
+
+ Assignment parsing format:
+ 
+   Groups separated by 3 or more -
+   Each line:
+     urlOrQid weight%? 
+ 
+ 
 */
 
 import java.io.IOException;
@@ -106,8 +114,9 @@ public class Assignment extends Controller {
             if (lines.length == 0) throw new IllegalArgumentException("No problems given");
             String[] problemURLs = new String[lines.length];
             String[] qids = new String[lines.length];
-            Double[] weights = new Double[lines.length];	            
+            double[] weights = new double[lines.length];	            
             for (int i = 0; i < lines.length; i++) {
+            	weights[i] = 1;
             	for (String token: lines[i].trim().split("\\s+")) {
             		boolean checked = false;
             		if (problemURLs[i] == null) {
@@ -130,29 +139,8 @@ public class Assignment extends Controller {
             		else throw new IllegalArgumentException("Bad token: " + token);            		
             	}	            	
             }
-            double weightSum = 0;
-            int noWeights = 0;
-            for (int i = 0; i < lines.length; i++) {
-            	if (weights[i] == null) {
-            		noWeights++;
-            	} else {
-            		if (weights[i] < 0) throw new IllegalArgumentException("Bad weight: " + 100 * weights[i]);
-            		else weightSum += weights[i];
-            	} 
-            }
-            if (noWeights > 0) {
-            	if (weightSum > 1) {
-            		throw new IllegalArgumentException("Sum of weights > 100%");
-            	}
-            	double defaultWeight = (1 - weightSum) / noWeights;
-            	for (int i = 0; i < lines.length; i++)
-            		if (weights[i] == null) weights[i] = defaultWeight;
-            } else if (weightSum > 1) {
-            	for (int i = 0; i < lines.length; i++)
-            		weights[i] /= weightSum;
-            }
-            		
-        	ArrayNode group = JsonNodeFactory.instance.arrayNode();
+
+            ArrayNode group = JsonNodeFactory.instance.arrayNode();
             for (int i = 0; i < lines.length; i++) {
             	ObjectNode problem = JsonNodeFactory.instance.objectNode();
             	problem.put("URL", problemURLs[i]);
@@ -176,20 +164,23 @@ public class Assignment extends Controller {
 	}
 		  	 
 	public static double score(ObjectNode assignment, ObjectNode work) {
-		double result = 0;
 		ArrayNode groups = (ArrayNode) assignment.get("problems");
 		String workID = work.get("workID").asText();
 		ArrayNode problems = (ArrayNode) groups.get(workID.hashCode() % groups.size());
 		ObjectNode submissions = (ObjectNode) work.get("problems");
-		for (String qid : Util.iterable(submissions.fieldNames())) {
-			ObjectNode submission = (ObjectNode) submissions.get(qid);
-			for (JsonNode p : problems) {
-				ObjectNode problem = (ObjectNode) p;
+		double result = 0;
+		double sum = 0;
+		for (JsonNode p : problems) {
+			ObjectNode problem = (ObjectNode) p;
+			double weight = problem.get("weight").asDouble();
+			sum += weight;
+			for (String qid : Util.iterable(submissions.fieldNames())) {
+				ObjectNode submission = (ObjectNode) submissions.get(qid);
 				if (containsQuestion(problem, qid, submission))	
-					result += problem.get("weight").asDouble() * submission.get("score").asDouble();
-			}	
+					result += weight * submission.get("score").asDouble();
+			}			
 		}
-		return result;
+		return sum == 0 ? 0 : result / sum;
 	}
 	
 	/*

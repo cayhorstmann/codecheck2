@@ -25,14 +25,17 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   
   function score(problems, work) {
-    let score = 0
-    for (const qid in work.problems) {
-      const q = work.problems[qid]
-      for (const p of problems)
+    let result = 0
+    let sum = 0
+    for (const p of problems) {
+      sum += p.weight          
+      for (const qid in work.problems) {
+        const q = work.problems[qid]
         if (containsQuestion(p, qid, q)) 
-          score += p.weight * q.score
+          result += p.weight * q.score
+      }
     }
-    return score
+    return sum === 0 ? sum : result / sum
   }
 
   function sendingIframe(event) {
@@ -50,13 +53,15 @@ window.addEventListener('DOMContentLoaded', () => {
 
   function updateScoreDisplay() {
     for (const p of problems) {
-      let score = 0
-      for (const qid in work.problems) {
-        const q = work.problems[qid]
-        if (containsQuestion(p, qid, q)) 
-          score += q.score
-        updateScore(p.button, score)          
-      }
+      if (p.weight > 0) {
+        let score = 0
+        for (const qid in work.problems) {
+          const q = work.problems[qid]
+          if (containsQuestion(p, qid, q)) 
+            score += q.score
+        }
+        updateScore(p.button, score)
+      }          
     }
   }
   
@@ -144,10 +149,6 @@ window.addEventListener('DOMContentLoaded', () => {
   buttonDiv.id = 'buttons'
   document.body.appendChild(buttonDiv)
   
-  let allWeightsSame = true
-  for (let i = 1; allWeightsSame && i < problems.length; i++) 
-    allWeightsSame = Math.abs(problems[0].weight - problems[i].weight) < 0.001   
-
   for (let i = 0; i < problems.length; i++) {
     const iframe = document.createElement('iframe')    
     iframePid.set(iframe, problemPid(problems[i]))
@@ -173,7 +174,9 @@ window.addEventListener('DOMContentLoaded', () => {
     problems[i].button = button
     buttonDiv.appendChild(button)
     button.textContent = "" + (i + 1)
-    if (!allWeightsSame) button.title = `Weight: ${percent(problems[i].weight)}` 
+    const weight = problems[i].weight
+    if (weight !== 0 && weight !== 1)
+      button.title = `Weight: ${percent(weight)}` 
   }
   
   if (assignment.isStudent) {
