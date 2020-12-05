@@ -1,7 +1,6 @@
 window.addEventListener('DOMContentLoaded', () => {
   const responseDiv = document.getElementById('response')
   const savedCopyCheckbox = document.querySelector('#savedcopy > input')
-  const buttonDiv = document.createElement('div')
   const iframePid = new Map()
 
   function hash(s) {
@@ -24,6 +23,21 @@ window.addEventListener('DOMContentLoaded', () => {
       // TODO: return problem.URL === qid
   }
   
+  function sendingIframe(event) {
+    for (const f of document.getElementsByClassName('exercise-iframe'))
+      if (f.contentWindow === event.source) return f
+    return undefined
+  }
+
+  function updateScoreInElementText(e, score, title) {
+    const text = e.textContent
+    let match = text.match(/ \(|✓/u)
+    let index = match === null ? text.length : match.index
+    const label = score >= 0.995 ? '✓' : ' (' + percent(score) + ')'
+    e.textContent = text.substring(0, index) + label
+    if (title !== undefined && title !== '') e.title = title
+  }
+
   function score(problems, work) {
     let result = 0
     let sum = 0
@@ -38,21 +52,13 @@ window.addEventListener('DOMContentLoaded', () => {
     return sum === 0 ? sum : result / sum
   }
 
-  function sendingIframe(event) {
-    for (const f of document.getElementsByClassName('exercise-iframe'))
-      if (f.contentWindow === event.source) return f
-    return undefined
-  }
-
-  function updateScore(e, score) {
-    const text = e.textContent
-    let index = text.indexOf(' (')
-    if (index < 0) index = text.length
-    e.textContent = text.substring(0, index) + ' (' + percent(score) + ')'
-  }
 
   function updateScoreDisplay() {
-    for (const p of problems) {
+    let result = 0
+    let sum = 0
+    let explanation = ''
+    for (let i = 0; i < problems.length; i++) {
+      const p = problems[i]
       if (p.weight > 0) {
         let score = 0
         for (const qid in work.problems) {
@@ -60,9 +66,19 @@ window.addEventListener('DOMContentLoaded', () => {
           if (containsQuestion(p, qid, q)) 
             score += q.score
         }
-        updateScore(p.button, score)
+        updateScoreInProblemSelector(i, score)
+        result += p.weight * score
+        sum += p.weight
+        if (explanation !== '') explanation += ' + '
+        explanation += percent(score)
+        if (p.weight !== 1) explanation += '×' + p.weight.toFixed(2).replace(/\.?0+$/, '')
       }          
     }
+    if (explanation !== '' && sum !== 1) 
+      explanation = '(' + explanation + ') / ' + sum.toFixed(2).replace(/\.?0+$/, '')
+    
+    result = sum === 0 ? sum : result / sum
+    updateScoreInElementText(document.querySelector('h1'), result, explanation)    
   }
   
   function adjustDocHeight(iframe, request) {
@@ -77,7 +93,6 @@ window.addEventListener('DOMContentLoaded', () => {
     if (qid === undefined) qid = iframePid.get(iframe)
     if (qid in work.problems) {
       iframe.contentWindow.postMessage({ request, param: work.problems[qid].state }, '*');
-      updateScoreDisplay();
     } else {
       iframe.contentWindow.postMessage({ request, param: null }, '*')
     }
@@ -96,28 +111,95 @@ window.addEventListener('DOMContentLoaded', () => {
       work.submittedAt = new Date(Date.now() - assignment.receivedAt + Date.parse(assignment.sentAt)).toISOString()
       if (lti !== undefined) {
         lti.work = work
-        let result = await postData("/lti/saveWork", lti)
-        updateScore(document.querySelector('h1'), result.score)
+        await postData("/lti/saveWork", lti)
       } else {
         await postData("/saveWork", work)
-        updateScore(document.querySelector('h1'), score(problems, work))
       }
     } catch (e) {
       responseDiv.textContent = `Error: ${e.message}` 
     }  
   }
-    
-  function activateButtons() {
-    savedCopyCheckbox.checked = true 
-    for (const btn of buttonDiv.children) {
-      btn.classList.remove('hc-disabled')
-    }
-    const tab = 'tab' in work ? work.tab : 0  
-    //TODO: Initial button might not be zero
-    buttonDiv.children[tab].classList.add('active')
-    setTimeout(() => buttonDiv.children[tab].click(), 1000)
-    //document.getElementsByTagName('iframe')[0].style.display = 'block'                   
+  
+  // Problem selection
+  
+  let useTitles = false
+  let buttonDiv = undefined
+  let select = undefined
+  
+  function initializeProblemSelectorUI() {
+    buttonDiv = document.createElement('div')
+    buttonDiv.id = 'buttons'
+    document.body.appendChild(buttonDiv)      
+    useTitles = problems.some(p => 'title' in p)
+    if (useTitles) {
+      document.getElementById('abovebuttons').textContent = 'Use the selector below to view all parts of the assignment.'
+      select = document.createElement('select')
+      select.disabled = true
+      select.addEventListener('change', () => selectProblem(select.selectedIndex))
+      buttonDiv.appendChild(select)
+      buttonDiv.appendChild(createButton('hc-step hc-disabled', 'Next', 
+        () => selectProblem(select.selectedIndex + 1)))   
+    }     
   }
+  
+  function addProblemSelector(index, title) {
+    const number = '' + (index + 1)
+    if (useTitles) {
+      const option = document.createElement('option')
+      option.textContent = title === undefined ? 'Problem ' + number : title
+      select.appendChild(option)
+    } else {
+      buttonDiv.appendChild(createButton('hc-step hc-disabled', number, () => selectProblem(index)))      
+    }    
+  }
+    
+  function activateProblemSelection() {
+    savedCopyCheckbox.checked = true 
+    if (useTitles) {
+      select.disabled = false      
+      buttonDiv.children[1].classList.remove('hc-disabled')
+    } else {
+      for (const b of buttonDiv.children)
+        b.classList.remove('hc-disabled')
+    }
+    const tab = 'tab' in work ? work.tab : 0 // TODO: Don't use index
+    setTimeout(() => selectProblem(tab), 1000)
+  }
+  
+  function selectProblem(index) {
+    if (!savedCopyCheckbox.checked) return
+    if (index < 0 || index >= problems.length) return
+    if (useTitles) {
+      select.selectedIndex = index      
+    } else {
+      for (let i = 0; i < buttonDiv.children.length; i++)
+        if (i === index)
+          buttonDiv.children[i].classList.add('active')
+        else
+          buttonDiv.children[i].classList.remove('active')      
+    }
+    const iframes = document.getElementsByClassName('exercise-iframe')
+    for (let i = 0; i < iframes.length; i++) {
+      const iframe = iframes[i]
+      if (i === index) {    
+        if (!iframe.src) iframe.src = problems[i].URL
+        iframe.style.display = 'block'
+      } else { 
+        iframe.style.display = 'none'
+      }
+    }
+    work.tab = index // TODO: pid or URL
+  }
+  
+  function updateScoreInProblemSelector(index, score) {
+    if (useTitles) {
+      updateScoreInElementText(select.children[index], score)            
+    } else {
+      updateScoreInElementText(buttonDiv.children[index], score)
+    }
+  }
+  
+  // Start of initialization
   
   assignment.receivedAt = Date.now()  
   //TODO: Why not done at server
@@ -146,41 +228,18 @@ window.addEventListener('DOMContentLoaded', () => {
       location = `${location.href.split(/[?#]/)[0]}?newid=`    
     }))
       
-  buttonDiv.id = 'buttons'
-  document.body.appendChild(buttonDiv)
-  
+  initializeProblemSelectorUI()      
   for (let i = 0; i < problems.length; i++) {
     const iframe = document.createElement('iframe')    
     iframePid.set(iframe, problemPid(problems[i]))
     iframe.className = 'exercise-iframe'
-    //iframe.src = problems[i].URL 
     document.body.appendChild(iframe)
     iframe.style.display = 'none'
-    const action = () => {
-      if (!iframe.src) iframe.src = problems[i].URL 
-      if (!savedCopyCheckbox.checked) return
-      for (const f of document.getElementsByClassName('exercise-iframe'))
-        if (f !== iframe) f.style.display = 'none'
-      iframe.style.display = 'block'
-      for (const btn of buttonDiv.children)
-        if (btn !== button)
-          btn.classList.remove('active')
-      button.classList.add('active')
-      work.tab = i  
-    }    
-
-    const button = createButton('hc-step', '' + (i + 1), action)
-    button.classList.add('hc-disabled')
-    problems[i].button = button
-    buttonDiv.appendChild(button)
-    button.textContent = "" + (i + 1)
-    const weight = problems[i].weight
-    if (weight !== 0 && weight !== 1)
-      button.title = `Weight: ${percent(weight)}` 
+    addProblemSelector(i, problems[i].title)
   }
   
   if (assignment.isStudent) {
-    updateScore(document.querySelector('h1'), score(problems, work))  
+    updateScoreDisplay()
     if (lti === undefined) {
       document.getElementById('studentLTIInstructions').style.display = 'none'
       const returnToWorkURLSpan = document.getElementById('returnToWorkURL') 
@@ -193,10 +252,16 @@ window.addEventListener('DOMContentLoaded', () => {
       }))
       
       if (assignment.editKeySaved) {
-        activateButtons()
+        activateProblemSelection()
         document.getElementById('savedcopy').style.display = 'none'
       } else {
         savedCopyCheckbox.checked = false
+        savedCopyCheckbox.addEventListener('change', () => {    
+          if (savedCopyCheckbox.checked) {
+            activateProblemSelection()
+          } else
+            savedCopyCheckbox.checked = true // Can't uncheck                  
+        }) 
       }      
     } else {
       document.getElementById('submitLTIButton').appendChild(createButton('hc-command', 'Resend Score', async () => {
@@ -204,14 +269,13 @@ window.addEventListener('DOMContentLoaded', () => {
           responseDiv.textContent = ''
           let request = { ...lti, workID: work.workID, resourceID: work.assignmentID }
           let response = await postData("/lti/sendScore", request)
-          responseDiv.textContent = `Score of ${percent(response.score)} submitted`
-          updateScore(document.querySelector('h1'), response.score)
+          responseDiv.textContent = `Score of ${percent(response.score)} recorded`
         } catch (e) {
           responseDiv.textContent = `Error: ${e.message}` 
         }  
       }))  
       document.getElementById('studentInstructions').style.display = 'none'
-      activateButtons()
+      activateProblemSelection()
     }       
     document.getElementById('instructorInstructions').style.display = 'none'
   } else { // Instructor view
@@ -227,21 +291,8 @@ window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('viewingAsInstructor').appendChild(createButton('hc-command', 'Edit assignment', () => {
           window.open(assignment.editAssignmentURL, '_blank')        
         }))    
-    activateButtons()
+    activateProblemSelection()
     document.getElementById('studentInstructions').style.display = 'none'
     document.getElementById('studentLTIInstructions').style.display = 'none'
-  }
-    
-  savedCopyCheckbox.addEventListener('change', () => {    
-    if (savedCopyCheckbox.checked) {
-      activateButtons()
-    } else {
-      for (const btn of buttonDiv.children) {
-        btn.classList.add('hc-disabled')
-        btn.classList.remove('active')
-      }
-      for (const f of document.getElementsByClassName('exercise-iframe'))
-        f.style.display = 'none'
-    }
-  })  
+  }  
 })

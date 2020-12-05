@@ -4,12 +4,10 @@ window.addEventListener('DOMContentLoaded', () => {
     for (let i = 0; i < problems.length; i++) {
       if (i > 0) result += '---\n'
       const group = problems[i]
-      let equalWeights = true
-      for (let j = 1; equalWeights && j < group.length; j++) 
-        equalWeights = group[0].weight === group[j].weight 
       for (const problem of group) {
         result += 'qid' in problem ? problem.qid : problem.URL
-        if (!equalWeights) result += ' ' + percent(problem.weight)
+        if (problem.weight != 1) result += ' ' + percent(problem.weight)
+        if ('title' in problem) result += ' ' + problem.title 
         result += '\n'
       }      
     }

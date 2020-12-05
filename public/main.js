@@ -25,7 +25,8 @@ async function postData(url = '', data = {}) {
 function createButton(clazz, label, action) {
   let button = document.createElement('span')
   button.classList.add('hc-button')
-  button.classList.add(clazz)
+  for (const cl of clazz.split(' '))
+    button.classList.add(cl)
   button.innerHTML = label
   button.tabIndex = 0 
   button.addEventListener('click', action)

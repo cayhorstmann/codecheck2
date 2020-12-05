@@ -72,6 +72,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.inject.Inject;
 
@@ -108,44 +110,45 @@ public class Assignment extends Controller {
         if (assignment == null || assignment.trim().isEmpty()) 
         	throw new IllegalArgumentException("No assignments");
     	ArrayNode groupsNode = JsonNodeFactory.instance.arrayNode();
+    	Pattern problemPattern = Pattern.compile("\\s*(\\S+)\\s+([0-9.]+%)(.*)");
     	String[] groups = assignment.split("\\s+-{3,}\\s+");
     	for (int problemGroup = 0; problemGroup < groups.length; problemGroup++) {
             String[] lines = groups[problemGroup].split("\\n+");
             if (lines.length == 0) throw new IllegalArgumentException("No problems given");
-            String[] problemURLs = new String[lines.length];
-            String[] qids = new String[lines.length];
-            double[] weights = new double[lines.length];	            
-            for (int i = 0; i < lines.length; i++) {
-            	weights[i] = 1;
-            	for (String token: lines[i].trim().split("\\s+")) {
-            		boolean checked = false;
-            		if (problemURLs[i] == null) {
-            			if (token.startsWith("https")) problemURLs[i] = token;
-            			else if (token.startsWith("http")) problemURLs[i] = "https" + token.substring(4);
-            			else if (token.matches("[a-zA-Z0-9_]+(-[a-zA-Z0-9_]+)*")) {	
-            				qids[i] = token;
-            				problemURLs[i] = "https://www.interactivities.ws/" + token + ".xhtml";
-            				if (Util.exists(problemURLs[i]))
-            					checked = true;
-            				else
-            					problemURLs[i] = "https://codecheck.it/files?repo=wiley&problem=" + token;            				            					
-            			}
-            			else throw new IllegalArgumentException("Bad token: " + token);
-            			if (!checked && !Util.exists(problemURLs[i]))
-            				throw new IllegalArgumentException("Cannot find " + (qids[i] == null 
-            					? problemURLs[i] : qids[i]));
-            		}
-            		else if (problemURLs[i] != null && token.matches("[0-9]+(\\.[0-9]+)?%")) weights[i] = 0.01 * Double.parseDouble(token.substring(0, token.length() - 1));
-            		else throw new IllegalArgumentException("Bad token: " + token);            		
-            	}	            	
-            }
-
             ArrayNode group = JsonNodeFactory.instance.arrayNode();
             for (int i = 0; i < lines.length; i++) {
             	ObjectNode problem = JsonNodeFactory.instance.objectNode();
-            	problem.put("URL", problemURLs[i]);
-            	problem.put("weight", weights[i]);
-            	if (qids[i] != null) problem.put("qid", qids[i]);
+        		Matcher matcher = problemPattern.matcher(lines[i]);
+            	if (!matcher.matches())
+            		throw new IllegalArgumentException("Bad input " + lines[i]);
+            	String problemDescriptor = matcher.group(1); // URL or qid
+            	String problemURL;
+            	String qid = null;
+            	boolean checked = false;
+            	if (problemDescriptor.startsWith("https")) problemURL = problemDescriptor;
+    			else if (problemDescriptor.startsWith("http")) problemURL = "https" + problemDescriptor.substring(4);
+    			else if (problemDescriptor.matches("[a-zA-Z0-9_]+(-[a-zA-Z0-9_]+)*")) {	
+    				qid = problemDescriptor;
+    				problemURL = "https://www.interactivities.ws/" + problemDescriptor + ".xhtml";
+    				if (Util.exists(problemURL))
+    					checked = true;
+    				else
+    					problemURL = "https://codecheck.it/files?repo=wiley&problem=" + problemDescriptor;            				            					
+    			}
+    			else throw new IllegalArgumentException("Bad problem: " + problemDescriptor);
+    			if (!checked && !Util.exists(problemURL))
+    				throw new IllegalArgumentException("Cannot find " + problemDescriptor);            	
+            	problem.put("URL", problemURL);
+            	if (qid != null) problem.put("qid", qid);
+            	
+            	String weight = matcher.group(2).replace("%", "");
+            	problem.put("weight", Double.parseDouble(weight) / 100);
+            	String title = matcher.group(3);
+            	if (title != null) { 
+            		title = title.trim();
+            		if (!title.isEmpty())
+            			problem.put("title", title);
+            	}
             	group.add(problem);
             }
             groupsNode.add(group);
@@ -219,7 +222,7 @@ public class Assignment extends Controller {
     		boolean isStudent, String newid) 
     		throws IOException, GeneralSecurityException {
     	ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
-    	if (assignmentNode == null) badRequest("No assignment " + assignmentID);
+    	if (assignmentNode == null) return badRequest("No assignment " + assignmentID);
     	String prefix = Util.prefix(request);
     	assignmentNode.remove("editKey");
     	assignmentNode.put("isStudent", isStudent);
