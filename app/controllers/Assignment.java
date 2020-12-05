@@ -110,7 +110,7 @@ public class Assignment extends Controller {
         if (assignment == null || assignment.trim().isEmpty()) 
         	throw new IllegalArgumentException("No assignments");
     	ArrayNode groupsNode = JsonNodeFactory.instance.arrayNode();
-    	Pattern problemPattern = Pattern.compile("\\s*(\\S+)\\s+([0-9.]+%)(.*)");
+    	Pattern problemPattern = Pattern.compile("\\s*(\\S+)(\\s+[0-9.]+%)?(.*)");
     	String[] groups = assignment.split("\\s+-{3,}\\s+");
     	for (int problemGroup = 0; problemGroup < groups.length; problemGroup++) {
             String[] lines = groups[problemGroup].split("\\n+");
@@ -141,8 +141,11 @@ public class Assignment extends Controller {
             	problem.put("URL", problemURL);
             	if (qid != null) problem.put("qid", qid);
             	
-            	String weight = matcher.group(2).replace("%", "");
+            	String weight = matcher.group(2);
+            	if (weight == null) weight = "100";
+            	else weight = weight.trim().replace("%", "");
             	problem.put("weight", Double.parseDouble(weight) / 100);
+
             	String title = matcher.group(3);
             	if (title != null) { 
             		title = title.trim();
