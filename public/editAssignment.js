@@ -19,7 +19,6 @@ window.addEventListener('DOMContentLoaded', () => {
   urlsDl.style.display = 'none'
   if ('problems' in assignment)  
     document.getElementById('problems').value = format(assignment.problems)
-  askForDeadline = false // TODO
   if (askForDeadline) {
     if ('deadlineDate' in assignment)  
       document.getElementById('deadlineDate').value = assignment.deadlineDate
