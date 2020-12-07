@@ -95,6 +95,7 @@ public class LTIAssignment extends Controller {
 		
 		String launchPresentationReturnURL = Util.getParam(postParams, "launch_presentation_return_url");
 	    assignmentNode.put("launchPresentationReturnURL", launchPresentationReturnURL);
+    	assignmentNode.put("saveURL", "/lti/saveAssignment");		
 
 		return ok(views.html.editAssignment.render(assignmentNode.toString(), false))
 			.withNewSession()
