@@ -116,7 +116,7 @@ window.addEventListener('DOMContentLoaded', () => {
         await postData("/saveWork", work)
       }
     } catch (e) {
-      responseDiv.textContent = `Error: ${e.message}` 
+      responseDiv.textContent = e.message 
     }  
   }
   
@@ -271,7 +271,7 @@ window.addEventListener('DOMContentLoaded', () => {
           let response = await postData("/lti/sendScore", request)
           responseDiv.textContent = `Score of ${percent(response.score)} recorded`
         } catch (e) {
-          responseDiv.textContent = `Error: ${e.message}` 
+          responseDiv.textContent = e.message 
         }  
       }))  
       document.getElementById('studentInstructions').style.display = 'none'

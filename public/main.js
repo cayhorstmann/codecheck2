@@ -1,6 +1,4 @@
-// https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
 async function postData(url = '', data = {}) {
-  // Default options are marked with *
   const response = await fetch(url, {
     method: 'POST', // *GET, POST, PUT, DELETE, etc.
     mode: 'cors', // no-cors, *cors, same-origin
@@ -8,7 +6,6 @@ async function postData(url = '', data = {}) {
     credentials: 'include', // include, *same-origin, omit
     headers: {
       'Content-Type': 'application/json'
-      // 'Content-Type': 'application/x-www-form-urlencoded',
     },
     redirect: 'follow', // manual, *follow, error
     referrerPolicy: 'no-referrer', // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
@@ -18,7 +15,12 @@ async function postData(url = '', data = {}) {
     return await response.json() // parses JSON response into native JavaScript objects
   else {
     const body = await response.text()
-    throw new Error(`${response.status} ${response.statusText}: ${body}`)
+    if (response.status === 500) console.log(body)
+    const msg = 
+      response.status === 500 ? 'Server error' : 
+      response.status === 400 ? `Error: ${body}` : // Bad reqest
+        `Error ${response.status} ${response.statusText}: ${body}`    
+    throw new Error(msg)
   }
 }
 

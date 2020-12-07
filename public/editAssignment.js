@@ -19,6 +19,7 @@ window.addEventListener('DOMContentLoaded', () => {
   urlsDl.style.display = 'none'
   if ('problems' in assignment)  
     document.getElementById('problems').value = format(assignment.problems)
+  askForDeadline = false // TODO
   if (askForDeadline) {
     if ('deadlineDate' in assignment)  
       document.getElementById('deadlineDate').value = assignment.deadlineDate
@@ -45,48 +46,41 @@ window.addEventListener('DOMContentLoaded', () => {
   }
     
   const submitButton = createButton('hc-command', 'Save', async () => {
-    submitButton.disabled = true
-    responseDiv.style.display = 'none'
+    let request = {
+        assignmentID: assignment.assignmentID,
+        editKey: assignment.editKey, // undefined when cloned
+        problems: document.getElementById('problems').value,
+      }
+    if (askForDeadline) {
+      request.deadlineDate = document.getElementById('deadlineDate').value
+      request.deadlineTime = document.getElementById('deadlineTime').value        
+    }
     urlsDl.style.display = 'none'
+    submitButton.disabled = true
+    responseDiv.textContent = ''
     try {
-      let request = {
-          assignmentID: assignment.assignmentID,
-          editKey: assignment.editKey, // undefined when cloned
-          problems: document.getElementById('problems').value,
-        }
-      if (askForDeadline) {
-        request.deadlineDate = document.getElementById('deadlineDate').value
-        request.deadlineTime = document.getElementById('deadlineTime').value        
-      }
       let response = await postData(assignment.saveURL, request)
-      if (response.error !== undefined) {
-        responseDiv.textContent = `Error: ${response.error}`
-        responseDiv.style.display = 'block'
-      } else {
-        assignment.assignmentID = response.assignmentID
-        if ('publicURL' in response) {
-          document.getElementById('publicURL').textContent = response.publicURL
-          document.getElementById('privateURL').textContent = response.privateURL
-          urlsDl.style.display = 'block'
-        }
-        if ('assignmentURL' in response) {
-          if ('launchPresentationReturnURL' in assignment) {
-            const params = new URLSearchParams()
-            params.append('return_type', 'lti_launch_url')
-            params.append('url', response.assignmentURL)
-            const url =  assignment.launchPresentationReturnURL
-              + (assignment.launchPresentationReturnURL.includes("?") ? "&" : "?")
-              + params.toString()
-            window.location.href = url
-          } else {
-            responseDiv.textContent = `Assignment URL: ${response.assignmentURL}`
-            responseDiv.style.display = 'block'          
-          }
-        }    
+      assignment.assignmentID = response.assignmentID
+      if ('publicURL' in response) {
+        document.getElementById('publicURL').textContent = response.publicURL
+        document.getElementById('privateURL').textContent = response.privateURL
+        urlsDl.style.display = 'block'
       }
+      if ('assignmentURL' in response) {
+        if ('launchPresentationReturnURL' in assignment) {
+          const params = new URLSearchParams()
+          params.append('return_type', 'lti_launch_url')
+          params.append('url', response.assignmentURL)
+          const url =  assignment.launchPresentationReturnURL
+            + (assignment.launchPresentationReturnURL.includes("?") ? "&" : "?")
+            + params.toString()
+          window.location.href = url
+        } else {
+          responseDiv.textContent = `Assignment URL: ${response.assignmentURL}`
+        }
+      }    
     } catch (e) {
-      responseDiv.textContent = `Error: ${e.message}`            
-      responseDiv.style.display = 'block'
+      responseDiv.textContent = e.message            
     }
     submitButton.disabled = false    
   })

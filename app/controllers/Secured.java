@@ -2,7 +2,6 @@ package controllers;
 
 import java.util.Optional;
 
-import play.Logger;
 import play.mvc.Http;
 import play.mvc.Result;
 import play.mvc.Security;

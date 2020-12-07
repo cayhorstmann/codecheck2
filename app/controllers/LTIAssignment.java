@@ -84,12 +84,11 @@ public class LTIAssignment extends Controller {
 		if (!isInstructor(postParams)) 
 			return badRequest("Instructor role is required to create an assignment.");
     	String userID = Util.getParam(postParams, "user_id");
-		if (Util.isEmpty(userID)) 
-			return badRequest("No user id");
+		if (Util.isEmpty(userID)) return badRequest("No user id");
 
+		String toolConsumerID = Util.getParam(postParams, "tool_consumer_instance_guid");
 		String contextID = Util.getParam(postParams, "context_id");
 		String resourceLinkID = Util.getParam(postParams, "resource_link_id");
-		String toolConsumerID = Util.getParam(postParams, "tool_consumer_instance_guid");
 		String resourceID = toolConsumerID + "/" + contextID + "/" + resourceLinkID;
 
 		ObjectNode assignmentNode = JsonNodeFactory.instance.objectNode();
@@ -97,12 +96,14 @@ public class LTIAssignment extends Controller {
 		String launchPresentationReturnURL = Util.getParam(postParams, "launch_presentation_return_url");
 	    assignmentNode.put("launchPresentationReturnURL", launchPresentationReturnURL);
 
-		return ok(views.html.editAssignment.render(assignmentNode.toString(), false));
+		return ok(views.html.editAssignment.render(assignmentNode.toString(), false))
+			.withNewSession()
+			.addingToSession(request, "user", toolConsumerID + "/" + userID)
+			.addingToSession(request, "resource", resourceID);  		
  	}
     
 	@Security.Authenticated(Secured.class) // Instructor
 	public Result saveAssignment(Http.Request request) throws IOException {		
-		// TODO Eliminate session
     	String editKey = request.session().get("user").get(); // TODO orElseThrow();    	
     	String resourceID = request.session().get("resource").get(); // TODO orElseThrow();
 
@@ -130,8 +131,10 @@ public class LTIAssignment extends Controller {
     			return badRequest("Edit keys do not match");
     	}
 
+    	/*
     	String launchPresentationReturnURL = params.has("launchPresentationReturnURL") ? 
     			params.get("launchPresentationReturnURL").asText() : null;
+    	*/
     	params.remove("launchPresentationReturnURL");
 
     	s3conn.writeJsonObjectToDynamoDB("CodeCheckAssignments", params);
@@ -161,7 +164,6 @@ public class LTIAssignment extends Controller {
 
 	@Security.Authenticated(Secured.class) // Instructor
 	public Result viewSubmissions(Http.Request request) throws IOException {		
-		// TODO eliminate session
     	String resourceID = request.session().get("resource").get(); // TODO orElseThrow();
     	ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckLTIResources", "resourceID", resourceID); 
     	if (resourceNode == null) return badRequest("No resource");
@@ -186,7 +188,6 @@ public class LTIAssignment extends Controller {
 	
 	@Security.Authenticated(Secured.class) // Instructor
 	public Result viewSubmission(Http.Request request, String workID) throws IOException {
-		// TODO eliminate session
     	String resourceID = request.session().get("resource").get(); // TODO orElseThrow();
     	String work = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", resourceID, "workID", workID);
     	if (work == null) return badRequest("Work not found");
@@ -200,7 +201,6 @@ public class LTIAssignment extends Controller {
 	
 	@Security.Authenticated(Secured.class) // Instructor
 	public Result editAssignment(Http.Request request) throws IOException {
-		// TODO eliminate session
     	String editKey = request.session().get("user").get(); // TODO orElseThrow();    	
     	String resourceID = request.session().get("resource").get(); // TODO orElseThrow();
     	ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckLTIResources", "resourceID", resourceID); 
@@ -318,7 +318,9 @@ Instructor:
 	        	assignmentNode.put("editKeySaved", true);
 	        	assignmentNode.put("sentAt", Instant.now().toString());		
 
-	        	return ok(views.html.workAssignment.render(assignmentNode.toString(), work, userID, ltiNode.toString()));
+	        	return ok(views.html.workAssignment.render(assignmentNode.toString(), work, userID, ltiNode.toString()))
+    				.withNewSession()
+    				.addingToSession(request, "user", toolConsumerID + "/" + userID);
 	    	}	    	
 	    }
  	}		
@@ -365,7 +367,7 @@ Instructor:
 		return sharedSecret;
 	}	    
 
-	// TODO @Security.Authenticated(Secured.class) // Student
+	@Security.Authenticated(Secured.class) // Student
 	public Result saveWork(Http.Request request) throws IOException, NoSuchAlgorithmException {
 		try {
 			ObjectNode requestNode = (ObjectNode) request.body().asJson();
@@ -383,7 +385,7 @@ Instructor:
         }
 	}	
 	
-	// TODO @Security.Authenticated(Secured.class) // Student
+	@Security.Authenticated(Secured.class) // Student
 	public Result sendScore(Http.Request request) throws IOException, NoSuchAlgorithmException {
 		ObjectNode requestNode = (ObjectNode) request.body().asJson();
     	ObjectNode result = JsonNodeFactory.instance.objectNode();

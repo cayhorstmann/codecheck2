@@ -55,6 +55,9 @@ package controllers;
    Each line:
      urlOrQid weight%? 
  
+ Cookies (student only)
+   ccid
+   cckey 
  
 */
 
@@ -239,9 +242,9 @@ public class Assignment extends Controller {
             Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
             ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
         }
-    	boolean editKeySaved = true;
+    	boolean editKeySaved = isStudent;
     	String work = null;
-    	if (editKey == null) {
+    	if (isStudent && editKey == null) {
     		Optional<Http.Cookie> editKeyCookie = request.getCookie("cckey");
             editKey = editKeyCookie.map(Http.Cookie::value).orElse(null);
             if (editKey == null) {
@@ -302,7 +305,11 @@ public class Assignment extends Controller {
         ObjectNode params = (ObjectNode) request.body().asJson();
 
         String assignment = params.get("problems").asText();
-    	params.set("problems", parseAssignment(assignment));
+        try {
+        	params.set("problems", parseAssignment(assignment));
+        } catch (IllegalArgumentException e) {
+        	return badRequest(e.getMessage());
+        }
     	String assignmentID;
     	String editKey;
     	ObjectNode assignmentNode;
@@ -329,7 +336,6 @@ public class Assignment extends Controller {
     	
     	params.remove("privateURL");
     	params.remove("publicURL");
-    	params.remove("error");        	
     	
     	s3conn.writeJsonObjectToDynamoDB("CodeCheckAssignments", params);
     	
