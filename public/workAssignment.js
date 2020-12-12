@@ -291,8 +291,8 @@ window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('viewingAsInstructor').appendChild(createButton('hc-command', 'View submissions', () => {
         window.open(assignment.viewSubmissionsURL, '_blank')        
       }))    
-    if (assignment.assignmentID.includes('/')) { // TODO: Hack
-      document.getElementById('ltiInfoDetails').textContent = assignment.assignmentID 
+    if (work.assignmentID.includes('/')) { // TODO: Hack
+      document.getElementById('ltiInfoDetails').textContent = work.assignmentID 
     } else {
       document.getElementById('ltiInfo').style.display = 'none'
     }
