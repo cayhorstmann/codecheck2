@@ -278,19 +278,39 @@ window.addEventListener('DOMContentLoaded', () => {
       activateProblemSelection()
     }       
     document.getElementById('instructorInstructions').style.display = 'none'
-  } else { // Instructor view
+  } else { // Instructor view                
+    if ('editAssignmentURL' in assignment)
+      document.getElementById('viewingAsInstructor').appendChild(createButton('hc-command', 'Edit', () => {
+        window.location.href = assignment.editAssignmentURL        
+      }))    
     if ('cloneURL' in assignment) 
       document.getElementById('viewingAsInstructor').appendChild(createButton('hc-command', 'Clone', () => {
         window.open(assignment.cloneURL, '_blank')        
       }))
     if ('viewSubmissionsURL' in assignment)
       document.getElementById('viewingAsInstructor').appendChild(createButton('hc-command', 'View submissions', () => {
-          window.open(assignment.viewSubmissionsURL, '_blank')        
-        }))    
-    if ('editAssignmentURL' in assignment)
-      document.getElementById('viewingAsInstructor').appendChild(createButton('hc-command', 'Edit assignment', () => {
-          window.open(assignment.editAssignmentURL, '_blank')        
-        }))    
+        window.open(assignment.viewSubmissionsURL, '_blank')        
+      }))    
+    if (assignment.assignmentID.includes('/')) { // TODO: Hack
+      document.getElementById('ltiInfoDetails').textContent = assignment.assignmentID 
+    } else {
+      document.getElementById('ltiInfo').style.display = 'none'
+    }
+        
+    const urlsDl = document.getElementById('urls')
+    if ('publicURL' in assignment) {
+      const privateURLSpan = document.getElementById('privateURL')
+      privateURLSpan.parentNode.appendChild(createButton('hc-command', 'Copy', () => { 
+        window.getSelection().selectAllChildren(privateURLSpan); 
+        document.execCommand('copy');
+        window.getSelection().removeAllRanges(); }))
+      document.getElementById('publicURL').textContent = assignment.publicURL
+      privateURLSpan.textContent = assignment.privateURL
+      urlsDl.style.display = 'block'
+    }
+    else
+      urlsDl.style.display = 'none'
+        
     activateProblemSelection()
     document.getElementById('studentInstructions').style.display = 'none'
     document.getElementById('studentLTIInstructions').style.display = 'none'

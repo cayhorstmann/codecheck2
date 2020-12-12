@@ -53,7 +53,7 @@ package controllers;
  
    Groups separated by 3 or more -
    Each line:
-     urlOrQid weight%? 
+     urlOrQid (weight%)? title
  
  Cookies (student only)
    ccid
@@ -208,10 +208,9 @@ public class Assignment extends Controller {
     			assignmentNode.remove("assignmentID");
     		}
     		else { // Edit existing assignment
-    			if (!editKey.equals(assignmentNode.get("editKey").asText()))     		
+    			if (!editKey.equals(assignmentNode.get("editKey").asText()) || editKey.contains("/")) 
+    				// In the latter case, it is an LTI toolConsumerID + userID     		
     				return badRequest("editKey " + editKey + " does not match");
-    			// TODO: Check if there are any submissions?
-    			assignmentNode.put("viewSubmissionsURL", "/private/viewSubmissions/" + assignmentID + "/" + editKey);
     		}
     	} 
     	assignmentNode.put("saveURL", "/saveAssignment");
@@ -230,6 +229,7 @@ public class Assignment extends Controller {
     	ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
     	if (assignmentNode == null) return badRequest("No assignment " + assignmentID);
     	String prefix = Util.prefix(request);
+		String assignmentEditKey = assignmentNode.get("editKey").asText();
     	assignmentNode.remove("editKey");
     	assignmentNode.put("isStudent", isStudent);
     	if (!isStudent && editKey == null) 
@@ -267,8 +267,24 @@ public class Assignment extends Controller {
         	Http.Cookie newCookie2 = Http.Cookie.builder("cckey", editKey).withPath("/").withMaxAge(Duration.ofDays(180)).build();
         	return ok(views.html.workAssignment.render(assignmentNode.toString(), work, ccid, lti)).withCookies(newCookie1, newCookie2);
     	}
-    	else // Instructor--no cookie
-    		return ok(views.html.workAssignment.render(assignmentNode.toString(), work, ccid, lti));    	
+    	else { // Instructor--no cookie
+    		if (editKey != null) {
+				// TODO: Check if there are any submissions?
+				assignmentNode.put("viewSubmissionsURL", "/private/viewSubmissions/" + assignmentID + "/" + editKey);
+				String publicURL = prefix + "assignment/" + assignmentID;
+		    	String privateURL = prefix + "private/assignment/" + assignmentID + "/" + editKey;
+		    	if (editKey.equals(assignmentEditKey)) { 
+		    		String editAssignmentURL = prefix + "private/editAssignment/" + assignmentID + "/" + editKey;
+					assignmentNode.put("editAssignmentURL", editAssignmentURL);
+		    	}
+		    	assignmentNode.put("privateURL", privateURL);
+				assignmentNode.put("publicURL", publicURL);
+    		}
+	    	String cloneURL = prefix + "copyAssignment/" + assignmentID;
+			assignmentNode.put("cloneURL", cloneURL);
+			
+    		return ok(views.html.workAssignment.render(assignmentNode.toString(), work, ccid, lti));
+    	}
     }
     
 	public Result viewSubmissions(Http.Request request, String assignmentID, String editKey)
@@ -333,18 +349,12 @@ public class Assignment extends Controller {
         	}
         	assignmentNode = null;
     	}
-    	
-    	params.remove("privateURL");
-    	params.remove("publicURL");
-    	
     	s3conn.writeJsonObjectToDynamoDB("CodeCheckAssignments", params);
-    	
-    	String prefix = Util.prefix(request);
-		String publicURL = prefix + "assignment/" + assignmentID;
-    	String privateURL = prefix + "private/assignment/" + assignmentID + "/" + editKey;
-		params.put("privateURL", privateURL);
-		params.put("publicURL", publicURL);
 
+    	String prefix = Util.prefix(request);
+    	String assignmentURL = prefix + "private/assignment/" + assignmentID + "/" + editKey;
+		params.put("assignmentURL", assignmentURL);
+    	
 		return ok(params);
 	}
 	

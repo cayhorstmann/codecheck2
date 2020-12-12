@@ -6,7 +6,6 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <link rel="stylesheet" href="/assets/codecheck.css"/>
     <script type="text/javascript">//<![CDATA[
-    const studentID = '@studentID'
     const assignment = @Html(assignment)
     let work = @Html(work)
     const lti = @Html(lti)
@@ -20,12 +19,19 @@
    <h1 id="heading">Your Assignment</h1>
    <div id="instructorInstructions">
      <p id="viewingAsInstructor">You are viewing this assignment as instructor.</p>
+     <dl id="urls">
+       <dt>Public URL for your students:</dt><dd><span id="publicURL" class="ccurl"></span></dd>
+       <dt>Private URL for you only:</dt><dd><span id="privateURL" class="ccurl"></span></dd>  
+     </dl>     
+     <dl id="ltiInfo">
+       <dt>LTI LMS/course/assignment:</dt><dd><span id="ltiInfoDetails"></span></dd>
+     </dl>     
    </div>
    <div id="studentInstructions">
 	   <p>Your CodeCheck ID: <span class="ccid">@studentID</span></p>
 	   <ul id="ccidBullets">
 	     <li>Share this ID with your professor</li>
-	     <li id="switchID">Not your ID? Enter yours here: <input id='newccid' type='text' size='30'/>
+	     <li id="switchID">Not your ID? Enter yours here: <input id="newccid" type="text" size="30"/>
 	     <li id="clearID">If you work on a shared computer, clear the ID after you are done</li>
 	   </ul>
 	   <dl id="urls">
@@ -39,7 +45,7 @@
      <p>Your LMS ID: <span class="ccid">@studentID</span></p>
      <p>Wrong score in LMS? <span id="submitLTIButton"></span></p>
    </div>
-<p class='message' id='response'></p>
+<p class="message" id="response"></p>
 <p id="abovebuttons">Click on the buttons below to view all parts of the assignment.</p>
 </body>
 </html>

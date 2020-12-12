@@ -132,10 +132,6 @@ public class LTIAssignment extends Controller {
     			return badRequest("Edit keys do not match");
     	}
 
-    	/*
-    	String launchPresentationReturnURL = params.has("launchPresentationReturnURL") ? 
-    			params.get("launchPresentationReturnURL").asText() : null;
-    	*/
     	params.remove("launchPresentationReturnURL");
 
     	s3conn.writeJsonObjectToDynamoDB("CodeCheckAssignments", params);
@@ -144,23 +140,7 @@ public class LTIAssignment extends Controller {
 		String assignmentURL = Util.prefix(request) + "lti/assignment?id=" + assignmentID;
     	result.put("assignmentURL", assignmentURL);    	
 
-   		/*
-   		 * Call launchPresentationReturnURL with:
-   		 * return_type=lti_launch_url
-   		 * url=assignment URL (with id=...)
-   		 * Util.getParams(launchPresentationReturnURL)
-   		 */
-    	/*
-    	if (launchPresentationReturnURL != null) {
-			launchPresentationReturnURL = launchPresentationReturnURL
-					+ (launchPresentationReturnURL.contains("?") ? "&" : "?")     					
-					+ "return_type=lti_launch_url"
-					+ "&url=" + URLEncoder.encode(assignmentURL, "UTF-8"); // TODO StandardCharsets.UTF_8 
-			new URL(launchPresentationReturnURL).openStream().close();
-			// TODO: Capture output from above and return?
-    	}
-	*/
-    	return ok(result); // TODO: Maybe we need to let the client redirect ???
+    	return ok(result); // Client will redirect to launch presentation URL 
 	}
 
 	@Security.Authenticated(Secured.class) // Instructor
@@ -212,27 +192,25 @@ public class LTIAssignment extends Controller {
 		if (!editKey.equals(assignmentNode.get("editKey").asText())) 
 			return badRequest("Edit keys don't match");
     	assignmentNode.put("saveURL", "/lti/saveAssignment");		
-		return ok(views.html.editAssignment.render(assignmentNode.toString(), false));		
+    	return ok(views.html.editAssignment.render(assignmentNode.toString(), false));		
 	}
 	
 	/*
 	 
 Student:
-  No resource or assignment IDs don't match => fail
-  Otherwise => work
+  Assignment ID => ok
+  Assignment ID in resource table => ok
+  Otherwise => fail 
 Instructor:
-  No resource?
-    Without assignment ID => create with edit key = context + user ID  
-    With assignment ID: add resource->assignment mapping => view
-  Resource?
-    Without assignment ID => view resource assignment ID
-    With assignment ID: If don't match, update, then view assignment ID
-  	 
-	 */
+  Assignment ID => ok
+  Assignment ID in resource table => display Clone button
+  Otherwise => Create with edit key = context + user ID, add mapping when created, display Clone button  
+    
+     */
 	
     public Result launch(Http.Request request, String assignmentID) throws IOException {    
 	 	Map<String, String[]> postParams = request.body().asFormUrlEncoded();
-	 	logger.info("LTIAssignment.launch: " + Util.paramsToString(postParams));
+	 	// logger.info("LTIAssignment.launch: " + Util.paramsToString(postParams));
 	 	if (!validate(request)) {
 	 		return badRequest("Failed OAuth validation");
 	 	}	 	
@@ -248,6 +226,7 @@ Instructor:
 		ObjectNode ltiNode = JsonNodeFactory.instance.objectNode();
 	    ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckLTIResources", "resourceID", resourceID); 
 		
+	    //TODO: Query string legacy
 	    if (assignmentID == null)
 	    	assignmentID = request.queryString("id").orElse(null);
     	String resourceAssignmentID = resourceNode == null ? null : resourceNode.get("assignmentID").asText(); 
@@ -276,16 +255,21 @@ Instructor:
 			ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
 			if (assignmentNode == null)
 				return badRequest("No assignment " + assignmentID);
+			String assignmentEditKey = assignmentNode.get("editKey").asText();
 	    	assignmentNode.remove("editKey");
 			
 			assignmentNode.put("isStudent", false);
 			assignmentNode.put("viewSubmissionsURL", "/lti/viewSubmissions");
-			assignmentNode.put("editAssignmentURL", "/lti/editAssignment");
+			String userLMSID = toolConsumerID + "/" + userID;
+			if (userLMSID.equals(assignmentEditKey)) {
+				assignmentNode.put("editAssignmentURL", "/lti/editAssignment");
+				assignmentNode.put("cloneURL", "/copyAssignment/" + assignmentID);
+			}
 	    	assignmentNode.put("sentAt", Instant.now().toString());				
 	    	String work = "{ assignmentID: '" + resourceID + "', workID: '" + userID + "', problems: {} }";
 			return ok(views.html.workAssignment.render(assignmentNode.toString(), work, userID, "undefined" /* lti */))
 				.withNewSession()
-				.addingToSession(request, "user", toolConsumerID + "/" + userID)
+				.addingToSession(request, "user", userLMSID)
 				.addingToSession(request, "resource", resourceID);  					
 	    } else { // Student
 		    if (resourceNode == null) 
