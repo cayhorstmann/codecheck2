@@ -291,9 +291,7 @@ window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('viewingAsInstructor').appendChild(createButton('hc-command', 'View submissions', () => {
         window.open(assignment.viewSubmissionsURL, '_blank')        
       }))    
-    if (work.assignmentID.includes('/')) { // TODO: Hack
-      document.getElementById('heading').title = work.assignmentID 
-    } 
+    document.getElementById('heading').title = work.assignmentID // TODO: Do we want this? 
         
     const urlsDl = document.getElementById('urls')
     if ('publicURL' in assignment) {
