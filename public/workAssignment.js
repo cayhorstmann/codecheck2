@@ -292,10 +292,8 @@ window.addEventListener('DOMContentLoaded', () => {
         window.open(assignment.viewSubmissionsURL, '_blank')        
       }))    
     if (work.assignmentID.includes('/')) { // TODO: Hack
-      document.getElementById('ltiInfoDetails').textContent = work.assignmentID 
-    } else {
-      document.getElementById('ltiInfo').style.display = 'none'
-    }
+      document.getElementById('heading').title = work.assignmentID 
+    } 
         
     const urlsDl = document.getElementById('urls')
     if ('publicURL' in assignment) {
