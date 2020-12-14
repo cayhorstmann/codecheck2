@@ -18,10 +18,10 @@ window.addEventListener('DOMContentLoaded', () => {
   if ('problems' in assignment)  
     document.getElementById('problems').value = format(assignment.problems)
   if (askForDeadline) {
-    if ('deadlineDate' in assignment)  
-      document.getElementById('deadlineDate').value = assignment.deadlineDate
-    if ('deadlineTime' in assignment)  
-      document.getElementById('deadlineTime').value = assignment.deadlineTime
+    if ('deadline' in assignment) { // an ISO 8601 string like "2020-12-01T23:59:59Z"
+      document.getElementById('deadlineDate').value = assignment.deadline.substring(0, 10)
+      document.getElementById('deadlineTime').value = assignment.deadline.substring(11, 16)      
+    } 
   } else {  
     const deadlineDiv = document.getElementById('deadlineDiv')
     deadlineDiv.style.display = 'none'
@@ -34,14 +34,13 @@ window.addEventListener('DOMContentLoaded', () => {
         problems: document.getElementById('problems').value,
       }
     if (askForDeadline) {
-      request.deadlineDate = document.getElementById('deadlineDate').value
-      request.deadlineTime = document.getElementById('deadlineTime').value        
+      request.deadline = document.getElementById('deadlineDate').value + 'T' +
+        document.getElementById('deadlineTime').value + ':59Z'        
     }
     submitButton.disabled = true
-    responseDiv.textContent = ''
+    responseDiv.style.display = 'none'
     try {
       let response = await postData(assignment.saveURL, request)
-      assignment.assignmentID = response.assignmentID
       if ('launchPresentationReturnURL' in assignment) {
         const params = new URLSearchParams()
         params.append('return_type', 'lti_launch_url')
@@ -54,7 +53,8 @@ window.addEventListener('DOMContentLoaded', () => {
         window.location.href = response.assignmentURL
       }
     } catch (e) {
-      responseDiv.textContent = e.message            
+      responseDiv.textContent = e.message           
+      responseDiv.style.display = 'block'
     }
     submitButton.disabled = false    
   })

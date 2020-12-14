@@ -90,7 +90,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   function restoreStateOfProblem(iframe, request) {
     let qid = request.param.qid
-    if (qid === undefined) qid = iframePid.get(iframe)
+    if (qid === undefined || qid === '') qid = request.param.qid = iframePid.get(iframe) // TODO: Fix in receiveMessage.js
     if (qid in work.problems) {
       iframe.contentWindow.postMessage({ request, param: work.problems[qid].state }, '*');
     } else {
@@ -102,7 +102,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!assignment.isStudent) return // Viewing as instructor
     let pid = iframePid.get(iframe)  
     let qid = request.param.qid
-    if (qid === undefined) qid = pid
+    if (qid === undefined || qid === '') qid = request.param.qid = pid // TODO: Fix in receiveMessage.js
     work.problems[qid] = request.param
     if (qid != pid) work.problems[qid].pid = pid
     updateScoreDisplay();     

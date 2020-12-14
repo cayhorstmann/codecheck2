@@ -195,18 +195,14 @@ public class LTIAssignment extends Controller {
     	return ok(views.html.editAssignment.render(assignmentNode.toString(), false));		
 	}
 	
-	/*
-	 
-Student:
-  Assignment ID => ok
-  Assignment ID in resource table => ok
-  Otherwise => fail 
-Instructor:
-  Assignment ID => ok
-  Assignment ID in resource table => display Clone button
-  Otherwise => Create with edit key = context + user ID, add mapping when created, display Clone button  
-    
-     */
+/*	 
+  Assignment ID exists and no entry in resource table => create entry in resource table 
+  Assignment ID exists and different from resource table => fail
+  No assignment ID and entry in resource table => take assignment ID from resource table
+  No assignment ID and no entry in resource table => 
+     Student: fail
+     Instructor: Create with edit key = context + user ID, add mapping when created, display Clone button      
+*/
 	
     public Result launch(Http.Request request, String assignmentID) throws IOException {    
 	 	Map<String, String[]> postParams = request.body().asFormUrlEncoded();
@@ -229,10 +225,26 @@ Instructor:
 	    //TODO: Query string legacy
 	    if (assignmentID == null)
 	    	assignmentID = request.queryString("id").orElse(null);
-    	String resourceAssignmentID = resourceNode == null ? null : resourceNode.get("assignmentID").asText(); 
-	    
+
+    	String resourceAssignmentID = resourceNode == null ? null : resourceNode.get("assignmentID").asText();
+
+    	if (assignmentID == null) {
+    		assignmentID = resourceAssignmentID;
+    	} else {
+    		// TODO: Should not be necessary if we recorded assignment in work
+		    // TODO: Race condition?
+	    	if (resourceNode == null) {	    
+	    		resourceNode = JsonNodeFactory.instance.objectNode();
+	    		resourceNode.put("resourceID", resourceID);
+	    		resourceNode.put("assignmentID", assignmentID);
+	    		s3conn.writeJsonObjectToDynamoDB("CodeCheckLTIResources", resourceNode);
+	    	} else if (!assignmentID.equals(resourceAssignmentID)) {
+	    		return badRequest("Assignment IDs do not match in " + resourceID);	    		
+	    	}
+	    }    		    
+    	    
 	    if (isInstructor(postParams)) {		
-		    if (assignmentID == null && resourceAssignmentID == null) { // Create new assignment
+		    if (assignmentID == null) { // No assignment ID, no prior resource
 		    	ObjectNode assignmentNode = JsonNodeFactory.instance.objectNode();
 		    	assignmentNode.put("saveURL", "/lti/saveAssignment");
 			    String launchPresentationReturnURL = Util.getParam(postParams, "launch_presentation_return_url");
@@ -243,41 +255,34 @@ Instructor:
 					.withNewSession()
 					.addingToSession(request, "user", toolConsumerID + "/" + userID)
 					.addingToSession(request, "resource", resourceID);  		
+		    } else {
+				ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+				if (assignmentNode == null)
+					return badRequest("No assignment " + assignmentID);
+				String assignmentEditKey = assignmentNode.get("editKey").asText();
+		    	assignmentNode.remove("editKey");
+				
+				assignmentNode.put("isStudent", false);
+				assignmentNode.put("viewSubmissionsURL", "/lti/viewSubmissions");
+				String userLMSID = toolConsumerID + "/" + userID;
+				if (userLMSID.equals(assignmentEditKey)) {
+					assignmentNode.put("editAssignmentURL", "/lti/editAssignment");
+					assignmentNode.put("cloneURL", "/copyAssignment/" + assignmentID);
+				}
+		    	assignmentNode.put("sentAt", Instant.now().toString());				
+		    	String work = "{ assignmentID: '" + resourceID + "', workID: '" + userID + "', problems: {} }";
+				return ok(views.html.workAssignment.render(assignmentNode.toString(), work, userID, "undefined" /* lti */))
+					.withNewSession()
+					.addingToSession(request, "user", userLMSID)
+					.addingToSession(request, "resource", resourceID);
 		    }
-		    else if (assignmentID == null && resourceAssignmentID != null) 
-		    	assignmentID = resourceAssignmentID;
-		    else if (assignmentID != null && !assignmentID.equals(resourceAssignmentID)) {
-		    	ObjectNode res = JsonNodeFactory.instance.objectNode();
-	   			res.put("resourceID", resourceID);
-	   			res.put("assignmentID", assignmentID);
-	   			s3conn.writeJsonObjectToDynamoDB("CodeCheckLTIResources", res);
-		    }
-			ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
-			if (assignmentNode == null)
-				return badRequest("No assignment " + assignmentID);
-			String assignmentEditKey = assignmentNode.get("editKey").asText();
-	    	assignmentNode.remove("editKey");
-			
-			assignmentNode.put("isStudent", false);
-			assignmentNode.put("viewSubmissionsURL", "/lti/viewSubmissions");
-			String userLMSID = toolConsumerID + "/" + userID;
-			if (userLMSID.equals(assignmentEditKey)) {
-				assignmentNode.put("editAssignmentURL", "/lti/editAssignment");
-				assignmentNode.put("cloneURL", "/copyAssignment/" + assignmentID);
-			}
-	    	assignmentNode.put("sentAt", Instant.now().toString());				
-	    	String work = "{ assignmentID: '" + resourceID + "', workID: '" + userID + "', problems: {} }";
-			return ok(views.html.workAssignment.render(assignmentNode.toString(), work, userID, "undefined" /* lti */))
-				.withNewSession()
-				.addingToSession(request, "user", userLMSID)
-				.addingToSession(request, "resource", resourceID);  					
 	    } else { // Student
-		    if (resourceNode == null) 
-	    		return badRequest("No resource with ID " + resourceID);	    		
-	    	else if (assignmentID != null && !assignmentID.equals(resourceAssignmentID))
-	    		return badRequest("Assignment IDs do not match");
+		    if (assignmentID == null) 
+	    		return badRequest("No assignment for " + resourceID);	    		
 	    	else {
-	    		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", resourceAssignmentID);
+	    		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+				if (assignmentNode == null)
+					return badRequest("No assignment " + assignmentID);
 	        	assignmentNode.remove("editKey");
 
 	    		String lisOutcomeServiceURL = Util.getParam(postParams, "lis_outcome_service_url");
@@ -334,7 +339,7 @@ Instructor:
 	      oav.validateMessage(oam, acc);
           return true;
         } catch (Exception e) {
-        	logger.info("Did not validate: " + e.getLocalizedMessage() + "\nurl: " + url + "\nentries: " + entries);
+        	logger.error("Did not validate: " + e.getLocalizedMessage() + "\nurl: " + url + "\nentries: " + entries);
             return false;
         }
     }
@@ -358,14 +363,22 @@ Instructor:
 			ObjectNode requestNode = (ObjectNode) request.body().asJson();
 			ObjectNode workNode = (ObjectNode) requestNode.get("work");
 	    	ObjectNode result = JsonNodeFactory.instance.objectNode();
-	    	result.put("submittedAt", Instant.now().toString());    	
-	
+	    	Instant now = Instant.now();
+			String assignmentID = requestNode.get("assignmentID").asText();
+			ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+	    	if (assignmentNode.has("deadline")) {
+	    		Instant deadline = Instant.parse(assignmentNode.get("deadline").asText());
+	    		if (now.isAfter(deadline)) 
+	    			return badRequest("After deadline of " + deadline);    		
+	    	}
+	    	result.put("submittedAt", now.toString());    	
+
 			s3conn.writeNewerJsonObjectToDynamoDB("CodeCheckWork", workNode, "assignmentID", "submittedAt");
 			double score = submitGradeToLMS(requestNode, (ObjectNode) requestNode.get("work"));
 	    	result.put("score", score);    	
 			return ok(result);
         } catch (Exception e) {
-            logger.info(Util.getStackTrace(e));
+            logger.error(Util.getStackTrace(e));
             return badRequest(e.getMessage());
         }
 	}	
@@ -384,7 +397,7 @@ Instructor:
 	    	result.put("score", score);    	
 			return ok(result);
         } catch (Exception e) {
-            logger.info(Util.getStackTrace(e));
+            logger.error(Util.getStackTrace(e));
             return badRequest(e.getMessage());
         }
 	}	

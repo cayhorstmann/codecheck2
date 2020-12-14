@@ -25,8 +25,7 @@ package controllers;
    
  CodeCheckAssignment
    assignmentID [primary key]
-   deadlineDate
-   deadlineTime
+   deadline (an ISO 8601 string like "2020-12-01T23:59:59Z")
    editKey // LTI: tool consumer ID + user ID
    problems
      array of // One per group
@@ -192,6 +191,12 @@ public class Assignment extends Controller {
 		return sum == 0 ? 0 : result / sum;
 	}
 	
+	private static boolean editKeyValid(String suppliedEditKey, ObjectNode assignmentNode) {
+		String storedEditKey = assignmentNode.get("editKey").asText();
+		return suppliedEditKey.equals(storedEditKey) && !suppliedEditKey.contains("/");
+		  // Otherwise it's an LTI edit key (tool consumer ID + user ID)
+	}
+	
 	/*
 	 * assignmentID == null: new assignment
 	 * assignmentID != null, editKey != null: edit assignment
@@ -208,7 +213,7 @@ public class Assignment extends Controller {
     			assignmentNode.remove("assignmentID");
     		}
     		else { // Edit existing assignment
-    			if (!editKey.equals(assignmentNode.get("editKey").asText()) || editKey.contains("/")) 
+    			if (!editKeyValid(editKey, assignmentNode)) 
     				// In the latter case, it is an LTI toolConsumerID + userID     		
     				return badRequest("editKey " + editKey + " does not match");
     		}
@@ -229,7 +234,6 @@ public class Assignment extends Controller {
     	ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
     	if (assignmentNode == null) return badRequest("No assignment " + assignmentID);
     	String prefix = Util.prefix(request);
-		String assignmentEditKey = assignmentNode.get("editKey").asText();
     	assignmentNode.remove("editKey");
     	assignmentNode.put("isStudent", isStudent);
     	if (!isStudent && editKey == null) 
@@ -273,7 +277,7 @@ public class Assignment extends Controller {
 				assignmentNode.put("viewSubmissionsURL", "/private/viewSubmissions/" + assignmentID + "/" + editKey);
 				String publicURL = prefix + "assignment/" + assignmentID;
 		    	String privateURL = prefix + "private/assignment/" + assignmentID + "/" + editKey;
-		    	if (editKey.equals(assignmentEditKey)) { 
+		    	if (!editKeyValid(editKey, assignmentNode)) { 
 		    		String editAssignmentURL = prefix + "private/editAssignment/" + assignmentID + "/" + editKey;
 					assignmentNode.put("editAssignmentURL", editAssignmentURL);
 		    	}
@@ -290,7 +294,7 @@ public class Assignment extends Controller {
 	public Result viewSubmissions(Http.Request request, String assignmentID, String editKey)
 		throws IOException {
 		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
-		if (!assignmentNode.get("editKey").asText().equals(editKey))
+		if (!editKeyValid(editKey, assignmentNode))
 			throw new IllegalArgumentException("Edit key does not match");
 
 		ArrayNode submissions = JsonNodeFactory.instance.arrayNode();
@@ -335,7 +339,7 @@ public class Assignment extends Controller {
     		if (assignmentNode == null) return badRequest("Assignment not found");
     		if (!params.has("editKey")) return badRequest("Missing edit key");
     		editKey = params.get("editKey").asText();
-    		if (!editKey.equals(assignmentNode.get("editKey").asText())) 
+    		if (!editKeyValid(editKey, assignmentNode)) 
     			return badRequest("Edit key does not match");
     	}
     	else { // New assignment or clone 
@@ -361,7 +365,16 @@ public class Assignment extends Controller {
 	public Result saveWork(Http.Request request) throws IOException, NoSuchAlgorithmException {
 		ObjectNode contents = (ObjectNode) request.body().asJson();
     	ObjectNode result = JsonNodeFactory.instance.objectNode();
-    	result.put("submittedAt", Instant.now().toString());    	
+    	
+    	Instant now = Instant.now();
+		String assignmentID = contents.get("assignmentID").asText();
+		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+    	if (assignmentNode.has("deadline")) {
+    		Instant deadline = Instant.parse(assignmentNode.get("deadline").asText());
+    		if (now.isAfter(deadline)) 
+    			return badRequest("After deadline of " + deadline);    		
+    	}
+    	result.put("submittedAt", now.toString());    	
 
 		s3conn.writeNewerJsonObjectToDynamoDB("CodeCheckWork", contents, "assignmentID", "submittedAt");
 		return ok(result); 
