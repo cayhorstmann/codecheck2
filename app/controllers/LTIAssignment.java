@@ -364,7 +364,9 @@ public class LTIAssignment extends Controller {
 			ObjectNode workNode = (ObjectNode) requestNode.get("work");
 	    	ObjectNode result = JsonNodeFactory.instance.objectNode();
 	    	Instant now = Instant.now();
-			String assignmentID = workNode.get("assignmentID").asText();
+			String resourceID = workNode.get("assignmentID").asText();
+	    	ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckLTIResources", "resourceID", resourceID); 
+		    String assignmentID = resourceNode.get("assignmentID").asText(); 	        
 			ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
 	    	if (assignmentNode.has("deadline")) {
 	    		Instant deadline = Instant.parse(assignmentNode.get("deadline").asText());
