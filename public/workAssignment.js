@@ -293,10 +293,10 @@ window.addEventListener('DOMContentLoaded', () => {
         window.getSelection().removeAllRanges(); }))
       document.getElementById('publicURL').textContent = assignment.publicURL
       privateURLSpan.textContent = assignment.privateURL
-      privateURLSpan.parentNode.style.display = 'block'
+      privateURLSpan.parentNode.parentNode.style.display = 'block'
     }
     else
-      privateURLSpan.parentNode.style.display = 'none'
+      privateURLSpan.parentNode.parentNode.style.display = 'none'
         
     activateProblemSelection()
     document.getElementById('studentInstructions').style.display = 'none'
