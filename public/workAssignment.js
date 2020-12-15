@@ -39,6 +39,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateScoreDisplay() {
+    if (studentID === '') return // Instructor viewing for cloning
     let result = 0
     let sum = 0
     let explanation = ''
@@ -191,6 +192,12 @@ window.addEventListener('DOMContentLoaded', () => {
   //TODO: Why not done at server
   const problems = assignment.problems[hash(work.workID) % assignment.problems.length]  
   
+  const ccidSpan = document.getElementById('ccid')
+  if (studentID !== '') 
+    ccidSpan.textContent = studentID
+  else
+    ccidSpan.parentNode.style.display = 'none'
+  
   window.addEventListener("message", event => {
     let iframe = sendingIframe(event)
     if (event.data.query === 'docHeight') 
@@ -225,7 +232,6 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   
   if (assignment.isStudent) {
-    updateScoreDisplay()
     if (lti === undefined) {
       document.getElementById('studentLTIInstructions').style.display = 'none'
       const returnToWorkURLSpan = document.getElementById('returnToWorkURL') 
@@ -279,19 +285,18 @@ window.addEventListener('DOMContentLoaded', () => {
       }))    
     document.getElementById('heading').title = work.assignmentID // TODO: Do we want this? 
         
-    const urlsDl = document.getElementById('urls')
-    if ('publicURL' in assignment) {
-      const privateURLSpan = document.getElementById('privateURL')
+    const privateURLSpan = document.getElementById('privateURL')
+    if ('privateURL' in assignment) {
       privateURLSpan.parentNode.appendChild(createButton('hc-command', 'Copy', () => { 
         window.getSelection().selectAllChildren(privateURLSpan); 
         document.execCommand('copy');
         window.getSelection().removeAllRanges(); }))
       document.getElementById('publicURL').textContent = assignment.publicURL
       privateURLSpan.textContent = assignment.privateURL
-      urlsDl.style.display = 'block'
+      privateURLSpan.parentNode.style.display = 'block'
     }
     else
-      urlsDl.style.display = 'none'
+      privateURLSpan.parentNode.style.display = 'none'
         
     activateProblemSelection()
     document.getElementById('studentInstructions').style.display = 'none'

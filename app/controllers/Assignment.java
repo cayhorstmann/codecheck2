@@ -101,12 +101,14 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import models.S3Connection;
 import models.Util;
+import play.Logger;
 import play.mvc.Controller;
 import play.mvc.Http;
 import play.mvc.Result;
 
 public class Assignment extends Controller {
 	@Inject private S3Connection s3conn;
+	private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
 	
 	public static ArrayNode parseAssignment(String assignment) {
         if (assignment == null || assignment.trim().isEmpty()) 
@@ -236,20 +238,23 @@ public class Assignment extends Controller {
     	String prefix = Util.prefix(request);
     	assignmentNode.remove("editKey");
     	assignmentNode.put("isStudent", isStudent);
-    	if (!isStudent && editKey == null) 
-    		assignmentNode.put("cloneURL", "/copyAssignment/" + assignmentID);	    	
     	
-    	if (newid != null) {
-    		ccid = Util.isPronouncableUID(newid) ? newid : Util.createPronouncableUID();
-    	}
-    	else if (ccid == null && isStudent) {    		
-            Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
-            ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
-        }
+    	if (isStudent) {
+    		if (editKey == null) {
+    			Optional<Http.Cookie> editKeyCookie = request.getCookie("cckey");
+    			editKey = editKeyCookie.map(Http.Cookie::value).orElse(null);
+    		}
+    	
+    		if (newid != null) {
+    			ccid = Util.isPronouncableUID(newid) ? newid : Util.createPronouncableUID();
+    			editKey = null;
+    		}
 
-    	if (isStudent && editKey == null) {
-    		Optional<Http.Cookie> editKeyCookie = request.getCookie("cckey");
-            editKey = editKeyCookie.map(Http.Cookie::value).orElse(null);
+    		if (ccid == null) {    		
+    			Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
+    			ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
+    			editKey = null;
+    		}
     	}
     	
     	String work = null;
@@ -277,19 +282,6 @@ public class Assignment extends Controller {
         	return ok(views.html.workAssignment.render(assignmentNode.toString(), work, ccid, lti)).withCookies(newCookie1, newCookie2);
     	}
     	else { // Instructor--no cookie
-    		/*
-    		if (editKey != null) {
-				// TODO: Check if there are any submissions?
-				String publicURL = prefix + "assignment/" + assignmentID;
-		    	String privateURL = prefix + "private/assignment/" + assignmentID + "/" + editKey;
-		    	if (!editKeyValid(editKey, assignmentNode)) { 
-		    		String editAssignmentURL = prefix + "private/editAssignment/" + assignmentID + "/" + editKey;
-					assignmentNode.put("editAssignmentURL", editAssignmentURL);
-		    	}
-		    	assignmentNode.put("privateURL", privateURL);
-				assignmentNode.put("publicURL", publicURL);
-    		}
-    		*/
     		if (editKey == null) {
     			String cloneURL = prefix + "copyAssignment/" + assignmentID;
     			assignmentNode.put("cloneURL", cloneURL);
@@ -371,20 +363,25 @@ public class Assignment extends Controller {
 	}
 	
 	public Result saveWork(Http.Request request) throws IOException, NoSuchAlgorithmException {
-		ObjectNode contents = (ObjectNode) request.body().asJson();
-    	ObjectNode result = JsonNodeFactory.instance.objectNode();
-    	
-    	Instant now = Instant.now();
-		String assignmentID = contents.get("assignmentID").asText();
-		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
-    	if (assignmentNode.has("deadline")) {
-    		Instant deadline = Instant.parse(assignmentNode.get("deadline").asText());
-    		if (now.isAfter(deadline)) 
-    			return badRequest("After deadline of " + deadline);    		
-    	}
-    	result.put("submittedAt", now.toString());    	
-
-		s3conn.writeNewerJsonObjectToDynamoDB("CodeCheckWork", contents, "assignmentID", "submittedAt");
-		return ok(result); 
+		try {
+			ObjectNode requestNode = (ObjectNode) request.body().asJson();
+	    	ObjectNode result = JsonNodeFactory.instance.objectNode();
+	    	
+	    	Instant now = Instant.now();
+			String assignmentID = requestNode.get("assignmentID").asText();
+			ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+	    	if (assignmentNode.has("deadline")) {
+	    		Instant deadline = Instant.parse(assignmentNode.get("deadline").asText());
+	    		if (now.isAfter(deadline)) 
+	    			return badRequest("After deadline of " + deadline);    		
+	    	}
+	    	result.put("submittedAt", now.toString());    	
+	
+			s3conn.writeNewerJsonObjectToDynamoDB("CodeCheckWork", requestNode, "assignmentID", "submittedAt");
+			return ok(result);
+        } catch (Exception e) {
+            logger.error(Util.getStackTrace(e));
+            return badRequest(e.getMessage());
+        }			
 	}		
 }

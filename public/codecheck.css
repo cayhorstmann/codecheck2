@@ -107,7 +107,7 @@ body {
     background: #E19042;
 }
 
-.ccid, .ccurl {
+#ccid, .ccurl {
   font-family: "DejaVuSansMonoSemiCondensed";	
 }
 

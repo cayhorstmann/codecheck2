@@ -8,6 +8,7 @@
     <script type="text/javascript">//<![CDATA[
     const assignment = @Html(assignment)
     let work = @Html(work)
+    const studentID = '@studentID'
     const lti = @Html(lti)
     
     //]]></script>
@@ -23,15 +24,16 @@
        <dt>Public URL for your students:</dt><dd><span id="publicURL" class="ccurl"></span></dd>
        <dt>Private URL for you only:</dt><dd><span id="privateURL" class="ccurl"></span></dd>  
      </dl>     
+     <p>Student ID: <span id="ccid"></span></p>
    </div>
    <div id="studentInstructions">
-	   <p>Your CodeCheck ID: <span class="ccid">@studentID</span></p>
+	   <p>Your CodeCheck ID: <span id="ccid"></span></p>
 	   <ul id="ccidBullets">
 	     <li>Share this ID with your professor</li>
 	     <li id="switchID">Not your ID? Enter yours here: <input id="newccid" type="text" size="30"/>
 	     <li id="clearID">If you work on a shared computer, clear the ID after you are done</li>
 	   </ul>
-	   <dl id="urls">
+	   <dl>
 	     <dt>Use this private URL for resuming your work later:</dt>
 	     <dd id="returnToWork"><span id="returnToWorkURL" class="ccurl"></span></dd>  
 	   </dl>
@@ -39,7 +41,7 @@
    </div>
    <div id="studentLTIInstructions">
      <p>You are viewing this assignment from a Learning Management System (LMS)</p>
-     <p>Your LMS ID: <span class="ccid">@studentID</span></p>
+     <p>Your LMS ID: <span id="ccid"></span></p>
      <p>Wrong score in LMS? <span id="submitLTIButton"></span></p>
    </div>
 <p class="message" id="response"></p>
