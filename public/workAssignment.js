@@ -192,11 +192,11 @@ window.addEventListener('DOMContentLoaded', () => {
   //TODO: Why not done at server
   const problems = assignment.problems[hash(work.workID) % assignment.problems.length]  
   
-  const ccidSpan = document.getElementById('ccid')
-  if (studentID !== '') 
-    ccidSpan.textContent = studentID
-  else
-    ccidSpan.parentNode.style.display = 'none'
+  for (const e of document.getElementsByClassName('ccid')) 
+    if (studentID !== '') 
+      e.textContent = studentID
+    else
+      e.parentNode.style.display = 'none'
   
   window.addEventListener("message", event => {
     let iframe = sendingIframe(event)
