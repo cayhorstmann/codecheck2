@@ -38,21 +38,6 @@ window.addEventListener('DOMContentLoaded', () => {
     if (title !== undefined && title !== '') e.title = title
   }
 
-  function score(problems, work) {
-    let result = 0
-    let sum = 0
-    for (const p of problems) {
-      sum += p.weight          
-      for (const qid in work.problems) {
-        const q = work.problems[qid]
-        if (containsQuestion(p, qid, q)) 
-          result += p.weight * q.score
-      }
-    }
-    return sum === 0 ? sum : result / sum
-  }
-
-
   function updateScoreDisplay() {
     let result = 0
     let sum = 0
@@ -96,6 +81,7 @@ window.addEventListener('DOMContentLoaded', () => {
     } else {
       iframe.contentWindow.postMessage({ request, param: null }, '*')
     }
+    updateScoreDisplay();     
   }
 
   async function sendScoreAndState(iframe, request) {    

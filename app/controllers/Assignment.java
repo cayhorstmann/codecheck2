@@ -246,23 +246,28 @@ public class Assignment extends Controller {
             Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
             ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
         }
-    	boolean editKeySaved = isStudent;
-    	String work = null;
+
     	if (isStudent && editKey == null) {
     		Optional<Http.Cookie> editKeyCookie = request.getCookie("cckey");
             editKey = editKeyCookie.map(Http.Cookie::value).orElse(null);
-            if (editKey == null) {
-            	editKey = Util.createPrivateUID();
-            	editKeySaved = false;
-            }
     	}
-    	if (editKeySaved) 
+    	
+    	String work = null;
+    	if (editKey != null) 
    		    work = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", assignmentID, "workID", ccid + "/" + editKey);
     	if (work == null)
        		work = "{ assignmentID: \"" + assignmentID + "\", workID: \"" + ccid + "/" + editKey + "\", problems: {} }";
-    	
+
     	String lti = "undefined";
     	if (isStudent) {    		
+        	boolean editKeySaved;
+        	if (editKey == null) {
+               	editKey = Util.createPrivateUID();
+               	editKeySaved = false;
+        	}
+        	else
+               	editKeySaved = true;
+        	
     		String returnToWorkURL = prefix + "private/resume/" + assignmentID + "/" + ccid + "/" + editKey;
     		assignmentNode.put("returnToWorkURL", returnToWorkURL); 
         	assignmentNode.put("editKeySaved", editKeySaved);
@@ -272,9 +277,9 @@ public class Assignment extends Controller {
         	return ok(views.html.workAssignment.render(assignmentNode.toString(), work, ccid, lti)).withCookies(newCookie1, newCookie2);
     	}
     	else { // Instructor--no cookie
+    		/*
     		if (editKey != null) {
 				// TODO: Check if there are any submissions?
-				assignmentNode.put("viewSubmissionsURL", "/private/viewSubmissions/" + assignmentID + "/" + editKey);
 				String publicURL = prefix + "assignment/" + assignmentID;
 		    	String privateURL = prefix + "private/assignment/" + assignmentID + "/" + editKey;
 		    	if (!editKeyValid(editKey, assignmentNode)) { 
@@ -284,8 +289,11 @@ public class Assignment extends Controller {
 		    	assignmentNode.put("privateURL", privateURL);
 				assignmentNode.put("publicURL", publicURL);
     		}
-	    	String cloneURL = prefix + "copyAssignment/" + assignmentID;
-			assignmentNode.put("cloneURL", cloneURL);
+    		*/
+    		if (editKey == null) {
+    			String cloneURL = prefix + "copyAssignment/" + assignmentID;
+    			assignmentNode.put("cloneURL", cloneURL);
+    		}
 			
     		return ok(views.html.workAssignment.render(assignmentNode.toString(), work, ccid, lti));
     	}
