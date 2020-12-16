@@ -225,10 +225,12 @@ public class Assignment extends Controller {
     }
     
     /*
-     * ccid == null, editKey == null, isStudent = true: Student starts editing
+     * ccid == null, editKey == null, isStudent = true:  Student starts editing
+     * ccid != null, editKey != null, isStudent = true:  Student resumes editing
+     * ccid != null, editKey != null, isStudent = false: Instructor views student work (with the student's editKey)
      * ccid == null, editKey == null, isStudent = false: Instructor views for possible cloning 
-     * ccid != null, editKey != null, isStudent = true: Student resumes editing
-     * ccid != null, editKey != null, isStudent = false: Instructor views student work
+     * ccid == null, editKey != null, isStudent = false: Instructor views problem for possible editing,  
+     *                                                   viewing student work (with the instructor's editKey)
      */
     public Result work(Http.Request request, String assignmentID, String ccid, String editKey, 
     		boolean isStudent, String newid) 
@@ -236,7 +238,7 @@ public class Assignment extends Controller {
     	ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
     	if (assignmentNode == null) return badRequest("No assignment " + assignmentID);
     	String prefix = Util.prefix(request);
-    	assignmentNode.remove("editKey");
+
     	assignmentNode.put("isStudent", isStudent);
     	
     	if (isStudent) {
@@ -255,13 +257,18 @@ public class Assignment extends Controller {
     			ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
     			editKey = null;
     		}
+    	} else {
+    		if (ccid == null && editKey != null && !editKeyValid(editKey, assignmentNode))
+    			throw new IllegalArgumentException("Edit key does not match");        	    		
     	}
+    	assignmentNode.remove("editKey");
     	
     	String work = null;
     	if (editKey != null) 
    		    work = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", assignmentID, "workID", ccid + "/" + editKey);
-    	if (work == null)
-       		work = "{ assignmentID: \"" + assignmentID + "\", workID: \"" + ccid + "/" + editKey + "\", problems: {} }";
+    	if (work == null) 
+       		work = "{ assignmentID: \"" + assignmentID + "\", workID: \"" 
+       			+ (ccid == null ? "undefined" : ccid + "/" + editKey) + "\", problems: {} }";
 
     	String lti = "undefined";
     	if (isStudent) {    		
@@ -281,10 +288,20 @@ public class Assignment extends Controller {
         	Http.Cookie newCookie2 = Http.Cookie.builder("cckey", editKey).withPath("/").withMaxAge(Duration.ofDays(180)).build();
         	return ok(views.html.workAssignment.render(assignmentNode.toString(), work, ccid, lti)).withCookies(newCookie1, newCookie2);
     	}
-    	else { // Instructor--no cookie
-    		if (editKey == null) {
-    			String cloneURL = prefix + "copyAssignment/" + assignmentID;
-    			assignmentNode.put("cloneURL", cloneURL);
+    	else { // Instructor
+    		if (ccid == null) {
+    			if (editKey != null) { // Instructor viewing for editing/submissions    				
+    				// TODO: Check if there are any submissions?
+    				assignmentNode.put("viewSubmissionsURL", "/private/viewSubmissions/" + assignmentID + "/" + editKey);
+    				String publicURL = prefix + "assignment/" + assignmentID;
+    		    	String privateURL = prefix + "private/assignment/" + assignmentID + "/" + editKey;
+		    		String editAssignmentURL = prefix + "private/editAssignment/" + assignmentID + "/" + editKey;
+					assignmentNode.put("editAssignmentURL", editAssignmentURL);
+    		    	assignmentNode.put("privateURL", privateURL);
+    				assignmentNode.put("publicURL", publicURL);    				
+    			}
+				String cloneURL = prefix + "copyAssignment/" + assignmentID;
+				assignmentNode.put("cloneURL", cloneURL);
     		}
 			
     		return ok(views.html.workAssignment.render(assignmentNode.toString(), work, ccid, lti));
