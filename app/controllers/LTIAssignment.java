@@ -11,6 +11,7 @@ import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.AbstractMap;
 import java.util.Base64;
 import java.util.HashMap;
@@ -369,9 +370,13 @@ public class LTIAssignment extends Controller {
 		    String assignmentID = resourceNode.get("assignmentID").asText(); 	        
 			ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
 	    	if (assignmentNode.has("deadline")) {
-	    		Instant deadline = Instant.parse(assignmentNode.get("deadline").asText());
-	    		if (now.isAfter(deadline)) 
-	    			return badRequest("After deadline of " + deadline);    		
+	    		try {
+	    			Instant deadline = Instant.parse(assignmentNode.get("deadline").asText());
+	    			if (now.isAfter(deadline)) 
+	    				return badRequest("After deadline of " + deadline);
+	    		} catch(DateTimeParseException e) { // TODO: This should never happen, but it did
+	    			logger.error(Util.getStackTrace(e));
+	    		}
 	    	}
 	    	result.put("submittedAt", now.toString());    	
 

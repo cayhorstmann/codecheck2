@@ -33,9 +33,12 @@ window.addEventListener('DOMContentLoaded', () => {
         editKey: assignment.editKey, // undefined when cloned
         problems: document.getElementById('problems').value,
       }
+      
     if (askForDeadline) {
-      request.deadline = document.getElementById('deadlineDate').value + 'T' +
-        document.getElementById('deadlineTime').value + ':59Z'        
+      const deadlineDate = document.getElementById('deadlineDate').value
+      const deadlineTime = document.getElementById('deadlineTime').value
+      if (deadlineDate != '' && deadlineTime != '')
+        request.deadline =  deadlineDate + 'T' + deadlineTime + ':59Z'        
     }
     submitButton.disabled = true
     responseDiv.style.display = 'none'

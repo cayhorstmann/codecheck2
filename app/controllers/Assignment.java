@@ -68,6 +68,7 @@ import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -388,9 +389,13 @@ public class Assignment extends Controller {
 			String assignmentID = requestNode.get("assignmentID").asText();
 			ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
 	    	if (assignmentNode.has("deadline")) {
-	    		Instant deadline = Instant.parse(assignmentNode.get("deadline").asText());
-	    		if (now.isAfter(deadline)) 
-	    			return badRequest("After deadline of " + deadline);    		
+	    		try {
+	    			Instant deadline = Instant.parse(assignmentNode.get("deadline").asText());
+	    			if (now.isAfter(deadline)) 
+	    				return badRequest("After deadline of " + deadline);
+	    		} catch(DateTimeParseException e) { // TODO: This should never happen, but it did
+	    			logger.error(Util.getStackTrace(e));
+	    		}
 	    	}
 	    	result.put("submittedAt", now.toString());    	
 	
