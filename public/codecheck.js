@@ -86,14 +86,16 @@ document.addEventListener('DOMContentLoaded', function () {
     for (let k = 0; k < editorDivs.length; k++)
       editors.push(ace.edit(editorDivs[k]));
     for (let k = 0; k < editors.length; k++) {
-      if (editorDivs[k].getAttribute('id').indexOf('.java-')!=-1) {
-	editors[k].getSession().setMode('ace/mode/java');
-      } else if(editorDivs[k].getAttribute('id').indexOf('.cpp-')!=-1) {
-	editors[k].getSession().setMode('ace/mode/c_cpp');
-      } else if(editorDivs[k].getAttribute('id').indexOf('.py-')!=-1) {
-	editors[k].getSession().setMode('ace/mode/python');
+      let divId = editorDivs[k].getAttribute('id')
+      let session = editors[k].getSession()  
+      if (divId.indexOf('.java-')!=-1) {
+	      session.setMode('ace/mode/java');
+      } else if(divId.indexOf('.cpp-')!=-1 || divId.indexOf('.c-')!=-1 || divId.indexOf('.h-')!=-1) {
+	      session.setMode('ace/mode/c_cpp');
+      } else if(divId.indexOf('.py-')!=-1) {
+	      session.setMode('ace/mode/python');
       } else {
-	editors[k].getSession().setMode('ace/mode/text');
+	      session.setMode('ace/mode/text');
       }
       editors[k].setOption('autoScrollEditorIntoView', true);
       editors[k].setOption('displayIndentGuides', false);

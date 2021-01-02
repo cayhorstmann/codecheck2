@@ -1,5 +1,6 @@
 package models;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -144,8 +145,16 @@ public class S3Connection {
 
 		InputStream in = getS3Connection().getObject(bucket, problem)
 				.getObjectContent();
-		Util.unzip(in, problemDir);
+		// TODO -- trying to avoid warning 
+		// WARN - com.amazonaws.services.s3.internal.S3AbortableInputStream - Not all bytes were read from the S3ObjectInputStream, aborting HTTP connection. This is likely an error and may result in sub-optimal behavior. Request only the bytes you need via a ranged GET or drain the input stream after use
+		//Util.unzip(in, problemDir);
+		//in.close();
+		byte[] bytes = readAllBytes(in);
 		in.close();
+		ByteArrayInputStream in2 = new ByteArrayInputStream(bytes);
+		Util.unzip(in2, problemDir);
+		in2.close();
+		
 		return problemDir;
 	}
 	

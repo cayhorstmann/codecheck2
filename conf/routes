@@ -3,7 +3,7 @@
 # ~~~~
 
 # Home page
-GET   /                       controllers.Default.redirect(to = "http://horstmann.com/codecheck/index.html")
+GET   /                       controllers.Default.redirect(to = "https://horstmann.com/codecheck/index.html")
 
 # Health check
 GET  /health                  controllers.Application.health(request: Request)
@@ -77,8 +77,6 @@ POST /assignment/:assignmentID controllers.LTIAssignment.launch(request: Request
 POST /lti/saveWork           controllers.LTIAssignment.saveWork(request: Request)
 # Student request sending score to LMS
 POST /lti/sendScore          controllers.LTIAssignment.sendScore(request: Request)
-# Instructor views submissions
-POST /lti/viewSubmissions    controllers.LTIAssignment.viewSubmissions(request: Request)
 # Canvas call to createAssignment (resource selection)
 POST /lti/createAssignment   controllers.LTIAssignment.createAssignment(request: Request)
 # Instructor saves assignment
@@ -87,9 +85,9 @@ POST /lti/saveAssignment     controllers.LTIAssignment.saveAssignment(request: R
 # Instructor views submissions
 GET  /lti/viewSubmissions    controllers.LTIAssignment.viewSubmissions(request: Request)
 # Instructor views a submission
-GET  /lti/viewSubmission/:workID controllers.LTIAssignment.viewSubmission(request: Request, workID: String)
+GET  /lti/viewSubmission     controllers.LTIAssignment.viewSubmission(request: Request)
 # Instructor edits current assignment
-GET  /lti/editAssignment     controllers.LTIAssignment.editAssignment(request: Request)
+GET  /lti/editAssignment/:assignmentID controllers.LTIAssignment.editAssignment(request: Request, assignmentID: String)
 
 # Shows LMS config XML
 GET /lti/config              controllers.LTIAssignment.config(request: Request)

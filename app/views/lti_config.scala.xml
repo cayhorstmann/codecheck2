@@ -12,14 +12,14 @@
     <blti:title>CodeCheck</blti:title>
     <blti:description>CodeCheck Assignments</blti:description>
     <blti:icon></blti:icon>
-    <blti:launch_url>https://@host/lti/assignment</blti:launch_url>
+    <blti:launch_url>https://@host/assignment</blti:launch_url>
     <blti:extensions platform="canvas.instructure.com">
       <lticm:property name="tool_id">320576af-a6a1-41f8-b634-2ee4ea4daafc</lticm:property>
       <lticm:property name="privacy_level">anonymous</lticm:property>
       <lticm:property name="domain">@host</lticm:property>
       <lticm:options name="resource_selection">
         <lticm:property name="url">https://@host/lti/createAssignment</lticm:property>
-        <lticm:property name="text">LTIHub</lticm:property>
+        <lticm:property name="text">CodeCheck</lticm:property>
         <lticm:property name="selection_width">1000</lticm:property>
         <lticm:property name="selection_height">800</lticm:property>
         <lticm:property name="enabled">true</lticm:property>

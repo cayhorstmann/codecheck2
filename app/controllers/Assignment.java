@@ -6,21 +6,11 @@ package controllers;
  could coexist on a page or shared iframe for efficiency.) An assignment 
  weighs its problems.
  
- A problem contains one or more questions. Each question has a globally unique qid. 
- The max scores of a problem must add up to 1.0. It's up the problem to weigh 
- questions. 
- 
- The problem ID is normally the problem URL. However, for interactive or CodeCheck 
+ The "problem key" is normally the problem URL. However, for interactive or CodeCheck 
  problems in the textbook repo, it is the qid of the single question in the problem.
  
- A submission contains work on one or more questions. Work is a map from qids to 
- scores, states, and the problem ID (unless it can be determined automatically that 
- a question belongs to a problem.) The problem ID is necessary for weighing and  
- changes in assignments. 
-   
- If the key of the enclosing problem is different from the qid, it must be included in the
- work record. 
- 
+ Work is a map from problem keys to scores and states. 
+    
  Tables:
    
  CodeCheckAssignment
@@ -31,17 +21,29 @@ package controllers;
      array of // One per group
        array of { URL, qid?, weight } // qid for book repo
   
- CodeCheckLTIResources
+ CodeCheckLTIResources (Legacy)
    resourceID [primary key] // LTI tool consumer ID + course ID + resource ID 
    assignmentID
    
  CodeCheckWork
-   assignmentID [partition key] // non-LTI: assignmentID in CodeCheckAssignments, LTI: tool consumer ID + course ID + resource ID, TODO: Should have been named resourceID  
-   workID [sort key] // non-LTI: ccid + editKey, LTI: userID
-   problems // TODO: Should have been named questions
-     map from qids to { state, score, pid? }
+   assignmentID [partition key] // non-LTI: courseID? + assignmentID, LTI: toolConsumeID/courseID + assignment ID, Legacy tool consumer ID/course ID/resource ID  
+   workID [sort key] // non-LTI: ccid/editKey, LTI: userID
+   problems 
+     map from URL/qids to { state, score }
    submittedAt
-   lastProblem    
+   tab     
+       
+ CodeCheckSubmission
+   submissionID [partition key] // non-LTI: courseID? + assignmentID + problemKey + ccid/editKey , LTI: toolConsumerID/courseID + assignmentID + problemKey + userID 
+     // either way, that's resource ID + workID + problem key
+   submittedAt [sort key] 
+   submitterID ccid or userID 
+   state: as string, not JSON
+   score
+  
+   with global secondary index
+     problemID 
+     submitterID
    
  CodeCheckLTICredentials
    oauth_consumer_key [primary key]
@@ -54,25 +56,18 @@ package controllers;
    Each line:
      urlOrQid (weight%)? title
  
- Cookies (student only)
-   ccid
-   cckey 
- 
+ Cookies 
+   ccid (student only)
+   cckey (student only)
+   PLAY_SESSION
 */
 
 import java.io.IOException;
-import java.net.URL;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -80,22 +75,7 @@ import java.util.regex.Pattern;
 
 import javax.inject.Inject;
 
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.document.DynamoDB;
-import com.amazonaws.services.dynamodbv2.document.Item;
-import com.amazonaws.services.dynamodbv2.document.ItemCollection;
-import com.amazonaws.services.dynamodbv2.document.PutItemOutcome;
-import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
-import com.amazonaws.services.dynamodbv2.document.RangeKeyCondition;
-import com.amazonaws.services.dynamodbv2.document.Table;
-import com.amazonaws.services.dynamodbv2.document.spec.PutItemSpec;
-import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
-import com.amazonaws.services.dynamodbv2.model.PutItemRequest;
-import com.amazonaws.services.dynamodbv2.model.PutItemResult;
-import com.amazonaws.services.dynamodbv2.model.ReturnValue;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -164,18 +144,16 @@ public class Assignment extends Controller {
         return groupsNode;
     }
     
-    private static boolean containsQuestion(ObjectNode problem, String qid, ObjectNode submission) {    	
+    private static boolean isProblemKeyFor(String key, ObjectNode problem) {    	
     	// Textbook repo
-    	if (problem.has("qid")) return problem.get("qid").asText().equals(qid);
+    	if (problem.has("qid")) return problem.get("qid").asText().equals(key);
     	String problemURL = problem.get("URL").asText();
-    	if (submission.has("pid")) return problemURL.equals(submission.get("pid").asText());    	
-		// Some legacy CodeCheck questions have butchered keys such as 0101407088y6iesgt3rs6k7h0w45haxajn 
-    	return problemURL.endsWith(qid);
-    	// TODO: return problemURL.equals(qid);
+    	// Some legacy CodeCheck questions have butchered keys such as 0101407088y6iesgt3rs6k7h0w45haxajn 
+    	return problemURL.endsWith(key);
 	}
 		  	 
 	public static double score(ObjectNode assignment, ObjectNode work) {
-		ArrayNode groups = (ArrayNode) assignment.get("problems");
+		ArrayNode groups = (ArrayNode) assignment.get("problems");		
 		String workID = work.get("workID").asText();
 		ArrayNode problems = (ArrayNode) groups.get(workID.hashCode() % groups.size());
 		ObjectNode submissions = (ObjectNode) work.get("problems");
@@ -185,10 +163,11 @@ public class Assignment extends Controller {
 			ObjectNode problem = (ObjectNode) p;
 			double weight = problem.get("weight").asDouble();
 			sum += weight;
-			for (String qid : Util.iterable(submissions.fieldNames())) {
-				ObjectNode submission = (ObjectNode) submissions.get(qid);
-				if (containsQuestion(problem, qid, submission))	
+			for (String key : Util.iterable(submissions.fieldNames())) {
+				if (isProblemKeyFor(key, problem)) {	
+					ObjectNode submission = (ObjectNode) submissions.get(key);
 					result += weight * submission.get("score").asDouble();
+				}
 			}			
 		}
 		return sum == 0 ? 0 : result / sum;
@@ -211,6 +190,8 @@ public class Assignment extends Controller {
     		assignmentNode = JsonNodeFactory.instance.objectNode();
     	} else {
     		assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+    		if (assignmentNode == null)	return badRequest("Assignment not found");
+    		
     		if (editKey == null) { // Clone
     			assignmentNode.remove("editKey");
     			assignmentNode.remove("assignmentID");
@@ -236,8 +217,12 @@ public class Assignment extends Controller {
     public Result work(Http.Request request, String assignmentID, String ccid, String editKey, 
     		boolean isStudent, String newid) 
     		throws IOException, GeneralSecurityException {
-    	ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
-    	if (assignmentNode == null) return badRequest("No assignment " + assignmentID);
+    	ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);    	
+    	if (assignmentNode == null) return badRequest("Assignment not found");
+    	String workID = ccid + "/" + editKey;
+    	ArrayNode groups = (ArrayNode) assignmentNode.get("problems");
+    	assignmentNode.set("problems", groups.get(Math.abs(workID.hashCode()) % groups.size()));
+    	
     	String prefix = Util.prefix(request);
 
     	assignmentNode.put("isStudent", isStudent);
@@ -266,7 +251,7 @@ public class Assignment extends Controller {
     	
     	String work = null;
     	if (editKey != null) 
-   		    work = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", assignmentID, "workID", ccid + "/" + editKey);
+   		    work = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", assignmentID, "workID", workID);
     	if (work == null) 
        		work = "{ assignmentID: \"" + assignmentID + "\", workID: \"" 
        			+ (ccid == null ? "undefined" : ccid + "/" + editKey) + "\", problems: {} }";
@@ -281,7 +266,7 @@ public class Assignment extends Controller {
         	else
                	editKeySaved = true;
         	
-    		String returnToWorkURL = prefix + "private/resume/" + assignmentID + "/" + ccid + "/" + editKey;
+    		String returnToWorkURL = prefix + "/private/resume/" + assignmentID + "/" + ccid + "/" + editKey;
     		assignmentNode.put("returnToWorkURL", returnToWorkURL); 
         	assignmentNode.put("editKeySaved", editKeySaved);
         	assignmentNode.put("sentAt", Instant.now().toString());
@@ -294,14 +279,14 @@ public class Assignment extends Controller {
     			if (editKey != null) { // Instructor viewing for editing/submissions    				
     				// TODO: Check if there are any submissions?
     				assignmentNode.put("viewSubmissionsURL", "/private/viewSubmissions/" + assignmentID + "/" + editKey);
-    				String publicURL = prefix + "assignment/" + assignmentID;
-    		    	String privateURL = prefix + "private/assignment/" + assignmentID + "/" + editKey;
-		    		String editAssignmentURL = prefix + "private/editAssignment/" + assignmentID + "/" + editKey;
+    				String publicURL = prefix + "/assignment/" + assignmentID;
+    		    	String privateURL = prefix + "/private/assignment/" + assignmentID + "/" + editKey;
+		    		String editAssignmentURL = prefix + "/private/editAssignment/" + assignmentID + "/" + editKey;
 					assignmentNode.put("editAssignmentURL", editAssignmentURL);
     		    	assignmentNode.put("privateURL", privateURL);
     				assignmentNode.put("publicURL", publicURL);    				
     			}
-				String cloneURL = prefix + "copyAssignment/" + assignmentID;
+				String cloneURL = prefix + "/copyAssignment/" + assignmentID;
 				assignmentNode.put("cloneURL", cloneURL);
     		}
 			
@@ -312,6 +297,8 @@ public class Assignment extends Controller {
 	public Result viewSubmissions(Http.Request request, String assignmentID, String editKey)
 		throws IOException {
 		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+		if (assignmentNode == null)	return badRequest("Assignment not found");
+		
 		if (!editKeyValid(editKey, assignmentNode))
 			throw new IllegalArgumentException("Edit key does not match");
 
@@ -355,6 +342,7 @@ public class Assignment extends Controller {
     		assignmentID = params.get("assignmentID").asText();
     		assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
     		if (assignmentNode == null) return badRequest("Assignment not found");
+    		
     		if (!params.has("editKey")) return badRequest("Missing edit key");
     		editKey = params.get("editKey").asText();
     		if (!editKeyValid(editKey, assignmentNode)) 
@@ -374,7 +362,7 @@ public class Assignment extends Controller {
     	s3conn.writeJsonObjectToDynamoDB("CodeCheckAssignments", params);
 
     	String prefix = Util.prefix(request);
-    	String assignmentURL = prefix + "private/assignment/" + assignmentID + "/" + editKey;
+    	String assignmentURL = prefix + "/private/assignment/" + assignmentID + "/" + editKey;
 		params.put("assignmentURL", assignmentURL);
     	
 		return ok(params);
@@ -388,6 +376,8 @@ public class Assignment extends Controller {
 	    	Instant now = Instant.now();
 			String assignmentID = requestNode.get("assignmentID").asText();
 			ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+			if (assignmentNode == null)	return badRequest("Assignment not found");
+			
 	    	if (assignmentNode.has("deadline")) {
 	    		try {
 	    			Instant deadline = Instant.parse(assignmentNode.get("deadline").asText());

@@ -1,26 +1,17 @@
 window.addEventListener('DOMContentLoaded', () => {
   const responseDiv = document.getElementById('response')
   const savedCopyCheckbox = document.querySelector('#savedcopy > input')
-  const iframePid = new Map()
+  const iframeKey = new Map()
 
-  function hash(s) {
-    let r = 0
-    for (let i = 0; i < s.length; i++) r = (31 * r + s.charCodeAt(i)) % 4294967296 // 2 ** 32
-    if (r >= 4294967296 / 2) r = r - 4294967296  
-    return r      
-  }
-  
-  function problemPid(problem) {
+  function problemKey(problem) {
     return problem.qid !== undefined ? problem.qid : problem.URL
   }
   
-  function containsQuestion(problem, qid, submission) {
+  function isProblemKeyFor(key, problem) {
       // Textbook repo
-      if ('qid' in problem) return problem.qid === qid
-      if ('pid' in submission) return problem.URL === submission.pid
-      // Some legacy CodeCheck questions have butchered keys such as 0101407088y6iesgt3rs6k7h0w45haxajn 
-      return problem.URL.endsWith(qid)
-      // TODO: return problem.URL === qid
+      if ('qid' in problem) return problem.qid === key
+      // Some legacy CodeCheck problems have butchered keys such as 0101407088y6iesgt3rs6k7h0w45haxajn 
+      else return problem.URL.endsWith(key)
   }
   
   function sendingIframe(event) {
@@ -43,18 +34,18 @@ window.addEventListener('DOMContentLoaded', () => {
     let result = 0
     let sum = 0
     let explanation = ''
-    for (let i = 0; i < problems.length; i++) {
-      const p = problems[i]
+    for (let i = 0; i < assignment.problems.length; i++) {
+      const p = assignment.problems[i]
       if (p.weight > 0) {
-        let score = 0
-        for (const qid in work.problems) {
-          const q = work.problems[qid]
-          if (containsQuestion(p, qid, q)) 
-            score += q.score
-        }
-        updateScoreInProblemSelector(i, score)
-        result += p.weight * score
         sum += p.weight
+        // really want let score = work.problems[problemKey(p)].score
+        for (const key in work.problems) {
+          if (isProblemKeyFor(key, p)) { 
+            let score = work.problems[key].score
+            updateScoreInProblemSelector(i, score)
+            result += p.weight * score
+          }
+        }
         if (explanation !== '') explanation += ' + '
         explanation += percent(score)
         if (p.weight !== 1) explanation += '×' + p.weight.toFixed(2).replace(/\.?0+$/, '')
@@ -68,17 +59,16 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   
   function adjustDocHeight(iframe, request) {
-    console.log({pid: iframePid.get(iframe), oldHeight: iframe.scrollHeight, newHeight: request.param.docHeight })
+    console.log({frame: iframeKey.get(iframe), oldHeight: iframe.scrollHeight, newHeight: request.param.docHeight })
     const newHeight = request.param.docHeight;
     if (iframe.scrollHeight < newHeight)
       iframe.style.height = newHeight + 'px'
   }
 
   function restoreStateOfProblem(iframe, request) {
-    let qid = request.param.qid
-    if (qid === undefined || qid === '') qid = request.param.qid = iframePid.get(iframe) // TODO: Fix in receiveMessage.js
-    if (qid in work.problems) {
-      iframe.contentWindow.postMessage({ request, param: work.problems[qid].state }, '*');
+    let key = iframeKey.get(iframe) 
+    if (key in work.problems) {
+      iframe.contentWindow.postMessage({ request, param: work.problems[key].state }, '*');
     } else {
       iframe.contentWindow.postMessage({ request, param: null }, '*')
     }
@@ -87,11 +77,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
   async function sendScoreAndState(iframe, request) {    
     if (!assignment.isStudent) return // Viewing as instructor
-    let pid = iframePid.get(iframe)  
-    let qid = request.param.qid
-    if (qid === undefined || qid === '') qid = request.param.qid = pid // TODO: Fix in receiveMessage.js
-    work.problems[qid] = request.param
-    if (qid != pid) work.problems[qid].pid = pid
+    let key = iframeKey.get(iframe)  
+    // Don't want qid which is also in request.param
+    work.problems[key] = { score: request.param.score, state: request.param.state }
     updateScoreDisplay();     
     try {
       responseDiv.textContent = ''
@@ -117,7 +105,7 @@ window.addEventListener('DOMContentLoaded', () => {
     buttonDiv = document.createElement('div')
     buttonDiv.id = 'buttons'
     document.body.appendChild(buttonDiv)      
-    useTitles = problems.some(p => 'title' in p)
+    useTitles = assignment.problems.some(p => 'title' in p)
     if (useTitles) {
       document.getElementById('abovebuttons').textContent = 'Use the selector below to view all parts of the assignment.'
       select = document.createElement('select')
@@ -133,7 +121,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const number = '' + (index + 1)
     if (useTitles) {
       const option = document.createElement('option')
-      option.textContent = title === undefined ? 'Problem ' + number : title
+      option.textContent = number + '. ' + (title === undefined ? '' : title)
       select.appendChild(option)
     } else {
       buttonDiv.appendChild(createButton('hc-step hc-disabled', number, () => selectProblem(index)))      
@@ -155,7 +143,7 @@ window.addEventListener('DOMContentLoaded', () => {
   
   function selectProblem(index) {
     if (!savedCopyCheckbox.checked) return
-    if (index < 0 || index >= problems.length) return
+    if (index < 0 || index >= assignment.problems.length) return
     if (useTitles) {
       select.selectedIndex = index      
     } else {
@@ -169,13 +157,13 @@ window.addEventListener('DOMContentLoaded', () => {
     for (let i = 0; i < iframes.length; i++) {
       const iframe = iframes[i]
       if (i === index) {    
-        if (!iframe.src) iframe.src = problems[i].URL
+        if (!iframe.src) iframe.src = assignment.problems[i].URL
         iframe.style.display = 'block'
       } else { 
         iframe.style.display = 'none'
       }
     }
-    work.tab = index // TODO: pid or URL
+    work.tab = index // TODO: key, not integer
   }
   
   function updateScoreInProblemSelector(index, score) {
@@ -189,8 +177,6 @@ window.addEventListener('DOMContentLoaded', () => {
   // Start of initialization
   
   assignment.receivedAt = Date.now()  
-  //TODO: Why not done at server
-  const problems = assignment.problems[hash(work.workID) % assignment.problems.length]  
   
   for (const e of document.getElementsByClassName('ccid')) 
     if (studentID !== '') 
@@ -222,13 +208,13 @@ window.addEventListener('DOMContentLoaded', () => {
     }))
       
   initializeProblemSelectorUI()      
-  for (let i = 0; i < problems.length; i++) {
+  for (let i = 0; i < assignment.problems.length; i++) {
     const iframe = document.createElement('iframe')    
-    iframePid.set(iframe, problemPid(problems[i]))
+    iframeKey.set(iframe, problemKey(assignment.problems[i]))
     iframe.className = 'exercise-iframe'
     document.body.appendChild(iframe)
     iframe.style.display = 'none'
-    addProblemSelector(i, problems[i].title)
+    addProblemSelector(i, assignment.problems[i].title)
   }
   
   if (assignment.isStudent) {
