@@ -217,13 +217,19 @@ public class Assignment extends Controller {
     		boolean isStudent) 
     		throws IOException, GeneralSecurityException {
     	String prefix = Util.prefix(request);
-    	String workID = "";  
+    	String workID = "";
+    	boolean editKeySaved = true;
 
     	ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);    	
     	if (assignmentNode == null) return badRequest("Assignment not found");
     	
     	assignmentNode.put("isStudent", isStudent);
     	if (isStudent) {
+    		if (request.queryString("newid").isPresent()) {
+				ccid = Util.createPronouncableUID();
+               	editKey = Util.createPrivateUID();
+               	editKeySaved = false;    			
+    		}
     		if (ccid == null) {    		
     			Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
     			if (ccidCookie.isPresent()) {
@@ -231,6 +237,10 @@ public class Assignment extends Controller {
     				Optional<Http.Cookie> editKeyCookie = request.getCookie("cckey");
     				if (!editKeyCookie.isPresent()) return badRequest("Missing cckey cookie");
     				editKey = editKeyCookie.get().value();
+    			} else {
+    				ccid = Util.createPronouncableUID();
+                   	editKey = Util.createPrivateUID();
+                   	editKeySaved = false;
     			}
     		}
         	workID = ccid + "/" + editKey;    		
@@ -243,22 +253,14 @@ public class Assignment extends Controller {
     	assignmentNode.set("problems", groups.get(Math.abs(workID.hashCode()) % groups.size()));
     	
     	String work = null;
-    	if (editKey != null) 
+    	if (!workID.equals("")) 
    		    work = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", assignmentID, "workID", workID);
     	if (work == null) 
        		work = "{ assignmentID: \"" + assignmentID + "\", workID: \"" 
        			+ workID + "\", problems: {} }";
 
     	String lti = "undefined";
-    	if (isStudent) {    		
-        	boolean editKeySaved;
-        	if (editKey == null) {
-               	editKey = Util.createPrivateUID();
-               	editKeySaved = false;
-        	}
-        	else
-               	editKeySaved = true;
-        	
+    	if (isStudent) {    		        	
     		String returnToWorkURL = prefix + "/private/resume/" + assignmentID + "/" + ccid + "/" + editKey;
     		assignmentNode.put("returnToWorkURL", returnToWorkURL); 
         	assignmentNode.put("editKeySaved", editKeySaved);
