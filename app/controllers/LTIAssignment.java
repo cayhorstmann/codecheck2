@@ -318,13 +318,13 @@ public class LTIAssignment extends Controller {
 			String assignmentID = assignmentOfResource(resourceID);
 			String workID = workNode.get("workID").asText();
 			String problemID = workNode.get("tab").asText();
-			
+			ObjectNode problemsNode = (ObjectNode) workNode.get("problems");
 			ObjectNode submissionNode = JsonNodeFactory.instance.objectNode();
 			String submissionID = resourceID + " " + workID + " " + problemID; 
 			submissionNode.put("submissionID", submissionID);
 			submissionNode.put("submittedAt", now.toString());
-			submissionNode.put("state", workNode.get(problemID).get("state").toString());
-			submissionNode.put("score", workNode.get(problemID).get("score").asDouble());
+			submissionNode.put("state", problemsNode.get(problemID).get("state").toString());
+			submissionNode.put("score", problemsNode.get(problemID).get("score").asDouble());
 			s3conn.writeJsonObjectToDynamoDB("CodeCheckSubmissions", submissionNode);
 			
 			ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
