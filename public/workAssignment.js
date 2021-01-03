@@ -202,6 +202,7 @@ window.addEventListener('DOMContentLoaded', () => {
       sendScoreAndState(iframe, event.data)
   }, false);
   
+  /*
   document.getElementById('switchID').appendChild(createButton('hc-command', 'Switch to this ID', () => {
       responseDiv.textContent = ''
       const newccid =  document.getElementById('newccid').value
@@ -211,6 +212,7 @@ window.addEventListener('DOMContentLoaded', () => {
         responseDiv.textContent = 'Not a valid CodeCheck ID'
       }        
     }))
+  */
   document.getElementById('clearID').appendChild(createButton('hc-command', 'Clear ID now', () => {
       location = `${location.href.split(/[?#]/)[0]}?newid=`    
     }))

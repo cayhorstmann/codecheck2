@@ -4,6 +4,9 @@
 
 # Home page
 GET   /                       controllers.Default.redirect(to = "https://horstmann.com/codecheck/index.html")
+# Favicon
+GET   /favicon.ico            controllers.Assets.at(path="/public", file="favicon.ico")
+
 
 # Health check
 GET  /health                  controllers.Application.health(request: Request)
