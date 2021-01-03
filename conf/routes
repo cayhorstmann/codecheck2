@@ -44,16 +44,16 @@ POST /codecheck/check						controllers.Check.checkHTML(request: Request)
 # Assignments
 
 # Student starts
-GET  /assignment/:assignmentID                      controllers.Assignment.work(request: Request, assignmentID: String, ccid: String = null, key: String = null, isStudent: Boolean = true, newid: String ?= null)
+GET  /assignment/:assignmentID                      controllers.Assignment.work(request: Request, assignmentID: String, ccid: String = null, key: String = null, isStudent: Boolean = true)
 # Student resumes
-GET  /private/resume/:assignmentID/:ccid/:key       controllers.Assignment.work(request: Request, assignmentID: String, ccid: String, key: String, isStudent: Boolean = true, newid: String ?= null)
+GET  /private/resume/:assignmentID/:ccid/:key       controllers.Assignment.work(request: Request, assignmentID: String, ccid: String, key: String, isStudent: Boolean = true)
 
 # Instructor views a student submission
-GET  /private/submission/:assignmentID/:ccid/:key   controllers.Assignment.work(request: Request, assignmentID: String, ccid: String, key: String, isStudent: Boolean = false, newid: String ?= null)
+GET  /private/submission/:assignmentID/:ccid/:key   controllers.Assignment.work(request: Request, assignmentID: String, ccid: String, key: String, isStudent: Boolean = false)
 # Instructor views an assignment for review/cloning
-GET  /viewAssignment/:assignmentID                  controllers.Assignment.work(request: Request, assignmentID: String, ccid: String = null, key: String = null, isStudent: Boolean = false, newid: String ?= null)
+GET  /viewAssignment/:assignmentID                  controllers.Assignment.work(request: Request, assignmentID: String, ccid: String = null, key: String = null, isStudent: Boolean = false)
 # Instructor views existing assignment
-GET  /private/assignment/:assignmentID/:key         controllers.Assignment.work(request: Request, assignmentID: String, ccid: String = null, key: String, isStudent: Boolean = false, newid: String ?= null)
+GET  /private/assignment/:assignmentID/:key         controllers.Assignment.work(request: Request, assignmentID: String, ccid: String = null, key: String, isStudent: Boolean = false)
 
 # Instructor makes new assignment
 GET  /newAssignment                                 controllers.Assignment.edit(request: Request, assignmentID: String = null, key: String = null)
