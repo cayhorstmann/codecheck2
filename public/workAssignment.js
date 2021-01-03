@@ -55,7 +55,7 @@ window.addEventListener('DOMContentLoaded', () => {
       explanation = '(' + explanation + ') / ' + sum.toFixed(2).replace(/\.?0+$/, '')
     
     result = sum === 0 ? sum : result / sum
-    updateScoreInElementText(document.querySelector('h1'), result, explanation)    
+    updateScoreInElementText(document.getElementById('heading'), result, explanation)    
   }
   
   function adjustDocHeight(iframe, request) {
@@ -137,11 +137,20 @@ window.addEventListener('DOMContentLoaded', () => {
       for (const b of buttonDiv.children)
         b.classList.remove('hc-disabled')
     }
-    const tab = 'tab' in work ? work.tab : 0 // TODO: Don't use index
+    const tab = 'tab' in work ? work.tab : 0 
     setTimeout(() => selectProblem(tab), 1000)
   }
   
-  function selectProblem(index) {
+  function selectProblem(tab) {
+    const iframes = document.getElementsByClassName('exercise-iframe')
+    
+    let index = parseInt(tab) // Legacy--used to be integers
+    if (isNaN(index)) {
+      for (let i = 0; isNaN(index) && i < iframes.length; i++)
+        if (iframeKey.get(iframes[i]) === tab)
+          index = i
+      if (isNaN(index)) index = 0            
+    }
     if (!savedCopyCheckbox.checked) return
     if (index < 0 || index >= assignment.problems.length) return
     if (useTitles) {
@@ -153,7 +162,6 @@ window.addEventListener('DOMContentLoaded', () => {
         else
           buttonDiv.children[i].classList.remove('active')      
     }
-    const iframes = document.getElementsByClassName('exercise-iframe')
     for (let i = 0; i < iframes.length; i++) {
       const iframe = iframes[i]
       if (i === index) {    
@@ -163,7 +171,7 @@ window.addEventListener('DOMContentLoaded', () => {
         iframe.style.display = 'none'
       }
     }
-    work.tab = index // TODO: key, not integer
+    work.tab = iframeKey.get(iframe)
   }
   
   function updateScoreInProblemSelector(index, score) {
@@ -269,7 +277,6 @@ window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('viewingAsInstructor').appendChild(createButton('hc-command', 'View submissions', () => {
         window.open(assignment.viewSubmissionsURL, '_blank')        
       }))    
-    document.getElementById('heading').title = work.assignmentID // TODO: Do we want this? 
         
     const privateURLSpan = document.getElementById('privateURL')
     if ('privateURL' in assignment) {

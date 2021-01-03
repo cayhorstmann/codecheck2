@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import controllers.Assignment;
 import models.S3Connection;
 import models.Util;
 import net.oauth.OAuthAccessor;
@@ -100,26 +101,26 @@ public class LTIAssignment extends Controller {
 	    assignmentNode.put("launchPresentationReturnURL", launchPresentationReturnURL);
     	assignmentNode.put("saveURL", "/lti/saveAssignment");
     	assignmentNode.put("assignmentID", Util.createPublicUID());
+    	assignmentNode.put("editKey", userLMSID);
     	
-		return ok(views.html.editAssignment.render(assignmentNode.toString(), false))
-			.withNewSession()
-			.addingToSession(request, "user", userLMSID);
+		return ok(views.html.editAssignment.render(assignmentNode.toString(), false));
  	}
     
-	@Security.Authenticated(Secured.class) // Instructor
-	public Result saveAssignment(Http.Request request) throws IOException {		
-    	String editKey = request.session().get("user").get(); // TODO orElseThrow();    	
-    	
+	public Result saveAssignment(Http.Request request) throws IOException {		 	
     	ObjectNode params = (ObjectNode) request.body().asJson();
-        	
-        String assignmentText = params.get("problems").asText();
-    	params.set("problems", Assignment.parseAssignment(assignmentText));
+        	        
+        try {
+        	params.set("problems", Assignment.parseAssignment(params.get("problems").asText()));
+        } catch (IllegalArgumentException e) {
+        	return badRequest(e.getMessage());
+        }
 
     	String assignmentID = params.get("assignmentID").asText();
-		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID); 
+		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+    	String editKey = params.get("editKey").asText();
+		
     	if (assignmentNode != null && !editKey.equals(assignmentNode.get("editKey").asText())) 
 			return badRequest("Edit keys do not match");    	
-   		params.put("editKey", editKey);
 
     	s3conn.writeJsonObjectToDynamoDB("CodeCheckAssignments", params);
 
@@ -215,7 +216,6 @@ public class LTIAssignment extends Controller {
 	    	ArrayNode groups = (ArrayNode) assignmentNode.get("problems");
 	    	assignmentNode.set("problems", groups.get(0));
 			String assignmentEditKey = assignmentNode.get("editKey").asText();
-	    	assignmentNode.remove("editKey");
 			
 			assignmentNode.put("isStudent", false);
 			assignmentNode.put("viewSubmissionsURL", "/lti/viewSubmissions?resourceID=" + URLEncoder.encode(resourceID, "UTF-8"));
@@ -316,6 +316,17 @@ public class LTIAssignment extends Controller {
 	    	Instant now = Instant.now();
 			String resourceID = workNode.get("assignmentID").asText();
 			String assignmentID = assignmentOfResource(resourceID);
+			String workID = workNode.get("workID").asText();
+			String problemID = workNode.get("tab").asText();
+			
+			ObjectNode submissionNode = JsonNodeFactory.instance.objectNode();
+			String submissionID = resourceID + " " + workID + " " + problemID; 
+			submissionNode.put("submissionID", submissionID);
+			submissionNode.put("submittedAt", now.toString());
+			submissionNode.put("state", workNode.get(problemID).get("state").toString());
+			submissionNode.put("score", workNode.get(problemID).get("score").asDouble());
+			s3conn.writeJsonObjectToDynamoDB("CodeCheckSubmissions", submissionNode);
+			
 			ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
 	    	if (assignmentNode.has("deadline")) {
 	    		try {

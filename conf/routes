@@ -67,10 +67,9 @@ POST /saveAssignment         controllers.Assignment.saveAssignment(request: Requ
 # Student saves work
 POST /saveWork               controllers.Assignment.saveWork(request: Request)
 
-# LTI Launch 
+# LTI Launch (legacy with query param for ID)
 POST /lti/assignment           controllers.LTIAssignment.launch(request: Request, assignmentID: String = null)
-# TODO: Do we really want to encourage this? Won't work when moving course
-# LTI Launch with POST to student URL
+# LTI Launch 
 POST /assignment/:assignmentID controllers.LTIAssignment.launch(request: Request, assignmentID: String)
 
 # Student saves work 

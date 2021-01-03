@@ -33,11 +33,10 @@ package controllers;
    submittedAt
    tab     
        
- CodeCheckSubmission
+ CodeCheckSubmissions
    submissionID [partition key] // non-LTI: courseID? + assignmentID + problemKey + ccid/editKey , LTI: toolConsumerID/courseID + assignmentID + problemKey + userID 
      // either way, that's resource ID + workID + problem key
    submittedAt [sort key] 
-   submitterID ccid or userID 
    state: as string, not JSON
    score
   
@@ -329,9 +328,8 @@ public class Assignment extends Controller {
 	public Result saveAssignment(Http.Request request) throws IOException {		
         ObjectNode params = (ObjectNode) request.body().asJson();
 
-        String assignment = params.get("problems").asText();
         try {
-        	params.set("problems", parseAssignment(assignment));
+        	params.set("problems", parseAssignment(params.get("problems").asText()));
         } catch (IllegalArgumentException e) {
         	return badRequest(e.getMessage());
         }
