@@ -44,11 +44,11 @@ window.addEventListener('DOMContentLoaded', () => {
             let score = work.problems[key].score
             updateScoreInProblemSelector(i, score)
             result += p.weight * score
+            if (explanation !== '') explanation += ' + '
+            explanation += percent(score)
+            if (p.weight !== 1) explanation += '×' + p.weight.toFixed(2).replace(/\.?0+$/, '')
           }
         }
-        if (explanation !== '') explanation += ' + '
-        explanation += percent(score)
-        if (p.weight !== 1) explanation += '×' + p.weight.toFixed(2).replace(/\.?0+$/, '')
       }          
     }
     if (explanation !== '' && sum !== 1) 
@@ -167,11 +167,11 @@ window.addEventListener('DOMContentLoaded', () => {
       if (i === index) {    
         if (!iframe.src) iframe.src = assignment.problems[i].URL
         iframe.style.display = 'block'
+        work.tab = iframeKey.get(iframe)
       } else { 
         iframe.style.display = 'none'
       }
     }
-    work.tab = iframeKey.get(iframe)
   }
   
   function updateScoreInProblemSelector(index, score) {
