@@ -214,46 +214,40 @@ public class Assignment extends Controller {
      *                                                   viewing student work (with the instructor's editKey)
      */
     public Result work(Http.Request request, String assignmentID, String ccid, String editKey, 
-    		boolean isStudent, String newid) 
+    		boolean isStudent) 
     		throws IOException, GeneralSecurityException {
+    	String prefix = Util.prefix(request);
+    	String workID = "";  
+
     	ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);    	
     	if (assignmentNode == null) return badRequest("Assignment not found");
-    	String workID = ccid + "/" + editKey;
-    	ArrayNode groups = (ArrayNode) assignmentNode.get("problems");
-    	assignmentNode.set("problems", groups.get(Math.abs(workID.hashCode()) % groups.size()));
     	
-    	String prefix = Util.prefix(request);
-
     	assignmentNode.put("isStudent", isStudent);
-    	
     	if (isStudent) {
-    		if (editKey == null) {
-    			Optional<Http.Cookie> editKeyCookie = request.getCookie("cckey");
-    			editKey = editKeyCookie.map(Http.Cookie::value).orElse(null);
-    		}
-    	
-    		if (newid != null) {
-    			ccid = Util.isPronouncableUID(newid) ? newid : Util.createPronouncableUID();
-    			editKey = null;
-    		}
-
     		if (ccid == null) {    		
     			Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
-    			ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
-    			editKey = null;
+    			if (ccidCookie.isPresent()) {
+    				ccid = ccidCookie.get().value();
+    				Optional<Http.Cookie> editKeyCookie = request.getCookie("cckey");
+    				if (!editKeyCookie.isPresent()) return badRequest("Missing cckey cookie");
+    				editKey = editKeyCookie.get().value();
+    			}
     		}
+        	workID = ccid + "/" + editKey;    		
     	} else {
     		if (ccid == null && editKey != null && !editKeyValid(editKey, assignmentNode))
     			throw new IllegalArgumentException("Edit key does not match");        	    		
     	}
     	assignmentNode.remove("editKey");
+    	ArrayNode groups = (ArrayNode) assignmentNode.get("problems");
+    	assignmentNode.set("problems", groups.get(Math.abs(workID.hashCode()) % groups.size()));
     	
     	String work = null;
     	if (editKey != null) 
    		    work = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", assignmentID, "workID", workID);
     	if (work == null) 
        		work = "{ assignmentID: \"" + assignmentID + "\", workID: \"" 
-       			+ (ccid == null ? "undefined" : ccid + "/" + editKey) + "\", problems: {} }";
+       			+ workID + "\", problems: {} }";
 
     	String lti = "undefined";
     	if (isStudent) {    		
