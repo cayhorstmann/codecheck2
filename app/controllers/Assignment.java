@@ -375,6 +375,17 @@ public class Assignment extends Controller {
 			String assignmentID = requestNode.get("assignmentID").asText();
 			ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
 			if (assignmentNode == null)	return badRequest("Assignment not found");
+			String workID = requestNode.get("workID").asText();
+			String problemID = requestNode.get("tab").asText();
+			ObjectNode problemsNode = (ObjectNode) requestNode.get("problems");
+			
+			String submissionID = assignmentID + " " + workID + " " + problemID; 
+			ObjectNode submissionNode = JsonNodeFactory.instance.objectNode();
+			submissionNode.put("submissionID", submissionID);
+			submissionNode.put("submittedAt", now.toString());
+			submissionNode.put("state", problemsNode.get(problemID).get("state").toString());
+			submissionNode.put("score", problemsNode.get(problemID).get("score").asDouble());
+			s3conn.writeJsonObjectToDynamoDB("CodeCheckSubmissions", submissionNode);
 			
 	    	if (assignmentNode.has("deadline")) {
 	    		try {
