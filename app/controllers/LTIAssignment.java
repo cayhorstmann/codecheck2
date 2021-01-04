@@ -125,7 +125,7 @@ public class LTIAssignment extends Controller {
     	s3conn.writeJsonObjectToDynamoDB("CodeCheckAssignments", params);
 
     	ObjectNode result = JsonNodeFactory.instance.objectNode();
-		String assignmentURL = Util.prefix(request) + "/assignment/" + assignmentID;
+		String assignmentURL = "/viewAssignment/" + assignmentID; // TODO: Not ideal inside LMS
     	result.put("assignmentURL", assignmentURL);    	
 
     	return ok(result); // Client will redirect to launch presentation URL 

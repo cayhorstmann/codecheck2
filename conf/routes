@@ -76,6 +76,8 @@ POST /saveWork               controllers.Assignment.saveWork(request: Request)
 POST /lti/assignment           controllers.LTIAssignment.launch(request: Request, assignmentID: String = null)
 # LTI Launch 
 POST /assignment/:assignmentID controllers.LTIAssignment.launch(request: Request, assignmentID: String)
+# LTI Launch, in case someone posts a viewAssignment URL instead of cloning it 
+POST /viewAssignment/:assignmentID controllers.LTIAssignment.launch(request: Request, assignmentID: String)
 
 # Student saves work 
 POST /lti/saveWork           controllers.LTIAssignment.saveWork(request: Request)
