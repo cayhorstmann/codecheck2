@@ -46,7 +46,7 @@ POST /codecheck/check						controllers.Check.checkHTML(request: Request)
 # Student starts
 GET  /assignment/:assignmentID                      controllers.Assignment.work(request: Request, assignmentID: String, ccid: String = null, key: String = null, isStudent: Boolean = true)
 # Student wants to change ID (hacky)
-GET  /private/resume/:assignmentID/:ccid            controllers.Assignment.work(request: Request, assignmentID: String, ccid: String, key: String = null, isStudent: Boolean = true)
+GET  /assignment/:assignmentID/:ccid                controllers.Assignment.work(request: Request, assignmentID: String, ccid: String, key: String = null, isStudent: Boolean = true)
 # Student resumes
 GET  /private/resume/:assignmentID/:ccid/:key       controllers.Assignment.work(request: Request, assignmentID: String, ccid: String, key: String, isStudent: Boolean = true)
 

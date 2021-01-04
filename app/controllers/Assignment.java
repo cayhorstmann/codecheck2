@@ -248,7 +248,7 @@ public class Assignment extends Controller {
                	editKey = Util.createPrivateUID();
                	editKeySaved = false;    			
     		}
-    		assignmentNode.put("clearIDURL", "/assignment/" + ccid);
+    		assignmentNode.put("clearIDURL", "/assignment/" + assignmentID + "/" + ccid);
         	workID = ccid + "/" + editKey;    		
     	} else {
     		if (ccid == null && editKey != null && !editKeyValid(editKey, assignmentNode))
