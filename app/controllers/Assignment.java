@@ -207,6 +207,7 @@ public class Assignment extends Controller {
     
     /*
      * ccid == null, editKey == null, isStudent = true:  Student starts editing
+     * ccid != null, editKey == null, isStudent = true:  Student wants to change ID (hacky)
      * ccid != null, editKey != null, isStudent = true:  Student resumes editing
      * ccid != null, editKey != null, isStudent = false: Instructor views student work (with the student's editKey)
      * ccid == null, editKey == null, isStudent = false: Instructor views for possible cloning 
@@ -225,24 +226,29 @@ public class Assignment extends Controller {
     	
     	assignmentNode.put("isStudent", isStudent);
     	if (isStudent) {
-    		if (request.queryString("newid").isPresent()) {
-				ccid = Util.createPronouncableUID();
-               	editKey = Util.createPrivateUID();
-               	editKeySaved = false;    			
-    		}
     		if (ccid == null) {    		
     			Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
     			if (ccidCookie.isPresent()) {
     				ccid = ccidCookie.get().value();
     				Optional<Http.Cookie> editKeyCookie = request.getCookie("cckey");
-    				if (!editKeyCookie.isPresent()) return badRequest("Missing cckey cookie");
-    				editKey = editKeyCookie.get().value();
-    			} else {
+    				if (editKeyCookie.isPresent()) 
+    					editKey = editKeyCookie.get().value();
+    				else { // This shouldn't happen, but if it does, clear ID
+        				ccid = Util.createPronouncableUID();
+                       	editKey = Util.createPrivateUID();
+                       	editKeySaved = false;    					
+    				}
+    			} else { // First time on this browser
     				ccid = Util.createPronouncableUID();
                    	editKey = Util.createPrivateUID();
                    	editKeySaved = false;
     			}
+    		} else if (editKey == null) { // Clear ID request
+    			ccid = Util.createPronouncableUID();
+               	editKey = Util.createPrivateUID();
+               	editKeySaved = false;    			
     		}
+    		assignmentNode.put("clearIDURL", "/assignment/" + ccid);
         	workID = ccid + "/" + editKey;    		
     	} else {
     		if (ccid == null && editKey != null && !editKeyValid(editKey, assignmentNode))

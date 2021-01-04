@@ -213,8 +213,9 @@ window.addEventListener('DOMContentLoaded', () => {
       }        
     }))
   */
-  document.getElementById('clearID').appendChild(createButton('hc-command', 'Clear ID now', () => {
-      location = `${location.href.split(/[?#]/)[0]}?newid=`    
+  if ('clearIDURL' in assignment)
+    document.getElementById('clearID').appendChild(createButton('hc-command', 'Clear ID now', () => {
+      location = assignment.clearIDURL    
     }))
       
   initializeProblemSelectorUI()      
