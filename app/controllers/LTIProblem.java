@@ -128,7 +128,7 @@ public class LTIProblem extends Controller {
 			String submissionID = requestNode.get("submissionID").asText();
 			ObjectNode result = s3conn.readJsonObjectFromDynamoDB("CodeCheckSubmissions", "submissionID", submissionID);
 			ObjectMapper mapper = new ObjectMapper();
-			result.set("state", mapper.valueToTree(result.get("state").asText()));
+			result.set("state", mapper.readTree(result.get("state").asText()));
 			return ok(result);
 	    } catch (Exception e) {
 	        logger.error(Util.getStackTrace(e));
