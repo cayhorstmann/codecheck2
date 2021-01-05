@@ -68,32 +68,37 @@ GET  /private/editAssignment/:assignmentID/:key     controllers.Assignment.edit(
 GET  /private/viewSubmissions/:assignmentID/:key    controllers.Assignment.viewSubmissions(request: Request, assignmentID: String, key: String)
 
 # Instructor saves assignment
-POST /saveAssignment         controllers.Assignment.saveAssignment(request: Request)
+POST /saveAssignment          controllers.Assignment.saveAssignment(request: Request)
 # Student saves work
-POST /saveWork               controllers.Assignment.saveWork(request: Request)
+POST /saveWork                controllers.Assignment.saveWork(request: Request)
 
 # LTI Launch (legacy with query param for ID)
-POST /lti/assignment           controllers.LTIAssignment.launch(request: Request, assignmentID: String = null)
+POST /lti/assignment          controllers.LTIAssignment.launch(request: Request, assignmentID: String = null)
 # LTI Launch 
 POST /assignment/:assignmentID controllers.LTIAssignment.launch(request: Request, assignmentID: String)
 # LTI Launch, in case someone posts a viewAssignment URL instead of cloning it 
 POST /viewAssignment/:assignmentID controllers.LTIAssignment.launch(request: Request, assignmentID: String)
 
 # Student saves work 
-POST /lti/saveWork           controllers.LTIAssignment.saveWork(request: Request)
+POST /lti/saveWork            controllers.LTIAssignment.saveWork(request: Request)
 # Student request sending score to LMS
-POST /lti/sendScore          controllers.LTIAssignment.sendScore(request: Request)
+POST /lti/sendScore           controllers.LTIAssignment.sendScore(request: Request)
 # Canvas call to createAssignment (resource selection)
-POST /lti/createAssignment   controllers.LTIAssignment.createAssignment(request: Request)
+POST /lti/createAssignment    controllers.LTIAssignment.createAssignment(request: Request)
 # Instructor saves assignment
-POST /lti/saveAssignment     controllers.LTIAssignment.saveAssignment(request: Request)
+POST /lti/saveAssignment      controllers.LTIAssignment.saveAssignment(request: Request)
 
 # Instructor views submissions
-GET  /lti/viewSubmissions    controllers.LTIAssignment.viewSubmissions(request: Request)
+GET  /lti/viewSubmissions     controllers.LTIAssignment.viewSubmissions(request: Request)
 # Instructor views a submission
-GET  /lti/viewSubmission     controllers.LTIAssignment.viewSubmission(request: Request)
+GET  /lti/viewSubmission      controllers.LTIAssignment.viewSubmission(request: Request)
 # Instructor edits current assignment
 GET  /lti/editAssignment/:assignmentID controllers.LTIAssignment.editAssignment(request: Request, assignmentID: String)
 
 # Shows LMS config XML
-GET /lti/config              controllers.LTIAssignment.config(request: Request)
+GET /lti/config               controllers.LTIAssignment.config(request: Request)
+
+# LTI Problems
+POST /lti/problem             controllers.LTIProblem.launch(request: Request)
+POST /lti/retrieve            controllers.LTIProblem.retrieve(request: Request)
+POST /lti/send                controllers.LTIProblem.send(request: Request)
