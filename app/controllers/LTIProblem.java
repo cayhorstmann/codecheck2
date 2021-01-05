@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
 
 import javax.inject.Inject;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -126,6 +127,8 @@ public class LTIProblem extends Controller {
 			ObjectNode requestNode = (ObjectNode) request.body().asJson();
 			String submissionID = requestNode.get("submissionID").asText();
 			ObjectNode result = s3conn.readJsonObjectFromDynamoDB("CodeCheckSubmissions", "submissionID", submissionID);
+			ObjectMapper mapper = new ObjectMapper();
+			result.set("state", mapper.valueToTree(result.get("state").asText()));
 			return ok(result);
 	    } catch (Exception e) {
 	        logger.error(Util.getStackTrace(e));
