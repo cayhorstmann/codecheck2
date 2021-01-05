@@ -50,7 +50,7 @@ if (!('Education' in window.EPUB)) {
           submissionID: lti.submissionID
         })
         // TODO: VitalSource format
-        callback({ data: [ { data: { state: response.state, score: response.score } } ] })
+        callback({ data: [ { data: response.state } ] })
       } catch {
         callback({ data: [ { data: null } ] })
       } 
