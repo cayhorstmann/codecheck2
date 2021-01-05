@@ -57,7 +57,7 @@ public class LTIProblem extends Controller {
 		ltiNode.put("sendURL", "/lti/send");
 		
 		try {
-			String domain = "http://www.interactivities.ws";
+			String domain = "https://www.interactivities.ws";
 			String urlString = domain + "/" + qid + ".xhtml";
 			URL url = new URL(urlString);
 			InputStream in = url.openStream();
