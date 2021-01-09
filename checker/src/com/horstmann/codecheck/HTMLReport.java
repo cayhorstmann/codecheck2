@@ -486,8 +486,8 @@ public class HTMLReport implements Report {
     @Override
     public HTMLReport compareTokens(String filename, List<Match> matchData) {
         caption(filename);
-        tableStart("output").rowStart().headerCell("Actual output")
-                .headerCell("Expected output").rowEnd().rowStart();
+        tableStart("output").rowStart().headerCell("Actual")
+                .headerCell("Expected").rowEnd().rowStart();
         builder.append("<td>");
         builder.append("<pre>");
         for (Match m : matchData) {

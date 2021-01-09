@@ -12,7 +12,9 @@ public class Comparison {
     private static final int MANY_MORE_LINES = 10;
         // If actual lines > expected + MANY_MORE_LINES, truncate actual output
     
-    public boolean execute(String actual, String expected, Report report, String filename) throws IOException {
+    public boolean execute(String input, String actual, String expected, Report report, String filename) throws IOException {
+        // TODO: This is where the newlines went to die
+        
         List<String> lines1 = getLines(actual.replace("〉\n", "〉")); 
         List<String> lines2 = getLines(expected.replace("〉\n", "〉"));
 
@@ -36,6 +38,8 @@ public class Comparison {
             }
         }
         else {
+            // Print inputs which are getting replaced
+            report.input(input);
             while (i < lines2.size()) {
                 Report.Match m = new Report.Match();
                 m.actual = "";
@@ -62,7 +66,6 @@ public class Comparison {
                 m.explanation = null;
                 matches.add(m);
             }
-            // TODO: Report needs to deal with 〈...〉 (replace with <b>...</b>\n)
             report.compareTokens(filename, matches);
         }
         return outcome;

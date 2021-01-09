@@ -79,7 +79,7 @@ public class CppLanguage implements Language {
             lines.add(i++, extern); // extern function from solution
         }
         lines.add(i++, "}");
-        lines.add(i++, "main(int argc, char *argv[]) {");
+        lines.add(i++, "int main(int argc, char *argv[]) {");
         // We declare the student functions locally in main so that they don't conflict with
         // solution functions
         for (String extern : externs) {        
@@ -94,6 +94,7 @@ public class CppLanguage implements Language {
                 // compare expected and actual
             lines.add(i++, "}");
         }
+        lines.add(i++, "   return 0;");
         lines.add(i++, "}");
         lines.add(i++, "namespace solution {");
         lines.add("}");

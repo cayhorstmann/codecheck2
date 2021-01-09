@@ -285,7 +285,7 @@ public class Main {
                     // Report output but don't grade it
                     report.output(outerr);
                 } else {
-                    boolean outcome = comp.execute(outerr, expectedOuterr, report, null);
+                    boolean outcome = comp.execute(input, outerr, expectedOuterr, report, null);
                     score.pass(outcome, report);
                 }
             }        
@@ -304,7 +304,7 @@ public class Main {
                     score.pass(outcome, report);                   
                 } else {
                     String expectedContents = Util.read(p);                
-                    boolean outcome = comp.execute(contents.remove(0),
+                    boolean outcome = comp.execute(input, contents.remove(0),
                             expectedContents, report, f);
                     score.pass(outcome, report);
                 }

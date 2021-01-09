@@ -24,7 +24,7 @@ namespace codecheck {
    template<typename T> void print(std::vector<T> xs) { 
       std::cout << "{"; 
       for (int i = 0; i < xs.size(); i++) {
-         if (i > 0) std::cout << ","; std::cout << " ";
+         if (i > 0) { std::cout << ","; } std::cout << " ";
          print(xs[i]);
       }
       std::cout << " }";

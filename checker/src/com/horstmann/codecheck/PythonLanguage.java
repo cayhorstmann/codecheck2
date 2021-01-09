@@ -10,8 +10,6 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.horstmann.codecheck.Language.Interleave;
-
 public class PythonLanguage implements Language {
 
     public PythonLanguage() {

@@ -23,7 +23,7 @@ case _"$LANG" in
         ;;
 
     _Cpp)
-        g++ -std=c++11 -g -o prog $@
+        g++ -std=c++17 -Wall -Wno-sign-compare -g -o prog $@
         ;;
 
     _Scala)
@@ -53,6 +53,7 @@ case _"$LANG" in
        ;;
     
     _)  
-       echo Unknown language $LANG 
+       echo Unknown language $LANG
+       exit 1
        ;;          
 esac
