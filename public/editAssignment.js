@@ -47,13 +47,13 @@ window.addEventListener('DOMContentLoaded', () => {
       if ('launchPresentationReturnURL' in assignment) {
         const params = new URLSearchParams()
         params.append('return_type', 'lti_launch_url')
-        params.append('url', response.assignmentURL)
+        params.append('url', response.launchURL)
         const url =  assignment.launchPresentationReturnURL
           + (assignment.launchPresentationReturnURL.includes("?") ? "&" : "?")
           + params.toString()
         window.location.href = url
       } else {
-        window.location.href = response.assignmentURL
+        window.location.href = response.viewAssignmentURL
       }
     } catch (e) {
       responseDiv.textContent = e.message           

@@ -52,9 +52,9 @@ GET  /private/resume/:assignmentID/:ccid/:key       controllers.Assignment.work(
 
 # Instructor views a student submission
 GET  /private/submission/:assignmentID/:ccid/:key   controllers.Assignment.work(request: Request, assignmentID: String, ccid: String, key: String, isStudent: Boolean = false)
-# Instructor views an assignment for review/cloning
+# Instructor views someone else's assignment
 GET  /viewAssignment/:assignmentID                  controllers.Assignment.work(request: Request, assignmentID: String, ccid: String = null, key: String = null, isStudent: Boolean = false)
-# Instructor views existing assignment
+# Instructor views own assignment
 GET  /private/assignment/:assignmentID/:key         controllers.Assignment.work(request: Request, assignmentID: String, ccid: String = null, key: String, isStudent: Boolean = false)
 
 # Instructor makes new assignment
@@ -98,7 +98,11 @@ GET  /lti/editAssignment/:assignmentID controllers.LTIAssignment.editAssignment(
 # Shows LMS config XML
 GET /lti/config               controllers.LTIAssignment.config(request: Request)
 
-# LTI Problems
+# LTI CodeCheck
+POST /files/:problem          controllers.LTIProblem.launchCodeCheck(request: Request, repo: String = "ext", problem: String)
+POST /files/:repo/:problem    controllers.LTIProblem.launchCodeCheck(request: Request, repo: String, problem: String)
+
+# LTI Interactive Problems
 POST /lti/problem             controllers.LTIProblem.launch(request: Request)
 POST /lti/retrieve            controllers.LTIProblem.retrieve(request: Request)
 POST /lti/send                controllers.LTIProblem.send(request: Request)

@@ -209,10 +209,9 @@ public class Assignment extends Controller {
      * ccid == null, editKey == null, isStudent = true:  Student starts editing
      * ccid != null, editKey == null, isStudent = true:  Student wants to change ID (hacky)
      * ccid != null, editKey != null, isStudent = true:  Student resumes editing
-     * ccid != null, editKey != null, isStudent = false: Instructor views student work (with the student's editKey)
-     * ccid == null, editKey == null, isStudent = false: Instructor views for possible cloning 
-     * ccid == null, editKey != null, isStudent = false: Instructor views problem for possible editing,  
-     *                                                   viewing student work (with the instructor's editKey)
+     * ccid != null, editKey != null, isStudent = false: Instructor views a student submission (with the student's editKey)
+     * ccid == null, editKey == null, isStudent = false: Instructor views someone else's assignment (for cloning) 
+     * ccid == null, editKey != null, isStudent = false: Instructor views own assignment (for editing, viewing submissions)
      */
     public Result work(Http.Request request, String assignmentID, String ccid, String editKey, 
     		boolean isStudent) 
@@ -250,9 +249,11 @@ public class Assignment extends Controller {
     		}
     		assignmentNode.put("clearIDURL", "/assignment/" + assignmentID + "/" + ccid);
         	workID = ccid + "/" + editKey;    		
-    	} else {
+    	} else { // Instructor
     		if (ccid == null && editKey != null && !editKeyValid(editKey, assignmentNode))
-    			throw new IllegalArgumentException("Edit key does not match");        	    		
+    			throw new IllegalArgumentException("Edit key does not match");
+    		if (ccid != null && editKey != null) // Instructor viewing student submission
+    			workID = ccid + "/" + editKey;
     	}
     	assignmentNode.remove("editKey");
     	ArrayNode groups = (ArrayNode) assignmentNode.get("problems");

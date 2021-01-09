@@ -46,7 +46,7 @@ public class Files extends Controller {
    private static String useStart = "<p>Use the following {0,choice,1#file|2#files}:</p>\n";
    private static String provideStart = "<p>Complete the following {0,choice,1#file|2#files}:</p>\n";
 
-   @Inject CodeCheck codeCheck;
+   @Inject private CodeCheck codeCheck;
 
    public Result fileData(Http.Request request, String repo, String problemName, String ccu)
       throws IOException, NoSuchMethodException, ScriptException {        

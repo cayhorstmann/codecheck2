@@ -9,6 +9,8 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.inject.Inject;
 
@@ -89,28 +91,41 @@ public class LTIAssignment extends Controller {
     	
 		return ok(views.html.editAssignment.render(assignmentNode.toString(), false));
  	}
+
+    private static String assignmentIDifAssignmentURL(String url) {
+    	if (url.contains("\n")) return null;
+    	Pattern pattern = Pattern.compile("https?://codecheck.[a-z]+/(private/)?(a|viewA)ssignment/([a-z0-9]+)($|/).*");
+    	Matcher matcher = pattern.matcher(url);
+    	return matcher.matches() ? matcher.group(3) : null; 
+    }
     
 	public Result saveAssignment(Http.Request request) throws IOException {		 	
     	ObjectNode params = (ObjectNode) request.body().asJson();
         	        
-        try {
-        	params.set("problems", Assignment.parseAssignment(params.get("problems").asText()));
-        } catch (IllegalArgumentException e) {
-        	return badRequest(e.getMessage());
-        }
-
-    	String assignmentID = params.get("assignmentID").asText();
-		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
-    	String editKey = params.get("editKey").asText();
-		
-    	if (assignmentNode != null && !editKey.equals(assignmentNode.get("editKey").asText())) 
-			return badRequest("Edit keys do not match");    	
-
-    	s3conn.writeJsonObjectToDynamoDB("CodeCheckAssignments", params);
+    	String problemText = params.get("problems").asText().trim();
+    	String assignmentID = assignmentIDifAssignmentURL(problemText);
+    	if (assignmentID == null) {	    		
+	        try {
+	        	params.set("problems", Assignment.parseAssignment(problemText));
+	        } catch (IllegalArgumentException e) {
+	        	return badRequest(e.getMessage());
+	        }
+	
+	    	assignmentID = params.get("assignmentID").asText();
+			ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+	    	String editKey = params.get("editKey").asText();
+			
+	    	if (assignmentNode != null && !editKey.equals(assignmentNode.get("editKey").asText())) 
+				return badRequest("Edit keys do not match");    	
+	
+	    	s3conn.writeJsonObjectToDynamoDB("CodeCheckAssignments", params);
+    	}
 
     	ObjectNode result = JsonNodeFactory.instance.objectNode();
-		String assignmentURL = "/viewAssignment/" + assignmentID; // TODO: Not ideal inside LMS
-    	result.put("assignmentURL", assignmentURL);    	
+		String viewAssignmentURL = "/viewAssignment/" + assignmentID; 
+    	result.put("viewAssignmentURL", viewAssignmentURL);    	
+    	String launchURL = "https://" + request.host() + "/assignment/" + assignmentID;
+    	result.put("launchURL", launchURL);    	
 
     	return ok(result); // Client will redirect to launch presentation URL 
 	}
