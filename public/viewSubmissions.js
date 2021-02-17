@@ -54,7 +54,7 @@ window.addEventListener('DOMContentLoaded', () => {
     jsonDownloadButton.setAttribute('href', '/lti/allSubmissions?resourceID=' + resourceID)
     jsonDownloadButton.setAttribute('target', '_blank')
     jsonDownloadButton.textContent = 'Download JSON'
-    buttonDiv.append()
+    buttonDiv.append(jsonDownloadButton)
     const table = append(body, 'table')
     table.id = 'submissions'
     let tr = append(table, 'tr')
