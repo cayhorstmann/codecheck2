@@ -92,6 +92,8 @@ POST /lti/saveAssignment      controllers.LTIAssignment.saveAssignment(request: 
 GET  /lti/viewSubmissions     controllers.LTIAssignment.viewSubmissions(request: Request)
 # Instructor views a submission
 GET  /lti/viewSubmission      controllers.LTIAssignment.viewSubmission(request: Request)
+# Instructor downloads submissions JSON
+GET  /lti/allSubmissions     controllers.LTIAssignment.allSubmissions(request: Request)
 # Instructor edits current assignment
 GET  /lti/editAssignment/:assignmentID controllers.LTIAssignment.editAssignment(request: Request, assignmentID: String)
 
