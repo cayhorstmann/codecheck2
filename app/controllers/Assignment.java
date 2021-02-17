@@ -321,7 +321,7 @@ public class Assignment extends Controller {
 			submissionData.put("viewURL", "/private/submission/" + assignmentID + "/" + ccid + "/" + submissionEditKey); 
 			submissions.add(submissionData);			
 		}
-		return ok(views.html.viewSubmissions.render(submissions.toString())); 
+		return ok(views.html.viewSubmissions.render(assignmentID, submissions.toString())); 
 	}
 
 	/*
