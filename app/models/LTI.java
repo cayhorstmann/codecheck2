@@ -13,6 +13,8 @@ import java.util.Base64;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -82,7 +84,10 @@ public class LTI {
 		return sharedSecret;
 	}	    
 
-	public void passbackGradeToLMS(String gradePassbackURL,
+	private static Pattern codeMajorPattern = Pattern.compile("<imsx_codeMajor>(.+)</imsx_codeMajor>");
+	private static Pattern descriptionPattern = Pattern.compile("(?s)<imsx_description>(.+)</imsx_description>");
+	
+	public String passbackGradeToLMS(String gradePassbackURL,
 			String sourcedID, double score, String oauthConsumerKey)
 			throws URISyntaxException, IOException,
 			OAuthMessageSignerException, OAuthExpectationFailedException,
@@ -122,17 +127,26 @@ public class LTI {
 		OutputStream out = request.getOutputStream();
 		out.write(xmlBytes);
 		out.close();
-		// TODO: Eliminate this log? Or look for error only?
 		// request.connect();
-		logger.info(request.getResponseCode() + " " + request.getResponseMessage());
+		if (request.getResponseCode() != 200)
+			logger.info(request.getResponseCode() + " " + request.getResponseMessage());
 		try {
 			InputStream in = request.getInputStream();
 			String body = new String(Util.readAllBytes(in), "UTF-8");
+			Matcher matcher1 = codeMajorPattern.matcher(body);
+			Matcher matcher2 = descriptionPattern.matcher(body);
+			String message = "";
+			if (matcher1.find()) message += matcher1.group(1);
+			if (matcher2.find()) message += ": " + matcher2.group(1);
+			if (message.length() == 0) message = body;
+			// TODO: Log error only? message not starting with success
 			logger.info("Response body received from LMS: " + body);
+			return message;			
 		} catch (Exception e) {			
 			InputStream in = request.getErrorStream();
 			String body = new String(Util.readAllBytes(in), "UTF-8");
-			logger.info("Response error received from LMS: " + body);
+			logger.info("Response error received from LMS: " + e.getMessage() + ": " + body);
+			return body;
 		}
 	}			
 }

@@ -1,4 +1,4 @@
-@(submissions: String)
+@(resourceID: String, submissions: String)
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -6,6 +6,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <link rel="stylesheet" href="/assets/codecheck.css"/>
     <script type="text/javascript">//<![CDATA[
+    const resourceID = @Html(resourceID)
     const submissionData = @Html(submissions)
     //]]></script>
     <script src="/assets/main.js" type="text/javascript"></script>

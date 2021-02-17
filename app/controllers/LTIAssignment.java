@@ -151,7 +151,7 @@ public class LTIAssignment extends Controller {
 					+ "&workID=" + URLEncoder.encode(workID, "UTF-8")); 
 			submissions.add(submissionData);
 		}
-		return ok(views.html.viewSubmissions.render(submissions.toString())); 	
+		return ok(views.html.viewSubmissions.render(resourceID, submissions.toString())); 	
 	}
 	
 	@Security.Authenticated(Secured.class) // Instructor
@@ -261,9 +261,27 @@ public class LTIAssignment extends Controller {
 				.withNewSession()
 				.addingToSession(request, "user", userLMSID);    	    
 	    }
- 	}		
+ 	}
     
-	@Security.Authenticated(Secured.class) // Student
+	@Security.Authenticated(Secured.class) // Instructor
+	public Result allSubmissions(Http.Request request) throws IOException {
+		String resourceID = request.queryString("resourceID").orElse(null);
+		if (resourceID == null)	return badRequest("Assignment not found");
+    	Map<String, ObjectNode> itemMap = s3conn.readJsonObjectsFromDynamoDB("CodeCheckWork", "assignmentID", resourceID, "workID");
+    	String assignmentID = assignmentOfResource(resourceID);
+    	
+		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+		if (assignmentNode == null)	return badRequest("Assignment not found");
+
+		ObjectNode submissions = JsonNodeFactory.instance.objectNode();
+		for (String workID : itemMap.keySet()) {
+			ObjectNode work = itemMap.get(workID);
+			submissions.set(workID, work);
+		}
+		return ok(submissions); 	
+	}
+    
+	// @Security.Authenticated(Secured.class) // Student TODO this really needs to be secure
 	public Result saveWork(Http.Request request) throws IOException, NoSuchAlgorithmException {
 		try {
 			ObjectNode requestNode = (ObjectNode) request.body().asJson();
@@ -296,8 +314,7 @@ public class LTIAssignment extends Controller {
 	    	result.put("submittedAt", now.toString());    	
 
 			s3conn.writeNewerJsonObjectToDynamoDB("CodeCheckWork", workNode, "assignmentID", "submittedAt");
-			double score = submitGradeToLMS(requestNode, (ObjectNode) requestNode.get("work"));
-	    	result.put("score", score);    	
+			submitGradeToLMS(requestNode, (ObjectNode) requestNode.get("work"), result);
 			return ok(result);
         } catch (Exception e) {
             logger.error(Util.getStackTrace(e));
@@ -305,7 +322,7 @@ public class LTIAssignment extends Controller {
         }
 	}	
 	
-	@Security.Authenticated(Secured.class) // Student
+	// @Security.Authenticated(Secured.class) // Student TODO this really needs to be secure
 	public Result sendScore(Http.Request request) throws IOException, NoSuchAlgorithmException {
 		ObjectNode requestNode = (ObjectNode) request.body().asJson();
     	ObjectNode result = JsonNodeFactory.instance.objectNode();
@@ -315,8 +332,12 @@ public class LTIAssignment extends Controller {
 			String resourceID = requestNode.get("resourceID").asText();
 	    	ObjectNode workNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckWork", "assignmentID", resourceID, "workID", workID);
 	    	if (workNode == null) return badRequest("Work not found");
-			double score = submitGradeToLMS(requestNode, workNode);
-	    	result.put("score", score);    	
+			submitGradeToLMS(requestNode, workNode, result);
+			String outcome = result.get("outcome").asText();
+			if (!outcome.startsWith("success")) {
+				logger.info("sendScore: " + requestNode);
+				return badRequest(outcome);
+			}
 			return ok(result);
         } catch (Exception e) {
             logger.error(Util.getStackTrace(e));
@@ -324,7 +345,7 @@ public class LTIAssignment extends Controller {
         }
 	}	
 	
-	private double submitGradeToLMS(ObjectNode params, ObjectNode work) 
+	private void submitGradeToLMS(ObjectNode params, ObjectNode work, ObjectNode result) 
 			throws IOException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, NoSuchAlgorithmException, URISyntaxException {
         String outcomeServiceUrl = params.get("lisOutcomeServiceURL").asText();
 		String sourcedID = params.get("lisResultSourcedID").asText();
@@ -335,10 +356,10 @@ public class LTIAssignment extends Controller {
         
 		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
 		double score = Assignment.score(assignmentNode, work);
-					
-        lti.passbackGradeToLMS(outcomeServiceUrl, sourcedID, score, oauthConsumerKey); 
+    	result.put("score", score);    	
+    	
+        String outcome = lti.passbackGradeToLMS(outcomeServiceUrl, sourcedID, score, oauthConsumerKey); 
 		// org.imsglobal.pox.IMSPOXRequest.sendReplaceResult(outcomeServiceUrl, oauthConsumerKey, getSharedSecret(oauthConsumerKey), sourcedId, "" + score);
-
-        return score;
+        result.put("outcome", outcome);
     }	
 }

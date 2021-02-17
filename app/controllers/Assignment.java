@@ -26,7 +26,7 @@ package controllers;
    assignmentID
    
  CodeCheckWork
-   assignmentID [partition key] // non-LTI: courseID? + assignmentID, LTI: toolConsumeID/courseID + assignment ID, Legacy tool consumer ID/course ID/resource ID  
+   assignmentID [partition key] // non-LTI: courseID? + assignmentID, LTI: toolConsumerID/courseID + assignment ID, Legacy tool consumer ID/course ID/resource ID  
    workID [sort key] // non-LTI: ccid/editKey, LTI: userID
    problems 
      map from URL/qids to { state, score }
@@ -34,7 +34,7 @@ package controllers;
    tab     
        
  CodeCheckSubmissions
-   submissionID [partition key] // non-LTI: courseID? + assignmentID + problemKey + ccid/editKey , LTI: toolConsumerID/courseID + assignmentID + problemKey + userID 
+   submissionID [partition key] // non-LTI: courseID? + assignmentID + problemKey + ccid/editKey , LTI: toolConsumerID/courseID + assignmentID + problemID + userID 
      // either way, that's resource ID + workID + problem key
    submittedAt [sort key] 
    state: as string, not JSON
@@ -364,7 +364,7 @@ public class Assignment extends Controller {
 
     	String prefix = Util.prefix(request);
     	String assignmentURL = prefix + "/private/assignment/" + assignmentID + "/" + editKey;
-		params.put("assignmentURL", assignmentURL);
+		params.put("viewAssignmentURL", assignmentURL);
     	
 		return ok(params);
 	}

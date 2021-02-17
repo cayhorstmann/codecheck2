@@ -257,8 +257,8 @@ window.addEventListener('DOMContentLoaded', () => {
         try {
           responseDiv.textContent = ''
           let request = { ...lti, workID: work.workID, resourceID: work.assignmentID }
-          let response = await postData("/lti/sendScore", request)
-          responseDiv.textContent = `Score of ${percent(response.score)} recorded`
+          let response = await postData("/lti/sendScore", request) // TODO: URLs from server
+          responseDiv.textContent = response.outcome === 'success' ? `Score of ${percent(response.score)} recorded` : response.outcome 
         } catch (e) {
           responseDiv.textContent = e.message 
         }  
