@@ -76,7 +76,8 @@ body {
     margin-left: 1em;
     margin-right: 1em;
     user-select: none;
-    display: inline-block; 
+    display: inline-block;
+    text-decoration: none;     
 }
 
 #buttons > hc-button { 
@@ -105,10 +106,6 @@ body {
 
 .hc-button.hc-command {
     background: #E19042;
-}
-
-a.hc_button {
-	text-decoration: none;
 }
 
 .ccid, .ccurl {

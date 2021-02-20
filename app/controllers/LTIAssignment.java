@@ -226,7 +226,8 @@ public class LTIAssignment extends Controller {
 			}
 	    	assignmentNode.put("sentAt", Instant.now().toString());				
 	    	String work = "{ assignmentID: '" + resourceID + "', workID: '" + userID + "', problems: {} }";
-			return ok(views.html.workAssignment.render(assignmentNode.toString(), work, userID, "undefined" /* lti */))
+	    	// TODO Here we show the resource ID for troubleshooting
+			return ok(views.html.workAssignment.render(assignmentNode.toString(), work, resourceID, "undefined" /* lti */))
 				.withNewSession()
 				.addingToSession(request, "user", userLMSID);
 	    } else { // Student
