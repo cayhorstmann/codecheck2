@@ -50,8 +50,8 @@ window.addEventListener('DOMContentLoaded', () => {
     append(body, 'h2', 'Submissions')
     buttonDiv.appendChild(createButton('hc-command', 'Download CSV', () => download_table_as_csv('submissions')))
     const jsonDownloadButton = document.createElement('a')
-    jsonDownloadButton.classList.add('hc-command')
-    jsonDownloadButton.setAttribute('href', '/lti/allSubmissions?resourceID=' + resourceID)
+    jsonDownloadButton.classList.add('hc-button', 'hc-command')
+    jsonDownloadButton.setAttribute('href', allSubmissionsURL)
     jsonDownloadButton.setAttribute('target', '_blank')
     jsonDownloadButton.textContent = 'Download JSON'
     buttonDiv.appendChild(jsonDownloadButton)

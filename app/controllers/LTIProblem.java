@@ -6,8 +6,10 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -120,8 +122,10 @@ public class LTIProblem extends Controller {
     	try {    		
     		// TODO: Now the client will do the LTI communication. CodeCheck should do it.
 			ObjectNode ltiNode = ltiNode(request);
-			String ccu = ltiNode.get("submissionID").asText(); 
-			Path problemPath = codeCheck.loadProblem(repo, problemName, ccu);
+            Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
+		    String ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
+			
+			Path problemPath = codeCheck.loadProblem(repo, problemName, ccid);
 	        Problem problem = new Problem(problemPath);
 	        ProblemData data = problem.getData();	        
     		ObjectNode problemNode = (ObjectNode) Json.toJson(problem.getData());
@@ -168,7 +172,8 @@ public class LTIProblem extends Controller {
 				"    </ol>" +
 				"  </body>" +
 				"</html>";
-    		return ok(document).as("text/html");
+            Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();    		
+    		return ok(document).withCookies(newCookie).as("text/html");
     	}  catch (Exception ex) {
 			logger.info(Util.getStackTrace(ex));
 			return badRequest(ex.getMessage());

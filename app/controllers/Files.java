@@ -48,17 +48,17 @@ public class Files extends Controller {
 
    @Inject private CodeCheck codeCheck;
 
-   public Result fileData(Http.Request request, String repo, String problemName, String ccu)
+   public Result fileData(Http.Request request, String repo, String problemName, String ccid)
       throws IOException, NoSuchMethodException, ScriptException {        
-      if (ccu == null) { 
-         Optional<Http.Cookie> ccuCookie = request.getCookie("ccu");
-         ccu = ccuCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
+      if (ccid == null) { 
+         Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
+         ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
       }		
       Path problemPath = null;
       try {
-         problemPath = codeCheck.loadProblem(repo, problemName, ccu);
+         problemPath = codeCheck.loadProblem(repo, problemName, ccid);
          Problem problem = new Problem(problemPath);
-         Http.Cookie newCookie = Http.Cookie.builder("ccid", ccu).withMaxAge(Duration.ofDays(180)).build();
+         Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();
          return ok(Json.toJson(problem.getData())).withCookies(newCookie);
       } finally {
          if (problemPath != null)
@@ -66,15 +66,15 @@ public class Files extends Controller {
       }
    }
 
-   public Result filesHTML(Http.Request request, String repo, String problemName, String ccu)
+   public Result filesHTML(Http.Request request, String repo, String problemName, String ccid)
       throws IOException, NoSuchMethodException, ScriptException {
-      if (ccu == null) { 
-          Optional<Http.Cookie> ccuCookie = request.getCookie("ccid");
-          ccu = ccuCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
+      if (ccid == null) { 
+          Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
+          ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
       }
       Path problemPath = null;
       try {						
-         problemPath = codeCheck.loadProblem(repo, problemName, ccu);
+         problemPath = codeCheck.loadProblem(repo, problemName, ccid);
          Problem problem = new Problem(problemPath);
          ProblemData data = problem.getData();
          StringBuilder result = new StringBuilder();
@@ -180,7 +180,7 @@ public class Files extends Controller {
          // result.append(jsonpAjaxSubmissionScript);
          result.append(bodyEnd);
 			
-         Http.Cookie newCookie = Http.Cookie.builder("ccu", ccu).withMaxAge(Duration.ofDays(180)).build();
+         Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();
          return ok(result.toString()).withCookies(newCookie).as("text/html");
       } finally {
          if (problemPath != null)

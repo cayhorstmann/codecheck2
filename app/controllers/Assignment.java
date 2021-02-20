@@ -62,6 +62,7 @@ package controllers;
 */
 
 import java.io.IOException;
+import java.net.URLEncoder;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
@@ -321,7 +322,8 @@ public class Assignment extends Controller {
 			submissionData.put("viewURL", "/private/submission/" + assignmentID + "/" + ccid + "/" + submissionEditKey); 
 			submissions.add(submissionData);			
 		}
-		return ok(views.html.viewSubmissions.render(assignmentID, submissions.toString())); 
+		String allSubmissionsURL = "/lti/allSubmissions?resourceID=" + URLEncoder.encode(assignmentID, "UTF-8");
+		return ok(views.html.viewSubmissions.render(allSubmissionsURL, submissions.toString())); 	
 	}
 
 	/*

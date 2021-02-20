@@ -151,7 +151,8 @@ public class LTIAssignment extends Controller {
 					+ "&workID=" + URLEncoder.encode(workID, "UTF-8")); 
 			submissions.add(submissionData);
 		}
-		return ok(views.html.viewSubmissions.render(resourceID, submissions.toString())); 	
+		String allSubmissionsURL = "/lti/allSubmissions?resourceID=" + URLEncoder.encode(resourceID, "UTF-8");
+		return ok(views.html.viewSubmissions.render(allSubmissionsURL, submissions.toString())); 	
 	}
 	
 	@Security.Authenticated(Secured.class) // Instructor
@@ -197,6 +198,7 @@ public class LTIAssignment extends Controller {
 		String userLMSID = toolConsumerID + "/" + userID;
 
 		ObjectNode ltiNode = JsonNodeFactory.instance.objectNode();
+		// TODO: In order to facilitate search by assignmentID, it would be better if this was the other way around
 		String resourceID = toolConsumerID + "/" + contextID + " " + assignmentID; 
 		String legacyResourceID = toolConsumerID + "/" + contextID + "/" + resourceLinkID; 
 	    ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckLTIResources", "resourceID", legacyResourceID); 
@@ -224,7 +226,7 @@ public class LTIAssignment extends Controller {
 			}
 	    	assignmentNode.put("sentAt", Instant.now().toString());				
 	    	String work = "{ assignmentID: '" + resourceID + "', workID: '" + userID + "', problems: {} }";
-			return ok(views.html.workAssignment.render(assignmentNode.toString(), work, "", "undefined" /* lti */))
+			return ok(views.html.workAssignment.render(assignmentNode.toString(), work, userID, "undefined" /* lti */))
 				.withNewSession()
 				.addingToSession(request, "user", userLMSID);
 	    } else { // Student

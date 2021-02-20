@@ -107,6 +107,10 @@ body {
     background: #E19042;
 }
 
+a.hc_button {
+	text-decoration: none;
+}
+
 .ccid, .ccurl {
   font-family: "DejaVuSansMonoSemiCondensed";	
 }
