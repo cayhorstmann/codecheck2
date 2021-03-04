@@ -64,7 +64,7 @@ function randIntArray2(r, c, a, b) {
 function randFloatArray(len, a, b) {
    var result = []
    for (var i = 0; i < len; i++)
-		result.push(randInt(a, b))
+		result.push(randFloat(a, b))
 	return result;
 }
 

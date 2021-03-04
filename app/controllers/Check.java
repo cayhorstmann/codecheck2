@@ -8,6 +8,7 @@ import java.util.Iterator;
 import static java.util.Map.Entry;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
@@ -38,7 +39,7 @@ public class Check extends Controller {
 		Map<String, String[]> params = request.body().asFormUrlEncoded();
 		return CompletableFuture.supplyAsync(() -> {
 			try {
-				String ccu = null;
+				String ccid = null;
 		        String repo = "ext";
 		        String problem = "";
 		        Path submissionDir = codeCheck.createSubmissionDirectory();
@@ -49,24 +50,24 @@ public class Check extends Controller {
 		                repo = value;
 		            else if (key.equals("problem"))
 		                problem = value;
-		            else if (key.equals("ccu"))
-		            	ccu = value;
+		            else if (key.equals("ccu") || key.equals("ccid")) // TODO: Where does this come from???
+		            	ccid = value;
 		            else
 		                Util.write(submissionDir, key, value);
 		        }
-		    	if (ccu == null) { 
-					Http.Cookie ccuCookie = request.cookie("ccu");
-				    ccu = ccuCookie == null ? Util.createPronouncableUID() : ccuCookie.value();
+		    	if (ccid == null) { 
+		            Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
+		            ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
 				}
 				long startTime = System.nanoTime();			
-		        codeCheck.run("html", repo, problem, ccu, submissionDir);
+		        codeCheck.run("html", repo, problem, ccid, submissionDir);
 				double elapsed = (System.nanoTime() - startTime) / 1000000000.0;
 		        String report = Util.read(submissionDir.resolve("report.html"));
 		        if (report == null || report.length() == 0) {
 		        	report = String.format("Timed out after %5.0f seconds\n", elapsed);
 		        }
 		        
-		        Http.Cookie newCookie = Http.Cookie.builder("ccu", ccu).withMaxAge(Duration.ofDays(180)).build();
+		        Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();
 				// TODO: Delete submissionDir unless flag is set to keep it?
 				// Util.deleteDirectory(submissionDir);
 		        return ok(report).withCookies(newCookie).as("text/html");
@@ -96,7 +97,7 @@ public class Check extends Controller {
 		
 		return CompletableFuture.supplyAsync(() -> {
 			try {
-				String ccu = null;
+				String ccid = null;
 				String repo = "ext";
 				String problem = null;
 		        Path submissionDir = codeCheck.createSubmissionDirectory();
@@ -122,19 +123,19 @@ public class Check extends Controller {
 					else if ("problem".equals(key)) problem = value;
 					else if ("callback".equals(key)) callback = value;
 					else if ("scoreCallback".equals(key)) scoreCallback = value;
-					else if ("ccu".equals(key)) ccu = value;
+					else if ("ccu".equals(key) || "ccid".equals(key)) ccid = value; // TODO: Where from? 
 					else {
 						Util.write(submissionDir, key, value);
 						studentWork.put(key, value);
 					}
 				}
-				if (ccu == null) { 
-					Http.Cookie ccuCookie = request.cookie("ccu");
-				    ccu = ccuCookie == null ? Util.createPronouncableUID() : ccuCookie.value();
+				if (ccid == null) { 
+		            Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
+		            ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
 				};				
 				Logger.of("com.horstmann.codecheck.check").info("checkNJS: " + requestParams);
 				//TODO last param should be submissionDir
-				codeCheck.run(reportType, repo, problem, ccu, submissionDir);
+				codeCheck.run(reportType, repo, problem, ccid, submissionDir);
 				ObjectNode result = (ObjectNode) Json.parse(Util.read(submissionDir.resolve("report.json")));
 				String reportZip = Util.base64(submissionDir, "report.signed.zip");
 				
@@ -154,7 +155,7 @@ public class Check extends Controller {
 				}
 				
 				result.put("zip", reportZip);
-				Http.Cookie newCookie = Http.Cookie.builder("ccu", ccu).withMaxAge(Duration.ofDays(180)).build();				
+				Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();				
 				// TODO: Delete submissionDir unless flag is set to keep it?
 				// Util.deleteDirectory(submissionDir);
 				if (callback == null)

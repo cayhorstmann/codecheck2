@@ -114,11 +114,11 @@ public class CodeCheck {
 	}
 	
 	public void run(String reportType, String repo,
-			String problem, String ccu, Path submissionDir)
+			String problem, String ccid, Path submissionDir)
 			throws IOException, InterruptedException, NoSuchMethodException, ScriptException {
-		Path problemDir = loadProblem(repo, problem, ccu);
+		Path problemDir = loadProblem(repo, problem, ccid);
 		run(reportType, repo, problem, problemDir, submissionDir,
-				"User=" + ccu, "Problem=" + (repo + "/" + problem).replaceAll("[^\\pL\\pN_/-]", ""));
+				"User=" + ccid, "Problem=" + (repo + "/" + problem).replaceAll("[^\\pL\\pN_/-]", ""));
 		Util.deleteDirectory(problemDir);
 	}
 

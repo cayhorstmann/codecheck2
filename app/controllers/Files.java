@@ -48,6 +48,7 @@ public class Files extends Controller {
 
    @Inject private CodeCheck codeCheck;
 
+   // TODO: Caution--this won't do the right thing with param.js randomness when used to prebuild UI like in ebook, Udacity 
    public Result fileData(Http.Request request, String repo, String problemName, String ccid)
       throws IOException, NoSuchMethodException, ScriptException {        
       if (ccid == null) { 

@@ -15,17 +15,18 @@ POST /echo                    controllers.Application.echo(request: Request)
 # Map static resources from the /public folder to the /assets URL path
 GET  /assets/*file            controllers.Assets.versioned(path="/public", file: Asset)
 
-GET	 /files						        controllers.Files.filesHTML(request: Request, repo: String ?= "ext", problem: String, ccu: String ?= null)
-GET	 /files/:problem				  controllers.Files.filesHTML(request: Request, repo: String ?= "ext", problem: String, ccu: String ?= null)
-GET  /files/:repo/:problem		controllers.Files.filesHTML(request: Request, repo: String, problem: String,          ccu: String ?= null)
+# Classic HTML
+GET	 /files						        controllers.Files.filesHTML(request: Request, repo: String ?= "ext", problem: String, ccid: String ?= null)
+GET	 /files/:problem				  controllers.Files.filesHTML(request: Request, repo: String ?= "ext", problem: String, ccid: String ?= null)
+GET  /files/:repo/:problem		controllers.Files.filesHTML(request: Request, repo: String, problem: String,          ccid: String ?= null)
 POST /checkNJS					      controllers.Check.checkNJS(request: Request)
 # GET called from interactive element with jsonp result--TODO: Does this still happen???
 GET  /checkNJS					      controllers.Check.checkNJS(request: Request)
 
 # Used by textbook-problems, cs046 Split 
-GET  /fileData                controllers.Files.fileData(request: Request, repo: String ?= "ext", problem: String, ccu: String ?= null)
+GET  /fileData                controllers.Files.fileData(request: Request, repo: String ?= "ext", problem: String, ccid: String ?= null)
 
-# Classic HTML--TODO: is anyone still using it? Core Java?
+# Classic HTML
 POST /check						        controllers.Check.checkHTML(request: Request)
 
 POST /uploadProblem                     controllers.Upload.uploadProblem(request: Request)
