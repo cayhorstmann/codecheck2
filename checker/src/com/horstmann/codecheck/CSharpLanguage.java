@@ -1,8 +1,8 @@
 package com.horstmann.codecheck;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import com.horstmann.codecheck.Calls.Call;
@@ -22,8 +22,7 @@ public class CSharpLanguage implements Language {
     }
     
     @Override
-    public List<Path> writeTester(Path solutionDir, Path workDir, Path file,
-            List<Call> calls) throws IOException {
+    public Map<Path, String> writeTester(Path file, String contents, List<Call> calls) {
         // TODO Auto-generated method stub
         return null;
     }

@@ -1,6 +1,5 @@
 package com.horstmann.codecheck;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -12,7 +11,61 @@ public class Comparison {
     private static final int MANY_MORE_LINES = 10;
         // If actual lines > expected + MANY_MORE_LINES, truncate actual output
     
-    public boolean execute(String input, String actual, String expected, Report report, String filename) throws IOException {
+    public boolean execute(String input, String actual, String expected, Report report, String filename) {
+        List<String> lines1 = getLines(actual.replaceAll("〈[^〉]*〉\n", "")); 
+        List<String> lines2 = getLines(expected.replaceAll("〈[^〉]*〉\n", ""));
+
+        List<Report.Match> matches = new ArrayList<>();
+        boolean outcome = lines1.size() == lines2.size();
+        int i;
+        for (i = 0; i < lines1.size() && i < lines2.size(); i++) {
+           String line1 = lines1.get(i);
+           String line2 = lines2.get(i);
+           Report.Match m = compare(line1, line2);
+           outcome &= m.matches;
+           matches.add(m);
+        }
+        if (outcome) {
+            if (filename != null) {
+                report.file(filename, actual);
+            }
+            else {
+                report.output(actual);
+            }
+        }
+        else {
+            // Print inputs which are getting replaced
+            report.input(input);
+            while (i < lines2.size()) {
+                Report.Match m = new Report.Match();
+                m.actual = "";
+                m.expected = lines2.get(i);
+                m.matches = false;
+                m.explanation = null;
+                matches.add(m);
+                i++;
+            }
+            while (i < lines1.size() && i < lines2.size() + MANY_MORE_LINES) {
+                Report.Match m = new Report.Match();
+                m.actual = lines1.get(i);
+                m.expected = "";
+                m.matches = false;
+                m.explanation = null;
+                matches.add(m);
+                i++;
+            }
+            if (i < lines1.size()) {
+                Report.Match m = new Report.Match();
+                m.actual = ". . .";
+                m.expected = "";
+                m.matches = false;
+                m.explanation = null;
+                matches.add(m);
+            }
+            report.compareTokens(filename, matches);
+        }
+        return outcome;
+        /*
         // TODO: This is where the newlines went to die
         
         List<String> lines1 = getLines(actual.replace("〉\n", "〉")); 
@@ -69,6 +122,7 @@ public class Comparison {
             report.compareTokens(filename, matches);
         }
         return outcome;
+        */
     }
 
     private static List<String> getLines(String contents) {

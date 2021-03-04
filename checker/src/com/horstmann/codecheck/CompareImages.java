@@ -1,9 +1,8 @@
 package com.horstmann.codecheck;
 
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Arrays;
 
 import javax.imageio.ImageIO;
@@ -18,42 +17,23 @@ public class CompareImages {
         return Arrays.asList(ImageIO.getReaderFileSuffixes()).contains(extension);
     }
 
-    public CompareImages(Path firstImage) throws IOException  {
+    public CompareImages(byte[] firstImage) throws IOException  {
         image1 = readImage(firstImage);
     }
 
-    public void setOtherImage(Path p) throws IOException {
+    public void setOtherImage(byte[] p) throws IOException {
         image2 = readImage(p);
     }
 
     public BufferedImage first() { return image1; }
     public BufferedImage other() { return image2; }
     
-    private static BufferedImage readImage(Path p) throws IOException {
-    	int tries = 20;
-    	while (tries > 0) {
-    		tries--;
-    		if (Files.exists(p)) {
-    	    	tries = 10;
-    	    	while (tries > 0) {
-    	    		tries--;
-    	    		try {            
-    	    			return ImageIO.read(p.toFile());
-    	    		} catch (Exception ex) {
-    	    		}
-    	    		if (tries == 0) throw new IOException(p + " not readable");
-    	            try {
-    	                Thread.sleep(1000);
-    	            } catch (InterruptedException e) {}    		    		
-    	    	}    			
-    		}
-    		else {
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {}
-    		}    		
-    	}
-    	throw new IOException(p + " not found");
+    private static BufferedImage readImage(byte[] bytes) throws IOException {
+        try {
+            return ImageIO.read(new ByteArrayInputStream(bytes));
+        } catch (Exception ex) {
+            throw new IOException("Image not readable");
+        }
     }
 
     public boolean getOutcome() {

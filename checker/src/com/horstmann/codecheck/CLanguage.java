@@ -1,10 +1,10 @@
 package com.horstmann.codecheck;
 
-import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 public class CLanguage implements Language {
@@ -39,15 +39,13 @@ public class CLanguage implements Language {
 
     // TODO: Implement this
     @Override
-    public List<Path> writeTester(Path solutionDir, Path workDir, Path file,
-            List<Calls.Call> calls)
-            throws IOException {
+    public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls) {
         
         String moduleName = moduleOf(file);
         //List<String> lines = Util.readLines(sourceDir.resolve(file));
         
-        List<Path> paths = new ArrayList<>();
-        paths.add(pathOf(moduleName + "CodeCheck"));
+        Map<Path, String> paths = new HashMap<>();
+        paths.put(pathOf(moduleName + "CodeCheck"), "");
         return paths;
     }
 

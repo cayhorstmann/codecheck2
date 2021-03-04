@@ -1,5 +1,4 @@
-// This is the draft
 public class Numbers
 {
-   public int square(int n) { return 0; }
+   public int square(int n) { return n * n; }
 }

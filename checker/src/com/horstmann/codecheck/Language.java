@@ -4,11 +4,10 @@ import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -88,9 +87,11 @@ public interface Language {
      * @return true if it is an "Expected" style unit test file
      */
     default boolean isTester(Path fileName) { 
-        return fileName != null && moduleOf(fileName).matches(".*Tester[0-9]*");
+        if (fileName == null) return false;
+        String moduleName = moduleOf(fileName);
+        if (moduleName == null) return false;
+        return moduleName.matches(".*Tester[0-9]*");
     }
-
 
     /**
      * Tests if a file is an "XUnit" style unit test file in this language.
@@ -111,69 +112,6 @@ public interface Language {
         return moduleOf(fileName).matches(".*(Runn|Test)er[0-9]*"); 
     }
 
-    // TODO: Why wire in the report? Maybe needs to return a compilation result with success, messages, name of executable?
-    /**
-     * Compiles a program
-     * @param sourceFiles the source files that need to be compiled. The first one
-     * is the "main" one. 
-     * @param dir the directory containing the files
-     * 
-     * @return null for no error, or an error report if there was an error.
-     */
-    default String compile(List<Path> sourceFiles, Path dir) {
-        List<String> cmd = new ArrayList<>();
-        if (System.getProperty("os.name").toLowerCase().contains("win")) // We lose
-            cmd.add(Util.getHomeDir() + "\\comprog.bat");
-        else
-            cmd.add(Util.getHomeDir() + "/comprog");
-        cmd.add(getLanguage());
-        for (Path p : sourceFiles)
-            cmd.add(dir.resolve(p).toString());
-        StringBuilder output = new StringBuilder();
-        final int MAX_OUTPUT_LEN = 10_000;
-        int exitValue = Util.runProcess(cmd, null, Integer.MAX_VALUE, output, MAX_OUTPUT_LEN);
-        if (exitValue != 0) {
-            return output.toString();
-        } else
-            return null;
-    }
-
-    /**
-     * Runs a program
-     * @param sourceFile the path of the main file (from which the
-     * program name needs to be derived, in concert with the compile method) 
-     * @param dir the directory containing the main file
-     * @param args the command-line arguments
-     * @param input the input to pass to stdin  
-     * @return the combined stdout/stderr of the run 
-     */
-    default String run(Path sourceFile, Set<Path> dependentFiles, Path dir, String args,
-            String input, int timeoutMillis, int maxOutputLen, boolean interleaveIO) throws Exception {
-        List<String> cmd = new ArrayList<>();
-        if (System.getProperty("os.name").toLowerCase().contains("win")) // We lose
-            cmd.add(Util.getHomeDir() + "\\runprog.bat");
-        else
-            cmd.add(Util.getHomeDir() + "/runprog");
-        int timeoutSeconds = Math.max(1, (timeoutMillis + 500) / 1000);
-        cmd.add("" + timeoutSeconds);
-        cmd.add("" + interleaveIO);
-        cmd.add(getLanguage());        
-        cmd.addAll(runCommand(dir, sourceFile, dependentFiles, args));
-        
-        if (args != null) cmd.addAll(Arrays.asList(args.split("\\s+")));
-        StringBuilder output = new StringBuilder();        
-        Util.runProcess(cmd, input, timeoutMillis, output, maxOutputLen);
-        return output.toString();
-    }
-
-    default List<String> runCommand(Path dir, Path sourceFile, Set<Path> dependentFiles, String args)
-    {
-        List<String> cmd = new ArrayList<>();
-        String programName = dir.resolve(sourceFile).toString();
-        cmd.add(programName);        
-        return cmd;
-    }
-    
     /**
      * Gets the language string for this language.
      * @return the language string (which may be passed on to the comprog/runprog scripts)
@@ -187,17 +125,12 @@ public interface Language {
 
     /**
      * Writes a CALL tester.
-     * @param solutionDir the directory of the solution
-     * @param workDir the target directory to write the tester to (which also contains the submission files)
      * @param file the relative path of the submitted/solved file
+     * @param contents the file contents
      * @param calls the calls to be made
-     * @return a list containing the Path to the tester (with the main method or its equivalent),
-     * relative to the work directory, followed by the paths to any helper files
-     * @throws IOException
+     * @return a map containing the file paths and contents of the the tester and any helper files
      */
-    List<Path> writeTester(Path solutionDir, Path workDir, Path file,
-            List<Calls.Call> calls)
-            throws IOException;
+    Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls);
 
     default String[] pseudoCommentDelimiters() { return new String[] { "//", "" }; }
 
@@ -213,7 +146,29 @@ public interface Language {
      */
     default String substitutionSeparator() { return ";"; }
     
-    default void runUnitTest(Path mainFile, Set<Path> dependentFiles, Path workdir, Report report, Score score,  int timeoutMillis, int maxOutputLen) {        
+    default Pattern unitTestSuccessPattern() { return Pattern.compile("$."); }
+    default Pattern unitTestFailurePattern() { return Pattern.compile("$."); }
+    
+    default void reportUnitTest(String result, Report report, Score score) {
+        report.output(result);
+        Matcher matcher = unitTestSuccessPattern().matcher(result);
+        int runs = 0;
+        int failures = 0;
+        if (matcher.find())
+        {
+           runs = Integer.parseInt(matcher.group("runs"));
+        }
+        else
+        {
+           matcher = unitTestFailurePattern().matcher(result);
+           if (matcher.find())
+           {
+              failures = Integer.parseInt(matcher.group("failures"));
+              runs = Integer.parseInt(matcher.group("runs"));
+           }
+        }
+        report.pass(runs > 0 && failures == 0);
+        score.add(runs - failures, runs, report);
     }
 
     /**
@@ -221,19 +176,14 @@ public interface Language {
      * 
      * @param file
      *            the file to check for optional processing
-     * @param dir
+     * @param submissionDir
      *            the directory containing the student files
-     * @param studentFiles
-     *            all student files
-     * @param report
-     *            the report to add to, if an action was taken
-     * @param score
-     *            the score object to reward
-     * @return true if an action was taken
      */
-    default boolean accept(Path file, Path dir, Report report,
-            Score score) throws IOException { 
-        return false; 
+    default String process(Path file, Path submissionDir) throws IOException { 
+        return null; 
+    }
+    
+    default void reportProcessResult(String result, Report report, Score score) {        
     }
 
     /**

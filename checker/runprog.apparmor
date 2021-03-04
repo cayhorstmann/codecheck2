@@ -32,6 +32,7 @@
   /usr/local/lib/python3*/dist-packages/** rix,
   /usr/bin/poly mrix,
   /usr/bin/node mrix,
+  /usr/bin/nodejs mrix,
 
   /opt/codecheck/interleaveio* mrix,
   /bin/rm mrix,

@@ -6,7 +6,6 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -17,17 +16,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Scanner;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
-
-/*
- * Run this program from the "work directory", the directory in which all compilation and
- * execution happens. The submission directory and problem directory are left untouched.
- *
- */
 
 public class Main { 
     public static final double DEFAULT_TOLERANCE = 1.0E-6;
@@ -39,10 +31,8 @@ public class Main {
     
     private int timeoutMillis;
     private int maxOutputLen;
-    private Path workDir;
     private Properties checkProperties;
     private Report report;
-    private Path submissionDir;
     private Path studentDir;
     private Path solutionDir;
     private Set<Path> useFiles = new TreeSet<>(); // relative to studentDir
@@ -60,7 +50,6 @@ public class Main {
     private Score score = new Score();
     private Comparison comp = new Comparison();
     private Language language = null;
-    // TODO: Use service loader???
     private Language[] languages = {
        new JavaLanguage(),
        new PythonLanguage(),
@@ -74,6 +63,8 @@ public class Main {
        new HaskellLanguage(),
        new SMLLanguage()
     };
+    private Annotations annotations;
+    private Plan plan;
 
     /**
      * Entry point to program.
@@ -88,101 +79,138 @@ public class Main {
         new Main().run(args);
     }
 
-    public void copyUseFiles(Path targetDir) throws IOException {
-        for (Path p : useFiles) {
-            Path source = studentDir.resolve(p);
-            Path target = targetDir.resolve(p);
-            Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+    private void doSubstitutions(Path submissionDir, Substitution sub) throws Exception {
+        Path mainFile = sub.getFile();
+        int n = sub.getSize();
+        int timeout = timeoutMillis / n;
+        int maxOutput = maxOutputLen / n;
+        for (int i = 0; i < n; i++) {
+            // TODO: No sense compiling if first (unsubstituted) student program not working
+            // This can be a useful optimization elsewhere
+            String subtituted = sub.substitute(submissionDir.resolve(mainFile), i); // TODO get from plan???
+            String fileID = "submissionsubfiles" + i;
+            String compileID = "submissionsub" + i;            
+            plan.addFile(Paths.get(fileID).resolve(mainFile), subtituted);
+            plan.compile(compileID, "submission " + fileID, mainFile, dependentSourceFiles);
+            plan.run(compileID, compileID, mainFile, null, null, timeout, maxOutput, false); 
+            subtituted = sub.substitute(solutionDir.resolve(mainFile), i); // TODO get from plan???
+            fileID = "solutionsubfiles" + i;
+            compileID = "solutionsub" + i;            
+            plan.addFile(Paths.get(fileID).resolve(mainFile), subtituted);
+            plan.compile(compileID, "solution " + fileID, mainFile, dependentSourceFiles);
+            plan.run(compileID, compileID, mainFile, null, null, timeout, maxOutput, false); 
         }
-        for (Path p : useFiles) { // This happens in Input mode with submitted inputs
-            Path source = submissionDir.resolve(p);
-            if (Files.exists(source)) {
-                Path target = targetDir.resolve(p);
-                Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+        plan.addTask(() -> {
+            report.header("sub", "Running program with substitutions");
+            String[] argNames = sub.names().toArray(new String[0]);
+            String[][] args = new String[n][argNames.length];
+            String[] actual = new String[n];
+            String[] expected = new String[n];
+            boolean[] outcomes = new boolean[n];
+            for (int i = 0; i < n; i++) {
+                if (!plan.checkCompiled("submissionsub" + i, report, score)) return;    
+                actual[i] = plan.outerr("submissionsub" + i); 
+                expected[i] = plan.outerr("solutionsub" + i);                    
+                int j = 0;
+                for (String v : sub.values(i)) { args[i][j] = v; j++; }
+                outcomes[i] = comp.compare(actual[i], expected[i]).matches;
+                actual[i] = Util.truncate(actual[i], expected[i].length() + MUCH_LONGER);
+                score.pass(outcomes[i], null); // Pass/fail shown in run table
+            }
+            report.runTable(null, argNames, args, actual, expected, outcomes);
+        });
+    }
+
+    private void doCalls(Path submissionDir, Calls calls) throws Exception {        
+        Map<Path, String> testerFiles = calls.writeTester(solutionDir);
+        Path base = Paths.get("callfiles");
+        for (Map.Entry<Path, String> entry : testerFiles.entrySet()) 
+            plan.addFile(base.resolve(entry.getKey()), entry.getValue());
+        
+        String[] names = new String[calls.getSize()];
+        String[][] args = new String[calls.getSize()][1];
+        String[] actual = new String[calls.getSize()];
+        String[] expected = new String[calls.getSize()];
+        boolean[] outcomes = new boolean[calls.getSize()];
+
+        int timeout = timeoutMillis / calls.getSize();
+        int maxOutput = maxOutputLen  / calls.getSize();
+        List<Path> sources = new ArrayList<Path>(testerFiles.keySet()); 
+        plan.compile("call", "submission callfiles", sources, dependentSourceFiles); // TODO: This is the only place with a list of sources. Why???
+        for (int i = 0; i < calls.getSize(); i++) {
+            Path mainFile = sources.get(0);
+            // TODO: Solution code not isolated from student. It would be more secure to
+            // change call strategy to generate output. 
+            plan.run("call", "call", "call" + i, mainFile, "", "" + (i + 1), timeout, maxOutput, false);
+        }
+        plan.addTask(() -> {
+            report.header("call", "Calling with Arguments");
+            if (!plan.checkCompiled("call", report, score)) return;    
+            
+            for (int i = 0; i < calls.getSize(); i++) {
+                String output = plan.outerr("call" + i);                
+                List<String> lines = Util.lines(output);
+                Calls.Call call = calls.getCall(i);
+                names[i] = call.name;
+                args[i][0] = call.args;
+                if (lines.size() == 3 && Arrays.asList("true", "false").contains(lines.get(2))) {
+                    expected[i] = lines.get(0);
+                    actual[i] = Util.truncate(lines.get(1), expected[i].length() + MUCH_LONGER);
+                    outcomes[i] = lines.get(2).equals("true");                
+                } else {
+                    // Error in compilation or execution
+                    StringBuilder msg = new StringBuilder();
+                    for (String line : lines) { msg.append(line); msg.append('\n'); }
+                    String message = msg.toString(); 
+                    report.errors(language.errors(message, true));
+                                    
+                    expected[i] = "";  
+                    actual[i] = message;
+                    outcomes[i] = false;
+                }
+                score.pass(outcomes[i], null /* no report--it's in the table */);
+            }
+            report.runTable(names, new String[] { "Arguments" }, args, actual, expected, outcomes);
+        });
+    }     
+
+    private void runUnitTests() {
+        List<Path> unitTests = new ArrayList<>();
+        for (Path p : useFiles) {
+            if (language.isUnitTest(p)) 
+                unitTests.add(p);
+        }
+        if (unitTests.size() > 0) {
+            report.header("unitTest", "Unit Tests");
+            
+            for (Path p: unitTests) {
+                String id = plan.nextID("test");
+                plan.unitTest(id, p, dependentSourceFiles, timeoutMillis / unitTests.size(), maxOutputLen / unitTests.size());
+                plan.addTask(() -> {
+                    report.run(p.toString());
+                    if (!plan.checkCompiled(id, report, score)) return; // TODO unittest must make report
+                    String outerr = plan.outerr(id);                    
+                    language.reportUnitTest(outerr, report, score);                
+                });
+                            
             }
         }
     }
-
-    public boolean compile(Path mainFile) {
-        return compile(Collections.singletonList(mainFile));
-    }
-
-    /**
-     * Runs the compiler
-     * @param sourceFiles a list of paths, starting with the path to the main source file
-     * @return true if compilation succeeds
-     */
-    public boolean compile(List<Path> sourceFiles) {
-        List<Path> allSourceFiles = new ArrayList<>();
-        allSourceFiles.addAll(sourceFiles);
-        allSourceFiles.addAll(dependentSourceFiles);
-        String errorReport = language.compile(allSourceFiles, workDir);
-        if (errorReport == null) return true;        
-        if (errorReport.trim().equals(""))
-            report.error("Error compiling " + sourceFiles.get(0));
-        else {
-            report.error(errorReport);
-            report.errors(language.errors(errorReport, true));
-        }
-        return false;
-    }
-
-    public Path compileSolution(Path mainSourceFile, Substitution sub, int n) throws IOException {
-        // Delete any class files in the work directory
-        // Otherwise they won't be generated in the solution directory
-        for (Path p : Files.list(workDir).filter(p -> p.getFileName().toString().endsWith(".class")).toArray(Path[]::new))
-            Files.deleteIfExists(p);
-        
-        Path tempDir = Util.createTempDirectory();
-        copyUseFiles(tempDir);
-        for (Path p : solutionFiles) {
-            Path source = solutionDir.resolve(p);
-            Path target = tempDir.resolve(p);
-            if (sub != null && sub.getFile().equals(p))
-                sub.substitute(source, target, n);
-            else
-                Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
-        }
-        List<Path> sourceFiles = new ArrayList<>();
-        sourceFiles.add(mainSourceFile);
-        sourceFiles.addAll(dependentSourceFiles);        
-        String errorReport = language.compile(sourceFiles, tempDir);
-        if (errorReport == null) return tempDir;
-        else {
-            report.systemError("Error compiling " + sourceFiles + "\n" + errorReport);
-            return null;
-        }
-    }
-
-    private String getStringProperty(String key, String... fallbackKeysAndDefaultValue) {
-        String value = checkProperties.getProperty(key);
-        if (value != null)
-            return value;
-        for (int i = 0; i < fallbackKeysAndDefaultValue.length - 1; i++) {
-            value = checkProperties.getProperty(fallbackKeysAndDefaultValue[i]);
-            if (value != null)
-                return value;
-        }
-        if (fallbackKeysAndDefaultValue.length > 0)
-            return fallbackKeysAndDefaultValue[fallbackKeysAndDefaultValue.length - 1];
-        else
-            return null;
-    }
-
+    
     private void runTester(Path mainFile, int timeout, int maxOutputLen) throws Exception {
-        report.run("Running " + mainFile);
-        // TODO: Assume testers always in default package?
-        
-        // TODO: Scoring doesn't work when outerr contains an exception report because we don't know how many
-        // test cases have not occurred. 
-        // May need to count the number of expected cases in the 
-        
-        if (compile(mainFile)) {
-            String outerr = language.run(mainFile, dependentSourceFiles, workDir, "", null, timeout, maxOutputLen, false);
+        String compileID = plan.nextID("tester");
+        plan.compile(compileID, "submission", mainFile, dependentSourceFiles);
+        plan.run(compileID, compileID, mainFile, "", null, timeout, maxOutputLen, false);
+        plan.addTask(() -> {
+            report.run("Running " + mainFile);
+            if (!plan.checkCompiled(compileID, report, score)) return; 
+            String outerr = plan.outerr(compileID);
             AsExpected cond = new AsExpected(comp);
-            cond.eval(outerr, report, score, workDir.resolve(mainFile));
-        } else
-            score.setInvalid();
+            String tester = plan.getFileString("use", mainFile);
+            if (tester == null)
+                tester = plan.getFileString("solution", mainFile);  // In case the student was asked to do it
+            cond.eval(outerr, report, score, tester);                 
+        });
     }
 
     private void testInputs(Map<String, String> inputs, Path mainFile, Annotations annotations) throws Exception {
@@ -191,97 +219,98 @@ public class Main {
          */
         if (inputs.size() == 0)
             inputs.put("", ""); 
-        report.header("run", inputMode ? "Output" : "Testing " + mainFile);
-        Path solutionDir = null;
+        plan.addTask(() -> { report.header("run", inputMode ? "Output" : "Testing " + mainFile); });
+        
+        boolean runSolution = false;
 
         if (!inputMode && !annotations.isSample(mainFile)) {
-            solutionDir = compileSolution(mainFile, null, 0);
-            if (solutionDir == null) return;
+            plan.compile("solutionrun", "solution", mainFile, dependentSourceFiles);
+            runSolution = true;
         }        
-        
-        if (compile(mainFile)) {
-            for (String test : inputs.keySet()) {
-                String input = inputs.get(test);
-                if (!input.endsWith("\n")) input += "\n";
 
-                testInput(mainFile, annotations, solutionDir, test, input, timeoutMillis / inputs.size(), maxOutputLen / inputs.size());
-            }
-        } else
-            score.setInvalid();
-        
-        Util.deleteDirectory(solutionDir);
+        plan.compile("submissionrun", "submission", mainFile, dependentSourceFiles);
+        plan.addTask(() -> { plan.checkCompiled("submissionrun", report, score); });
+        for (String test : inputs.keySet()) {
+            String input = inputs.get(test);
+            testInput(mainFile, annotations, runSolution, test, input, timeoutMillis / inputs.size(), maxOutputLen / inputs.size());
+        }
     }
 
     private void testInput(Path mainFile, Annotations annotations,
-            Path solutionDir, String test, String input, int timeout, int maxOutput)
+            boolean runSolution, String test, String input, int timeout, int maxOutput)
             throws Exception {
         List<String> runargs = annotations.findKeys("ARGS");
         if (runargs.size() == 0) runargs.add("");
         String out = annotations.findUniqueKey("OUT");
-        String[] outFiles = out == null ? new String[0] : out.trim().split("\\s+");
+        List<String> outFiles = out == null ? Collections.emptyList() : Arrays.asList(out.trim().split("\\s+"));
         
         String runNumber = test.replace("test", "").trim();
-        report.run(!test.equals("Input") && runNumber.length() > 0 ? "Test " + runNumber : null);
+        plan.addTask(() -> { 
+            report.run(!test.equals("Input") && runNumber.length() > 0 ? "Test " + runNumber : null);
+        });
         boolean interleaveio = language.echoesStdin() == Language.Interleave.ALWAYS ||
             language.echoesStdin() == Language.Interleave.UNGRADED && test.equals("Input");
+        if (input == null || input.equals("")) interleaveio = false;
+        else if (!input.endsWith("\n")) input += "\n";
+        
         // TODO: Language settings
         for (String args : runargs) {
-            testInput(mainFile, solutionDir, test, input, args, outFiles, timeout / runargs.size(), maxOutput / runargs.size(), interleaveio);
+            testInput(mainFile, runSolution, test, input, args, outFiles, timeout / runargs.size(), maxOutput / runargs.size(), interleaveio);
         }
     }
     
     private void testInput(Path mainFile,
-            Path solutionDir, String test, String input, String runargs, String[] outFiles, int timeout, int maxOutput, boolean interleaveio)
+            boolean runSolution, String test, String input, String runargs, List<String> outFiles, int timeout, int maxOutput, boolean interleaveio)
             throws Exception {
-        
-        // Before the run, clear any output files in case they existed, 
-        // and recopy any supplied files (in case an input has been mutated by a previous run) 
-        for (String f : outFiles) Files.deleteIfExists(workDir.resolve(f));           
-        copyUseFiles(workDir); 
-    
-        report.args(runargs);
-
-        if (!interleaveio && !test.equals("Input")) report.input(input);
-
-        // Run student program and capture stdout/err and output files
-
-        String outerr = language.run(mainFile, dependentSourceFiles, workDir, runargs, input, timeout, maxOutput, interleaveio);
-        List<String> contents = new ArrayList<>();
-        List<CompareImages> imageComp = new ArrayList<>();
-        
-        for (String f : outFiles) {
-            Path p = workDir.resolve(f);
-            if (CompareImages.isImage(f)) {
-                try {
-                    imageComp.add(new CompareImages(p));
-                } catch (Exception ex) {
-                    report.output(outerr);
-                    throw ex;
-                }
-            }
-            else
-                contents.add(Util.read(p));            
+        String submissionRunID = plan.nextID("submissionrun");
+        plan.run("submissionrun", submissionRunID, mainFile, runargs, input, outFiles, timeout, maxOutput, interleaveio);
+        String solutionRunID = plan.nextID("solutionrun");        
+        if (runSolution) {
+            plan.run("solutionrun", solutionRunID, mainFile, runargs, input, outFiles, timeout, maxOutput, interleaveio);                
         }
-                
-        if (solutionDir == null) { // Run without testing
-            report.output(outerr);
+        plan.addTask(() -> {
+            if (!plan.compiled("submissionrun")) return;
+            report.args(runargs);
+    
+            if (!interleaveio && !test.equals("Input")) report.input(input);
+    
+            List<String> contents = new ArrayList<>();
+            List<CompareImages> imageComp = new ArrayList<>();
+            String outerr = plan.outerr(submissionRunID);
             for (String f : outFiles) {
-                if (CompareImages.isImage(f))          
-                    report.image("Image", imageComp.remove(0).first());                    
+                if (CompareImages.isImage(f)) {
+                    try {
+                        imageComp.add(new CompareImages(plan.getOutputBytes(submissionRunID, f)));
+                    } catch (IOException ex) {
+                        report.output(outerr);
+                        report.error(ex.getMessage());
+                    }
+                }
                 else
-                    report.file(f, contents.remove(0));
+                    contents.add(plan.getOutputString(submissionRunID, f));            
             }
-            // No score
-        } else { // Run solution in the same way         
-            for (String f : outFiles) Files.deleteIfExists(workDir.resolve(f));           
-            copyUseFiles(workDir); // Might have been deleted or mutated
-            
-            String expectedOuterr = language.run(mainFile, dependentSourceFiles, solutionDir, runargs, input, timeout, maxOutput, interleaveio);
-        
-            // Report on results
+                    
+            if (!runSolution) { 
+                report.output(outerr);
+                for (String f : outFiles) {
+                    if (CompareImages.isImage(f)) {
+                        try {
+                            report.image("Image", imageComp.remove(0).first());
+                        } catch (IOException ex) {
+                            report.error(ex.getMessage());    
+                        }
+                    }
+                    else
+                        report.file(f, contents.remove(0));
+                }
+                // No score
+                return;
+            } 
 
+            String expectedOuterr = plan.outerr(solutionRunID);
+                
             if (expectedOuterr != null && expectedOuterr.trim().length() > 0) {                
-                if (outFiles.length > 0) {
+                if (outFiles.size() > 0) {
                     // Report output but don't grade it
                     report.output(outerr);
                 } else {
@@ -291,28 +320,82 @@ public class Main {
             }        
         
             for (String f : outFiles) {
-                Path p = workDir.resolve(f);
                 if (CompareImages.isImage(f)) {
                     CompareImages ic = imageComp.remove(0);
-                    ic.setOtherImage(p);
-                    boolean outcome = ic.getOutcome();
-                    report.image("Image", ic.first());
-                    if (!outcome) {
-                        report.image("Expected", ic.other());
-                        report.image("Mismatched pixels", ic.diff());
+                    try {
+                        ic.setOtherImage(plan.getOutputBytes(solutionRunID, f));
+                        boolean outcome = ic.getOutcome();
+                        report.image("Image", ic.first());
+                        if (!outcome) {
+                            report.image("Expected", ic.other());
+                            report.image("Mismatched pixels", ic.diff());
+                        }
+                        score.pass(outcome, report);
+                    } catch (IOException ex) {
+                        report.error(ex.getMessage());                        
                     }
-                    score.pass(outcome, report);                   
                 } else {
-                    String expectedContents = Util.read(p);                
+                    String expectedContents = plan.getOutputString(solutionRunID, f);                
                     boolean outcome = comp.execute(input, contents.remove(0),
                             expectedContents, report, f);
                     score.pass(outcome, report);
                 }
             }
+        });
+    }
+    
+    private void getStudentAndSolutionFiles(Path problemDir, Path submissionDir)  throws IOException {
+        studentDir = problemDir.resolve("student"); 
+        
+        if (Files.exists(studentDir)) { // old style with student and solution directories
+            Path checkPropertiesPath = studentDir.resolve("check.properties");
+            if (Files.exists(checkPropertiesPath)) {
+                try (InputStream in = Files.newInputStream(checkPropertiesPath)) {
+                    checkProperties.load(in);
+                } 
+            }
+
+            useFiles = Util.filterNot(Util.getDescendantFiles(studentDir), 
+                    ".*", "*~", "check.properties", "*.zy");
+            solutionDir = problemDir.resolve("solution");
+            solutionFiles = Util.filterNot(Util.getDescendantFiles(solutionDir), 
+                    ".*", "*~");
+            annotations.read(studentDir, useFiles, solutionDir, solutionFiles, /* inputMode = */ false, report);
+            useFiles.removeAll(solutionFiles);
+        } else {
+            studentDir = problemDir;
+            solutionDir = problemDir;
+            useFiles = Util.filterNot(Util.getDescendantFiles(studentDir), 
+                    ".*", "*~", "*.class", "a.out", "*.pyc",  
+                    "index.html", "index.ch", "problem.html", 
+                    "*.in", "q.properties", "check.properties", "param.js", "edit.key");
+            solutionFiles = new TreeSet<Path>();
+            inputMode = Files.exists(submissionDir.resolve("Input"));
+            annotations.read(studentDir, useFiles, solutionDir, solutionFiles, inputMode, report);
+            // Move any files annotated with SOLUTION, SHOW or EDIT to solution 
+            Set<Path> annotatedSolutions = annotations.getSolutions();
+            useFiles.removeAll(annotatedSolutions);
+            solutionFiles.addAll(annotatedSolutions);
+
+            if (inputMode) {
+                Iterator<Path> iter = useFiles.iterator();
+                while (iter.hasNext()) {
+                    Path p = iter.next();
+                    if (language.isSource(studentDir.resolve(p)) && !annotations.getHidden().contains(p)) {
+                        solutionFiles.add(p);
+                        iter.remove();                            
+                    }
+                }
+                useFiles.remove(Paths.get("Input"));
+            }                 
+        }
+
+        if (solutionFiles.isEmpty()) {                                   
+            throw new CodeCheckException("No solution files found");
         }
     }
-
-    private void getMainAndDependentFiles() {
+    
+    private void getMainAndDependentSourceFiles(Path studentDir) {
         for (Path p : solutionFiles) {
             Path fullPath = solutionDir.resolve(p);
             if (language.isMain(fullPath))
@@ -328,153 +411,78 @@ public class Main {
             else if (language.isSource(fullPath) && !language.isUnitTest(fullPath))
                 dependentSourceFiles.add(p);
         }
-        
-        if (mainSourceFiles.size() == 0 && dependentSourceFiles.size() == 1) {
-            // This can happen with Python where main is not required
-            mainSourceFiles.addAll(dependentSourceFiles);
-            dependentSourceFiles.clear();
-        }
     }
 
-    private void runUnitTests() {
-        List<Path> unitTests = new ArrayList<>();
+    public Set<Path> copyFiles(Path studentDir, Path submissionDir) throws IOException {
+        Path use = Paths.get("use");
+        Path solution = Paths.get("solution");
+        Path submission = Paths.get("submission");
         for (Path p : useFiles) {
-            if (language.isUnitTest(p)) 
-                unitTests.add(p);
+            Path source = studentDir.resolve(p);
+            plan.addFile(use.resolve(p), Files.readAllBytes(source));
         }
-        if (unitTests.size() > 0) {
-            report.header("unitTest", "Unit Tests");
-            for (Path p: unitTests) {
-                language.runUnitTest(p, dependentSourceFiles, workDir, report, score, timeoutMillis / unitTests.size(), maxOutputLen / unitTests.size());            
+        for (Path p : useFiles) { // This happens in Input mode with submitted inputs
+            Path source = submissionDir.resolve(p);
+            if (Files.exists(source)) {
+                plan.addFile(use.resolve(p), Files.readAllBytes(source));
             }
         }
-    }
-
-    private void doSubstitutions(Path submissionDir, Substitution sub) throws Exception {
-        report.header("sub", "Running program with substitutions");
-        Path mainFile = sub.getFile();
-        if (compile(mainFile)) {
-        	int n = sub.getSize();
-        	String[] argNames = sub.names().toArray(new String[0]);
-            String[][] args = new String[n][argNames.length];
-            String[] actual = new String[n];
-            String[] expected = new String[n];
-            boolean[] outcomes = new boolean[n];
-
-            int timeout = timeoutMillis / Math.max(1, sub.getSize());
-            int maxOutput = maxOutputLen / Math.max(1, sub.getSize());
-            for (int i = 0; i < sub.getSize(); i++) {
-                sub.substitute(submissionDir.resolve(mainFile),
-                               workDir.resolve(mainFile), i);
-                if (compile(mainFile)) {
-                    actual[i] = language.run(mainFile, dependentSourceFiles, workDir, null, null, timeout, maxOutput, false);
-                    Path tempDir = compileSolution(mainFile, sub, i);
-                    expected[i] = language.run(mainFile, dependentSourceFiles, tempDir, null, null, timeout, maxOutput, false);                    
-                    Util.deleteDirectory(tempDir);
-                    int j = 0;
-                    for (String v : sub.values(i)) { args[i][j] = v; j++; }
-                    outcomes[i] = comp.compare(actual[i], expected[i]).matches;
-                    actual[i] = Util.truncate(actual[i], expected[i].length() + MUCH_LONGER);
-                    score.pass(outcomes[i], null); // Pass/fail shown in run table
-                }
-            }
-            report.runTable(null, argNames, args, actual, expected, outcomes);
-        } else {
-            score.setInvalid();
-        }
-    }
-
-    private void doCalls(Path submissionDir, Calls calls) throws Exception {        
-        report.header("call", "Calling with Arguments");
-        List<Path> testFiles = calls.writeTester(solutionDir, workDir);
         
-        String[] names = new String[calls.getSize()];
-        String[][] args = new String[calls.getSize()][1];
-        String[] actual = new String[calls.getSize()];
-        String[] expected = new String[calls.getSize()];
-        boolean[] outcomes = new boolean[calls.getSize()];
-
-        int timeout = timeoutMillis / calls.getSize();
-        int maxOutput = maxOutputLen  / calls.getSize();
-        
-        if (compile(testFiles)) {
-            for (int i = 0; i < calls.getSize(); i++) {
-                Path mainFile = testFiles.get(0);
-                Set<Path> otherFiles = new TreeSet<>(dependentSourceFiles);
-                for (int j = 1; j < testFiles.size(); j++) otherFiles.add(testFiles.get(j));
-            	String result = language.run(mainFile, otherFiles, workDir, "" + (i + 1), null, timeout, maxOutput, false);
-            	Scanner in = new Scanner(result);
-                List<String> lines = new ArrayList<>();
-                while (in.hasNextLine()) lines.add(in.nextLine());
-                in.close();
-                Calls.Call call = calls.getCall(i);
-                names[i] = call.name;
-            	args[i][0] = call.args;
-                if (lines.size() == 3 && Arrays.asList("true", "false").contains(lines.get(2))) {
-                	expected[i] = lines.get(0);
-                	actual[i] = Util.truncate(lines.get(1), expected[i].length() + MUCH_LONGER);
-                	outcomes[i] = lines.get(2).equals("true");                
-                } else {
-                    // Error in compilation or execution
-                        StringBuilder msg = new StringBuilder();
-                        for (String line : lines) { msg.append(line); msg.append('\n'); }
-                        String message = msg.toString(); 
-                        report.errors(language.errors(message, true));
-                                        
-                	expected[i] = "";  
-                	actual[i] = message;
-                	outcomes[i] = false;
-                }
-            	score.pass(outcomes[i], null /* no report--it's in the table */);
+        Set<Path> missingFiles = new TreeSet<>();
+        for (Path file : solutionFiles) {
+            Path source = solutionDir.resolve(file);
+            plan.addFile(solution.resolve(file), Files.readAllBytes(source));
+            source = submissionDir.resolve(file);
+            if (Files.exists(source))
+                plan.addFile(submission.resolve(file), Files.readAllBytes(source));
+            else {
+                report.error("Missing file " + file);
+                missingFiles.add(file); // TODO: How can this happen? Why not abort?
             }
-            report.runTable(names, new String[] { "Arguments" }, args, actual, expected, outcomes);
-        } else {
-            score.setInvalid();
-        }
+        }        
+        return missingFiles;
     }
-
-    private void callMethod(double tolerance, boolean ignoreCase,
-            boolean ignoreSpace) throws IOException, Exception {
-        String mainclass = getStringProperty("mainclass");
-        Path mainFile = null;
-        if (mainclass == null) {
-            if (mainSourceFiles.size() == 1)
-                mainFile = mainSourceFiles.iterator().next();
-            else if (solutionFiles.size() == 1)
-                mainFile = solutionFiles.iterator().next();
-            else
-                report.systemError("Can't identify main file");
-            mainclass = Util.removeExtension(mainFile);
-        } else mainFile = Paths.get(mainclass + ".java");
-
-        CallMethod call = new CallMethod(mainclass, checkProperties, timeoutMillis);
-        call.setTolerance(tolerance);
-        call.setIgnoreCase(ignoreCase);
-        call.setIgnoreSpace(ignoreSpace);
-        Path tempDir = compileSolution(mainFile, null, 0); 
-        if (compile(mainFile)) {
-            report.header("callMethod", "Calling method");
-            call.prepare(tempDir);
-            call.run(workDir, report, score);
-        } else
-            score.setInvalid();
-        Util.deleteDirectory(tempDir);
+    
+    // TODO: Need another mechanism for the args
+    public String reportComments(String[] args) {
+        report.comment("Submission", plan.getWorkDir().getFileName().toString());
+        // This is just a unique ID, can be used to check against cheating
+         DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+         df.setTimeZone(TimeZone.getTimeZone("UTC"));
+         String currentTime = df.format(new Date());
+         report.comment("Time", currentTime);
+         report.footnote(currentTime);
+         String problemId = annotations.findUniqueKey("ID");
+         if (problemId == null) {
+             problemId = Util.removeExtension(solutionFiles.iterator().next().getFileName());                
+         }
+         else {
+             problemId = problemId.replaceAll("[^A-Za-z0-9]", "").toLowerCase();
+         }
+             
+         report.comment("ID", problemId);
+         
+         // Used to pass in machine instance, git url into report 
+         for (int iarg = 2; iarg < args.length; iarg++) {
+             String arg = args[iarg];
+             int keyEnd = arg.indexOf("=");
+             if (keyEnd >= 0) {
+                 report.comment(arg.substring(0, keyEnd), arg.substring(keyEnd + 1));
+             }
+             else {
+                 report.comment(arg, "");
+             }
+         }
+         return problemId;
     }
 
     public void run(String[] args) throws IOException, ReflectiveOperationException {
-        Annotations annotations = null;
-        String problemId = "";
         // TODO: Adjustable Timeouts
         long startTime = System.currentTimeMillis();
+        String problemID = "";
         try {
-            Path homeDir = Util.getHomeDir();
-            System.setProperty("java.security.policy", homeDir.resolve("codecheck.policy").toString());
-            System.setProperty("com.horstmann.codecheck.home", homeDir.toString());
-            if (!DEBUG) // TODO: Why not in debug mode? 
-                System.setSecurityManager(new SecurityManager());
+            Path submissionDir = FileSystems.getDefault().getPath(args[0]);
             Path problemDir = FileSystems.getDefault().getPath(args[1]);
-            workDir = Paths.get(".").toAbsolutePath().normalize();
-            submissionDir = FileSystems.getDefault().getPath(args[0]);
 
             // Set up report first in case anything else throws an exception 
             
@@ -514,87 +522,11 @@ public class Main {
                 }
                 if (language == null) throw new CodeCheckException("Cannot find language from " + files);
             }
-
-            studentDir = problemDir.resolve("student"); 
-                    
+            plan = new Plan(language);
+            
             checkProperties = new Properties();
             annotations = new Annotations(language);
             
-            if (Files.exists(studentDir)) { // old style with student and solution directories
-                Path checkPropertiesPath = studentDir.resolve("check.properties");
-                if (Files.exists(checkPropertiesPath)) {
-                    try (InputStream in = Files.newInputStream(checkPropertiesPath)) {
-                        checkProperties.load(in);
-                    }
-                }
-
-                useFiles = Util.filterNot(Util.getDescendantFiles(studentDir), 
-                        ".*", "*~", "check.properties");
-                solutionDir = problemDir.resolve("solution");
-                solutionFiles = Util.filterNot(Util.getDescendantFiles(solutionDir), 
-                        ".*", "*~");
-                annotations.read(studentDir, useFiles, solutionDir, solutionFiles, /* inputMode = */ false, report);
-                useFiles.removeAll(solutionFiles);
-            } else {
-                studentDir = problemDir;
-                solutionDir = problemDir;
-                useFiles = Util.filterNot(Util.getDescendantFiles(studentDir), 
-                        ".*", "*~", "*.class", "a.out", "*.pyc",  
-                        "index.html", "index.ch", "problem.html", 
-                        "*.in", "q.properties", "check.properties", "param.js", "edit.key");
-                solutionFiles = new TreeSet<Path>();
-                inputMode = Files.exists(submissionDir.resolve("Input"));
-                annotations.read(studentDir, useFiles, solutionDir, solutionFiles, inputMode, report);
-                // Move any files annotated with SOLUTION, SHOW or EDIT to solution 
-                Set<Path> annotatedSolutions = annotations.getSolutions();
-                useFiles.removeAll(annotatedSolutions);
-                solutionFiles.addAll(annotatedSolutions);
-
-                if (inputMode) {
-                    Iterator<Path> iter = useFiles.iterator();
-                    while (iter.hasNext()) {
-                        Path p = iter.next();
-                        if (language.isSource(studentDir.resolve(p)) && !annotations.getHidden().contains(p)) {
-                            solutionFiles.add(p);
-                            iter.remove();                            
-                        }
-                    }
-                    useFiles.remove(Paths.get("Input"));
-                }                 
-            }
-
-            if (solutionFiles.isEmpty()) {                                   
-                throw new CodeCheckException("No solution files found");
-            }
-            
-            report.comment("Submission", submissionDir.toString());
-               // This is just a unique ID, can be used to check against cheating
-            DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-            df.setTimeZone(TimeZone.getTimeZone("UTC"));
-            String currentTime = df.format(new Date());
-            report.comment("Time", currentTime);
-            report.footnote(currentTime);
-            problemId = annotations.findUniqueKey("ID");
-            if (problemId == null) {
-                problemId = Util.removeExtension(solutionFiles.iterator().next().getFileName());            	
-            }
-            else {
-            	problemId = problemId.replaceAll("[^A-Za-z0-9]", "").toLowerCase();
-            }
-        	
-            report.comment("ID", problemId);
-            
-            // Used to pass in machine instance, git url into report 
-            for (int iarg = 2; iarg < args.length; iarg++) {
-            	String arg = args[iarg];
-            	int keyEnd = arg.indexOf("=");
-            	if (keyEnd >= 0) {
-            	    report.comment(arg.substring(0, keyEnd), arg.substring(keyEnd + 1));
-            	}
-            	else {
-            	    report.comment(arg, "");
-            	}
-            }
             
             timeoutMillis = DEFAULT_TIMEOUT_MILLIS;
             String timeoutProperty = System.getProperty("com.horstmann.codecheck.timeout");
@@ -614,32 +546,22 @@ public class Main {
             comp.setTolerance(tolerance);
             comp.setIgnoreCase(ignoreCase);
             comp.setIgnoreSpace(ignoreSpace);            
-            
-            getMainAndDependentFiles();            
+
+            getStudentAndSolutionFiles(problemDir, submissionDir);
+            getMainAndDependentSourceFiles(studentDir);            
+
+            problemID = reportComments(args);
                         
-            copyUseFiles(workDir);
-                
-            Set<Path> missingFiles = new TreeSet<>();
-            for (Path file : solutionFiles) {
-                Path source = submissionDir.resolve(file);
-                if (Files.exists(source))
-                    Files.copy(source, workDir.resolve(file), StandardCopyOption.REPLACE_EXISTING);
-                else {
-                    report.error("Missing file " + file);
-                    missingFiles.add(file); // TODO: How can this happen? Why not abort?
-                }
-            }
+            Set<Path> missingFiles = copyFiles(studentDir, submissionDir);
             
             // the supplied files that the students are entitled to see
             Set<Path> printFiles = Util.filterNot(useFiles, "test*.in", "test*.out", "Input", 
-                    "*.png", "*.PNG", "*.gif", "*.GIF", "*.jpg", "*.jpeg", "*.JPG", 
+                    "*.png", "*.PNG", "*.gif", "*.GIF", "*.jpg", "*.jpeg", "*.JPG", "*.bmp", "*.BMP",
                     "*.jar", "*.pdf");      
 
             printFiles.removeAll(annotations.getHidden()); 
             
             if (annotations.checkConditions(submissionDir, report)) {
-                if (getStringProperty("test.method") != null) // TODO: Legacy
-                    callMethod(tolerance, ignoreCase, ignoreSpace);
                 if (annotations.has("CALL")) {
                     Calls calls = annotations.findCalls();
                     mainSourceFiles.remove(calls.getFile());
@@ -656,7 +578,8 @@ public class Main {
                 Map<String, String> inputs = new TreeMap<>(); // TODO: Legacy
                 for (String i : new String[] { "", "1", "2", "3", "4", "5", "6", "7", "8", "9" }) {
                     String key = "test" + i + ".in";
-                    String in = getStringProperty(key);
+                    
+                    String in = checkProperties.getProperty(key);
                     if (in == null)
                         in = Util.read(studentDir.resolve(key));
                     else
@@ -673,7 +596,7 @@ public class Main {
                     inputs.put("Input", Util.read(runInput));
                 }
 
-                runUnitTests();
+                runUnitTests(); 
     
                 List<Path> testerFiles = new ArrayList<>();
                 List<Path> runFiles = new ArrayList<>();
@@ -683,7 +606,7 @@ public class Main {
                         testerFiles.add(mainSourceFile);
                     else
                         runFiles.add(mainSourceFile);
-                }
+                } 
                 
                 if (testerFiles.size() > 0) {
                     report.header("tester", "Testers");
@@ -707,11 +630,19 @@ public class Main {
                 }
                 // Process checkstyle.xml etc.
                 for (Path p : useFiles) {
-                    if (language.accept(p, submissionDir, report, score)) {
+                    String cmd = language.process(p, submissionDir);
+                    if (cmd != null) {
                         printFiles.remove(p);
+                        String id = plan.nextID("process");
+                        plan.process(id, cmd);
+                        plan.addTask(() -> {
+                            String result = plan.outerr(id);
+                            language.reportProcessResult(result, report, score);
+                        });
                     }
                 }
             }
+            plan.execute(report);
             
             if (!inputMode) { // Don't print student or provided files for run-only mode
                 report.header("studentFiles", "Submitted files");
@@ -735,10 +666,9 @@ public class Main {
                     report.add(score);
                 long endTime = System.currentTimeMillis();
                 report.comment("Elapsed", (endTime - startTime) + " ms");
-                report.save(problemId, "report");
+                report.save(problemID, "report");
             }
             else System.err.println("report is null");
-        }
-        System.exit(0);
+        }        
     }
 }

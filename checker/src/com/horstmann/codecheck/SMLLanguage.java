@@ -1,10 +1,10 @@
 package com.horstmann.codecheck;
 
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.nio.file.Path;
-import java.util.Arrays;
+import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -38,41 +38,42 @@ public class SMLLanguage implements Language {
         return mainPattern.matcher(contents).find();
     }
 
-    public List<Path> writeTester(Path solutionDir, Path workDir, Path file,
-            List<Calls.Call> calls) throws IOException {        
+    public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls) {        
         String moduleName = moduleOf(file);
         
-        Path testFile = workDir.resolve("testCodeCheck.sml");
-        try (PrintWriter out = new PrintWriter(testFile.toFile(), "UTF-8")) {
-            out.println("use \"" + moduleName + ".sml\";");
-            out.println("structure Solution = struct");
-            out.println(Util.read(solutionDir.resolve(file)));
-            out.println("end;   ");
-            out.println("fun eval expr = SOME (expr ()) handle exn => NONE ;");
-            out.println("fun comp expr1 expr2 = let");
-            out.println("    val actual = eval expr1");
-            out.println("    val expected = eval expr2");
-            out.println("  in");
-            out.println("    (case (actual, expected) of");
-            out.println("      (NONE, NONE) => \"exception\\nexception\\ntrue\\n\" |");
-            out.println("      (NONE, SOME y) => \"exception\\n\" ^ (PolyML.makestring y) ^ \"\\nfalse\\n\" |");
-            out.println("      (SOME x, NONE) => (PolyML.makestring x) ^ \"\\nexception\\nfalse\\n\" |");
-            out.println("      (SOME x, SOME y) => (PolyML.makestring x) ^ \"\\n\" ^ (PolyML.makestring y) ^ \"\\n\" ^ (PolyML.makestring (x = y)) ^ \"\\n\")");
-            out.println("end;");
-            out.println("fun main() = print (case hd(CommandLine.arguments()) of ");
-            for (int k = 0; k < calls.size(); k++) {
-                Calls.Call call = calls.get(k);
-                if (k < calls.size() - 1) 
-                    out.println("  \"" + (k + 1) + "\" => comp (fn () => (Solution." + 
-                        call.name + " " + call.args + ")) (fn () => (" +
-                        call.name + " " + call.args + ")) |");
-                else 
-                    out.println("  _ => comp (fn () => (Solution." + 
-                        call.name + " " + call.args + ")) (fn () => (" +
-                        call.name + " " + call.args + ")));");
-            }            
-        }
-        return Arrays.asList(testFile);
+        Path testFile = Paths.get("testCodeCheck.sml");
+        StringBuilder out = new StringBuilder();
+        out.append("use \"" + moduleName + ".sml\";\n");
+        out.append("structure Solution = struct\n");
+        out.append(contents);
+        out.append("\n");
+        out.append("end;\n");
+        out.append("fun eval expr = SOME (expr ()) handle exn => NONE ;\n");
+        out.append("fun comp expr1 expr2 = let\n");
+        out.append("    val actual = eval expr1\n");
+        out.append("    val expected = eval expr2\n");
+        out.append("  in\n");
+        out.append("    (case (actual, expected) of\n");
+        out.append("      (NONE, NONE) => \"exception\\nexception\\ntrue\\n\" |\n");
+        out.append("      (NONE, SOME y) => \"exception\\n\" ^ (PolyML.makestring y) ^ \"\\nfalse\\n\" |\n");
+        out.append("      (SOME x, NONE) => (PolyML.makestring x) ^ \"\\nexception\\nfalse\\n\" |\n");
+        out.append("      (SOME x, SOME y) => (PolyML.makestring x) ^ \"\\n\" ^ (PolyML.makestring y) ^ \"\\n\" ^ (PolyML.makestring (x = y)) ^ \"\\n\")\n");
+        out.append("end;\n");
+        out.append("fun main() = print (case hd(CommandLine.arguments()) of \n");
+        for (int k = 0; k < calls.size(); k++) {
+            Calls.Call call = calls.get(k);
+            if (k < calls.size() - 1) 
+                out.append("  \"" + (k + 1) + "\" => comp (fn () => (Solution." + 
+                    call.name + " " + call.args + ")) (fn () => (" +
+                    call.name + " " + call.args + ")) |\n");
+            else 
+                out.append("  _ => comp (fn () => (Solution." + 
+                    call.name + " " + call.args + ")) (fn () => (" +
+                    call.name + " " + call.args + ")));\n");
+        }            
+        Map<Path, String> result = new HashMap<>();
+        result.put(testFile, out.toString());
+        return result;
     }
     
     private static String variablePatternString = "\\s*val\\s+(?<name>\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*(?<rhs>.+)";

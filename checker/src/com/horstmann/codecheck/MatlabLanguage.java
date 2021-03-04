@@ -1,11 +1,9 @@
 package com.horstmann.codecheck;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 public class MatlabLanguage implements Language {
@@ -41,11 +39,9 @@ public class MatlabLanguage implements Language {
 
     // TODO: Implement correctly
     @Override
-    public List<Path> writeTester(Path solutionDir, Path workDir, Path file,
-            List<Calls.Call> calls)
-            throws IOException {
+    public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls) {
         String moduleName = moduleOf(file);
-        List<String> lines = Util.readLines(solutionDir.resolve(file));
+        List<String> lines = Util.lines(contents);
         int i = 0;
         lines.add(i++, "from sys import argv");
         lines.add(i++, "import " + moduleName);        
@@ -79,9 +75,8 @@ public class MatlabLanguage implements Language {
         }
         lines.add("main()");
         Path p = pathOf(moduleName + "CodeCheck");
-        Files.write(workDir.resolve(p), lines, StandardCharsets.UTF_8);        
-        List<Path> testFiles = new ArrayList<>();
-        testFiles.add(p);
+        Map<Path, String> testFiles = new HashMap<>();
+        testFiles.put(p, Util.join(lines, "\n"));
         return testFiles;        
     }
 

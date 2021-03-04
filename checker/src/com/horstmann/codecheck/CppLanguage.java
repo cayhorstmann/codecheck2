@@ -1,14 +1,12 @@
 package com.horstmann.codecheck;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -45,9 +43,7 @@ public class CppLanguage implements Language {
     }
 
     @Override
-    public List<Path> writeTester(Path solutionDir, Path workDir, Path file,
-            List<Calls.Call> calls)
-            throws IOException {
+    public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls) {
         
         // function in solution needs to be in separate namespace
         // function of student needs be externed;
@@ -57,7 +53,7 @@ public class CppLanguage implements Language {
         // add solution wrapped in namespace solution { ... }
         
         String moduleName = moduleOf(file);
-        List<String> lines = Util.readLines(solutionDir.resolve(file));
+        List<String> lines = Util.lines(contents);
         int i = 0;
         boolean done = false;
         while (!done) {
@@ -98,13 +94,10 @@ public class CppLanguage implements Language {
         lines.add(i++, "}");
         lines.add(i++, "namespace solution {");
         lines.add("}");
-        Files.write(workDir.resolve(pathOf(moduleName + "CodeCheck")), lines,
-                StandardCharsets.UTF_8);
-        Files.copy(getClass().getResourceAsStream("codecheck.cpp"), workDir.resolve("codecheck.cpp"));
-        Files.copy(getClass().getResourceAsStream("codecheck.h"), workDir.resolve("codecheck.h"));
-        List<Path> paths = new ArrayList<>();
-        paths.add(pathOf(moduleName + "CodeCheck"));
-        paths.add(Paths.get("codecheck.cpp"));
+        Map<Path, String> paths = new HashMap<>();
+        paths.put(pathOf(moduleName + "CodeCheck"), Util.join(lines, "\n"));
+        paths.put(Paths.get("codecheck.cpp"), Util.readString(getClass().getResourceAsStream("codecheck.cpp")));
+        paths.put(Paths.get("codecheck.h"), Util.readString(getClass().getResourceAsStream("codecheck.h")));
         return paths;
     }
 

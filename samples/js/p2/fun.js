@@ -8,9 +8,9 @@
 */
 function secondSmallest(a) {
     //HIDE
-    smallest = Math.min(a[0], a[1])
-    nextSmallest = Math.max(a[0], a[1])
-    for (i = 2; i < a.length; i++) {
+    let smallest = Math.min(a[0], a[1])
+    let nextSmallest = Math.max(a[0], a[1])
+    for (let i = 2; i < a.length; i++) {
         if (a[i] < smallest) {
             nextSmallest = smallest;
             smallest = a[i];
@@ -22,3 +22,4 @@ function secondSmallest(a) {
     //SHOW ...
 }
 
+exports.secondSmallest = secondSmallest

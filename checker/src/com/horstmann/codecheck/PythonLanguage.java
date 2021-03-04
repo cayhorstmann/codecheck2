@@ -1,13 +1,9 @@
 package com.horstmann.codecheck;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
-import java.util.regex.Matcher;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 public class PythonLanguage implements Language {
@@ -40,16 +36,18 @@ public class PythonLanguage implements Language {
         String contents = Util.read(p);
         if (contents == null) return false;
         if (mainPattern.matcher(contents).find()) return true;
-        if (fundefPattern.matcher(contents).find()) return false;
-        return true;
+        // Unindented statement indicates script
+        for (String line : Util.lines(contents)) {
+            if (line.length() != 0 && !Character.isWhitespace(line.charAt(0)) && !line.matches("^(#|(def|class|from|import|async)\\s|[A-Za-z0-9_]+\\s*=).*$"))
+                return true;            
+        }
+        return false;
     }
 
     @Override
-    public List<Path> writeTester(Path solutionDir, Path workDir, Path file,
-            List<Calls.Call> calls)
-            throws IOException {
+    public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls) {
         String moduleName = moduleOf(file);
-        List<String> lines = Util.readLines(solutionDir.resolve(file));
+        List<String> lines = Util.lines(contents);
         int i = 0;
         lines.add(i++, "from sys import argv");
         lines.add(i++, "import " + moduleName);        
@@ -82,10 +80,9 @@ public class PythonLanguage implements Language {
                     "            print(\"false\")");
         }
         lines.add("main()");
-        Path p = pathOf(moduleName + "CodeCheck");
-        Files.write(workDir.resolve(p), lines, StandardCharsets.UTF_8);        
-        List<Path> testFiles = new ArrayList<>();
-        testFiles.add(p);
+        Path p = pathOf(moduleName + "CodeCheck");        
+        Map<Path, String> testFiles = new HashMap<>();
+        testFiles.put(p, Util.join(lines, "\n"));
         return testFiles;        
     }
 
@@ -106,41 +103,11 @@ public class PythonLanguage implements Language {
     public Pattern variablePattern() {
         return pattern;
     }
-
-    // TODO: Same as Racket. 
     
     public boolean isUnitTest(Path fileName) { return fileName != null && fileName.toString().matches(".*Test[0-9]*.py"); }
     
-    private static final Pattern successPattern = Pattern.compile("Ran ([0-9]+) tests in [0-9.]+s\\s+OK");
+    private static final Pattern successPattern = Pattern.compile("Ran (?<runs>[0-9]+) tests in [0-9.]+s\\s+OK");
     private static final Pattern failurePattern = Pattern.compile("Ran (?<runs>[0-9]+) tests in [0-9.]+s\\s+FAILED \\([^=]+=(?<failures>[0-9]+)\\)");
-    
-    public @Override void runUnitTest(Path mainFile, Set<Path> dependentFiles, Path dir, Report report,
-             Score score, int timeout, int maxOutput) {
-       try {
-          String result = run(mainFile, dependentFiles, dir, "", "", timeout, maxOutput, false); 
-          Matcher matcher = successPattern.matcher(result);
-          int runs = 0;
-          int failures = 0;
-          if (matcher.find())
-          {
-             runs = Integer.parseInt(matcher.group(1));
-          }
-          else
-          {
-             matcher = failurePattern.matcher(result);
-             if (matcher.find())
-             {
-                failures = Integer.parseInt(matcher.group("failures"));
-                runs = Integer.parseInt(matcher.group("runs"));
-             }
-          }
-          report.run("Unit test");
-          report.output(result + "\nRuns:" + runs + " Failures: " + failures);
-          report.pass(failures == 0);
-          score.add(runs - failures, runs, report);
-       } catch (Throwable t) {
-          report.systemError(t);
-       }
-    }
-
+    @Override public Pattern unitTestSuccessPattern() { return successPattern; }
+    @Override public Pattern unitTestFailurePattern() { return failurePattern; }    
 }

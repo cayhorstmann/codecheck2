@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2006-2020 Cay S. Horstmann
+# Copyright 2006-2021 Cay S. Horstmann
 #
 # This file is part of CodeCheck.
 #
@@ -32,6 +32,7 @@
 # -q quiet (just prints path to result file)
 # -d debug (prints CodeCheck command)
 # -u Also check student directory (to verify that it will fail)
+# -r remote
 
 function usage {
     echo "Usage: `basename $0` [-dpqut] problemdir"
@@ -145,8 +146,9 @@ EXEC_CONTROL=""
 if [ -z $1 ] ; then usage; fi
 
 REPORT=report.html
+REMOTE=
 
-while getopts “cpqdutjn” OPTION
+while getopts "cpqdutjnlr" OPTION
 do
      case $OPTION in
          p)
@@ -180,6 +182,12 @@ do
              REPORT_TYPE="Codio"
              REPORT=report.html
              ;;
+         l)
+           REMOTE="-Dcom.horstmann.codecheck.remote=http://localhost:8080/api/upload"
+           ;;
+         r)
+           REMOTE="-Dcom.horstmann.codecheck.remote=https://comrun-ic7y4d2pyq-uc.a.run.app/api/upload"
+           ;;
      esac
 done
 shift $((OPTIND-1))
@@ -195,7 +203,7 @@ if [ -z "$BROWSER" ] ; then
     esac
 fi
 
-JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck.report=$REPORT_TYPE"
+JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck.report=$REPORT_TYPE $REMOTE"
 
 if [[ -z $2 ]] ; then
   # Check solution

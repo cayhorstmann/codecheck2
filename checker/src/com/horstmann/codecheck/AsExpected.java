@@ -1,6 +1,5 @@
 package com.horstmann.codecheck;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -16,8 +15,11 @@ public class AsExpected {
 		this.comp = comp;
 	}
 	
-	public static int expectedTests(Path tester) {
-		String contents = Util.read(tester);
+        // Scoring doesn't work when outerr contains an exception report because we don't know how many
+        // test cases have not occurred. 
+        // Need to count the number of expected cases in the file 
+	
+	public static int expectedTests(String contents) { // TODO: Shouldn't this be in Language?
 		Pattern expecteds = Pattern.compile("Expected: "); // TODO: What if this is commented out? 
 		Matcher matcher = expecteds.matcher(contents);
 		int count = 0;
@@ -26,7 +28,7 @@ public class AsExpected {
 		return count;
 	}
 	
-    public void eval(String value, Report report, Score score, Path tester) {
+    public void eval(String value, Report report, Score score, String tester) {
     	int expectedTests = expectedTests(tester);
         List<String> lines = new ArrayList<>();
         try (Scanner in = new Scanner(value)) {

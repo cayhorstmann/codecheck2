@@ -1,3 +1,7 @@
+CodeCheck TODO -*- mode: org -*-
+
+* Commands
+
 awsweex /assets/receiveMessage.js
 
 sbt -jvm-debug 9999 -Dcom.horstmann.codecheck.s3credentials=/data/cay/projects/codecheck-legacy/instances/s3.properties run
@@ -6,14 +10,60 @@ firefox file:///home/cay/projects/play-codecheck/ltitest/index.html
 
 gcloud compute ssh staging --zone us-central1-b
 
-=============================
+* Fix Problems
+
+Eliminate test.method, fix site
+
+bjlo/1 = jfe1cc 9 problems out3
+bj/4 = bj4cc 2 problems (out of 9) out4
+bj4fp has no analog but should NOT be in
+https://horstmann.com/codecheck/java-objects-late.html -- just archive
+bjlo/1e lots of them occur in book, but none of them has CallMethod
 
 
-DynamoDB
+ood/102
+Square[x=15,y=15,width=40,height=40]
+Square[x=15,y=15,width=40,height=40]
+loop/107
+Flawed because of multiline
+class2/110
+flawed test with static methods, is duplicate of jfe1cc
+
+~/codecheck/bj4cc$ find . -type f -printf "%T@\t%Tc %6k KiB %p\n" | sort -n | cut -f 2- | tail
+Fri 20 Apr 2018 23:20:54      4 KiB ./ch10/c10_exp_10_105/index.html
+Fri 20 Apr 2018 23:21:17      4 KiB ./ch06/c06_exp_6_107/index.html
+Sat 21 Apr 2018 02:13:18      4 KiB ./ch17/c17_exp_17_101/q.properties
+Sat 21 Apr 2018 02:53:02      4 KiB ./ch06/c06_exp_6_110/student/BalloonComponent.java
+Sat 21 Apr 2018 02:53:13      4 KiB ./ch06/c06_exp_6_110/solution/BalloonComponent.java
+Sat 21 Apr 2018 02:59:30      4 KiB ./ch11/c11_exp_11_110/IllegalNumberOfWheels.java
+Sat 21 Apr 2018 03:03:18      4 KiB ./ch11/c11_exp_11_110/Vehicle.java
+Sat 21 Apr 2018 03:03:24      4 KiB ./ch11/c11_exp_11_110/Checker.java
+Sat 21 Apr 2018 03:11:13      4 KiB ./ch02/c02_exp_2_112/student/ThreeButtonViewer.java
+Sat 21 Apr 2018 03:14:47      4 KiB ./ch02/c02_exp_2_112/student/JFrame.java
+
+~/codecheck/jfe1cc$ find . -type f -printf "%T@\t%Tc %6k KiB %p\n" | sort -n | cut -f 2- | tail
+Fri 20 Apr 2018 20:47:01      4 KiB ./ch10/c10_exp_10_109/index.html
+Fri 20 Apr 2018 20:47:01      4 KiB ./ch10/c10_exp_10_110/index.html
+Fri 20 Apr 2018 23:14:18      4 KiB ./ch07/c07_exp_7_101/index.html
+Fri 20 Apr 2018 23:15:05     20 KiB ./ch03/c03_exp_3_106/quadrants.png
+Fri 20 Apr 2018 23:15:31      4 KiB ./ch03/c03_exp_3_106/index.html
+Sun 22 Apr 2018 19:03:27      4 KiB ./ch05/c05_exp_5_106/Strings.java
+Sat 09 Jan 2021 17:18:33      4 KiB ./ch07/c07_exp_7_103/solution/Rectangle.class
+Sat 09 Jan 2021 17:23:46      4 KiB ./ch10/c10_exp_10_108/solution/MapUtil.class
+Sat 09 Jan 2021 17:31:30      4 KiB ./ch10/c10_exp_10_105/solution/QueueStackUtil.class
+Sat 09 Jan 2021 17:54:04
+
+for f in * ; do echo 〉〈h3 $(cat $f/*.properties)〉〈ol ; for g in $f/* ; do t=$(grep title $g/q.properties) ; echo 〈li 〈a href=${g/\//-} $t〉〉 ; done ; done | pbcopy
+
+Transfer the graphics problems
+
+Need to update CodeCheck for a bunch of the CALL problems
+
+* DynamoDB
 
 arn:aws:dynamodb:us-west-1:686205121574:table/CodeCheckWork
 
-Need to make a policy
+** Need to make a policy
 
 {
     "Version": "2012-10-17",
@@ -48,6 +98,8 @@ for f in $(aws s3 ls --recursive work.code-check.org | awk '{print $4}') ; do aw
 
 for f in $(ls) ; do for g in $(ls $f) ; do for h in $(ls ${f}/${g}) ; do cat $f/$g/$h | jq "{ problems: del(.submittedAt, .ccid), submittedAt: .submittedAt, assignmentID: \"${f}\", workID: \"${g}/${h}\" }" > $f/$g/$h.json ; done ; done ; done
 
+** Queries
+
 # I had to patch /usr/local/lib/node_modules/dynamodb-data-types/bin/wrap.js
 # const ddt = require('../lib/dynamodb-data-types')
 # ddt.preserveArrays()
@@ -55,11 +107,7 @@ for f in $(ls) ; do for g in $(ls $f) ; do for h in $(ls ${f}/${g}) ; do cat $f/
 
 for f in */*/*.json ; do echo $f ; aws dynamodb put-item --table-name CodeCheckWork --item "$(dynamo-dt-attr-wrap "$(cat $f)")" ; done
 
-
-
-
-
-TODO: Make use of Submissions instead of/in addition to Work table
+** TODO: Make use of Submissions instead of/in addition to Work table
 
 work() or launch()
 saveWork()
@@ -85,10 +133,10 @@ sort key = submitter + submissionTime
 
 begins with submitter, <= submitter + deadline
 
+** Alternatives
+Do we really need DynamoDB? Shared CockroachDB? https://www.a2hosting.com/cockroachdb-hosting, https://www.cockroachclusters.com/pricing/
 
-
-=========================================
-Security
+* Security
 
 TODO Harden against tampering with interactives/send scores directly from CC
 
@@ -98,74 +146,76 @@ https://dzone.com/articles/jwt-authentication-with-play-framework
 
 SuperTokens https://supertokens.io/
 
-=======================================================================
-Non LTI
+* Non LTI
 
-TODO: For CS046 (or in general), could make it so that the "Download work" part works without registration. Does it go to the server for signing? 
+** TODO: I agree it's unreasonable to ask for the deadline in UTC and then to show it in the local timezone. 
+** TODO: If the height of an iframe was never set, set it to something large
 
-TODO: Download report. Jarsigner. Name it id-date.zip or id-assignment.zip for easy submission.
+** TODO: For CS046 (or in general), could make it so that the "Download work" part works without registration. Does it go to the server for signing? 
 
-TODO: REST API
+** TODO: Download report. Jarsigner. Name it id-date.zip or id-assignment.zip for easy submission.
 
-TODO: Why not param: { state: ..., score: ... }
+** TODO: REST API
+
+** TODO: Why not param: { state: ..., score: ... }
   If we want that, must adapt workAssignment.js, receiveMessage.js, codecheck.js
 
-TODO: Sort table in viewSubmissions https://www.willmaster.com/library/features/sorting-a-table-with-javascript.php
+** TODO: Sort table in viewSubmissions https://www.willmaster.com/library/features/sorting-a-table-with-javascript.php
 
-TODO This is better than postMessage
+** TODO This is better than postMessage
 https://developer.mozilla.org/en-US/docs/Web/API/Channel_Messaging_API/Using_channel_messaging
 
-TODO: Hide links in problem text when they can't be useful
+** TODO: Hide links in problem text when they can't be useful
   (or make them more useful by sending message to parent?)
 
-Other ways to submit
+** Other ways to submit
   To Google Sheet: http://codesmith.in/post-data-google-drive-sheet-through-mobile-app/
   BlueJ Submitter Extension: https://bluej.org/extensions/submitter/submitter.html
 
-What about xAPI https://xapi.com/statements-101/
+** What about xAPI https://xapi.com/statements-101/
 
-TODO: Time zone new Date().getTimezoneOffset()
+** TODO: Time zone new Date().getTimezoneOffset()
 Intl.DateTimeFormat().resolvedOptions().timeZone
 Toggle between your time and UTC?
 
-=======================================================================
+** I am concerned about anal, babe, nude, sexy, and a few others, but I haven't yet made a list of forbidden words. I am sure it would be a really good idea, though.  
 
-LTI provider
+grep -E '^(([aeiouy][bcdfghjklmnpqrstvwxz]){2}|([bcdfghjklmnpqrstvwxz][aeiouy]){2})$' /usr/share/dict/words
+
+
+
+
+
+
+* LTI provider
 
 Right now, editing problems created inside LMS hides the deadline. Is that what we want?
 
-TODO: Ask for inclusion in https://canvas.instructure.com/courses/2062633
+** TODO: Ask for inclusion in https://canvas.instructure.com/courses/2062633
 
-TODO: Unsatisfactory clone state in viewAssignment. Would be nice if URLs could be copied into LTI. Maybe ?role=Instructor which is ignored in LTI post? 
+** TODO: Unsatisfactory clone state in viewAssignment. Would be nice if URLs could be copied into LTI. Maybe ?role=Instructor which is ignored in LTI post? 
 
-TODO: https://github.com/IMSGlobal/basiclti-util-java/blob/master/src/test/java/org/imsglobal/lti/BasicLTIUtilTest.java
+** TODO: https://github.com/IMSGlobal/basiclti-util-java/blob/master/src/test/java/org/imsglobal/lti/BasicLTIUtilTest.java
 
-=======================================================================
-
-LTI consumer
+* LTI consumer
 
 When sending score/state, also cause server to send score as XML to lis_outcome_service_url (TODO: unless the lis_outcome_service_url is with CodeCheck)
 
-TODO: JWT
+** TODO: JWT
 
-TODO: Consistent spelling of lis_outcome_service_url etc
+** TODO: Consistent spelling of lis_outcome_service_url etc
 
-		    // TODO: What about CodeCheck qids?
+** TODO: What about CodeCheck qids?
 
+** What about docHeight?
 
-What about docHeight?
+** TODO: Now the CodeCheck client will do the LTI communication. CodeCheck should do it.
 
-// TODO: Now the CodeCheck client will do the LTI communication. CodeCheck should do it.
+** TODO: No point in expanding zip file on disk (problemPath)
 
+** TODO: Would be nice for an instructor in LTI to see the per-problem work for all students
 
-TODO: No point in expanding zip file on disk (problemPath)
-
-TODO: Would be nice for an instructor in LTI to see the per-problem work for all students
-
-
-=======================================================================
-
-Course
+* Course
 
 For reusing assignments in coming semester, need notion of course. null course if none given.
 
@@ -192,15 +242,9 @@ Concept 2: Course is simply a tag
 
 &tag=... for submissions, filter by tag
 
+* Elements
 
-
-
-
-=======================================================================
-
-Elements
-
-* horstmann_codecheck might as well get the file data if they don't currently exist. Just do this in JavaScript:
+** horstmann_codecheck might as well get the file data if they don't currently exist. Just do this in JavaScript:
                String fileData = new String(url.openStream().readAllBytes(), StandardCharsets.UTF_8);
                String replacement = "<div class='horstmann_codecheck'><script type='text/javascript'>//<![CDATA[\n" +
 "horstmann_codecheck.setup.push({\n" +
@@ -210,7 +254,7 @@ Elements
 
 
 
-* horstmann_vitalsource (which is part of horstmann_all_min) defines
+** horstmann_vitalsource (which is part of horstmann_all_min) defines
 
   horstmann_config.score_change_listener 
   horstmann_config.retrieve_state
@@ -222,91 +266,103 @@ Elements
   -> message retrieve
   -> callback from nonceMap
 
-* Make it possible to copy the ID
+** Make it possible to copy the ID
 https://stackoverflow.com/questions/400212/how-do-i-copy-to-the-clipboard-in-javascript, https://developer.mozilla.org/en-US/docs/Web/API/Element/auxclick_event
 
-* Compare protocol with https://github.com/acos-server/acos-server/blob/master/doc/development.md
+** Compare protocol with https://github.com/acos-server/acos-server/blob/master/doc/development.md
 
-* Use client UI for interactivities.ws/makews script; in general, try to use client UI
+** Use client UI for interactivities.ws/makews script; in general, try to use client UI
 
-* You are right about the vertical lines. They shouldn't appear when the solved problem is restored. I fixed that in my code, 
+But careful with randomized param.js. Can one even use cookies? Use ccid param with fileData and be sure to send the same param back up. Or maybe fileData includes it?
 
-* With MC, hide answer at outset
+** You are right about the vertical lines. They shouldn't appear when the solved problem is restored. I fixed that in my code, 
 
-* Long-term want proof that students have the book. Make them solve a trivial problem and store unlock code as the problem state
+** With MC, hide answer at outset
 
-* Example table enhancement if the solution has \n, provide a text area. Make it possible to not have Start button. If no entries in third column, show the first two at 50%. 
+** Long-term want proof that students have the book. Make them solve a trivial problem and store unlock code as the problem state
+
+** Example table enhancement if the solution has \n, provide a text area. Make it possible to not have Start button. If no entries in third column, show the first two at 50%. 
 
 
 =========================================
-Docker
 
-Think of queue implementation once we have Docker
-
-
-Dockerfile
-JDK 8 image
-Make second layer with our stuff
-Third layer???
-
-Now with a server
-
-Server must get problem zip (because we don't want any security inside, do that in Play), student JSON (all file content), and input (in run mode)
-
-Like checkNJS but with the zip base64-encoded (for now)
-
-Returning completableFuture
-http://heidloff.net/article/developing-reactive-rest-apis-with-quarkus/
-
-Seems the best entrypoint to Quarkus because there is no UI involved
-
-
-
-For now, gave up on checker-only Docker. Docker contains Play server.
+* Docker
 
 Instead of apparmor: chroot? But a non-root user doesn't have access to any root resources anyway
 https://help.ubuntu.com/community/BasicChroot
 Firejail? https://firejail.wordpress.com/
 
-Killold upon invocation instead of cron
+Killold upon invocation instead of cron?
 
 docker build --tag codecheck:1.0 .
-docker run -p 9000:9000 -it codecheck:1.0
+docker run -p 8080:8080 -it codecheck:1.0
 
 docker ps (only running)
 docker ps -a (running and stopped)
 docker stop <name>
 docker kill <name>
+Kill all: docker container kill $(docker ps -q) 
 docker rm <name>
-Shell into container: docker exec -it <name> /bin/bash
+Shell into container: docker exec -u root -it <name> /bin/bash
+If there is just one: docker exec -u root -it $(docker ps -q) /bin/bash
 Prune all stopped containers: docker system prune
-
-TODO: Note that codecheck.env needs JDK 11 JAVA_HOME
-Had to remove
-    # EXEC_CONTROL="cgexec -g cpu:codecheck --sticky nice -15"
-    EXEC_CONTROL=""
-in codecheck--needs fix since it won't survive rebuild
-
 
 Deployment at Google
 
 https://cloud.google.com/run/docs/setup
 
+gcloud builds submit --tag gcr.io/codecheck-docker/comrun
+# Do I have to build in the cloud? docker push
+
+docker tag codecheck:1.0 gcr.io/codecheck-docker/comrun
+docker push gcr.io/codecheck-docker/comrun
+
+gcloud run deploy comrun \
+  --image gcr.io/codecheck-docker/comrun \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated
+
+Service URL 
+https://comrun-ic7y4d2pyq-uc.a.run.app
+
+TODO: Memory allocated, maximum requests per container, health check
+
+(for f in $(grep -rl --include q.properties type=cc ~/textbook-problems/ebook/bjlo | sed -e 's/.q.properties//') ; do echo $f ; codecheck -d -t -r $f ; done) > /tmp/out4
+TODO: Diff against old (need to take out zip location). There is a testdiff script
+
+Why does this one take 50 seconds?
+samples/cpp/l09
+
+Also check the book code
+
+
 
 
 What about secrets? https://cloud.google.com/secret-manager/docs/creating-and-accessing-secrets#secretmanager-access-secret-version-java
-
-(B) CodeCheck 20.04, gcinstall0, gcinstall, build, build.xml, codecheck.policy, runprog.apparmor, better scaling (containers?), //CFLAGS?, show warnings 
-
-
 
 Podman?
 https://developers.redhat.com/blog/2019/02/21/podman-and-buildah-for-docker-users/
 https://martinheinz.dev/blog/35?utm_source=tds&utm_medium=referral&utm_campaign=blog_post_35
 
+Is this useful???
+https://jvns.ca/blog/2021/01/23/firecracker--start-a-vm-in-less-than-a-second/
 
-=========================================
-Quarkus
+* Plans and tasks
+
+** # TIMEOUT relative to solution run? Then need to run solution first
+
+Security problem: Student code can read solution. First run and delete all solutions??? Run student code as student user?
+
+Can't do ulimit globally. But it's sticky, so need to first do all compilations, then the runs
+
+https://fabianlee.org/2020/01/18/docker-placing-limits-on-container-memory-using-cgroups/
+
+show warnings 
+
+//CFLAGS?
+
+* Quarkus
 
 Quarkus fascicles in ~/Dropbox/ebooks/javaee
 https://smallrye.io/
@@ -319,8 +375,7 @@ Or https://micronaut.io/
 https://de2.slideshare.net/isabelbaum/consolibmwebcastquarkusthebluehedgehogofjavawebframeworks?qid=a0824831-8b7b-4753-9800-f2001d647cdd&v=&b=&from_search=3
 https://github.com/ConSol/ibm-quarkus
 
-=========================================
-GraalVM
+* GraalVM
 
   Security manager not supported
   Java program needs to be run with separate java task (and sec.mgr.)
@@ -334,8 +389,7 @@ GraalVM
 https://blogs.oracle.com/developers/building-cross-platform-native-images-with-graalvm
 https://jamesward.com/2020/05/07/graalvm-native-image-tips-tricks/
 
-==========================================
-Parsons Problems
+* Parsons Problems
 
 //TILE
 
@@ -355,9 +409,33 @@ Parsing yields a data structure
 The items on the right are delivered scrambled, and so are the groups of correct/distractors
 
 
+* AppArmor
 
-=========================================
-CodeCheck
+sudo cat /etc/apparmor.d/data.cay.projects.codecheck.checker.runprog 
+
+# Last Modified: Thu Sep 11 18:23:09 2014
+#include <tunables/global>
+
+/data/cay/projects/codecheck/checker/runpython {
+  #include <abstractions/base>
+  #include <abstractions/bash>
+
+  /bin/bash ix,
+  /data/cay/projects/codecheck/checker/runpython r,
+}
+
+sudo apparmor_parser -r /etc/apparmor.d/data.cay.projects.codecheck.checker.runprog
+sudo aa-enforce /etc/apparmor.d/data.cay.projects.codecheck.checker.runprog
+
+sudo /etc/init.d/apparmor reload
+vi /var/log/syslog
+sudo aa-logprof
+
+
+---> Check that it can't read a neighbor
+
+
+* CodeCheck Issues
 
 (B) Why don't we see the checkbox and paperclip in http://horstmann.com/sjsu/cs046/lesson6_1-14.html
 (B) CodeCheck tab width in Ace editor, make it not convert spaces to tabs
@@ -368,6 +446,9 @@ CodeCheck
 Brilliant idea: Make timeout relative to reference solution time, rather than absolute. (With % or x suffix, default 300/3x) Give a caution when submitting a slow reference solution
 
 Disable submit button (if not already done)
+
+This library runs a process with a pty: https://ptyprocess.readthedocs.io/en/latest/api.html
+
 
 Tyler's websocket stuff
 
@@ -397,15 +478,6 @@ that table. (Which we could generally adopt, and maybe have.)
 
 ---
 
-jdeprscan --class-path lib/checkstyle-5.7-all.jar:lib/hamcrest-core.jar:lib/jackson-annotations-2.6.4.jar:lib/jackson-core-2.6.4.jar:lib/jackson-databind-2.6.4.jar:lib/junit.jar codecheck.jar
-Jar file codecheck.jar:
-class com/horstmann/codecheck/CallMethod uses deprecated method java/lang/Thread::stop()V 
-class com/horstmann/codecheck/CallMethod uses deprecated method java/lang/Character::<init>(C)V 
-class com/horstmann/codecheck/JavaLanguage uses deprecated method java/lang/Thread::stop()V 
-
----
-
-(C) CodeCheck: Allow students to save their work and give them a URL
 (C) In play project, activate some of the security filters
 (C) https://www.slideshare.net/EricSmalling1/best-practices-for-developing-deploying-java-applications-with-docker, https://blog.sebastian-daschner.com/
 
@@ -517,36 +589,6 @@ grep -l test.run=true ~/codecheck/*/*/*/*/check.properties
 
 
 
-AppArmor
-========
-
-sudo cat /etc/apparmor.d/data.cay.projects.codecheck.checker.runprog 
-
-# Last Modified: Thu Sep 11 18:23:09 2014
-#include <tunables/global>
-
-/data/cay/projects/codecheck/checker/runpython {
-  #include <abstractions/base>
-  #include <abstractions/bash>
-
-  /bin/bash ix,
-  /data/cay/projects/codecheck/checker/runpython r,
-}
-
-sudo apparmor_parser -r /etc/apparmor.d/data.cay.projects.codecheck.checker.runprog
-sudo aa-enforce /etc/apparmor.d/data.cay.projects.codecheck.checker.runprog
-
-sudo /etc/init.d/apparmor reload
-vi /var/log/syslog
-sudo aa-logprof
-
-
----> Check that it can't read a neighbor
-
-
-
-Checker
-=======
 
 Currently with C++ problems, .h files are not syntax highlighted in the editor like .cpp file. That would be nice. (https://github.com/cayhorstmann/play-codecheck/issues/1)
 
@@ -803,7 +845,7 @@ Don't want main for test-engine/racket-tests
 
 =============================
 
-Related projects
+* Related projects
 
 https://cscircles.cemc.uwaterloo.ca
   Extensive Python question bank

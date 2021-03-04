@@ -93,8 +93,9 @@ case _"$LANG" in
     ;;
 
   _JavaScript)
+    sed -i -e 's/^const //g' *CodeCheck.js # TODO Horrible hack for ancient node version--remove
     ulimit -d 1000000 -f 1000 -n 100 -v 10000000 -t ${TIMEOUT}
-    timeout ${TIMEOUT}s nice node $@
+    timeout ${TIMEOUT}s nice nodejs $@ # TODO Check if still nodejs or node with Ubuntu 20.04
     ;;
 
   _CSharp)

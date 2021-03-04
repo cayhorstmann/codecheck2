@@ -57,6 +57,7 @@
     <copy todir="${build.dir}" preservelastmodified="true">
       <fileset dir="${src.dir}">
         <include name="**/codecheck.*" />
+        <include name="**/script" />
       </fileset>
     </copy>
     <replaceregexp file="${build.dir}/${app.resources}" byline="true">

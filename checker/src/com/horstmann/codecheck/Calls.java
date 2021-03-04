@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class Calls {
     
@@ -57,9 +58,10 @@ public class Calls {
         } 
     }
 
-    public List<Path> writeTester(Path solutionDir, Path workDir) throws IOException {
+    public Map<Path, String> writeTester(Path solutionDir) throws IOException {
         if (lastGroup < calls.size() - 1)
             throw new CodeCheckException("No function below CALL in " + file + "\n");
-        return language.writeTester(solutionDir, workDir, file, calls);
+        String contents = Util.read(solutionDir.resolve(file));
+        return language.writeTester(file, contents, calls);
     }
 }

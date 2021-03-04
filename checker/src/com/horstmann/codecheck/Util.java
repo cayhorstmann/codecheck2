@@ -1,13 +1,22 @@
 package com.horstmann.codecheck;
 
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.net.MalformedURLException;
+import java.math.BigInteger;
+import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.net.URLClassLoader;
+import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -20,12 +29,37 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 public class Util {
+    private static Random generator = new Random();
+
+    public static <T> String join(Collection<T> items, String separator) {
+        return items.stream().map(Object::toString).collect(Collectors.joining(separator));
+    }
+    // TODO if separator is "\n", add a terminal one
+    public static <T> String join(T[] items, String separator) {
+        return Stream.of(items).map(Object::toString).collect(Collectors.joining(separator));
+    }
+    public static List<String> lines(String contents) {
+        return Stream.of(contents.split("\n")).collect(Collectors.toList());
+    }
+    
+    public static String createPrivateUID() {
+        return new BigInteger(128, generator).toString(36).toUpperCase();               
+    }
+    
     public static boolean sameContents(Path p1, Path p2) throws IOException {
         return Files.exists(p1)
                 && Files.exists(p2)
@@ -66,6 +100,28 @@ public class Util {
     
     public static void write(Path path, String contents) throws IOException {
         Files.write(path, contents.getBytes(StandardCharsets.UTF_8));
+    }
+    
+    public static String readString(InputStream in) {
+        try {
+            return new String(readAllBytes(in), "UTF-8");
+        } catch (IOException ex) {
+            return null;
+        }
+    }
+    
+    public static byte[] readAllBytes(InputStream in) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        copy(in, out);
+        out.close();
+        return out.toByteArray();
+    }
+    
+    public static void copy(InputStream in, OutputStream out) throws IOException {
+        final int BLOCKSIZE = 1024;
+        byte[] bytes = new byte[BLOCKSIZE];
+        int len;
+        while ((len = in.read(bytes)) != -1) out.write(bytes, 0, len);
     }
 
     @SuppressWarnings("unchecked")
@@ -185,37 +241,6 @@ public class Util {
         return out.toString();
     }
     
-    public static Path getHomeDir() {
-        String home = System.getProperty("com.horstmann.codecheck.home");
-        if (home != null) return Paths.get(home);
-        home = System.getenv("CODECHECK_HOME");
-        if (home != null) return Paths.get(home);
-        for (String p : System.getProperty("java.class.path").split(System.getProperty("path.separator"))) {
-            if (p.endsWith("codecheck.jar")) {
-                return Paths.get(p).getParent();
-            }
-            // TODO: If p ends with *, enumerate all JAR files?
-            // TODO: What if we make a module? 
-        }
-        
-        Object obj = new Util();
-        ClassLoader loader = obj.getClass().getClassLoader();
-        if (loader instanceof URLClassLoader) { // TODO: Not true in Java 9. Retire this fallback when Java 8 is EOL
-            for (URL url : ((URLClassLoader) loader).getURLs()) {
-                String urlString = url.toString();
-                if (urlString.startsWith("file:") && urlString.endsWith("codecheck.jar")) {
-                    try {
-                        return Paths.get(new URL(urlString).toURI()).getParent();
-                        // This works with file:///C:/... URLs in Windows
-                    } catch (MalformedURLException | URISyntaxException e) {
-                        // We tried
-                    }
-                }
-            }
-        }
-        throw new CodeCheckException("Cannot find codecheck home. Set CODECHECK_HOME.");        
-    }
-    
     public static String unescapeJava(String s) {
         StringBuilder out = new StringBuilder();
         StringBuilder unicode = new StringBuilder(4);
@@ -303,12 +328,136 @@ public class Util {
         return result;
     }
 
-    // TODO: Should be in Util
     public static void copyAll(Collection<Path> paths, Path fromDir, Path toDir)  throws IOException {
         for (Path p : paths) {
             Path source = fromDir.resolve(p);
             Path target = toDir.resolve(p);
             Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+        }        
+    }
+    
+    public static void zip(Path source, Path zipPath) throws IOException {
+        URI uri;
+        try {
+                uri = new URI("jar", zipPath.toUri().toString(), null);
+                Files.deleteIfExists(zipPath);
+                // Constructs the URI jar:file://myfile.zip
+                try (FileSystem zipfs = FileSystems.newFileSystem(uri,
+                                Collections.singletonMap("create", "true"))) {
+                        Files.walk(source).forEach(p -> {
+                                try {
+                                        String target = source.relativize(p).toString();
+                                        if (target.length() > 0) {
+                                                Path q = zipfs.getPath("/" + target);
+                                                if (Files.isDirectory(p))
+                                                        Files.createDirectory(q);
+                                                else
+                                                        Files.copy(p, q);
+                                        }
+                                } catch (IOException ex) {
+                                        throw new java.io.UncheckedIOException(ex);
+                        }});
+                }
+        } catch (URISyntaxException e) {
+                throw new IOException(e);
+        } catch (java.io.UncheckedIOException ex) {
+                throw ex.getCause();
+        }
+    }
+    
+    public static byte[] zip(Map<Path, byte[]> contents) throws IOException {
+        ByteArrayOutputStream bout = new ByteArrayOutputStream();
+        ZipOutputStream zout = new ZipOutputStream(bout);
+        for (Map.Entry<Path, byte[]> entry : contents.entrySet())
+        {
+           ZipEntry ze = new ZipEntry(entry.getKey().toString());
+           zout.putNextEntry(ze);
+           zout.write(entry.getValue());
+           zout.closeEntry();
+        }
+        zout.close();
+        return bout.toByteArray();
+    }
+    
+    static class FileMap extends HashMap<Path, byte[]> {
+        public String toString() {
+            StringBuilder result = new StringBuilder();
+            for (Map.Entry<Path, byte[]> entry : entrySet()) {
+                if (result.length() == 0) result.append("{ "); else result.append(", ");
+                result.append(entry.getKey());
+                result.append(" -> ");
+                try {
+                    result.append(new String(entry.getValue(), StandardCharsets.UTF_8));
+                } catch (Exception e) {
+                    result.append("(binary, " + entry.getValue().length + " bytes)");
+                }
+            }
+            if (result.length() == 0) result.append("{}");
+            else result.append(" }");
+            return result.toString();
+        }
+    }
+    
+    public static Map<Path, byte[]> unzip(byte[] bytes) throws IOException {
+        HashMap<Path, byte[]> result = new FileMap(); 
+        ZipInputStream zin = new ZipInputStream(new ByteArrayInputStream(bytes));
+        ZipEntry entry;
+        while ((entry = zin.getNextEntry()) != null)
+        {
+            result.put(Paths.get(entry.getName()), readAllBytes(zin));
+            zin.closeEntry();
+        }
+        zin.close();
+        return result;
+    }
+    
+    public static byte[] fileUpload(String urlString, String fieldName, String fileName, byte[] bytes) throws IOException {
+        final int TIMEOUT = 90000; // 90 seconds
+        String boundary = "===" + Util.createPrivateUID() + "===";
+        URL url = new URL(urlString);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setConnectTimeout(TIMEOUT);
+        conn.setReadTimeout(TIMEOUT);
+        conn.setUseCaches(false);
+        conn.setDoOutput(true); 
+        conn.setDoInput(true);
+        conn.setRequestProperty("Content-Type",
+                "multipart/form-data; boundary=" + boundary);
+        OutputStream out = conn.getOutputStream();
+        StringBuilder builder = new StringBuilder();
+        builder.append("--").append(boundary)
+            .append("\r\n")
+            .append("Content-Disposition: form-data; name=\"").append(fieldName)
+            .append("\"; filename=\"").append(fileName).append("\"")
+            .append("\r\n")
+            .append("Content-Type: ")
+            .append(URLConnection.guessContentTypeFromName(fileName))
+            .append("\r\n")
+            .append("Content-Transfer-Encoding: binary")
+            .append("\r\n")
+            .append("\r\n");
+        out.write(builder.toString().getBytes(StandardCharsets.UTF_8));
+        out.write(bytes);
+        builder.delete(0,  builder.length());
+        builder.append("\r\n\r\n--").append(boundary).append("--\r\n");
+        out.write(builder.toString().getBytes(StandardCharsets.UTF_8));
+        out.close();
+        int status = conn.getResponseCode();
+        if (status == HttpURLConnection.HTTP_OK) {
+            ByteArrayOutputStream bout = new ByteArrayOutputStream();
+            InputStream in = conn.getInputStream();
+            int bytesRead = -1;
+            byte[] buffer = new byte[1024];
+            while ((bytesRead = in.read(buffer)) != -1) {
+                bout.write(buffer, 0, bytesRead);
+            }
+            in.close();
+            bout.close();
+            conn.disconnect();
+            return bout.toByteArray();
+        } else {
+            conn.disconnect();
+            throw new IOException("Status: " + status);
         }        
     }
 }

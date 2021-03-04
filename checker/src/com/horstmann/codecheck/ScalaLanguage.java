@@ -1,12 +1,10 @@
 package com.horstmann.codecheck;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,10 +30,8 @@ public class ScalaLanguage implements Language {
     }
 
     @Override
-    public List<Path> writeTester(Path solutionDir, Path workDir, Path file,
-            List<Calls.Call> calls)
-            throws IOException {
-        List<String> lines = Util.readLines(solutionDir.resolve(file));
+    public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls) {
+        List<String> lines = Util.lines(contents);
         
         // Find class name
         int i = 0;
@@ -66,9 +62,8 @@ public class ScalaLanguage implements Language {
             lines.add(++i, "println(actual == expected) }");
          }
         Path p = Paths.get(objectName + "CodeCheck.scala");
-        Files.write(workDir.resolve(p), lines, StandardCharsets.UTF_8);
-        List<Path> testModules = new ArrayList<>();
-        testModules.add(p);
+        Map<Path, String> testModules = new HashMap<>();
+        testModules.put(p, Util.join(lines, "\n"));
         return testModules;        
     }
     

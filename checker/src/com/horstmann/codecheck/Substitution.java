@@ -64,6 +64,31 @@ public class Substitution {
         return r;
     }
 
+    String substitute(Path from, int n) throws IOException { // TODO: Pass string or byte[]
+        Pattern pattern = language.variablePattern();
+        List<String> lines = Util.readLines(from);
+        StringBuilder out = new StringBuilder();
+        for (String line : lines) {
+            Matcher matcher = pattern.matcher(line);
+            if (matcher.matches()) {
+                String name = matcher.group("name");
+                if (subs.containsKey(name)) {
+                    out.append(line.substring(0, matcher.start("rhs")));
+                    out.append(subs.get(name).get(n));
+                    out.append(line.substring(matcher.end("rhs")));
+                    out.append("\n");
+                } else {
+                    out.append(line);
+                    out.append("\n");
+                }
+            } else {
+                out.append(line);
+                out.append("\n");
+            }
+        }
+        return out.toString();
+    }
+    
     void substitute(Path from, Path to, int n) throws IOException {
         Pattern pattern = language.variablePattern();
         List<String> lines = Util.readLines(from);
