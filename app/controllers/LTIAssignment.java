@@ -1,0 +1,368 @@
+package controllers;
+
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URISyntaxException;
+import java.net.URLEncoder;
+import java.net.UnknownHostException;
+import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import javax.inject.Inject;
+
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import models.LTI;
+import models.S3Connection;
+import models.Util;
+import oauth.signpost.exception.OAuthCommunicationException;
+import oauth.signpost.exception.OAuthExpectationFailedException;
+import oauth.signpost.exception.OAuthMessageSignerException;
+import play.Logger;
+import play.mvc.Controller;
+import play.mvc.Http;
+import play.mvc.Result;
+import play.mvc.Security;
+
+   
+/*
+Session cookie (LTI only)
+  "user": toolConsumerID + "/" + userID (needs toolConsumerID because it's used for secure identification)
+*/
+
+
+public class LTIAssignment extends Controller {
+	@Inject private S3Connection s3conn;
+	@Inject private LTI lti;
+	private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
+	
+	public static boolean isInstructor(Map<String, String[]> postParams) {
+		String role = Util.getParam(postParams, "roles");
+		return role != null && (role.contains("Faculty") || role.contains("TeachingAssistant") || role.contains("Instructor"));
+	}
+	
+    public Result config(Http.Request request) throws UnknownHostException {
+        String host = request.host();
+        if (host.endsWith("/")) host = host.substring(0, host.length() - 1);
+        return ok(views.xml.lti_config.render(host)).as("application/xml");			
+    }     
+
+	private String assignmentOfResource(String resourceID) throws IOException {
+		if (resourceID.contains(" ") ) {
+			int i = resourceID.lastIndexOf(" ");
+			return resourceID.substring(i + 1);
+		} else {
+			ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckLTIResources", "resourceID", resourceID); 
+			if (resourceNode == null) return null;
+			return resourceNode.get("assignmentID").asText();
+		}
+	}	
+    
+    /*
+     * Called from Canvas and potentially other LMS with a "resource selection" interface
+     */
+    public Result createAssignment(Http.Request request) throws UnsupportedEncodingException {    
+	 	Map<String, String[]> postParams = request.body().asFormUrlEncoded();
+	 	if (!lti.validate(request)) {
+	 		return badRequest("Failed OAuth validation");
+	 	}	 	
+	 	
+		if (!isInstructor(postParams)) 
+			return badRequest("Instructor role is required to create an assignment.");
+    	String userID = Util.getParam(postParams, "user_id");
+		if (Util.isEmpty(userID)) return badRequest("No user id");
+
+		String toolConsumerID = Util.getParam(postParams, "tool_consumer_instance_guid");
+		String userLMSID = toolConsumerID + "/" + userID;
+
+		ObjectNode assignmentNode = JsonNodeFactory.instance.objectNode();
+		
+		String launchPresentationReturnURL = Util.getParam(postParams, "launch_presentation_return_url");
+	    assignmentNode.put("launchPresentationReturnURL", launchPresentationReturnURL);
+    	assignmentNode.put("saveURL", "/lti/saveAssignment");
+    	assignmentNode.put("assignmentID", Util.createPublicUID());
+    	assignmentNode.put("editKey", userLMSID);
+    	
+		return ok(views.html.editAssignment.render(assignmentNode.toString(), false));
+ 	}
+
+    private static String assignmentIDifAssignmentURL(String url) {
+    	if (url.contains("\n")) return null;
+    	Pattern pattern = Pattern.compile("https?://codecheck.[a-z]+/(private/)?(a|viewA)ssignment/([a-z0-9]+)($|/).*");
+    	Matcher matcher = pattern.matcher(url);
+    	return matcher.matches() ? matcher.group(3) : null; 
+    }
+    
+	public Result saveAssignment(Http.Request request) throws IOException {		 	
+    	ObjectNode params = (ObjectNode) request.body().asJson();
+        	        
+    	String problemText = params.get("problems").asText().trim();
+    	String assignmentID = assignmentIDifAssignmentURL(problemText);
+    	if (assignmentID == null) {	    		
+	        try {
+	        	params.set("problems", Assignment.parseAssignment(problemText));
+	        } catch (IllegalArgumentException e) {
+	        	return badRequest(e.getMessage());
+	        }
+	
+	    	assignmentID = params.get("assignmentID").asText();
+			ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+	    	String editKey = params.get("editKey").asText();
+			
+	    	if (assignmentNode != null && !editKey.equals(assignmentNode.get("editKey").asText())) 
+				return badRequest("Edit keys do not match");    	
+	
+	    	s3conn.writeJsonObjectToDynamoDB("CodeCheckAssignments", params);
+    	}
+
+    	ObjectNode result = JsonNodeFactory.instance.objectNode();
+		String viewAssignmentURL = "/viewAssignment/" + assignmentID; 
+    	result.put("viewAssignmentURL", viewAssignmentURL);    	
+    	String launchURL = "https://" + request.host() + "/assignment/" + assignmentID;
+    	result.put("launchURL", launchURL);    	
+
+    	return ok(result); // Client will redirect to launch presentation URL 
+	}
+	
+	@Security.Authenticated(Secured.class) // Instructor
+	public Result viewSubmissions(Http.Request request) throws IOException {
+		String resourceID = request.queryString("resourceID").orElse(null);
+    	Map<String, ObjectNode> itemMap = s3conn.readJsonObjectsFromDynamoDB("CodeCheckWork", "assignmentID", resourceID, "workID");
+    	String assignmentID = assignmentOfResource(resourceID);
+    	
+		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+		if (assignmentNode == null)	return badRequest("Assignment not found");
+
+		ArrayNode submissions = JsonNodeFactory.instance.arrayNode();
+		for (String workID : itemMap.keySet()) {
+			ObjectNode work = itemMap.get(workID);
+			ObjectNode submissionData = JsonNodeFactory.instance.objectNode();
+			submissionData.put("opaqueID", workID);
+			submissionData.put("score", Assignment.score(assignmentNode, work));
+			submissionData.set("submittedAt", work.get("submittedAt"));
+			submissionData.put("viewURL", "/lti/viewSubmission?resourceID=" 
+					+ URLEncoder.encode(resourceID, "UTF-8") 
+					+ "&workID=" + URLEncoder.encode(workID, "UTF-8")); 
+			submissions.add(submissionData);
+		}
+		String allSubmissionsURL = "/lti/allSubmissions?resourceID=" + URLEncoder.encode(resourceID, "UTF-8");
+		return ok(views.html.viewSubmissions.render(allSubmissionsURL, submissions.toString())); 	
+	}
+	
+	@Security.Authenticated(Secured.class) // Instructor
+	public Result viewSubmission(Http.Request request) throws IOException {
+		String resourceID = request.queryString("resourceID").orElse(null);
+		String workID = request.queryString("workID").orElse(null);
+    	String work = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", resourceID, "workID", workID);
+    	if (work == null) return badRequest("Work not found");
+    	String assignmentID = assignmentOfResource(resourceID);
+		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+    	if (assignmentNode == null) return badRequest("Assignment not found");
+    	ArrayNode groups = (ArrayNode) assignmentNode.get("problems");
+    	assignmentNode.set("problems", groups.get(Math.abs(workID.hashCode()) % groups.size()));
+    	
+    	return ok(views.html.workAssignment.render(assignmentNode.toString(), work, workID, "undefined"));
+	}
+	
+	@Security.Authenticated(Secured.class) // Instructor
+	public Result editAssignment(Http.Request request, String assignmentID) throws IOException {
+    	String editKey = request.session().get("user").get(); // TODO orElseThrow();    
+		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+    	if (assignmentNode == null) return badRequest("Assignment not found");
+    	
+		if (!editKey.equals(assignmentNode.get("editKey").asText())) 
+			return badRequest("Edit keys don't match");
+    	assignmentNode.put("saveURL", "/lti/saveAssignment");		
+    	return ok(views.html.editAssignment.render(assignmentNode.toString(), false));		
+	}
+	
+    public Result launch(Http.Request request, String assignmentID) throws IOException {    
+	 	Map<String, String[]> postParams = request.body().asFormUrlEncoded();
+	 	if (!lti.validate(request)) {
+	 		return badRequest("Failed OAuth validation");
+	 	}	 	
+	 	
+    	String userID = Util.getParam(postParams, "user_id");
+		if (Util.isEmpty(userID)) return badRequest("No user id");
+
+		String toolConsumerID = Util.getParam(postParams, "tool_consumer_instance_guid");
+		String contextID = Util.getParam(postParams, "context_id");
+		String resourceLinkID = Util.getParam(postParams, "resource_link_id");
+
+		String userLMSID = toolConsumerID + "/" + userID;
+
+		ObjectNode ltiNode = JsonNodeFactory.instance.objectNode();
+		// TODO: In order to facilitate search by assignmentID, it would be better if this was the other way around
+		String resourceID = toolConsumerID + "/" + contextID + " " + assignmentID; 
+		String legacyResourceID = toolConsumerID + "/" + contextID + "/" + resourceLinkID; 
+	    ObjectNode resourceNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckLTIResources", "resourceID", legacyResourceID); 
+	    if (resourceNode != null) resourceID = legacyResourceID;
+	    
+	    //TODO: Query string legacy
+	    if (assignmentID == null)
+	    	assignmentID = request.queryString("id").orElse(null);
+
+    	if (assignmentID == null) {
+    		return badRequest("No assignment ID");
+    	} 
+	    if (isInstructor(postParams)) {		
+			ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+	    	if (assignmentNode == null) return badRequest("Assignment not found");
+	    	ArrayNode groups = (ArrayNode) assignmentNode.get("problems");
+	    	assignmentNode.set("problems", groups.get(0));
+			String assignmentEditKey = assignmentNode.get("editKey").asText();
+			
+			assignmentNode.put("isStudent", false);
+			assignmentNode.put("viewSubmissionsURL", "/lti/viewSubmissions?resourceID=" + URLEncoder.encode(resourceID, "UTF-8"));
+			if (userLMSID.equals(assignmentEditKey)) {
+				assignmentNode.put("editAssignmentURL", "/lti/editAssignment/" + assignmentID);
+				assignmentNode.put("cloneURL", "/copyAssignment/" + assignmentID);
+			}
+	    	assignmentNode.put("sentAt", Instant.now().toString());				
+	    	String work = "{ assignmentID: '" + resourceID + "', workID: '" + userID + "', problems: {} }";
+	    	// TODO Here we show the resource ID for troubleshooting
+			return ok(views.html.workAssignment.render(assignmentNode.toString(), work, resourceID, "undefined" /* lti */))
+				.withNewSession()
+				.addingToSession(request, "user", userLMSID);
+	    } else { // Student
+    		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+        	if (assignmentNode == null) return badRequest("Assignment not found");
+        	ArrayNode groups = (ArrayNode) assignmentNode.get("problems");
+        	assignmentNode.set("problems", groups.get(Math.abs(userID.hashCode()) % groups.size()));
+        	assignmentNode.remove("editKey");
+
+    		String lisOutcomeServiceURL = Util.getParam(postParams, "lis_outcome_service_url");
+        	String lisResultSourcedID = Util.getParam(postParams, "lis_result_sourcedid");
+        	String oauthConsumerKey = Util.getParam(postParams, "oauth_consumer_key");
+        	
+    	    if (Util.isEmpty(lisOutcomeServiceURL)) 
+              	return badRequest("lis_outcome_service_url missing.");
+    		else
+    			ltiNode.put("lisOutcomeServiceURL", lisOutcomeServiceURL);
+    		
+    		if (Util.isEmpty(lisResultSourcedID)) 
+    			return badRequest("lis_result_sourcedid missing.");
+    		else
+    			ltiNode.put("lisResultSourcedID", lisResultSourcedID);
+    		ltiNode.put("oauthConsumerKey", oauthConsumerKey);
+
+			String work = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", resourceID, "workID", userID);
+			if (work == null) 
+				work = "{ assignmentID: '" + resourceID + "', workID: '" + userID + "', problems: {} }";
+    		
+    		assignmentNode.put("isStudent", true);
+        	assignmentNode.put("editKeySaved", true);
+        	assignmentNode.put("sentAt", Instant.now().toString());		
+
+        	return ok(views.html.workAssignment.render(assignmentNode.toString(), work, userID, ltiNode.toString()))
+				.withNewSession()
+				.addingToSession(request, "user", userLMSID);    	    
+	    }
+ 	}
+    
+	@Security.Authenticated(Secured.class) // Instructor
+	public Result allSubmissions(Http.Request request) throws IOException {
+		String resourceID = request.queryString("resourceID").orElse(null);
+		if (resourceID == null)	return badRequest("Assignment not found");
+    	Map<String, ObjectNode> itemMap = s3conn.readJsonObjectsFromDynamoDB("CodeCheckWork", "assignmentID", resourceID, "workID");
+    	String assignmentID = assignmentOfResource(resourceID);
+    	
+		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+		if (assignmentNode == null)	return badRequest("Assignment not found");
+
+		ObjectNode submissions = JsonNodeFactory.instance.objectNode();
+		for (String workID : itemMap.keySet()) {
+			ObjectNode work = itemMap.get(workID);
+			submissions.set(workID, work);
+		}
+		return ok(submissions); 	
+	}
+    
+	// @Security.Authenticated(Secured.class) // Student TODO this really needs to be secure
+	public Result saveWork(Http.Request request) throws IOException, NoSuchAlgorithmException {
+		try {
+			ObjectNode requestNode = (ObjectNode) request.body().asJson();
+			ObjectNode workNode = (ObjectNode) requestNode.get("work");
+	    	ObjectNode result = JsonNodeFactory.instance.objectNode();
+	    	Instant now = Instant.now();
+			String resourceID = workNode.get("assignmentID").asText();
+			String assignmentID = assignmentOfResource(resourceID);
+			String workID = workNode.get("workID").asText();
+			String problemID = workNode.get("tab").asText();
+			ObjectNode problemsNode = (ObjectNode) workNode.get("problems");
+			ObjectNode submissionNode = JsonNodeFactory.instance.objectNode();
+			String submissionID = resourceID + " " + workID + " " + problemID; 
+			submissionNode.put("submissionID", submissionID);
+			submissionNode.put("submittedAt", now.toString());
+			submissionNode.put("state", problemsNode.get(problemID).get("state").toString());
+			submissionNode.put("score", problemsNode.get(problemID).get("score").asDouble());
+			s3conn.writeJsonObjectToDynamoDB("CodeCheckSubmissions", submissionNode);
+			
+			ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+	    	if (assignmentNode.has("deadline")) {
+	    		try {
+	    			Instant deadline = Instant.parse(assignmentNode.get("deadline").asText());
+	    			if (now.isAfter(deadline)) 
+	    				return badRequest("After deadline of " + deadline);
+	    		} catch(DateTimeParseException e) { // TODO: This should never happen, but it did
+	    			logger.error(Util.getStackTrace(e));
+	    		}
+	    	}
+	    	result.put("submittedAt", now.toString());    	
+
+			s3conn.writeNewerJsonObjectToDynamoDB("CodeCheckWork", workNode, "assignmentID", "submittedAt");
+			submitGradeToLMS(requestNode, (ObjectNode) requestNode.get("work"), result);
+			return ok(result);
+        } catch (Exception e) {
+            logger.error(Util.getStackTrace(e));
+            return badRequest(e.getMessage());
+        }
+	}	
+	
+	// @Security.Authenticated(Secured.class) // Student TODO this really needs to be secure
+	public Result sendScore(Http.Request request) throws IOException, NoSuchAlgorithmException {
+		ObjectNode requestNode = (ObjectNode) request.body().asJson();
+    	ObjectNode result = JsonNodeFactory.instance.objectNode();
+    	result.put("submittedAt", Instant.now().toString());    	
+		try {
+			String workID = requestNode.get("workID").asText();
+			String resourceID = requestNode.get("resourceID").asText();
+	    	ObjectNode workNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckWork", "assignmentID", resourceID, "workID", workID);
+	    	if (workNode == null) return badRequest("Work not found");
+			submitGradeToLMS(requestNode, workNode, result);
+			String outcome = result.get("outcome").asText();
+			if (!outcome.startsWith("success")) {
+				logger.info("sendScore: " + requestNode);
+				return badRequest(outcome);
+			}
+			return ok(result);
+        } catch (Exception e) {
+            logger.error(Util.getStackTrace(e));
+            return badRequest(e.getMessage());
+        }
+	}	
+	
+	private void submitGradeToLMS(ObjectNode params, ObjectNode work, ObjectNode result) 
+			throws IOException, OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, NoSuchAlgorithmException, URISyntaxException {
+        String outcomeServiceUrl = params.get("lisOutcomeServiceURL").asText();
+		String sourcedID = params.get("lisResultSourcedID").asText();
+		String oauthConsumerKey = params.get("oauthConsumerKey").asText();
+
+		String resourceID = work.get("assignmentID").asText();
+	    String assignmentID = assignmentOfResource(resourceID); 
+        
+		ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+		double score = Assignment.score(assignmentNode, work);
+    	result.put("score", score);    	
+    	
+        String outcome = lti.passbackGradeToLMS(outcomeServiceUrl, sourcedID, score, oauthConsumerKey); 
+		// org.imsglobal.pox.IMSPOXRequest.sendReplaceResult(outcomeServiceUrl, oauthConsumerKey, getSharedSecret(oauthConsumerKey), sourcedId, "" + score);
+        result.put("outcome", outcome);
+    }	
+}

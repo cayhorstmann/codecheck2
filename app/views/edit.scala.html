@@ -1,0 +1,67 @@
+@(pid: String, files: Map[String, String], editKey: String)
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>Edit Problem</title>
+</head>
+<body style="font-family: sans;">
+<form method="post" action="/editedFiles/@pid/@editKey">
+    <div>
+ @for(((k, v), i) <- files.toSeq.zipWithIndex) {
+    <div id="item@(i + 1)">
+    <p>File name: <input type="text" id="filename@(i + 1)" name="filename@(i + 1)" size="25" value="@k"/> 
+    <button id="delete@(i + 1)" type="button">Delete</button>
+    </p>
+    <p><textarea id="contents@(i + 1)" name="contents@(i + 1)" rows="24" cols="80">@v</textarea></p>
+    </div>
+ }    
+    <div id="addfilecontainer">Need more files? <button id="addfile" type="button">Add file</button></div>
+    <div><input type="submit" value="Submit changes"/></div>
+    </div>
+</form>
+<p></p>
+<hr/>
+<form method="post" action="/editedProblem/@pid/@editKey" enctype="multipart/form-data">
+<p>Alternatively, upload a zip file. Select the file <input name="file" id="file" type="file"/></p>
+<p><input id="upload" type="submit" value="Upload zip file"/></p></form>
+<script type="text/javascript">
+for (let i = 1; i <= @{files.size()}; i++) { 
+  document.getElementById('delete' + i).addEventListener('click',
+    function() {
+      document.getElementById('filename' + i).setAttribute('value', '')
+      document.getElementById('contents' + i).innerHTML = ''
+      document.getElementById('item' + i).style.display = 'none'
+    })
+}
+let fileIndex = @{files.size()}
+document.getElementById('addfile').addEventListener('click',
+  function() {
+    fileIndex++
+    let fileDiv = document.createElement('div')
+    fileDiv.setAttribute('id', 'item' + fileIndex)
+    fileDiv.innerHTML = '<p>File name: <input id="filename' + fileIndex + '" name="filename' + fileIndex 
+            + '" size="25" type="text"/> <button id="delete' + fileIndex 
+            +'" type="button">Delete</button></p><p><textarea id="contents' + fileIndex + '" name="contents' + fileIndex 
+            + '" rows="24" cols="80"/></textarea></p>'
+    let addFile = document.getElementById('addfilecontainer')
+    addFile.parentNode.insertBefore(fileDiv, addFile)
+    
+    document.getElementById('delete' + fileIndex).addEventListener('click',
+      function() {
+        document.getElementById('filename' + fileIndex).setAttribute('value', '')
+        document.getElementById('contents' + fileIndex).innerHTML = ''
+        document.getElementById('item' + fileIndex).style.display = 'none'
+    })
+})
+
+document.getElementById('upload').disabled = document.getElementById('file').files.length === 0 
+
+document.getElementById('file').addEventListener('change', function() {
+    document.getElementById('upload').disabled = document.getElementById('file').files.length === 0
+})
+</script>
+</body>
+</html>
+

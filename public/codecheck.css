@@ -1,0 +1,146 @@
+@charset "utf-8";
+@font-face {
+  font-family: "DejaVuSansMonoSemiCondensed";
+  font-style: normal;
+  font-weight: normal;
+  src: url("https://horstmann.com/DejaVuSansMonoCondensed.otf"), local("DejaVuSansMonoCondensed")  
+}
+
+
+.studentFiles, .providedFiles { 
+	display: none; 
+}
+
+.ace_editor { 
+    /* border: 1px solid #EEE; */
+    /* TODO: If we want a border, put all editor divs inside a div with a border */
+	min-width: 700px; 
+}
+
+.ace_gutter {
+	width: 4em !important;
+}
+
+.ace_gutter-cell {
+    padding-right: 1em !important;
+}
+
+.ace_gutter-layer {
+    display: inline !important;
+}
+
+.ace_hidden-cursors {opacity:0}
+
+.ace_scrollbar {
+    display: none;
+}
+
+body { 
+	font-family: sans;
+	font-size: 1.2em; 
+}
+
+.editor { 
+	width: 80%; 
+}
+ 
+#submit { 
+	margin: 0.8em; 
+}
+
+.exercise-button {
+  margin: 0.5em;
+  padding: 0.5em;
+}
+
+.exercise-button.active {
+  background: #FFF8C4;
+}
+
+.exercise-iframe {
+    width: 100%;
+    border-width: 0;
+  overflow: hidden; 
+}
+
+/* Shape for all buttons */
+
+.hc-button {
+    font-weight: bold;
+    color: #FFFFFF;
+    cursor: pointer;
+    padding: 0.2em .56em;
+    border-radius: 0.56em;
+    position: relative;
+    font-size: 75%;
+    margin-left: 1em;
+    margin-right: 1em;
+    user-select: none;
+    display: inline-block;
+    text-decoration: none;     
+}
+
+#buttons > hc-button { 
+	margin-bottom: 0.5em; 
+}
+
+/* Button states */
+
+.hc-button:focus {
+    border: solid 0.2em #c0c0c0;
+    border-radius: 0.56em;
+}
+
+.hc-button.hc-step.hc-disabled {
+    background: #707070;
+    pointer-events: none; 
+}
+
+.hc-button.hc-start, .hc-button.hc-step.active {
+    background: #005a70;
+}
+
+.hc-button.hc-step {
+    background: #0054a8;
+}
+
+.hc-button.hc-command {
+    background: #E19042;
+}
+
+.ccid, .ccurl {
+  font-family: "DejaVuSansMonoSemiCondensed";	
+}
+
+#response {
+	border: solid thin red;
+	padding: 0.5em;
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+}
+
+#response:empty {
+	border: none;
+}
+
+#abovebuttons {
+  border-top: solid thin gray;
+  padding-top: 0.5em;
+}
+
+#ccidBullets > li {
+	padding-top: 0.35em;
+	padding-bottom: 0.35em;
+}
+
+#buttonDiv {
+  padding-top: 0.35em;
+  padding-bottom: 0.35em;	
+}
+
+#submissions td {
+	background-color: #eee;
+}
+
+
+
