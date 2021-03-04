@@ -1,0 +1,59 @@
+#!/bin/bash
+
+if [ -e `dirname $0`/codecheck.env ] ; then
+    set -o allexport
+    source `dirname $0`/codecheck.env
+    set +o allexport
+fi
+
+LANG=$1
+shift
+
+cd `dirname $1`
+
+case _"$LANG" in
+    _Python)        
+        ulimit -f 1000
+        python3 -m py_compile $@
+        ;;
+        
+    _C)
+        ulimit -f 1000
+        gcc -std=c99 -g -o prog -lm $@
+        ;;
+
+    _Cpp)
+        g++ -std=c++17 -Wall -Wno-sign-compare -g -o prog $@
+        ;;
+
+    _Scala)
+        ulimit -f 1000
+        PATH=$PATH:$JAVA_HOME/bin $SCALA_HOME/bin/scalac $@
+        ;;
+
+    _Matlab)
+        ;;
+
+    _Racket)
+        ;;
+
+    _JavaScript)
+        ;;
+
+    _CSharp)
+        mcs -o Prog.exe $@
+        ;;
+    
+    _Haskell)
+        ghc -o prog $@
+        ;;
+
+    _SML)
+       polyc -o prog $1
+       ;;
+    
+    _)  
+       echo Unknown language $LANG
+       exit 1
+       ;;          
+esac

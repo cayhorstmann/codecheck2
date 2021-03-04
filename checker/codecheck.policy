@@ -1,0 +1,24 @@
+grant codeBase "file:${com.horstmann.codecheck.home}/codecheck.jar" {
+   permission java.security.AllPermission;
+};
+
+grant codeBase "file:${com.horstmann.codecheck.home}/lib/-" {
+   permission java.security.AllPermission;
+};
+
+grant codeBase "file:${java.home}/../lib/tools.jar" {
+   permission java.security.AllPermission;
+};
+
+//grant codeBase "jrt:/jdk.compiler" {
+//   permission java.security.AllPermission;
+//};
+
+grant {
+  permission java.io.FilePermission "-", "read,write,delete";
+  permission java.util.PropertyPermission "com.horstmann.codecheck", "read";
+  permission java.util.logging.LoggingPermission "control";
+  permission java.util.PropertyPermission "user.language", "write";
+  permission java.lang.RuntimePermission "accessDeclaredMembers";
+};
+

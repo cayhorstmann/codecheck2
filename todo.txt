@@ -1,0 +1,863 @@
+CodeCheck TODO -*- mode: org -*-
+
+* Commands
+
+awsweex /assets/receiveMessage.js
+
+sbt -jvm-debug 9999 -Dcom.horstmann.codecheck.s3credentials=/data/cay/projects/codecheck-legacy/instances/s3.properties run
+
+firefox file:///home/cay/projects/play-codecheck/ltitest/index.html
+
+gcloud compute ssh staging --zone us-central1-b
+
+* Fix Problems
+
+Eliminate test.method, fix site
+
+bjlo/1 = jfe1cc 9 problems out3
+bj/4 = bj4cc 2 problems (out of 9) out4
+bj4fp has no analog but should NOT be in
+https://horstmann.com/codecheck/java-objects-late.html -- just archive
+bjlo/1e lots of them occur in book, but none of them has CallMethod
+
+
+ood/102
+Square[x=15,y=15,width=40,height=40]
+Square[x=15,y=15,width=40,height=40]
+loop/107
+Flawed because of multiline
+class2/110
+flawed test with static methods, is duplicate of jfe1cc
+
+~/codecheck/bj4cc$ find . -type f -printf "%T@\t%Tc %6k KiB %p\n" | sort -n | cut -f 2- | tail
+Fri 20 Apr 2018 23:20:54      4 KiB ./ch10/c10_exp_10_105/index.html
+Fri 20 Apr 2018 23:21:17      4 KiB ./ch06/c06_exp_6_107/index.html
+Sat 21 Apr 2018 02:13:18      4 KiB ./ch17/c17_exp_17_101/q.properties
+Sat 21 Apr 2018 02:53:02      4 KiB ./ch06/c06_exp_6_110/student/BalloonComponent.java
+Sat 21 Apr 2018 02:53:13      4 KiB ./ch06/c06_exp_6_110/solution/BalloonComponent.java
+Sat 21 Apr 2018 02:59:30      4 KiB ./ch11/c11_exp_11_110/IllegalNumberOfWheels.java
+Sat 21 Apr 2018 03:03:18      4 KiB ./ch11/c11_exp_11_110/Vehicle.java
+Sat 21 Apr 2018 03:03:24      4 KiB ./ch11/c11_exp_11_110/Checker.java
+Sat 21 Apr 2018 03:11:13      4 KiB ./ch02/c02_exp_2_112/student/ThreeButtonViewer.java
+Sat 21 Apr 2018 03:14:47      4 KiB ./ch02/c02_exp_2_112/student/JFrame.java
+
+~/codecheck/jfe1cc$ find . -type f -printf "%T@\t%Tc %6k KiB %p\n" | sort -n | cut -f 2- | tail
+Fri 20 Apr 2018 20:47:01      4 KiB ./ch10/c10_exp_10_109/index.html
+Fri 20 Apr 2018 20:47:01      4 KiB ./ch10/c10_exp_10_110/index.html
+Fri 20 Apr 2018 23:14:18      4 KiB ./ch07/c07_exp_7_101/index.html
+Fri 20 Apr 2018 23:15:05     20 KiB ./ch03/c03_exp_3_106/quadrants.png
+Fri 20 Apr 2018 23:15:31      4 KiB ./ch03/c03_exp_3_106/index.html
+Sun 22 Apr 2018 19:03:27      4 KiB ./ch05/c05_exp_5_106/Strings.java
+Sat 09 Jan 2021 17:18:33      4 KiB ./ch07/c07_exp_7_103/solution/Rectangle.class
+Sat 09 Jan 2021 17:23:46      4 KiB ./ch10/c10_exp_10_108/solution/MapUtil.class
+Sat 09 Jan 2021 17:31:30      4 KiB ./ch10/c10_exp_10_105/solution/QueueStackUtil.class
+Sat 09 Jan 2021 17:54:04
+
+for f in * ; do echo 〉〈h3 $(cat $f/*.properties)〉〈ol ; for g in $f/* ; do t=$(grep title $g/q.properties) ; echo 〈li 〈a href=${g/\//-} $t〉〉 ; done ; done | pbcopy
+
+Transfer the graphics problems
+
+Need to update CodeCheck for a bunch of the CALL problems
+
+* DynamoDB
+
+arn:aws:dynamodb:us-west-1:686205121574:table/CodeCheckWork
+
+** Need to make a policy
+
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "CodeCheckDynamoAccess",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem",
+                "dynamodb:DeleteItem",
+                "dynamodb:BatchWriteItem",
+                "dynamodb:GetItem",
+                "dynamodb:BatchGetItem",
+                "dynamodb:Scan",
+                "dynamodb:Query",
+                "dynamodb:ConditionCheckItem"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:us-west-1:686205121574:table/CodeCheck*",
+                "arn:aws:dynamodb:us-west-1:686205121574:table/CodeCheck*/index/*"
+            ]
+        }        
+    ]
+}
+
+
+rm -rf /tmp/work
+mkdir /tmp/work
+cd /tmp/work
+for f in $(aws s3 ls --recursive work.code-check.org | awk '{print $4}') ; do aws s3 cp s3://work.code-check.org/$f $f ; done
+
+for f in $(ls) ; do for g in $(ls $f) ; do for h in $(ls ${f}/${g}) ; do cat $f/$g/$h | jq "{ problems: del(.submittedAt, .ccid), submittedAt: .submittedAt, assignmentID: \"${f}\", workID: \"${g}/${h}\" }" > $f/$g/$h.json ; done ; done ; done
+
+** Queries
+
+# I had to patch /usr/local/lib/node_modules/dynamodb-data-types/bin/wrap.js
+# const ddt = require('../lib/dynamodb-data-types')
+# ddt.preserveArrays()
+# const attr = ddt.AttributeValue;
+
+for f in */*/*.json ; do echo $f ; aws dynamodb put-item --table-name CodeCheckWork --item "$(dynamo-dt-attr-wrap "$(cat $f)")" ; done
+
+** TODO: Make use of Submissions instead of/in addition to Work table
+
+work() or launch()
+saveWork()
+viewSubmissions() and for LTI viewSubmission()
+
+work and launch query
+  context
+  assignment 
+  problem
+  submitter
+  deadline
+Get latest item before deadline
+
+Therefore, want to support viewSubmissions, which has input
+  context
+  assignment 
+  problem 
+  deadline
+  and yields: all submitters and their latest submissions
+
+primary key = context + assignment + problem
+sort key = submitter + submissionTime
+
+begins with submitter, <= submitter + deadline
+
+** Alternatives
+Do we really need DynamoDB? Shared CockroachDB? https://www.a2hosting.com/cockroachdb-hosting, https://www.cockroachclusters.com/pricing/
+
+* Security
+
+TODO Harden against tampering with interactives/send scores directly from CC
+
+TODO: JWT for authorization instead of !@#% session cookie
+https://en.wikipedia.org/wiki/JSON_Web_Token
+https://dzone.com/articles/jwt-authentication-with-play-framework
+
+SuperTokens https://supertokens.io/
+
+* Non LTI
+
+** TODO: I agree it's unreasonable to ask for the deadline in UTC and then to show it in the local timezone. 
+** TODO: If the height of an iframe was never set, set it to something large
+
+** TODO: For CS046 (or in general), could make it so that the "Download work" part works without registration. Does it go to the server for signing? 
+
+** TODO: Download report. Jarsigner. Name it id-date.zip or id-assignment.zip for easy submission.
+
+** TODO: REST API
+
+** TODO: Why not param: { state: ..., score: ... }
+  If we want that, must adapt workAssignment.js, receiveMessage.js, codecheck.js
+
+** TODO: Sort table in viewSubmissions https://www.willmaster.com/library/features/sorting-a-table-with-javascript.php
+
+** TODO This is better than postMessage
+https://developer.mozilla.org/en-US/docs/Web/API/Channel_Messaging_API/Using_channel_messaging
+
+** TODO: Hide links in problem text when they can't be useful
+  (or make them more useful by sending message to parent?)
+
+** Other ways to submit
+  To Google Sheet: http://codesmith.in/post-data-google-drive-sheet-through-mobile-app/
+  BlueJ Submitter Extension: https://bluej.org/extensions/submitter/submitter.html
+
+** What about xAPI https://xapi.com/statements-101/
+
+** TODO: Time zone new Date().getTimezoneOffset()
+Intl.DateTimeFormat().resolvedOptions().timeZone
+Toggle between your time and UTC?
+
+** I am concerned about anal, babe, nude, sexy, and a few others, but I haven't yet made a list of forbidden words. I am sure it would be a really good idea, though.  
+
+grep -E '^(([aeiouy][bcdfghjklmnpqrstvwxz]){2}|([bcdfghjklmnpqrstvwxz][aeiouy]){2})$' /usr/share/dict/words
+
+
+
+
+
+
+* LTI provider
+
+Right now, editing problems created inside LMS hides the deadline. Is that what we want?
+
+** TODO: Ask for inclusion in https://canvas.instructure.com/courses/2062633
+
+** TODO: Unsatisfactory clone state in viewAssignment. Would be nice if URLs could be copied into LTI. Maybe ?role=Instructor which is ignored in LTI post? 
+
+** TODO: https://github.com/IMSGlobal/basiclti-util-java/blob/master/src/test/java/org/imsglobal/lti/BasicLTIUtilTest.java
+
+* LTI consumer
+
+When sending score/state, also cause server to send score as XML to lis_outcome_service_url (TODO: unless the lis_outcome_service_url is with CodeCheck)
+
+** TODO: JWT
+
+** TODO: Consistent spelling of lis_outcome_service_url etc
+
+** TODO: What about CodeCheck qids?
+
+** What about docHeight?
+
+** TODO: Now the CodeCheck client will do the LTI communication. CodeCheck should do it.
+
+** TODO: No point in expanding zip file on disk (problemPath)
+
+** TODO: Would be nice for an instructor in LTI to see the per-problem work for all students
+
+* Course
+
+For reusing assignments in coming semester, need notion of course. null course if none given.
+
+Concept 1: Course knows its assignments
+
+Course has assignments
+
+Name     Deadline     URL   [View submissions]  [Delete]
+
+
+Trash [Empty]
+
+Name     Deadline     URL   [View submissions]  [Undelete]
+
+
+Existing assignments are cloned into course
+New assignments have same edit key as course (course owner owns assignments)
+
+Can download all submissions in course
+
+Can clone entire course
+
+Concept 2: Course is simply a tag
+
+&tag=... for submissions, filter by tag
+
+* Elements
+
+** horstmann_codecheck might as well get the file data if they don't currently exist. Just do this in JavaScript:
+               String fileData = new String(url.openStream().readAllBytes(), StandardCharsets.UTF_8);
+               String replacement = "<div class='horstmann_codecheck'><script type='text/javascript'>//<![CDATA[\n" +
+"horstmann_codecheck.setup.push({\n" +
+"url: 'https://codecheck.it/checkNJS', repo: 'cs046', problem: '" + id + "',\n" +
+                  fileData.substring(1) +
+                  ")\n// ]]>\n</script></div>\n";
+
+
+
+** horstmann_vitalsource (which is part of horstmann_all_min) defines
+
+  horstmann_config.score_change_listener 
+  horstmann_config.retrieve_state
+
+  This should be moved to horstmann_common if not VS specific
+
+  -> EPUB.Education.retrieve 
+  -> postMessage retrieve
+  -> message retrieve
+  -> callback from nonceMap
+
+** Make it possible to copy the ID
+https://stackoverflow.com/questions/400212/how-do-i-copy-to-the-clipboard-in-javascript, https://developer.mozilla.org/en-US/docs/Web/API/Element/auxclick_event
+
+** Compare protocol with https://github.com/acos-server/acos-server/blob/master/doc/development.md
+
+** Use client UI for interactivities.ws/makews script; in general, try to use client UI
+
+But careful with randomized param.js. Can one even use cookies? Use ccid param with fileData and be sure to send the same param back up. Or maybe fileData includes it?
+
+** You are right about the vertical lines. They shouldn't appear when the solved problem is restored. I fixed that in my code, 
+
+** With MC, hide answer at outset
+
+** Long-term want proof that students have the book. Make them solve a trivial problem and store unlock code as the problem state
+
+** Example table enhancement if the solution has \n, provide a text area. Make it possible to not have Start button. If no entries in third column, show the first two at 50%. 
+
+
+=========================================
+
+* Docker
+
+Instead of apparmor: chroot? But a non-root user doesn't have access to any root resources anyway
+https://help.ubuntu.com/community/BasicChroot
+Firejail? https://firejail.wordpress.com/
+
+Killold upon invocation instead of cron?
+
+docker build --tag codecheck:1.0 .
+docker run -p 8080:8080 -it codecheck:1.0
+
+docker ps (only running)
+docker ps -a (running and stopped)
+docker stop <name>
+docker kill <name>
+Kill all: docker container kill $(docker ps -q) 
+docker rm <name>
+Shell into container: docker exec -u root -it <name> /bin/bash
+If there is just one: docker exec -u root -it $(docker ps -q) /bin/bash
+Prune all stopped containers: docker system prune
+
+Deployment at Google
+
+https://cloud.google.com/run/docs/setup
+
+gcloud builds submit --tag gcr.io/codecheck-docker/comrun
+# Do I have to build in the cloud? docker push
+
+docker tag codecheck:1.0 gcr.io/codecheck-docker/comrun
+docker push gcr.io/codecheck-docker/comrun
+
+gcloud run deploy comrun \
+  --image gcr.io/codecheck-docker/comrun \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated
+
+Service URL 
+https://comrun-ic7y4d2pyq-uc.a.run.app
+
+TODO: Memory allocated, maximum requests per container, health check
+
+(for f in $(grep -rl --include q.properties type=cc ~/textbook-problems/ebook/bjlo | sed -e 's/.q.properties//') ; do echo $f ; codecheck -d -t -r $f ; done) > /tmp/out4
+TODO: Diff against old (need to take out zip location). There is a testdiff script
+
+Why does this one take 50 seconds?
+samples/cpp/l09
+
+Also check the book code
+
+
+
+
+What about secrets? https://cloud.google.com/secret-manager/docs/creating-and-accessing-secrets#secretmanager-access-secret-version-java
+
+Podman?
+https://developers.redhat.com/blog/2019/02/21/podman-and-buildah-for-docker-users/
+https://martinheinz.dev/blog/35?utm_source=tds&utm_medium=referral&utm_campaign=blog_post_35
+
+Is this useful???
+https://jvns.ca/blog/2021/01/23/firecracker--start-a-vm-in-less-than-a-second/
+
+* Plans and tasks
+
+** # TIMEOUT relative to solution run? Then need to run solution first
+
+Security problem: Student code can read solution. First run and delete all solutions??? Run student code as student user?
+
+Can't do ulimit globally. But it's sticky, so need to first do all compilations, then the runs
+
+https://fabianlee.org/2020/01/18/docker-placing-limits-on-container-memory-using-cgroups/
+
+show warnings 
+
+//CFLAGS?
+
+* Quarkus
+
+Quarkus fascicles in ~/Dropbox/ebooks/javaee
+https://smallrye.io/
+
+Or https://micronaut.io/
+
+(B) Quarkus with CodeCheck, https://blogs.oracle.com/javamagazine/getting-started-with-kubernetes, https://cs50.readthedocs.io/, https://medium.com/google-cloud/serverless-computing-with-pascal-d7a16633db44
+
+
+https://de2.slideshare.net/isabelbaum/consolibmwebcastquarkusthebluehedgehogofjavawebframeworks?qid=a0824831-8b7b-4753-9800-f2001d647cdd&v=&b=&from_search=3
+https://github.com/ConSol/ibm-quarkus
+
+* GraalVM
+
+  Security manager not supported
+  Java program needs to be run with separate java task (and sec.mgr.)
+  Reflective loading of report, language
+  Not clear how to pass Java properties -- as env properties instead?
+  Must take out Runner.java and change main class in manifest
+  /data/apps/graalvm-ce-java11-20.2.0/bin/native-image -cp /opt/codecheck/lib/\* --native-image-info --verbose -H:ConfigurationFileDirectories=conf-dir -H:+ReportExceptionStackTraces -H:+StackTrace -H:NativeLinkerOption=/data/apps/graalvm-ce-java11-20.2.0/lib/static/linux-amd64/glibc/libprefs.a --no-server --no-fallback -jar codecheck.jar
+
+  All of those things would also have to be done when moving code to Quarkus
+
+https://blogs.oracle.com/developers/building-cross-platform-native-images-with-graalvm
+https://jamesward.com/2020/05/07/graalvm-native-image-tips-tricks/
+
+* Parsons Problems
+
+//TILE
+
+makes each line a tile, except includes following {
+
+//GOOD
+moves to the left
+
+//BAD code
+Adds to the distractors of the preceding line (unless at the end)
+
+Anything before the first //TILE is implicitly GOOD
+
+Parsing yields a data structure
+{ left: [ GOOD strings ], right: [ strings or [ correct/distractors ]] }
+
+The items on the right are delivered scrambled, and so are the groups of correct/distractors
+
+
+* AppArmor
+
+sudo cat /etc/apparmor.d/data.cay.projects.codecheck.checker.runprog 
+
+# Last Modified: Thu Sep 11 18:23:09 2014
+#include <tunables/global>
+
+/data/cay/projects/codecheck/checker/runpython {
+  #include <abstractions/base>
+  #include <abstractions/bash>
+
+  /bin/bash ix,
+  /data/cay/projects/codecheck/checker/runpython r,
+}
+
+sudo apparmor_parser -r /etc/apparmor.d/data.cay.projects.codecheck.checker.runprog
+sudo aa-enforce /etc/apparmor.d/data.cay.projects.codecheck.checker.runprog
+
+sudo /etc/init.d/apparmor reload
+vi /var/log/syslog
+sudo aa-logprof
+
+
+---> Check that it can't read a neighbor
+
+
+* CodeCheck Issues
+
+(B) Why don't we see the checkbox and paperclip in http://horstmann.com/sjsu/cs046/lesson6_1-14.html
+(B) CodeCheck tab width in Ace editor, make it not convert spaces to tabs
+(B) What are the tests??? http://codecheck.it/files?repo=jfe1cc&problem=ch04/c04_exp_4_104
+(B) Switch ~/web/com/sjsu/cs046/*.ch to min for obscurity, clean private/app
+
+
+Brilliant idea: Make timeout relative to reference solution time, rather than absolute. (With % or x suffix, default 300/3x) Give a caution when submitting a slow reference solution
+
+Disable submit button (if not already done)
+
+This library runs a process with a pty: https://ptyprocess.readthedocs.io/en/latest/api.html
+
+
+Tyler's websocket stuff
+
+Try Codemirror--it can have read-only areas
+
+https://www.linuxjournal.com/content/simulate-typing-c-program
+
+If interleaveio is inherently unstable, may need to run without, compare result, and then run with for visual representation
+
+for f in `seq 1 100` ; do http POST http://codecheck.it/checkNJS  @/data/temp/request.json | jq '. | {score}' ; done
+
+---
+
+CodeCheck requires that a tester ends in "Tester", "Tester2", etc. I suppose I could change CodeCheck to allow "_tester" as well.
+
+---
+
+> ebook-bc-3-ch08-sec01-cc-6
+> ebook-bc-3-ch08-sec01-cc-7
+> Both have only one set of test values.  OK?
+I added another output to cc-6, but there is no easy way to do it with cc-7. //OUTPUT doesn't interact well with //SUB or //CALL. 
+
+---
+
+Unify substitutions with running? It's no different, except for
+that table. (Which we could generally adopt, and maybe have.) 
+
+---
+
+(C) In play project, activate some of the security filters
+(C) https://www.slideshare.net/EricSmalling1/best-practices-for-developing-deploying-java-applications-with-docker, https://blog.sebastian-daschner.com/
+
+---
+
+Hi Rance,
+
+unfortunately, CALL doesn't work with the TOLERANCE, IGNORECASE, and IGNORESPACE pseudocomments. This would be a nice change going forward, but I don't know how to implement it in Python. I would need to write a Python function 
+
+deepEqual(x, y, tolerance, ignorecase, ignorespace) 
+
+that checks whether x and y are equal except if they are doubles, use the tolerance, if they are strings, use ignorecase/ignorespace (I know how to do this part), and if they are sequences such as lists, sets, or tuples, do this recursively for the elements. I guess I should see if something is iterable (https://stackoverflow.com/questions/1952464/in-python-how-do-i-determine-if-an-object-is-iterable). This seems like a good thing to do in the long run, and I am adding it to the wish list.---
+
+
+---
+
+Another "to be fixed eventually" problem
+
+When using the picture class, if the image is not found and exception is thrown but then the student gets a pass and full marks. 
+
+Here is the report.
+
+http://www.codecheck.it/fetch/17072919018705920314428255902/report.html
+
+This happened because I forgot to include the image, but the same thing would happen if the student misspelled the file name
+
+---
+
+Can we compare numbers by significant digits rather than by epsilon?
+
+---
+
+https://docs.racket-lang.org/rackunit/quick-start.html
+
+mono-mcs  
+
+http://danml.com/download.html
+
+Codecheck JdK 9
+Put junit, hamcrest on module path
+
+java.security.policy: error adding Entry:
+	java.net.MalformedURLException: unknown protocol: jrt
+
+grant codeBase "jrt:/jdk.compiler" {
+   permission java.security.AllPermission;
+};
+
+
+Should be possible to detect JAVA_HOME by finding the real path for
+`which java` in codecheck script
+
+JUnit 5
+
+score and maxscore in new JSON instead of score/maxscore?
+
+http --form POST localhost:9000/checkJSON repo=bj4fp problem=ch04/c04_exp_4_8 Square.java=@/data/cay/codecheck/bj4fp/ch04/c04_exp_4_8/solution/Square.java | bcat
+
+codecheck -j hw1a
+
+http -j POST cs20.cs.sjsu.edu:8080/checkJson < /data/temp/test.json
+
+
+
+We need a bunch of permissions for Jackson and could put that
+into /opt/codecheck/lib/jackson and add it to the classpath.
+
+JUnit only needs
+
+  permission java.lang.RuntimePermission "accessDeclaredMembers";
+
+and we grant that to students and testers so they can do stuff with reflection
+
+This reorg would deal with an attack where a student puts arbitrary code into a JUnit test file.
+
+> - Is it possible to embed(in html) css stylesheets in the problem.html? I've tried it but codecheck seems to get rid of them
+
+
+codecheck download files link; what about //HIDE?
+
+Do s/th about ~/codecheck vs. ~/books/problems/solutions
+Fixed ch06/c06_exp_6_110
+
+It would be nice if when the Javadoc is correct, Checkstyle printed something other than pass - perhaps just the "OK"? or "style pass"?
+
+Ron codecheck bug Sun, 21 Jun 2015 23:55:32 System.exit in solution
+
+Codecheck--when one compares program output, and the student has an additional \n at the end, Codecheck fails in a hard-to-understand way.
+- Can one accept blank lines at the end when the solution has none?
+
+        // TODO: We only show students source files, not text or images
+        // Would be better to show those as well
+
+http://clang-analyzer.llvm.org/
+
+http://libcloud.apache.org/
+Codecheck bug with 04_11
+CodeCheck SQL, Scheme 
+   http://stackoverflow.com/questions/6380327/how-do-you-load-a-file-into-racket-via-command-line
+Codecheck
+
+
+Blog https://wiley.adobeconnect.com/_a44433639/p9ab13p2db7/?launcher=false&fcsContent=true&pbMode=normal
+In the future, I'll see if I can produce some diagnostics instead of the blank screen.
+I suppose I could mark them as "student" and "other". 
+ivy
+grep -l test.run=true ~/codecheck/*/*/*/*/check.properties
+
+
+
+
+
+Currently with C++ problems, .h files are not syntax highlighted in the editor like .cpp file. That would be nice. (https://github.com/cayhorstmann/play-codecheck/issues/1)
+
+
+Bug in /home/cay/projects/codecheck/checker/../samples/python/test5: 
+Shouldn't run two tests
+
+AIOOBE in image calculation didn't get displayed :-(
+
+http://wiley.code-check.org/codecheck/files?repo=bjlo2&problem=06_10
+
+public class EdgeDetect
+{
+   public static void main(String[] args)
+   {
+      Picture picture = new Picture("eiffel-tower-picture.jpg");
+      int[][] grays = picture.getGrayLevels();
+
+      for (int i = 0; i < grays.length; i++)
+      {
+         for (int j = 0; j < grays[0].length; j++)
+         {
+            int neighborAverage = (grays[i][j + 1] + grays[i + 1][j] + grays[i + 1][j + 1]) / 3;
+            if (Math.abs(grays[i][j] - neighborAverage) > 20)
+            {
+               grays[i][j] = 0;               
+            }
+            else
+            {
+               grays[i][j] = 255;               
+            }
+         }         
+      }
+      Picture edges = new Picture(grays);
+      edges.draw();
+   }
+}
+
+
+=======
+
+In http://go.code-check.org/codecheck/files?repo=jfe1cc&problem=ch01/c01_exp_1_103, if the student has a \n at the end, the test fails:
+
+Testing Triangle
+
+
+Actual output
+
+   x
+  xxx
+ xxxxx
+xxxxxxx
+
+
+Expected output
+
+   x
+  xxx
+ xxxxx
+xxxxxxx
+
+ 
+fail
+
+ /** 
+   A program to draw a filled triangle.
+*/
+
+public class Triangle
+{
+   public static void main(String[] args)
+   {
+      System.out.println("   x");
+      System.out.println("  xxx");
+      System.out.println(" xxxxx");
+      System.out.println("xxxxxxx\n");
+
+      /* Your work here */
+
+   }
+}
+
+
+ 
+
+
+
+------------------------------------------------------------------
+
+
+Remedy 1: Check that the method returned without an exception, and don't give any points otherwise.
+
+Remedy 2: Instead of doing the Expected thing, just compare with the outcome from the expected run
+
+public class TrafficLight
+{
+    // instance variable
+    private int value;
+
+    public void next()
+    {
+        // code for next method
+        TrafficLight light1 = new TrafficLight();
+        System.out.println(light1.getReds());
+        System.out.println("Expected: 1");
+        light1.next();
+        System.out.println(light1.getReds());
+        System.out.println("Expected: 1");
+        light1.next();
+        System.out.println(light1.getReds());
+        System.out.println("Expected: 1");
+        light1.next();
+        System.out.println(light1.getReds());
+        System.out.println("Expected: 2");
+    }
+
+    public int getReds()
+    {
+        
+        return 0 + 1; // Fix this statement
+    }
+}
+
+public class TrafficLightTester
+{
+    public static void main(String[] args)
+    {
+        TrafficLight light1 = new TrafficLight();
+        System.out.println(light1.getReds());
+        System.out.println("Expected: 1");
+        light1.next();
+        System.out.println(light1.getReds());
+        System.out.println("Expected: 1");
+        light1.next();
+        System.out.println(light1.getReds());
+        System.out.println("Expected: 1");
+        light1.next();
+        System.out.println(light1.getReds());
+        System.out.println("Expected: 2");
+    }
+}
+
+The result is 
+
+1
+Expected: 1
+...
+1
+Expected: 1
+java.lang.StackOverflowError
+	at sun.nio.cs.UTF_8.updatePositions(UTF_8.java:77)
+
+Score
+
+3862/3862
+
+----------------------------------------------------------------------
+
+Here's another one that you might be interested in. It seems all of the graphics exercises do this:
+
+java.awt.HeadlessException: 
+No X11 DISPLAY variable was set, but this program performed an operation which requires it.
+	at java.awt.GraphicsEnvironment.checkHeadless(GraphicsEnvironment.java:207)
+	at java.awt.Window.<init>(Window.java:535)
+	at java.awt.Frame.<init>(Frame.java:420)
+	at java.awt.Frame.<init>(Frame.java:385)
+	at javax.swing.JFrame.<init>(JFrame.java:180)
+	at com.horstmann.codecheck.SnapFrame.run(SnapFrame.java:60)
+	at com.horstmann.codecheck.Main.snap(Main.java:205)
+	at com.horstmann.codecheck.Main.run(Main.java:650)
+	at com.horstmann.codecheck.Main.main(Main.java:65)
+
+--Steve
+------------------------------------------------------------------
+
+
+Le 01/22/2014 09:32 AM, Stephen Gilbert a écrit :> http://go.code-check.org/codecheck/files?repo=bj4cc&problem=ch19/c19_exp_19_102
+
+Thanks, I figured out the problem. It doesn't make sense to show the binary file encrypted.txt to the student, and it can't be read in as a text file because it's invalid UTF-8. But I changed the mechanism for hiding files, and I'll have to refine that. I'll put it on my todo list.
+
+
+------------------------------------------------------------------
+
+
+
+It depends, unfortunately. They won't get 4/6, but they might get 4 (without a denominator) if code-check can't figure out what the total was because it died prematurely.
+
+It would be a good idea to have it figure out the total, perhaps by grading the solution. I'll add that to the wish list.
+
+Le 23/08/2013 22:40, Kathleen O'Brien a écrit :> If a student gets 4 of 6 expected values and then his code throws an 
+> exception doe he get 4/6 points or 0/6?
+> 
+
+------------------------------------------------------------------
+
+Shorten timeout, user selectable
+
+Limit stdout size, user selectable
+
+----------------------------------------
+
+"About codecheck" disclaimer	 	
+
+Can't generate outputs that depend on directory location 	
+
+Graphics capture not threadsafe	 	
+
+When a Tester dies with a stack overflow, the error message is not added to the report.
+
+==============================================
+
+Scheme
+
+racket -t filename
+
+Input/output--support it but is it important?
+
+Functions CALL 
+
+
+
+(equal? ...)
+Name spaces: http://stackoverflow.com/questions/14994153/using-namespaces-to-work-with-shadowed-identifiers   
+
+Testers with RackUnit
+
+Unit testing:
+http://docs.racket-lang.org/rackunit/api.html#%28part._.Overview_of_.Rack.Unit%29
+
+Is SUB useful???
+
+;;MAIN
+
+
+Can have
+
+#lang racket
+(provide (all-defined-out))
+
+as first two lines and then use
+
+(require "file.rkt")
+
+or neither of the two and then
+
+(include "file.rkt")
+
+
+Problem with main
+
+Don't want main for regular work, but then how to recognize main file?
+Need main for CALL to feed arg 1 2 3 etc.
+Don't want main for test-engine/racket-tests
+
+=============================
+
+* Related projects
+
+https://cscircles.cemc.uwaterloo.ca
+  Extensive Python question bank
+https://open.kattis.com/
+  For interview training or employers
+https://www.autogradr.com/
+  For universities. Got nice note from founder Tushar Soni <tushar@autogradr.com> when I signed up
+https://github.com/MimirHQ/opencs1
+  OER problem sets:
+https://www.executeprogram.com/
+  Commercial ($19/month) practice
+https://codehs.com/info/platform/assignments
+  Commercial assignment system for high schools
+https://www.onlinegdb.com/
+  Online debugger

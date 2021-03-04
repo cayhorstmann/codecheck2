@@ -1,0 +1,48 @@
+#include <tunables/global>
+
+/opt/codecheck/runprog {
+  #include <abstractions/base>
+  #include <abstractions/bash>
+  #include <abstractions/consoles>
+  #include <abstractions/python>
+
+  /bin/bash ix,
+  /opt/codecheck/runprog r,
+  /opt/codecheck/codecheck.env r,
+  /etc/apt/** r,
+  /etc/default/apport r,
+  /tmp/codecheck*/ rwk,
+  /tmp/codecheck*/** rwix,
+  /home/codecheck/submissions/** rwix,
+  /tmp/submissions/** rwix,
+  /usr/bin/python3.5 mrix,
+  /usr/bin/python3.6 mrix,
+  /usr/bin/racket mrix,
+  /usr/bin/nice mrix,
+  /usr/bin/timeout mrix,
+  /usr/share/racket/** mrix,
+  /etc/racket/** mrix,
+  /opt/scala*/** mrix,
+  /opt/jdk*/** mrix,
+  /usr/lib/jvm/java-8-openjdk-amd64/** mrix,
+  /bin/grep ix,
+  /bin/uname ix,
+  /usr/bin/dirname ix,
+  /usr/bin/basename ix,
+  /usr/local/lib/python3*/dist-packages/** rix,
+  /usr/bin/poly mrix,
+  /usr/bin/node mrix,
+  /usr/bin/nodejs mrix,
+
+  /opt/codecheck/interleaveio* mrix,
+  /bin/rm mrix,
+  /bin/cat mrix,
+  /bin/sleep mrix,
+  /usr/bin/empty mrix,
+  /bin/dash mrix,
+  /dev/ptmx rw,
+  /bin/sed mrix,
+  /proc/cgroups mrix,
+  /sys/fs/cgroup/cpu,cpuacct/codecheck/** rw,
+  /usr/bin/cg* mrix,
+}
