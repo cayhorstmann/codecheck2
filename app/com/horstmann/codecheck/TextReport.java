@@ -1,10 +1,7 @@
 package com.horstmann.codecheck;
 
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.PrintStream;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -23,9 +20,7 @@ public class TextReport implements Report {
     private String section;
     private List<String> footnotes = new ArrayList<>();
 
-    // TODO: Directory
-    public TextReport(String title, Path outputDir) {
-        dir = outputDir;
+    public TextReport(String title) {
         builder = new StringBuilder();
         builder.append("codecheck version ");
         builder.append(ResourceBundle.getBundle(
@@ -154,47 +149,11 @@ public class TextReport implements Report {
         output(message);
         return this;
     }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.horstmann.codecheck.Report#systemError(java.lang.Throwable)
-     */
+    
     @Override
     public TextReport systemError(Throwable t) {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        PrintStream pout = new PrintStream(out);
-        t.printStackTrace(pout);
-        systemError(out.toString());
-        return this;
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.horstmann.codecheck.Report#image(java.lang.String,
-     * java.nio.file.Path)
-     */
-    @Override
-    public TextReport image(String captionText, Path file) {
-        image(file);
-        return this;
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.horstmann.codecheck.Report#image(java.nio.file.Path)
-     */
-    @Override
-    public TextReport image(Path file) {
-        try {
-            image(ImageIO.read(file.toFile()));
-        } catch (IOException ex) {
-            error("No image");
-        }
-        return this;
-    }
+        return systemError(Util.getStackTrace(t));
+    }    
 
     /*
      * (non-Javadoc)
@@ -215,34 +174,6 @@ public class TextReport implements Report {
             ImageIO.write(image, "PNG", out.toFile());
         } catch (IOException ex) {
             error("No image");
-        }
-        return this;
-    }
-
-    @Override
-    public TextReport file(Path dir, Path file) {
-        if ("studentFiles".equals(section) || "providedFiles".equals(section)) return this;
-        caption(file.toString());
-        Path source = dir.resolve(file);
-        boolean lineNumbers = file.toString().endsWith(".java"); // TODO:
-                                                                 // Arbitrary
-        if (Files.exists(source)) {
-            try {
-                List<String> lines = Files.readAllLines(source,
-                        Charset.forName("UTF-8"));
-                int lineNumber = 1;
-                for (String line : lines) {
-                    if (lineNumbers)
-                        builder.append(String.format("%4d ", lineNumber));
-                    lineNumber++;
-                    add(line);
-                }
-            } catch (IOException e) {
-                systemError(e);
-            }
-
-        } else {
-            error("Not found");
         }
         return this;
     }
@@ -282,11 +213,14 @@ public class TextReport implements Report {
      * @see com.horstmann.codecheck.Report#save(java.nio.file.Path)
      */
     @Override
-    public TextReport save(String problemDir, String out) throws IOException {
+    public TextReport save(Path dir, String out) throws IOException {
         Path outPath = dir.resolve(out + ".txt");
         Files.write(outPath, builder.toString().getBytes());
         return this;
     }
+    
+    @Override
+    public String getText() { return builder.toString(); }
 
     @Override
     public TextReport pass(boolean b) {

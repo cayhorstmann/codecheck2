@@ -27,20 +27,8 @@ public class CppLanguage implements Language {
     
     private static Pattern mainPattern = Pattern.compile("\\s*((int|void)\\s+)?main\\s*\\([^)]*\\)\\s*(\\{\\s*)?");
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.horstmann.codecheck.Language#isMain(java.nio.file.Path,
-     * java.nio.file.Path)
-     */
-    @Override
-    public boolean isMain(Path p) {
-        if (!p.toString().endsWith(".cpp")) // lodepng.h has main pattern in comment :-(
-            return false;
-        String contents = Util.read(p);
-        if (contents == null) return false;
-        return mainPattern.matcher(contents).find();
-    }
+    @Override 
+    public Pattern mainPattern() { return mainPattern; }
 
     @Override
     public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls) {

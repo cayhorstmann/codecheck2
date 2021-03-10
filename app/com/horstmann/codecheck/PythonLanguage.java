@@ -30,11 +30,9 @@ public class PythonLanguage implements Language {
      * java.nio.file.Path)
      */
     @Override
-    public boolean isMain(Path p) {
+    public boolean isMain(Path p, String contents) {
         if (!isSource(p))
             return false;
-        String contents = Util.read(p);
-        if (contents == null) return false;
         if (mainPattern.matcher(contents).find()) return true;
         // Unindented statement indicates script
         for (String line : Util.lines(contents)) {
@@ -104,7 +102,7 @@ public class PythonLanguage implements Language {
         return pattern;
     }
     
-    public boolean isUnitTest(Path fileName) { return fileName != null && fileName.toString().matches(".*Test[0-9]*.py"); }
+    public boolean isUnitTest(Path fileName) { return fileName.toString().matches(".*Test[0-9]*.py"); }
     
     private static final Pattern successPattern = Pattern.compile("Ran (?<runs>[0-9]+) tests in [0-9.]+s\\s+OK");
     private static final Pattern failurePattern = Pattern.compile("Ran (?<runs>[0-9]+) tests in [0-9.]+s\\s+FAILED \\([^=]+=(?<failures>[0-9]+)\\)");

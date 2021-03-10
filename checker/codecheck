@@ -33,6 +33,7 @@
 # -d debug (prints CodeCheck command)
 # -u Also check student directory (to verify that it will fail)
 # -r remote
+# -l local
 
 function usage {
     echo "Usage: `basename $0` [-dpqut] problemdir"

@@ -1,16 +1,9 @@
 package controllers;
 
-import play.libs.concurrent.CustomExecutionContext;
-import play.libs.concurrent.HttpExecution;
-
 import javax.inject.Inject;
 
 import akka.actor.ActorSystem;
-
-import java.util.concurrent.Executor;
-import java.util.concurrent.CompletionStage;
-
-import static java.util.concurrent.CompletableFuture.supplyAsync;
+import play.libs.concurrent.CustomExecutionContext;
 
 // https://www.playframework.com/documentation/2.6.x/JavaAsync
 

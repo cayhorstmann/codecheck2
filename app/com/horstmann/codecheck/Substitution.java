@@ -64,9 +64,9 @@ public class Substitution {
         return r;
     }
 
-    String substitute(Path from, int n) throws IOException { // TODO: Pass string or byte[]
+    String substitute(String contents, int n) throws IOException { 
         Pattern pattern = language.variablePattern();
-        List<String> lines = Util.readLines(from);
+        List<String> lines = Util.lines(contents);
         StringBuilder out = new StringBuilder();
         for (String line : lines) {
             Matcher matcher = pattern.matcher(line);

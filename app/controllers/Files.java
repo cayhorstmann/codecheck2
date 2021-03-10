@@ -55,16 +55,10 @@ public class Files extends Controller {
          Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
          ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
       }		
-      Path problemPath = null;
-      try {
-         problemPath = codeCheck.loadProblem(repo, problemName, ccid);
-         Problem problem = new Problem(problemPath);
-         Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();
-         return ok(Json.toJson(problem.getData())).withCookies(newCookie);
-      } finally {
-         if (problemPath != null)
-            Util.deleteDirectory(problemPath);
-      }
+      Map<Path, byte[]> problemFiles = codeCheck.loadProblem(repo, problemName, ccid);
+      Problem problem = new Problem(problemFiles);
+      Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();
+      return ok(Json.toJson(problem.getData())).withCookies(newCookie);
    }
 
    public Result filesHTML(Http.Request request, String repo, String problemName, String ccid)
@@ -73,10 +67,8 @@ public class Files extends Controller {
           Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
           ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
       }
-      Path problemPath = null;
-      try {						
-         problemPath = codeCheck.loadProblem(repo, problemName, ccid);
-         Problem problem = new Problem(problemPath);
+    	 Map<Path, byte[]> problemFiles = codeCheck.loadProblem(repo, problemName, ccid);
+         Problem problem = new Problem(problemFiles);
          ProblemData data = problem.getData();
          StringBuilder result = new StringBuilder();
          result.append(start);
@@ -183,9 +175,5 @@ public class Files extends Controller {
 			
          Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();
          return ok(result.toString()).withCookies(newCookie).as("text/html");
-      } finally {
-         if (problemPath != null)
-            Util.deleteDirectory(problemPath);
-      }
    }
 }

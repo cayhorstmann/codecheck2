@@ -36,11 +36,7 @@ public class RacketLanguage implements Language {
    // (define (main . args)
 
     @Override
-    public boolean isMain(Path p) {
-        if (!isSource(p))
-            return false;
-        String contents = Util.read(p);
-        if (contents == null) return false;
+    public boolean isMain(Path p, String contents) {
         if (mainPattern.matcher(contents).find()) return true;
         if (isUnitTest(p)) return false;
         if (contents.contains("(provide ")) return false; // TODO: Hack
@@ -87,7 +83,7 @@ public class RacketLanguage implements Language {
 
     @Override
     public boolean isUnitTest(Path fileName) {
-        return fileName != null && fileName.toString().matches(".*Test[0-9]*.rkt");
+        return fileName.toString().matches(".*Test[0-9]*.rkt");
     }
 
    private static final Pattern successPattern = Pattern.compile("All (?<runs>[0-9]+) tests passed");

@@ -30,11 +30,9 @@ public class JavaScriptLanguage implements Language {
         return false;                    
     }    
     
-    @Override public boolean isMain(Path p) {
+    @Override public boolean isMain(Path p, String contents) {
         if (!isSource(p))
             return false;
-        String contents = Util.read(p);
-        if (contents == null) return false;
         for (String line : Util.lines(contents)) 
             if (line.matches("^\\s*export\\s+.*$")) return false;
         return true;

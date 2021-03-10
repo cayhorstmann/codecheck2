@@ -1,18 +1,26 @@
 package controllers;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Iterator;
-import static java.util.Map.Entry;
-import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
 import javax.inject.Inject;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.typesafe.config.Config;
 
 import models.CodeCheck;
 import models.Util;
@@ -20,19 +28,16 @@ import play.Logger;
 import play.libs.Json;
 import play.libs.Jsonp;
 import play.libs.concurrent.HttpExecution;
-import play.libs.concurrent.HttpExecutionContext;
 import play.mvc.Controller;
 import play.mvc.Http;
 import play.mvc.Result;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
 public class Check extends Controller {
 	// @Inject HttpExecutionContext ec;
 	private CodecheckExecutionContext ccec; 
-	@Inject CodeCheck codeCheck;
+	@Inject private CodeCheck codeCheck;
+	@Inject private Config config;
+	
 	
 	// Classic HTML report
 	public CompletableFuture<Result> checkHTML(Http.Request request) throws IOException, InterruptedException {
@@ -42,7 +47,7 @@ public class Check extends Controller {
 				String ccid = null;
 		        String repo = "ext";
 		        String problem = "";
-		        Path submissionDir = codeCheck.createSubmissionDirectory();
+		        Map<Path, String> submissionFiles = new TreeMap<>();
 		        
 		        for (String key : params.keySet()) {
 		            String value = params.get(key)[0];
@@ -53,23 +58,20 @@ public class Check extends Controller {
 		            else if (key.equals("ccu") || key.equals("ccid")) // TODO: Where does this come from???
 		            	ccid = value;
 		            else
-		                Util.write(submissionDir, key, value);
+		            	submissionFiles.put(Paths.get(key), value);
 		        }
 		    	if (ccid == null) { 
 		            Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
 		            ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
 				}
 				long startTime = System.nanoTime();			
-		        codeCheck.run("html", repo, problem, ccid, submissionDir);
+		        String report = codeCheck.run("html", repo, problem, ccid, submissionFiles).getText();
 				double elapsed = (System.nanoTime() - startTime) / 1000000000.0;
-		        String report = Util.read(submissionDir.resolve("report.html"));
 		        if (report == null || report.length() == 0) {
 		        	report = String.format("Timed out after %5.0f seconds\n", elapsed);
 		        }
 		        
 		        Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();
-				// TODO: Delete submissionDir unless flag is set to keep it?
-				// Util.deleteDirectory(submissionDir);
 		        return ok(report).withCookies(newCookie).as("text/html");
 			}
 			catch (Exception ex) {
@@ -100,12 +102,13 @@ public class Check extends Controller {
 				String ccid = null;
 				String repo = "ext";
 				String problem = null;
-		        Path submissionDir = codeCheck.createSubmissionDirectory();
-				String reportType = "njs";
+				String reportType = "NJS";
 				String callback = null;
 				String scoreCallback = null;
 				StringBuilder requestParams = new StringBuilder();
 				ObjectNode studentWork = JsonNodeFactory.instance.objectNode();
+		        Map<Path, String> submissionFiles = new TreeMap<>();
+				Map<Path, byte[]> reportZipFiles = new TreeMap<>();
 				for (String key : params.keySet()) {
 					String value = params.get(key)[0];
 					
@@ -125,7 +128,9 @@ public class Check extends Controller {
 					else if ("scoreCallback".equals(key)) scoreCallback = value;
 					else if ("ccu".equals(key) || "ccid".equals(key)) ccid = value; // TODO: Where from? 
 					else {
-						Util.write(submissionDir, key, value);
+						Path p = Paths.get(key);					
+						submissionFiles.put(p, value);
+						reportZipFiles.put(p, value.getBytes(StandardCharsets.UTF_8));
 						studentWork.put(key, value);
 					}
 				}
@@ -135,9 +140,21 @@ public class Check extends Controller {
 				};				
 				Logger.of("com.horstmann.codecheck.check").info("checkNJS: " + requestParams);
 				//TODO last param should be submissionDir
-				codeCheck.run(reportType, repo, problem, ccid, submissionDir);
-				ObjectNode result = (ObjectNode) Json.parse(Util.read(submissionDir.resolve("report.json")));
-				String reportZip = Util.base64(submissionDir, "report.signed.zip");
+				String report = codeCheck.run(reportType, repo, problem, ccid, submissionFiles).getText();
+				ObjectNode result = (ObjectNode) Json.parse(report);
+				String reportHTML = result.get("report").asText();
+				reportZipFiles.put(Paths.get("report.html"), reportHTML.getBytes(StandardCharsets.UTF_8));
+
+				byte[] reportZipBytes;
+				if (config.hasPath("com.horstmann.codecheck.storePassword")) {
+					reportZipBytes = com.horstmann.codecheck.Util.signedZip(reportZipFiles,
+							config.getString("com.horstmann.codecheck.storePassword").toCharArray(),
+							config.getString("com.horstmann.codecheck.storeLocation"));
+				} else 
+					reportZipBytes = com.horstmann.codecheck.Util.zip(reportZipFiles);
+					
+				// TODO Need to sign
+				String reportZip = Base64.getEncoder().encodeToString(reportZipBytes); 
 				
 				//TODO: Score callback no longer used from LTIHub. Does Engage use it?
 				if (scoreCallback != null) {

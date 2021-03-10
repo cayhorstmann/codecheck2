@@ -16,37 +16,31 @@ public interface Report
         public String explanation;
     }
 
-   public abstract Report header(String section, String text);
+   Report header(String section, String text);
    
-   public abstract Report run(String caption);
+   Report run(String caption);
 
-   public abstract Report output(CharSequence text);
+   Report output(CharSequence text);
 
-   public abstract Report error(String message);
+   Report error(String message);
 
-   public abstract Report systemError(String message);
+   Report systemError(String message);
 
-   public abstract Report systemError(Throwable t);
+   Report systemError(Throwable t);
 
-   public abstract Report image(String caption, Path file) throws IOException;
+   Report image(String caption, BufferedImage image) throws IOException;
 
-   public abstract Report image(Path file) throws IOException;
+   Report image(BufferedImage image) throws IOException;
 
-   public abstract Report image(String caption, BufferedImage image) throws IOException;
-
-   public abstract Report image(BufferedImage image) throws IOException;
-
-   public abstract Report file(Path dir, Path file) throws IOException;
-
-   public abstract Report file(String file, String contents);
+   Report file(String file, String contents);
    
-   public abstract Report args(String args);
+   Report args(String args);
    
-   public abstract Report input(String input);
+   Report input(String input);
 
-   public abstract Report add(Score score);
+   Report add(Score score);
 
-   public abstract Report save(String problemId, String out) throws IOException;
+   Report save(Path dir, String out) throws IOException;
    
    Report pass(boolean b);
    
@@ -57,6 +51,9 @@ public interface Report
    Report comment(String key, String value);
    
    Report footnote(String text);
+   
+   default void close() {}
+   String getText();
    
    default Report errors(List<Error> errors) { return this; }
 }

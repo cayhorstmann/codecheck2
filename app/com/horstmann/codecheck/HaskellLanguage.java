@@ -30,13 +30,9 @@ public class HaskellLanguage implements Language {
    
    private static Pattern mainPattern = Pattern
             .compile("main\\s*::\\s*IO\\s*\\(\\s*\\)");
-    public boolean isMain(Path p) {
-        if (!isSource(p))
-            return false;
-        String contents = Util.read(p);
-        if (contents == null) return false;
-        return mainPattern.matcher(contents).find();
-    }
+
+   @Override 
+   public Pattern mainPattern() { return mainPattern; }
 
     @Override public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls) {
         Map<Path, String> result = new HashMap<>();

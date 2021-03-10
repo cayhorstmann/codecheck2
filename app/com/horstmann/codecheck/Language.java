@@ -1,6 +1,5 @@
 package com.horstmann.codecheck;
 
-import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -69,14 +68,14 @@ public interface Language {
      * at least one .cpp file. A .h file is source, but not an indication for C++
      * The default implementation, which works for Java etc., just checks 
      * that there is at least one file with the source extension
-     * @param files
+     * @param fileNames
      * @return
      */
-    default boolean isLanguage(Collection<Path> files) {
+    default boolean isLanguage(Collection<Path> fileNames) {
         String extension = getExtension();
         // Don't call isSource because that may have been overridden to classify 
         // header files as source
-        for (Path p : files)
+        for (Path p : fileNames)
             if (extension != null && p.toString().endsWith("." + extension)) return true;
         return false;                    
     }
@@ -100,6 +99,8 @@ public interface Language {
      */
     default boolean isUnitTest(Path fileName) { return false; }
 
+    default Pattern mainPattern() { return null; }
+    
     /**
      * Tests if a file is a "main" file, i.e. an entry point for execution. By default,
      * a file whose module name ends in Runner or Tester, optionally followed by a number, matches.
@@ -108,8 +109,12 @@ public interface Language {
      * @param fileName the path to the file
      * @return true if it is a "main" file
      */
-    default boolean isMain(Path fileName) { 
-        return moduleOf(fileName).matches(".*(Runn|Test)er[0-9]*"); 
+    default boolean isMain(Path fileName, String contents) { 
+    	Pattern p = mainPattern();
+    	if (p == null)
+    		return moduleOf(fileName).matches(".*(Runn|Test)er[0-9]*");
+    	else
+    		return isSource(fileName) && p.matcher(contents).find();
     }
 
     /**
@@ -150,7 +155,6 @@ public interface Language {
     default Pattern unitTestFailurePattern() { return Pattern.compile("$."); }
     
     default void reportUnitTest(String result, Report report, Score score) {
-        report.output(result);
         Matcher matcher = unitTestSuccessPattern().matcher(result);
         int runs = 0;
         int failures = 0;
@@ -167,7 +171,7 @@ public interface Language {
               runs = Integer.parseInt(matcher.group("runs"));
            }
         }
-        report.pass(runs > 0 && failures == 0);
+        report.output(result);
         score.add(runs - failures, runs, report);
     }
 
@@ -179,7 +183,7 @@ public interface Language {
      * @param submissionDir
      *            the directory containing the student files
      */
-    default String process(Path file, Path submissionDir) throws IOException { 
+    default String process(Path file, Map<Path, String> submissionFiles) { 
         return null; 
     }
     
@@ -232,9 +236,9 @@ public interface Language {
     
     default Pattern errorPattern() { return null; }
     
-    default List<Error> errors(String report, boolean compileTime) {
+    default List<Error> errors(String report) {    	
         Pattern pattern = errorPattern();
-        if (compileTime && pattern != null) {
+        if (pattern != null) {
             List<Error> result = new ArrayList<>();
             String[] lines = report.split("\n");
             int i = 0;
@@ -248,6 +252,7 @@ public interface Language {
             }
             return result;
         }
-        else return Collections.emptyList();
+        else 
+        	return null;
     }
 }

@@ -22,11 +22,8 @@ public class ScalaLanguage implements Language {
     
 
     @Override
-    public boolean isMain(Path p) {
-        if (!isSource(p)) return false;
-        String contents = Util.read(p);
-        return contents != null &&
-            (mainPattern1.matcher(contents).find() || mainPattern2.matcher(contents).find());
+    public boolean isMain(Path p, String contents) {
+        return mainPattern1.matcher(contents).find() || mainPattern2.matcher(contents).find();
     }
 
     @Override

@@ -1,6 +1,5 @@
 package com.horstmann.codecheck;
 
-import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -14,20 +13,15 @@ public class JavaLanguage implements Language {
     
     @Override
     public boolean isUnitTest(Path fileName) {
-        return fileName != null && fileName.toString().matches(".*Test[0-9]*.java");
+        return fileName.toString().matches(".*Test[0-9]*.java");
     }
 
     private static Pattern mainPattern = Pattern
             .compile("public\\s+static\\s+void\\s+main\\s*\\(\\s*String(\\s*\\[\\s*\\]\\s*\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*|\\s+\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*\\s*\\[\\s*\\])\\s*\\)");
 
-    @Override
-    public boolean isMain(Path p) {
-        if (!isSource(p))
-            return false;
-        String contents = Util.read(p);
-        return contents != null && mainPattern.matcher(contents).find();
-    }
-
+    @Override 
+    public Pattern mainPattern() { return mainPattern; }
+    
     public String moduleOf(Path path) {
         String name = Util.removeExtension(path); // drop .java
         return name.replace(FileSystems.getDefault().getSeparator(), ".");
@@ -123,10 +117,10 @@ public class JavaLanguage implements Language {
     }
 
     @Override
-    public String process(Path file, Path submissionDir) throws IOException {
+    public String process(Path file, Map<Path, String> submissionFiles) {
         if (file.getFileName().toString().equals("checkstyle.xml")) {
             String args = "";
-            for (Path p : Util.getDescendantFiles(submissionDir)) {
+            for (Path p : submissionFiles.keySet()) {
                 if (isSource(p)) args += " " + p;
             }
             return "CheckStyle " + args;

@@ -10,7 +10,6 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -27,13 +26,16 @@ public class Plan {
     private Path workDir;
     private int nextID = 0;
     private static int MIN_TIMEOUT = 3; // TODO: Maybe better to switch interleaveio and timeout? 
+    private boolean debug;
     
-    public Plan(Language language) throws IOException {
+    public Plan(Language language, boolean debug) throws IOException {
         this.language = language;
         workDir = Util.createTempDirectory();
-        if (Main.DEBUG) addScript("debug");
+        this.debug = debug;
+        if (debug) addScript("debug");        
     }
     
+    // TODO: Is used as a unique ID in report--eliminate
     public Path getWorkDir() {
         return workDir;
     }
@@ -57,14 +59,25 @@ public class Plan {
     }
 
     public boolean checkCompiled(String compileDir, Report report, Score score) {
-        String errorReport = getOutputString(compileDir + "/_errors");
+        String errorReport = getOutputString(compileDir, "_errors");
         if (errorReport == null) return true;         
         if (errorReport.trim().equals(""))
-        report.error("Compilation Failed");
+        	report.error("Compilation Failed");
         else {
             report.error(errorReport);
-            report.errors(language.errors(errorReport, true));
+            report.errors(language.errors(errorReport));
         }
+        score.setInvalid();
+        return false;
+    }
+
+    public boolean checkSolutionCompiled(String compileDir, Report report, Score score) {
+        String errorReport = getOutputString(compileDir, "_errors");
+        if (errorReport == null) return true;         
+        if (errorReport.trim().equals(""))
+        	report.systemError("Compilation Failed");
+        else 
+            report.systemError(errorReport);        
         score.setInvalid();
         return false;
     }
@@ -149,9 +162,8 @@ public class Plan {
         addScript("process " + dir + cmd);
     }
         
-    public void execute(Report report) throws IOException, InterruptedException {
-        files.put(Paths.get("script"), scriptBuilder.toString().getBytes(StandardCharsets.UTF_8));
-        String remoteURL = System.getProperty("com.horstmann.codecheck.remote");
+    public void execute(Report report, String remoteURL) throws IOException, InterruptedException {
+        files.put(Paths.get("script"), scriptBuilder.toString().getBytes(StandardCharsets.UTF_8));        
         if (remoteURL == null)
             executeLocally(report);
         else
@@ -189,7 +201,7 @@ public class Plan {
                 });
             }
         } finally {
-            if (!Main.DEBUG) Util.deleteDirectory(workDir);
+            if (!debug) Util.deleteDirectory(workDir);
         }
     }
     
@@ -201,8 +213,11 @@ public class Plan {
             try {
                 byte[] responseZip = Util.fileUpload(remoteURL, "job", "job.zip", requestZip);
                 outputs = Util.unzip(responseZip);
-                if (Main.DEBUG) {
-                    Path temp = Files.createTempFile("codecheck", ".zip");
+                if (debug) {
+                	Path temp = Files.createTempFile("codecheck-request", ".zip");
+                    System.out.println("Remote request at " + temp);
+                    Files.write(temp, requestZip);
+                    temp = Paths.get(temp.toString().replace("request",  "response"));
                     System.out.println("Remote result at " + temp);
                     Files.write(temp, responseZip);
                 }

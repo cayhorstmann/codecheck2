@@ -1,38 +1,38 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <!--
 
-    Copyright 2006-2020 Cay S. Horstmann
+    Copyright 2006-2021 Cay S. Horstmann
 
-    This file is part of Codecheck.
+    This file is part of CodeCheck.
 
-    Codecheck is free software: you can redistribute it and/or modify
+    CodeCheck is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
-    Codecheck is distributed in the hope that it will be useful,
+    CodeCheck is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with Codecheck.  If not, see <http://www.gnu.org/licenses/>.
+    along with CodeCheck.  If not, see <http://www.gnu.org/licenses/>.
 
 -->
 
-<project name="codecheck" basedir="." default="dist">
+<project name="codecheck" basedir=".." default="dist">
 
-   <property name="src.dir" value="${basedir}/src" />
+   <property name="src.dir" value="${basedir}/app" />
    <property name="build.dir" value="${basedir}/antbuild" />
    <property name="app.resources" 
              value="com/horstmann/codecheck/codecheck.properties" />
    <property name="distdir" value="/opt/codecheck" />
 
-   <property name="ant.build.javac.source" value="1.8"/> 
-   <property name="ant.build.javac.target" value="1.8"/>
+   <property name="ant.build.javac.source" value="11"/> 
+   <property name="ant.build.javac.target" value="11"/>
 
    <path id="classpath">
-      <fileset dir="${basedir}/lib">
+      <fileset dir="${basedir}/checker/lib">
 	       <include name="*.jar"/>
       </fileset>
    </path>
@@ -50,14 +50,14 @@
   </target>
 
   <target name="compile" description="Compiles the Task" depends="init">
-    <javac includeantruntime="false" srcdir="${src.dir}" debug="true" destdir="${build.dir}">
+     <javac includeantruntime="false" srcdir="${src.dir}" debug="true" destdir="${build.dir}">
+       <include name="com/horstmann/codecheck/**"/>
        <classpath refid="classpath"/>
        <compilerarg value="-Xlint:all,-serial"/>
     </javac>
     <copy todir="${build.dir}" preservelastmodified="true">
       <fileset dir="${src.dir}">
         <include name="**/codecheck.*" />
-        <include name="**/script" />
       </fileset>
     </copy>
     <replaceregexp file="${build.dir}/${app.resources}" byline="true">
@@ -67,7 +67,7 @@
   </target>
   
   <target name="jar" description="Makes the JAR file" depends="compile">
-    <jar destfile="codecheck.jar" basedir="${build.dir}">
+    <jar destfile="checker/codecheck.jar" basedir="${build.dir}">
       <manifest>
         <attribute name="Main-Class" value="com.horstmann.codecheck.Runner" />
       </manifest>
@@ -76,30 +76,19 @@
 
   <target name="dist" depends="jar">
     <copy todir="${distdir}" preservelastmodified="true">
-        <fileset dir="${basedir}">
+        <fileset dir="${basedir}/checker">
            <include name="codecheck.jar"/>
-           <include name="codecheck.jks"/>
            <include name="codecheck"/>
-           <include name="codecheck.policy"/>
-           <include name="comprog"/>
-           <include name="runprog"/>
-           <include name="runprog.apparmor"/>
-           <include name="killold"/>
+           <include name="lib/**"/>
+        </fileset>
+        <fileset dir="${basedir}/checker/docker/bin">
+           <include name="check"/>
+           <include name="server.js"/>
+           <include name="preload.sh"/>
            <include name="interleaveio.py"/>
            <include name="lib/**"/>
+           <include name="node_modules/**"/>
         </fileset>
     </copy>
   </target>
-
-  <target name="sourcedist" description="Make the source distribution" depends="jar">
-    <zip basedir="${basedir}" destfile="codecheck-src-${DSTAMP}.zip" >
-      <include name="COPYING"/>
-      <include name="HISTORY"/>
-      <include name="build.xml"/>
-      <include name="src/**"/>
-      <include name="lib/**"/>
-      <include name="codecheck.jar"/>
-    </zip>
-  </target>
-
 </project>

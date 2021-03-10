@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
@@ -35,9 +36,9 @@ public class Annotations {
         this.language = language;
     }
 
-    public void read(Path useDir, Set<Path> useFiles, Path solutionDir, Set<Path> solutionFiles, boolean inputMode, Report r) {
-        for (Path p : useFiles) read(useDir, p, false);
-        for (Path p : solutionFiles) read(solutionDir, p, true);
+    public void read(Map<Path, byte[]> useOrSolutionFiles, Map<Path, byte[]> knownSolutionFiles, boolean inputMode, Report r) {
+        for (Map.Entry<Path, byte[]> entry : useOrSolutionFiles.entrySet()) read(entry.getKey(), entry.getValue(), false);
+        for (Map.Entry<Path, byte[]> entry : knownSolutionFiles.entrySet()) read(entry.getKey(), entry.getValue(), true);
         for (Annotation a : annotations) {
             if (a.key.equals("HIDE") && !solutions.contains(a.path)) hidden.add(a.path);
         }
@@ -48,11 +49,11 @@ public class Annotations {
         }
     }
 
-    private void read(Path dir, Path p, boolean inSolution) {
+    private void read(Path p, byte[] contents, boolean knownSolution) {
     	String[] delims = language.pseudoCommentDelimiters();
         Pattern pattern = Pattern.compile("(.*\\s|)" + delims[0] + "([A-Z\\[\\]]+)(\\s.*|)" + delims[1] + "\\s*");
-        List<String> lines =  Util.readLines(dir.resolve(p));
-        if (inSolution) solutions.add(p);
+        List<String> lines =  Util.lines(contents);
+        if (knownSolution) solutions.add(p);
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i).trim();
             Matcher matcher = pattern.matcher(line);
@@ -133,15 +134,15 @@ public class Annotations {
     }
 
 
-    public boolean checkConditions(Path dir, Report report) {
+    public boolean checkConditions(Map<Path, String> submissionFiles, Report report) {
         for (Annotation a : annotations) {
             boolean forbidden = a.key.equals("FORBIDDEN");
             if (a.key.equals("REQUIRED") || forbidden) {
                 StringBuilder contents = new StringBuilder();
-                for (String line : Util.readLines(dir.resolve(a.path))) {
+                for (String line : Util.lines(submissionFiles.get(a.path))) {
                     // TODO: Removing comments like this is language specific
                     contents.append(line.replaceAll("//.*$", ""));
-       		    contents.append(" ");
+                    contents.append(" ");
                 }
                 boolean found = Pattern.compile(a.args).matcher(contents).find();
                 if (found == forbidden) { // found && forbidden || !found && required

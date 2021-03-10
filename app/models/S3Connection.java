@@ -1,7 +1,6 @@
 package models;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -36,6 +35,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -111,36 +111,25 @@ public class S3Connection {
 		getS3Connection().putObject(bucket, key, contents);
 	}
 
+	public void putToS3(byte[] contents, String repo, String key)
+			throws IOException {
+		String bucket = repo + "." + bucketSuffix;
+		ObjectMetadata metadata = new ObjectMetadata();
+		metadata.setContentLength(contents.length);
+		metadata.setContentType("application/zip");
+		ByteArrayInputStream in = new ByteArrayInputStream(contents);
+		getS3Connection().putObject(bucket, key, in, metadata);
+		in.close();
+	}
+
 	public void deleteFromS3(String repo, String key)
 			throws IOException {
 		String bucket = repo + "." + bucketSuffix;
 		getS3Connection().deleteObject(bucket, key);
 	}
 	
-	private byte[] readAllBytes(InputStream in) throws IOException { // TODO: Use InputStream.readAllBytes
-		ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-		int nRead;
-		byte[] data = new byte[16384];
-		while ((nRead = in.read(data, 0, data.length)) != -1) 
-			buffer.write(data, 0, nRead);
-		return buffer.toByteArray();		
-	}
-	
-	public String readFromS3(String repo, String key) 
+	public byte[] readFromS3(String repo, String problem)
 			throws IOException {
-		String bucket = repo + "." + bucketSuffix;
-		/*
-		return new String(getS3Connection().getObject(bucket, key).getObjectContent().readAllBytes(), 
-				StandardCharsets.UTF_8);
-				*/
-		return new String(readAllBytes(getS3Connection().getObject(bucket, key).getObjectContent()), 
-				StandardCharsets.UTF_8);
-	}
-	
-	// Delete returned path when done
-	public Path unzipFromS3(String repo, String problem)
-			throws IOException {
-		Path problemDir = java.nio.file.Files.createTempDirectory("problem");
 		String bucket = repo + "." + bucketSuffix;
 
 		InputStream in = getS3Connection().getObject(bucket, problem)
@@ -149,13 +138,9 @@ public class S3Connection {
 		// WARN - com.amazonaws.services.s3.internal.S3AbortableInputStream - Not all bytes were read from the S3ObjectInputStream, aborting HTTP connection. This is likely an error and may result in sub-optimal behavior. Request only the bytes you need via a ranged GET or drain the input stream after use
 		//Util.unzip(in, problemDir);
 		//in.close();
-		byte[] bytes = readAllBytes(in);
+		byte[] bytes = in.readAllBytes();
 		in.close();
-		ByteArrayInputStream in2 = new ByteArrayInputStream(bytes);
-		Util.unzip(in2, problemDir);
-		in2.close();
-		
-		return problemDir;
+		return bytes;
 	}
 	
 	public List<String> readS3keys(String repo, String keyPrefix) throws AmazonServiceException {

@@ -3,7 +3,6 @@ package com.horstmann.codecheck;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -15,13 +14,11 @@ import javax.imageio.ImageIO;
 
 public class HTMLReport implements Report {
     protected StringBuilder builder;
-    protected Path dir;
     private List<String> footnotes = new ArrayList<>();
     private int metaOffset;
 
     // TODO: Directory
-    public HTMLReport(String title, Path outputDir) {
-        dir = outputDir;
+    public HTMLReport(String title) {
         builder = new StringBuilder();
         // Internal HTML can't deal with this
         // TODO: Better property name? Comes from Runner
@@ -151,11 +148,6 @@ public class HTMLReport implements Report {
         return this;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.horstmann.codecheck.Report#systemError(java.lang.String)
-     */
     @Override
     public HTMLReport systemError(String message) {
         failSpan("System Error:");
@@ -163,53 +155,9 @@ public class HTMLReport implements Report {
         return this;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.horstmann.codecheck.Report#systemError(java.lang.Throwable)
-     */
     @Override
     public HTMLReport systemError(Throwable t) {
-        if (t instanceof CodeCheckException) systemError(t.getMessage());
-        else systemError(Util.getStackTrace(t));
-        return this;
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.horstmann.codecheck.Report#image(java.lang.String,
-     * java.nio.file.Path)
-     */
-    @Override
-    public HTMLReport image(String captionText, Path file) throws IOException {
-        caption(captionText);
-        image(file);
-        return this;
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.horstmann.codecheck.Report#image(java.nio.file.Path)
-     */
-    @Override
-    public HTMLReport image(Path file) throws IOException {
-        builder.append("<p class=\"screencapture\">");
-        if ("false".equals(System.getProperty("labrat.img.inline"))) { // TODO:
-                                                                       // Legacy
-            builder.append("<img src=\"");
-            builder.append(file.toUri().toString());
-            builder.append("\">");
-        } else {
-            String data = Base64.getEncoder().encodeToString(Files
-                    .readAllBytes(file));
-            builder.append("<img alt=\"screen capture\" src=\"data:image/png;base64,");
-            builder.append(data);
-            builder.append("\"/>");
-        }
-        builder.append("</p>\n");
-        return this;
+        return systemError(Util.getStackTrace(t));
     }
 
     /*
@@ -245,50 +193,6 @@ public class HTMLReport implements Report {
         builder.append(data);
         builder.append("\"/>");
         builder.append("</p>\n");
-        return this;
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.horstmann.codecheck.Report#file(java.nio.file.Path,
-     * java.nio.file.Path)
-     */
-    @Override
-    public HTMLReport file(Path dir, Path file) {
-        caption(file.toString());
-        Path source = dir.resolve(file);
-        boolean lineNumbers = file.toString().endsWith(".java"); // TODO:
-                                                                 // Arbitrary
-        if (Files.exists(source)) {
-            try {
-                List<String> lines = Files.readAllLines(source,
-                        Charset.forName("UTF-8"));
-                if (lineNumbers) {
-                    builder.append("<table class=\"file\"><tr><td><pre>");
-                    for (int i = 1; i <= lines.size(); i++) {
-                        builder.append(String.format(
-                                "<span class=\"linenumber\">%3d</span>\n", i));
-                    }
-                    builder.append("</pre></td><td>");
-                }
-                builder.append("<pre>");
-                for (String line : lines) {
-                    escape(line);
-                    builder.append("\n");
-                }
-                builder.append("</pre>");
-                if (lineNumbers) {
-                    builder.append("</td></tr></table>");
-                }
-                builder.append("\n");
-            } catch (IOException e) {
-                systemError(e);
-            }
-
-        } else {
-            error("Not found");
-        }
         return this;
     }
     
@@ -383,13 +287,20 @@ public class HTMLReport implements Report {
      * @see com.horstmann.codecheck.Report#save(java.nio.file.Path)
      */
     @Override
-    public HTMLReport save(String problemId, String out) throws IOException {
+    public HTMLReport save(Path dir, String out) throws IOException {
         Path outPath = dir.resolve(out + ".html");
-        addFootnotes();
-        builder.append("</body></html>\n");
         Files.write(outPath, builder.toString().getBytes());
         return this;
     }
+    
+    @Override
+    public void close() {
+        addFootnotes();
+        builder.append("</body></html>\n");    	
+    }
+    
+    @Override
+    public String getText() { return builder.toString(); }
 
     private HTMLReport tableStart(String klass) {
         builder.append("<table");

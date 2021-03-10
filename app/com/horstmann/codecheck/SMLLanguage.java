@@ -30,13 +30,9 @@ public class SMLLanguage implements Language {
    
    private static Pattern mainPattern = Pattern
             .compile("fun\\s+main\\s*\\(\\s*\\)\\s*=");
-    public boolean isMain(Path p) {
-        if (!isSource(p))
-            return false;
-        String contents = Util.read(p);
-        if (contents == null) return false;
-        return mainPattern.matcher(contents).find();
-    }
+
+   @Override 
+   public Pattern mainPattern() { return mainPattern; }
 
     public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls) {        
         String moduleName = moduleOf(file);
@@ -89,6 +85,6 @@ public class SMLLanguage implements Language {
         return variablePattern;
     }
    
-   private static Pattern ERROR_PATTERN = Pattern.compile("(?<file>[^/]+\\.rkt):(?<line>[0-9]+):(?<col>[0-9]+): (?<msg>.+)");
+   private static Pattern ERROR_PATTERN = Pattern.compile("(?<file>[^/]+\\.sml):(?<line>[0-9]+):(?<col>[0-9]+): (?<msg>.+)");
    @Override public Pattern errorPattern() { return ERROR_PATTERN; }     
 }

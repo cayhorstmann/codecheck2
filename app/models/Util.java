@@ -1,15 +1,11 @@
 package models;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.io.UncheckedIOException;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.net.HttpURLConnection;
@@ -17,102 +13,34 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
-import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.nio.file.attribute.PosixFilePermission;
-import java.nio.file.attribute.PosixFilePermissions;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
-import java.util.Base64;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
-import play.Logger;
 import play.mvc.Http;
 
 public class Util {
 	private static Random generator = new Random();
-	private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
 
 	public static boolean isEmpty(String str) { return str == null || str.isEmpty(); }
 	
 	public static Path tail(Path p) {
 		return p.subpath(1, p.getNameCount());
-	}
-
-	public static String read(Path path) {
-		try {
-			return new String(java.nio.file.Files.readAllBytes(path), "UTF-8").replace("\r\n", "\n");
-		} catch (IOException ex) {
-			return null;
-		}
-	}
-
-	public static String read(Path dir, String file) {
-		return read(dir.resolve(file));
-	}
-
-	public static String read(Path dir, Path file) {
-		return read(dir.resolve(file));
-	}
-
-	public static void write(Path parent, String name, String contents) {
-		try {
-			java.nio.file.Files.write(parent.resolve(name),
-					contents.getBytes("UTF-8"));
-		} catch (IOException ex) {
-			ex.printStackTrace();
-			// TODO: log
-			throw new RuntimeException(ex);
-		}
-	}
-
-	public static String base64(Path dir, String fileName) {
-		try {
-			Path file = dir.resolve(fileName);
-			if (!Files.exists(file)) return null;
-			Base64.Encoder encoder = Base64.getEncoder();
-			return encoder.encodeToString(java.nio.file.Files
-				.readAllBytes(file));
-		} catch (IOException e) {
-			return null;
-		}
-	}
-
-	public static String getProperty(String dir, String file, String property) {
-		File pf = new File(dir, file);
-		if (pf.exists()) {
-			Properties p = new Properties();
-			try {
-				p.load(new FileInputStream(pf));
-				return p.getProperty(property);
-			} catch (IOException ex) {
-			}
-		}
-		return null;
 	}
 
 	public static int countLines(String s) {
@@ -146,14 +74,6 @@ public class Util {
 				b.append(c);
 		}
 		return b;
-	}
-
-	public static Path createTempDirectory(Path parent) throws IOException {
-		String prefix = datePrefix();
-		Set<PosixFilePermission> perms = PosixFilePermissions
-				.fromString("rwxr-xr-x");
-		return java.nio.file.Files.createTempDirectory(parent, prefix,
-				PosixFilePermissions.asFileAttribute(perms));
 	}
 
 	public static String createPublicUID() {
@@ -215,48 +135,6 @@ public class Util {
 		});
 	}
 	
-	public static void copyDirectory(Path source, Path target) throws IOException {
-		try {
-			Files.walk(source).forEach(p -> {
-				try {
-					Path q = target.resolve(source.relativize(p));
-					if (Files.isDirectory(p)) {
-						if (!Files.exists(q)) Files.createDirectory(q);
-					}
-					else
-						Files.copy(p, q);
-					} catch (IOException ex) {
-						throw new UncheckedIOException(ex);
-					}
-				});
-		} catch (UncheckedIOException ex) {
-			throw ex.getCause();
-		}
-	}
-
-	public static void unzip(InputStream in, Path dir) throws IOException {
-		ZipInputStream zin = new ZipInputStream(in);
-		ZipEntry entry;
-		while ((entry = zin.getNextEntry()) != null) {
-			String name = entry.getName();
-			Path outputPath = dir.resolve(name);
-			if (!entry.isDirectory() 
-					&& !name.startsWith("__MACOSX/") 
-					&& !outputPath.getFileName().toString().startsWith(".")) {
-				Path parent = outputPath.getParent();
-				java.nio.file.Files.createDirectories(parent);
-				OutputStream out = new FileOutputStream(outputPath.toFile());
-				byte[] buf = new byte[1024];
-				int len;
-				while ((len = zin.read(buf)) > 0)
-					out.write(buf, 0, len);
-				out.close();
-			}
-			zin.closeEntry();
-		}
-		zin.close();
-	}
-
 	public static String runProcess(String command, int millis) {
 		try {
 			Process process = Runtime.getRuntime().exec(command);
@@ -294,151 +172,6 @@ public class Util {
 		}
 	}
 	
-	public static int runProcess(List<String> cmd, Path directory, StringBuilder output, int millis) {
-	 try {
-            Path out = Files.createTempFile("codecheck", "");
-            Path in = null;
-            try {
-                ProcessBuilder builder = new ProcessBuilder(cmd);
-                builder.directory(directory.toFile());
-                builder.redirectErrorStream(true);
-                builder.redirectOutput(out.toFile());
-                Process process = builder.start();
-                boolean completed = process.waitFor(millis, TimeUnit.MILLISECONDS);
-                int exitValue = process.exitValue();
-                String result = new String(Files.readAllBytes(out), StandardCharsets.UTF_8);
-                if (!completed) {
-                	process.destroyForcibly();
-                	result += "\nTimeout after " + millis + " milliseconds\n";
-                }
-                output.append(result);
-                return exitValue;
-            } finally {
-                if (in != null) Files.delete(in);                
-                Files.deleteIfExists(out);
-            }                
-        } catch (Exception ex) {
-            output.append(getStackTrace(ex));
-            return -1;
-        }
-	}
-
-	public static void zip(Path source, Path zipPath) throws IOException {
-		URI uri;
-		try {
-			uri = new URI("jar", zipPath.toUri().toString(), null);
-			Files.deleteIfExists(zipPath);
-			// Constructs the URI jar:file://myfile.zip
-			try (FileSystem zipfs = FileSystems.newFileSystem(uri,
-					Collections.singletonMap("create", "true"))) {
-				Files.walk(source).forEach(p -> {
-					try {
-						String target = source.relativize(p).toString();
-						if (target.length() > 0) {
-							System.out.println(p + ", " + target);
-							Path q = zipfs.getPath("/" + target);
-							if (Files.isDirectory(p))
-								Files.createDirectory(q);
-							else
-								Files.copy(p, q);
-						}
-					} catch (IOException ex) {
-						throw new java.io.UncheckedIOException(ex);
-				}});
-			}
-		} catch (URISyntaxException e) {
-			throw new IOException(e);
-		} catch (java.io.UncheckedIOException ex) {
-			throw ex.getCause();
-		}
-	}
-
-	/**
-	 * Gets all files contained in a directory but not its subdirectories
-	 * 
-	 * @param dir
-	 *            a directory
-	 * @return the list of files, as Path objects that are relativized against
-	 *         dir
-	 * @throws IOException
-	 */
-	public static Set<Path> getFiles(final Path dir)
-			throws IOException {
-		if (dir == null || !Files.exists(dir) || !Files.isDirectory(dir))
-			return Collections.emptySet();
-		return Files.list(dir).filter(Files::isRegularFile).map(dir::relativize).collect(Collectors.toSet());
-	}
-	
-	@FunctionalInterface
-	public interface EConsumer<T, E extends Throwable> {
-		void accept(T t) throws E;
-	}
-	
-	public static void forEachFile(Path dir, EConsumer<Path, IOException> body) throws IOException {
-		if (dir != null && Files.exists(dir) && Files.isDirectory(dir)) {
-			try (Stream<Path> stream = Files.list(dir)) {
-				for (Path p : stream.filter(Files::isRegularFile).collect(Collectors.toSet()))
-					body.accept(p);
-			}
-		}
-	}
-
-	/*
-	 * Gets all files contained in the given directory.
-	 * @return a set of of files, as Path objects that are relativized against
-	 * dir 
-	 */
-	public static SortedSet<Path> getChildren(Path dir) throws IOException {
-		if (dir == null || !Files.exists(dir) || !Files.isDirectory(dir))
-			return Collections.emptySortedSet();
-		else
-			return Files.list(dir).filter(Files::isRegularFile).map(dir::relativize).collect(Collectors.toCollection(TreeSet::new));
-	}
-	
-	/**
-	 * Gets all files contained in a directory and its subdirectories
-	 * 
-	 * @param dir
-	 *            a directory
-	 * @return the list of files, as Path objects that are relativized against
-	 *         dir
-	 * @throws IOException
-	 */
-	public static SortedSet<Path> getDescendantFiles(final Path dir)
-			throws IOException {
-		final SortedSet<Path> result = new TreeSet<>();
-		if (dir == null || !Files.exists(dir))
-			return result;
-		Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
-			@Override
-			public FileVisitResult visitFile(Path file,
-					BasicFileAttributes attrs) throws IOException {
-				result.add(dir.relativize(file));
-				return FileVisitResult.CONTINUE;
-			}
-		});
-		return result;
-	}
-
-	public static SortedSet<Path> getDescendantFiles(Path dir, List<String> subdirs)
-			throws IOException {
-		SortedSet<Path> result = new TreeSet<>();
-		for (String subdir : subdirs) {
-			for (Path p : getDescendantFiles(dir.resolve(subdir))) {
-				// Is there a matching one? If so, replace it
-				boolean found = false;
-				Iterator<Path> iter = result.iterator();
-				while (!found && iter.hasNext())
-					if (p.equals(Util.tail(iter.next()))) {
-						iter.remove();
-						found = true;
-					}
-				result.add(Paths.get(subdir).resolve(p));
-			}
-		}
-		return result;
-	}
-
 	public static String moduleOf(Path path) {
 		String name = path.toString();
 		if (name.endsWith(".java")) {

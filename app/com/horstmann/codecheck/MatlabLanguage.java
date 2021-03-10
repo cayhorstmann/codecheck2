@@ -27,11 +27,7 @@ public class MatlabLanguage implements Language {
      * java.nio.file.Path)
      */
     @Override
-    public boolean isMain(Path p) {
-        if (!isSource(p))
-            return false;
-        String contents = Util.read(p);
-        if (contents == null) return false;
+    public boolean isMain(Path p, String contents) {
         if (mainPattern.matcher(contents).find()) return true;
         if (fundefPattern.matcher(contents).find()) return false;
         return true;

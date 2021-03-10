@@ -1,11 +1,10 @@
 package com.horstmann.codecheck;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -26,21 +25,29 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableEntryException;
+import java.security.cert.CertificateException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
+
+import jdk.security.jarsigner.JarSigner;
 
 public class Util {
     private static Random generator = new Random();
@@ -53,7 +60,11 @@ public class Util {
         return Stream.of(items).map(Object::toString).collect(Collectors.joining(separator));
     }
     public static List<String> lines(String contents) {
-        return Stream.of(contents.split("\n")).collect(Collectors.toList());
+        return contents.lines().collect(Collectors.toList());
+    }
+    
+    public static List<String> lines(byte[] contents) {
+    	return new String(contents, StandardCharsets.UTF_8).lines().collect(Collectors.toList());
     }
     
     public static String createPrivateUID() {
@@ -134,30 +145,6 @@ public class Util {
         }
     }
 
-    /**
-     * Gets all files contained in a directory and its subdirectories
-     *
-     * @param dir
-     *            a directory
-     * @return the list of files, as Path objects that are relativized against
-     *         dir
-     * @throws IOException
-     */
-    public static Set<Path> getDescendantFiles(final Path dir)
-            throws IOException {
-        final Set<Path> result = new TreeSet<>();
-        if (dir == null || !Files.exists(dir))
-            return result;
-        Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
-            @Override
-            public FileVisitResult visitFile(Path file,
-                    BasicFileAttributes attrs) throws IOException {
-                result.add(dir.relativize(file));
-                return FileVisitResult.CONTINUE;
-            }
-        });
-        return result;
-    }
 
     public static byte[] readBytes(Path path) {
         try {
@@ -168,7 +155,7 @@ public class Util {
     }
 
     public static void deleteDirectory(Path start) throws IOException {
-        if (start == null || Main.DEBUG) 
+        if (start == null) 
             return;
         Files.walkFileTree(start, new SimpleFileVisitor<Path>() {
             @Override
@@ -192,49 +179,6 @@ public class Util {
         });
     }
 
-    public static int runProcess(List<String> cmd, String input, int millis, StringBuilder output, int maxOutputLength) {
-        try {
-            Path out = Util.createTempFile();
-            Path in = null;
-            try {            
-                ProcessBuilder builder = new ProcessBuilder(cmd);
-                if (input == null) input = "";
-                in = Util.createTempFile();
-                Files.write(in, input.getBytes(StandardCharsets.UTF_8));
-                /*
-                 * TODO: It's weird that we write the input to a file and then, in runprog/
-                 * interleaveio, read it from stdin a line at a time. Maybe we should just
-                 * make a special case for runprog and give it the file?
-                 */
-                builder.redirectInput(in.toFile());
-                builder.redirectErrorStream(true);
-                builder.redirectOutput(out.toFile());
-                Process process = builder.start();
-                boolean completed = process.waitFor(millis, TimeUnit.MILLISECONDS);
-                int exitValue = completed ? process.exitValue() : -1;
-                String result;
-                if (Files.size(out) > maxOutputLength) {
-                    char[] chars = new char[maxOutputLength];
-                    int n = Files.newBufferedReader(out).read(chars);
-                    result = new String(chars, 0, n) + "\n...\nRemainder truncated\n";
-                }
-                else result = new String(Files.readAllBytes(out), StandardCharsets.UTF_8);
-                if (!completed) {
-                    process.destroyForcibly();
-                    result += "\nTimeout after " + millis + " milliseconds\n";
-                }
-                output.append(result);
-                return exitValue;
-            } finally {
-                if (in != null) Files.delete(in);                
-                Files.deleteIfExists(out);
-            }                
-        } catch (Exception ex) {
-            output.append(getStackTrace(ex));
-            return -1;
-        }
-    }
-    
     public static String getStackTrace(Throwable t) {
         StringWriter out = new StringWriter();
         t.printStackTrace(new PrintWriter(out));
@@ -288,22 +232,6 @@ public class Util {
         else return str;
     }
 
-    // TODO: Should be in Util
-    public static boolean matches(Path path, String glob) {
-        PathMatcher matcher = FileSystems.getDefault().getPathMatcher(
-                                  "glob:" + glob.replace("/", FileSystems.getDefault().getSeparator()));
-        return matcher.matches(path);
-    }
-
-    // TODO: Should be in Util
-    public static Set<Path> filter(Set<Path> paths, String glob) {
-        Set<Path> result = new TreeSet<>();
-        for (Path p : paths)
-            if (matches(p.getFileName(), glob))
-                result.add(p);
-        return result;
-    }
-
     /**
      * Yields all paths not matching a set of name patterns 
      * @param paths a set of paths
@@ -326,6 +254,15 @@ public class Util {
                 result.add(p);
         }
         return result;
+    }
+
+    public static boolean matches(Path path, String... namePatterns) {
+    	for (String glob : namePatterns) {
+    		PathMatcher matcher = FileSystems.getDefault().getPathMatcher(
+                                  "glob:" + glob.replace("/", FileSystems.getDefault().getSeparator()));
+    		if (matcher.matches(path)) return true;
+    	}
+    	return false;
     }
 
     public static void copyAll(Collection<Path> paths, Path fromDir, Path toDir)  throws IOException {
@@ -368,8 +305,7 @@ public class Util {
     public static byte[] zip(Map<Path, byte[]> contents) throws IOException {
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
         ZipOutputStream zout = new ZipOutputStream(bout);
-        for (Map.Entry<Path, byte[]> entry : contents.entrySet())
-        {
+        for (Map.Entry<Path, byte[]> entry : contents.entrySet()) {
            ZipEntry ze = new ZipEntry(entry.getKey().toString());
            zout.putNextEntry(ze);
            zout.write(entry.getValue());
@@ -379,7 +315,43 @@ public class Util {
         return bout.toByteArray();
     }
     
-    static class FileMap extends HashMap<Path, byte[]> {
+    public static byte[] signedZip(Map<Path, byte[]> contents, char[] password, String keyStorePath) throws IOException {    	    	
+        try {
+        	Path tempFile = Files.createTempFile(null, ".zip");
+        	OutputStream fout = Files.newOutputStream(tempFile);
+            ZipOutputStream zout = new ZipOutputStream(fout);
+            for (Map.Entry<Path, byte[]> entry : contents.entrySet()) {
+               ZipEntry ze = new ZipEntry(entry.getKey().toString());
+               zout.putNextEntry(ze);
+               zout.write(entry.getValue());
+               zout.closeEntry();
+            }
+            zout.close();	    	
+        	
+	        KeyStore ks = KeyStore.getInstance(new File(keyStorePath), password);
+	        KeyStore.ProtectionParameter protParam =
+	           new KeyStore.PasswordProtection(password);
+	
+	        KeyStore.PrivateKeyEntry pkEntry = (KeyStore.PrivateKeyEntry)
+	           ks.getEntry("codecheck", protParam);
+	
+	        JarSigner signer = new JarSigner.Builder(pkEntry)
+	           .build();
+	
+	        ByteArrayOutputStream out = new ByteArrayOutputStream();
+	        try (ZipFile in = new ZipFile(tempFile.toFile())) {
+	           signer.sign(in, out);
+	        }
+	        Files.delete(tempFile);
+	        return out.toByteArray(); 
+        } catch (CertificateException | NoSuchAlgorithmException | UnrecoverableEntryException | KeyStoreException e) {
+        	// TODO: Log exception
+        	return zip(contents);
+		}
+    }
+
+    
+    static class FileMap extends TreeMap<Path, byte[]> {
         public String toString() {
             StringBuilder result = new StringBuilder();
             for (Map.Entry<Path, byte[]> entry : entrySet()) {
@@ -399,15 +371,46 @@ public class Util {
     }
     
     public static Map<Path, byte[]> unzip(byte[] bytes) throws IOException {
-        HashMap<Path, byte[]> result = new FileMap(); 
+        Map<Path, byte[]> result = new FileMap(); 
         ZipInputStream zin = new ZipInputStream(new ByteArrayInputStream(bytes));
         ZipEntry entry;
         while ((entry = zin.getNextEntry()) != null)
         {
-            result.put(Paths.get(entry.getName()), readAllBytes(zin));
+        	if (!entry.isDirectory())
+        		result.put(Paths.get(entry.getName()), readAllBytes(zin));
             zin.closeEntry();
         }
         zin.close();
+        return result;
+    }
+    
+    public static Map<Path, byte[]> descendantFiles(Path dir) throws IOException {
+        Map<Path, byte[]> result = new FileMap(); 
+        if (dir == null || !Files.exists(dir))
+            return result;
+        Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(Path file,
+                    BasicFileAttributes attrs) throws IOException {
+                result.put(dir.relativize(file), readBytes(file));
+                return FileVisitResult.CONTINUE;
+            }
+        });
+        return result;
+    }
+    
+    public static Map<Path, String> descendantTextFiles(Path dir) throws IOException {
+        Map<Path, String> result = new TreeMap<Path, String>(); 
+        if (dir == null || !Files.exists(dir))
+            return result;
+        Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(Path file,
+                    BasicFileAttributes attrs) throws IOException {
+                result.put(dir.relativize(file), read(file));
+                return FileVisitResult.CONTINUE;
+            }
+        });
         return result;
     }
     

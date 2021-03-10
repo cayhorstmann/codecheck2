@@ -125,8 +125,8 @@ public class LTIProblem extends Controller {
             Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
 		    String ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
 			
-			Path problemPath = codeCheck.loadProblem(repo, problemName, ccid);
-	        Problem problem = new Problem(problemPath);
+		    Map<Path, byte[]> problemFiles = codeCheck.loadProblem(repo, problemName, ccid);
+	        Problem problem = new Problem(problemFiles);
 	        ProblemData data = problem.getData();	        
     		ObjectNode problemNode = (ObjectNode) Json.toJson(problem.getData());
     		problemNode.put("url", "/checkNJS"); 

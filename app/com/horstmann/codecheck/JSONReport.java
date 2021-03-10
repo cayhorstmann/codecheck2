@@ -3,7 +3,6 @@ package com.horstmann.codecheck;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -15,6 +14,7 @@ import java.util.Set;
 import javax.imageio.ImageIO;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class JSONReport implements Report {
@@ -61,7 +61,6 @@ public class JSONReport implements Report {
     private ReportData data = new ReportData();
     private Section section;    
     private Run run; 
-    private Path dir;
     
     /* TODO:
      * testMethod:
@@ -69,12 +68,11 @@ public class JSONReport implements Report {
      * sub:
      */
 
-    public JSONReport(String title, Path dir) {
-        this.dir = dir;
+    public JSONReport(String title) {
     }
     
     @Override
-    public Report header(String sectionType, String text) {
+    public JSONReport header(String sectionType, String text) {
         section = new Section();
         section.type = sectionType;
         if (!"studentFiles".equals(sectionType) && !"providedFiles".equals(sectionType))
@@ -84,7 +82,7 @@ public class JSONReport implements Report {
     }
 
     @Override
-    public Report run(String caption) { 
+    public JSONReport run(String caption) { 
         run = new Run();
         run.passed = true;
         if (section.runs == null) section.runs = new ArrayList<>();
@@ -95,7 +93,7 @@ public class JSONReport implements Report {
     
     
     @Override
-    public Report output(CharSequence text) {
+    public JSONReport output(CharSequence text) {
         if (run.output == null) run.output = text.toString();
         else run.output += "\n" + text;
         
@@ -111,7 +109,7 @@ public class JSONReport implements Report {
     }
 
     @Override
-    public Report error(String message) {
+    public JSONReport error(String message) {
         if (message == null) return this;
         if (run != null) {
             run.passed = false;
@@ -134,18 +132,17 @@ public class JSONReport implements Report {
     }
 
     @Override
-    public Report systemError(String message) {
+    public JSONReport systemError(String message) {
         return error(message);
     }
 
     @Override
-    public Report systemError(Throwable t) {
-        systemError(Util.getStackTrace(t));
-        return this;
+    public JSONReport systemError(Throwable t) {
+        return systemError(Util.getStackTrace(t));
     }
 
     @Override
-    public Report args(String args) {
+    public JSONReport args(String args) {
         // TODO: Would like to skip if no args
         // if (args == null || args.trim().length() == 0) return this;
         run.args = new ArrayList<>();
@@ -154,7 +151,7 @@ public class JSONReport implements Report {
     }
     
     @Override
-    public Report input(String input) {
+    public JSONReport input(String input) {
         run.input = input;
         StringBuilder builder = new StringBuilder();
         if (run.html != null) builder.append(run.html);           
@@ -168,21 +165,7 @@ public class JSONReport implements Report {
     }
     
     @Override
-    public Report image(String caption, Path file) throws IOException {
-        String data = Base64.getEncoder().encodeToString(Files
-                .readAllBytes(file));
-        run.images.add(new Item(caption, data));
-        return this;
-    }
-
-    @Override
-    public Report image(Path file) throws IOException {
-        image("", file);
-        return this;
-    }
-
-    @Override
-    public Report image(String caption, BufferedImage image) throws IOException {
+    public JSONReport image(String caption, BufferedImage image) throws IOException {
         if (image == null) return this;
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         ImageIO.write(image, "PNG", out);
@@ -194,14 +177,9 @@ public class JSONReport implements Report {
     }
 
     @Override
-    public Report image(BufferedImage image) throws IOException {
+    public JSONReport image(BufferedImage image) throws IOException {
         image("", image);
         return this;
-    }
-
-    @Override
-    public Report file(Path dir, Path file) throws IOException {
-        return file(file.toString(), Util.read(dir.resolve(file)));
     }
     
     @Override
@@ -223,13 +201,13 @@ public class JSONReport implements Report {
     }
 
     @Override
-    public Report add(Score score) {
+    public JSONReport add(Score score) {
         data.score = "" + score;
         return this;
     }
 
     @Override
-    public Report save(String problemId, String out) throws IOException {
+    public JSONReport save(Path dir, String out) throws IOException {
         Path outPath = dir.resolve(out + ".json");
         ObjectMapper mapper = new ObjectMapper();
         mapper.setSerializationInclusion(Include.NON_DEFAULT);
@@ -237,9 +215,20 @@ public class JSONReport implements Report {
         // JSON.std.write(data, outPath.toFile());
         return this;
     }
+    
+    @Override
+    public String getText() { 
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.setSerializationInclusion(Include.NON_DEFAULT);        
+    	try {
+			return mapper.writeValueAsString(data);
+		} catch (JsonProcessingException e) {			
+			return null;
+		}
+    }
 
     @Override
-    public Report pass(boolean b) {
+    public JSONReport pass(boolean b) {
         if (run != null) {
             if (!b) run.passed = false;
         }
@@ -247,7 +236,7 @@ public class JSONReport implements Report {
     }
 
     @Override
-    public Report compareTokens(String filename, List<Match> matchData) {
+    public JSONReport compareTokens(String filename, List<Match> matchData) {
         run.matchedOutput = new ArrayList<>();
         for (Match m : matchData)
             run.matchedOutput.add(m);
@@ -279,7 +268,7 @@ public class JSONReport implements Report {
     }
 
     @Override
-    public Report output(List<String> lines, Set<Integer> matches,
+    public JSONReport output(List<String> lines, Set<Integer> matches,
             Set<Integer> mismatches) {
         run.matchedOutput = new ArrayList<>();
         for (int i = 0; i < lines.size(); i++) {
@@ -316,7 +305,7 @@ public class JSONReport implements Report {
     }
 
     @Override
-    public Report runTable(String[] methodNames, String[] argNames, String[][] args, String[] actual,
+    public JSONReport runTable(String[] methodNames, String[] argNames, String[][] args, String[] actual,
             String[] expected, boolean[] outcomes) {
         if (section.runs == null) section.runs = new ArrayList<>();
         for (int i = 0; i < actual.length; i++)
@@ -372,18 +361,18 @@ public class JSONReport implements Report {
     }
 
     @Override
-    public Report comment(String key, String value) {
+    public JSONReport comment(String key, String value) {
         data.metaData.put(key, value);
         return this;
     }
 
     @Override
-    public Report footnote(String text) {        
+    public JSONReport footnote(String text) {        
         return this;
     }
     
     @Override
-    public Report errors(List<Error> errorData) 
+    public JSONReport errors(List<Error> errorData) 
     {
         if (section != null)
             section.errorData.addAll(errorData);

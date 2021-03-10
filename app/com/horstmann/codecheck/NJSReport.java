@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class NJSReport extends HTMLReport {
@@ -22,9 +23,8 @@ public class NJSReport extends HTMLReport {
     
     private String sectionType;
         
-    public NJSReport(String title, Path outputDir) {
-        super(title, outputDir);
-        
+    public NJSReport(String title) {
+        super(title);        
     }
     
     @Override
@@ -44,14 +44,7 @@ public class NJSReport extends HTMLReport {
         this.sectionType = sectionType;
         return this;
     }
-    
-    @Override
-    public NJSReport file(Path dir, Path file) {
-        //if (!"studentFiles".equals(sectionType) && !"providedFiles".equals(sectionType)) 
-            super.file(dir, file);
-        return this;
-    }
-    
+        
     @Override
     public NJSReport file(String file, String contents) {
          //if (!"studentFiles".equals(sectionType) && !"providedFiles".equals(sectionType)) 
@@ -66,20 +59,32 @@ public class NJSReport extends HTMLReport {
     }
     
     @Override
-    public NJSReport save(String problemId, String out) throws IOException {
-        // TODO Horrific Hack
-        if (sectionType != null) builder.append("</div>\n");
-        
-        addFootnotes();
-        builder.append("</body></html>\n");
-        data.report = builder.toString();
+    public NJSReport save(Path dir, String out) throws IOException {
         Path outPath = dir.resolve(out + ".json");
         ObjectMapper mapper = new ObjectMapper();
         mapper.setSerializationInclusion(Include.NON_DEFAULT);
         mapper.writeValue(outPath.toFile(), data);
-        outPath = dir.resolve(out + ".html");
-        Util.write(outPath, data.report);
         return this;
+    }
+    
+    @Override
+    public String getText() { 
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.setSerializationInclusion(Include.NON_DEFAULT);        
+    	try {
+			return mapper.writeValueAsString(data);
+		} catch (JsonProcessingException e) {			
+			return null;
+		}
+    }    
+    
+    @Override
+    public void close() {
+	    if (sectionType != null) builder.append("</div>\n");
+	    
+	    addFootnotes();
+	    builder.append("</body></html>\n");    	
+        data.report = builder.toString();
     }
     
     @Override
