@@ -52,33 +52,22 @@ public class S3Connection {
 	
 	public @Inject S3Connection(Config config) {
 		this.config = config;
-		String s3CredentialsKey = "com.horstmann.codecheck.s3credentials";
-		if (config.hasPath(s3CredentialsKey)) {
-			String s3CredentialsPath = config.getString(s3CredentialsKey);
-			try {
-				Properties props = new Properties();
-				props.load(Files.newBufferedReader(Paths.get(s3CredentialsPath),
-						StandardCharsets.UTF_8));
-				String s3AccessKey = props.getProperty("accessKey");
-				String s3SecretKey = props.getProperty("secretKey");
-				String s3Region = props.getProperty("region", "us-west-1"); 
-				amazonS3 = AmazonS3ClientBuilder
-						.standard()
-						.withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(s3AccessKey, s3SecretKey)))
-						.withRegion(s3Region)
-						.withForceGlobalBucketAccessEnabled(true)
-						.build();
-				
-		    	amazonDynamoDB = AmazonDynamoDBClientBuilder
-		    			.standard()
-		    			.withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(s3AccessKey, s3SecretKey)))
-						.withRegion("us-west-1")
-		    			.build();
-				
-			} catch (IOException ex) {
-				Logger.of("com.horstmann.codecheck").error("Can't load S3 credentials", ex);
-			}
-		} 
+		String s3AccessKey = config.getString("com.horstmann.codecheck.s3.accessKey");
+		String s3SecretKey = config.getString("com.horstmann.codecheck.s3.secretKey");
+		String s3Region = config.getString("com.horstmann.codecheck.s3.region"); 
+		amazonS3 = AmazonS3ClientBuilder
+				.standard()
+				.withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(s3AccessKey, s3SecretKey)))
+				.withRegion(s3Region)
+				.withForceGlobalBucketAccessEnabled(true)
+				.build();
+		
+    	amazonDynamoDB = AmazonDynamoDBClientBuilder
+    			.standard()
+    			.withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(s3AccessKey, s3SecretKey)))
+				.withRegion("us-west-1")
+    			.build();
+			
 		bucketSuffix = config.getString("com.horstmann.codecheck.s3bucketsuffix");
 	}
 
