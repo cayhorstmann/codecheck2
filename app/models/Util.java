@@ -30,7 +30,6 @@ import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.TimeUnit;
 
 import play.mvc.Http;
 
@@ -38,7 +37,7 @@ public class Util {
 	private static Random generator = new Random();
 
 	public static boolean isEmpty(String str) { return str == null || str.isEmpty(); }
-	
+			
 	public static Path tail(Path p) {
 		return p.subpath(1, p.getNameCount());
 	}
@@ -133,43 +132,6 @@ public class Util {
 				}
 			}
 		});
-	}
-	
-	public static String runProcess(String command, int millis) {
-		try {
-			Process process = Runtime.getRuntime().exec(command);
-			boolean completed = process.waitFor(millis, TimeUnit.MILLISECONDS);
-
-			Scanner in = new Scanner(process.getErrorStream(), "UTF-8");
-			StringBuilder result = new StringBuilder();
-			while (in.hasNextLine()) {
-				result.append(in.nextLine());
-				result.append("\n");
-			}
-			in.close();
-			if (result.length() > 0)
-				return result.toString();
-
-			in = new Scanner(process.getInputStream(), "UTF-8");
-			result = new StringBuilder();
-			while (in.hasNextLine()) {
-				result.append(in.nextLine());
-				result.append("\n");
-			}
-			in.close();
-
-            if (!completed) {
-            	process.destroyForcibly();
-            	result.append("\nTimeout after " + millis + " milliseconds\n");
-            }
-			
-			// CAUTION: Apparently, one can't just large input from the process
-			// stdout
-			// http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4062587
-			return result.toString().trim();
-		} catch (Exception ex) {
-			return ex.getMessage();
-		}
 	}
 	
 	public static String moduleOf(Path path) {

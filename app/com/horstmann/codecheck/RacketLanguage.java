@@ -44,7 +44,7 @@ public class RacketLanguage implements Language {
     }
 
     @Override
-    public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls) {
+    public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls, ResourceLoader resourceLoader) {
        String moduleName = moduleOf(file);       
         // Copy source/module.rkt to target/module-solution.rkt
        Map<Path, String> testerFiles = new HashMap<>();

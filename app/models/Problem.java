@@ -1,7 +1,6 @@
 package models; 
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -93,12 +92,12 @@ public class Problem {
         providedFiles = Util.filterNot(providedFiles, "param.js");
         Path runInput = Paths.get("Input");
         if (providedFiles.contains(runInput)) {
-       	   String input = new String(problemFiles.get(runInput), StandardCharsets.UTF_8);
+       	   String input = Util.getString(problemFiles, runInput);
            data.requiredFiles.put("Input", Arrays.asList(input));
            for (String f : potentialEditableInputs(providedFiles, input)) {
         	   Path p = Paths.get(f);
         	   if (problemFiles.containsKey(p))
-        		   data.requiredFiles.put(f, Arrays.asList(new String(problemFiles.get(p), StandardCharsets.UTF_8)));
+        		   data.requiredFiles.put(f, Arrays.asList(Util.getString(problemFiles, p)));
            }
            
            for (Path p : providedFiles) {
@@ -110,7 +109,7 @@ public class Problem {
            // Would be better to show those as well
            // But then need to filter out index.html and the images used inside
            for (Path p : providedFiles) {
-              if (isSolution(p, new String(problemFiles.get(p), StandardCharsets.UTF_8)))
+              if (isSolution(p, Util.getString(problemFiles, p)))
                  requiredFiles.add(p);
               else if (isSourceExtension(models.Util.extension(p))) 
                  useFiles.add(p);
@@ -119,14 +118,14 @@ public class Problem {
      }			
 		
       for (Path p : requiredFiles) {				
-         String cont = new String(problemFiles.get(p), StandardCharsets.UTF_8);
+         String cont = Util.getString(problemFiles, p);
          String extension = models.Util.extension(p);
          List<String> parts = Problem.processHideShow(extension, cont);
          if (parts.size() > 0) // Don't require hidden source files
             data.requiredFiles.put(p.getFileName().toString(), parts);
       }
       for (Path p : useFiles) {
-         String cont = new String(problemFiles.get(p), StandardCharsets.UTF_8);
+         String cont = Util.getString(problemFiles, p);
          String extension = models.Util.extension(p);
          List<String> parts = Problem.processHideShow(extension, cont);
          if (parts.size() > 0) // Don't show hidden files
@@ -140,7 +139,7 @@ public class Problem {
       throws IOException {
 	   Path descriptionPath = Paths.get(descriptionFile);
 	   if (!problemFiles.containsKey(descriptionPath)) return null;
-	   String description = new String(problemFiles.get(descriptionPath), StandardCharsets.UTF_8);
+	   String description = Util.getString(problemFiles, descriptionPath);
       // Strip off HTML header. If the file contains "<body>" or "<BODY>",
       String lcdescr = description.toLowerCase();
       int start = lcdescr.indexOf("<body>");

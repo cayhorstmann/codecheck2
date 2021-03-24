@@ -24,8 +24,6 @@
 
    <property name="src.dir" value="${basedir}/app" />
    <property name="build.dir" value="${basedir}/antbuild" />
-   <property name="app.resources" 
-             value="com/horstmann/codecheck/codecheck.properties" />
    <property name="distdir" value="/opt/codecheck" />
 
    <property name="ant.build.javac.source" value="11"/> 
@@ -55,12 +53,10 @@
        <classpath refid="classpath"/>
        <compilerarg value="-Xlint:all,-serial"/>
     </javac>
-    <copy todir="${build.dir}" preservelastmodified="true">
-      <fileset dir="${src.dir}">
-        <include name="**/codecheck.*" />
-      </fileset>
+    <copy todir="${build.dir}/com/horstmann/codecheck" preservelastmodified="true">
+      <fileset dir="${src.dir}/../public/resources"/>
     </copy>
-    <replaceregexp file="${build.dir}/${app.resources}" byline="true">
+    <replaceregexp file="${build.dir}/com/horstmann/codecheck/codecheck.properties" byline="true">
        <regexp pattern="(version\s*=\s*).*"/>
        <substitution expression="\1${VERSION}"/>
     </replaceregexp>
@@ -81,8 +77,8 @@
            <include name="codecheck"/>
            <include name="lib/**"/>
         </fileset>
-        <fileset dir="${basedir}/checker/docker/bin">
-           <include name="check"/>
+        <fileset dir="${basedir}/comrun/bin">
+           <include name="comrun"/>
            <include name="server.js"/>
            <include name="preload.sh"/>
            <include name="interleaveio.py"/>
@@ -90,5 +86,12 @@
            <include name="node_modules/**"/>
         </fileset>
     </copy>
+    <chmod perm="ugo+rx">
+        <fileset dir="${distdir}">
+           <include name="codecheck"/>
+           <include name="comrun"/>
+           <include name="interleaveio.py"/>
+        </fileset>       
+    </chmod>
   </target>
 </project>

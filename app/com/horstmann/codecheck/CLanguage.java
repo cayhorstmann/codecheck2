@@ -27,7 +27,7 @@ public class CLanguage implements Language {
 
     // TODO: Implement this
     @Override
-    public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls) {
+    public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls, ResourceLoader resourceLoader) {
         
         String moduleName = moduleOf(file);
         //List<String> lines = Util.readLines(sourceDir.resolve(file));

@@ -35,7 +35,7 @@ public class MatlabLanguage implements Language {
 
     // TODO: Implement correctly
     @Override
-    public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls) {
+    public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls, ResourceLoader resourceLoader) {
         String moduleName = moduleOf(file);
         List<String> lines = Util.lines(contents);
         int i = 0;

@@ -1,5 +1,6 @@
 package com.horstmann.codecheck;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -11,7 +12,6 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 public class CppLanguage implements Language {
-
     @Override
     public String getExtension() {
         return "cpp";
@@ -31,7 +31,7 @@ public class CppLanguage implements Language {
     public Pattern mainPattern() { return mainPattern; }
 
     @Override
-    public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls) {
+    public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls, ResourceLoader resourceLoader) throws IOException {
         
         // function in solution needs to be in separate namespace
         // function of student needs be externed;
@@ -84,8 +84,8 @@ public class CppLanguage implements Language {
         lines.add("}");
         Map<Path, String> paths = new HashMap<>();
         paths.put(pathOf(moduleName + "CodeCheck"), Util.join(lines, "\n"));
-        paths.put(Paths.get("codecheck.cpp"), Util.readString(getClass().getResourceAsStream("codecheck.cpp")));
-        paths.put(Paths.get("codecheck.h"), Util.readString(getClass().getResourceAsStream("codecheck.h")));
+        paths.put(Paths.get("codecheck.cpp"), resourceLoader.loadResourceAsString("codecheck.cpp"));
+        paths.put(Paths.get("codecheck.h"), resourceLoader.loadResourceAsString("codecheck.h"));
         return paths;
     }
 

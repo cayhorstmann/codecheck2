@@ -22,7 +22,6 @@ import javax.net.ssl.HttpsURLConnection;
 
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import controllers.Assignment;
 import net.oauth.OAuthAccessor;
 import net.oauth.OAuthConsumer;
 import net.oauth.OAuthMessage;
@@ -71,6 +70,7 @@ public class LTI {
         }
     }
             
+    // TODO Move this so that LTI doesn't depend on S3, Play
 	public String getSharedSecret(String oauthConsumerKey) {
 		String sharedSecret = "";
 		try {

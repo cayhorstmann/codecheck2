@@ -89,7 +89,8 @@ public class Main {
             }
         }
         
-        Report report = new Main().run(submissionFiles, problemFiles, System.getProperties(), metadata);
+        Report report = new Main().run(submissionFiles, problemFiles, 
+    		System.getProperties(), metadata, new CommandLineResourceLoader());
         report.save(submissionDir, "report");        
     }
 
@@ -138,8 +139,8 @@ public class Main {
         });
     }
 
-    private void doCalls(Calls calls) throws Exception {        
-        Map<Path, String> testerFiles = calls.writeTester(solutionFiles);
+    private void doCalls(Calls calls, ResourceLoader resourceLoader) throws Exception {        
+        Map<Path, String> testerFiles = calls.writeTester(solutionFiles, useFiles, resourceLoader);
         Path base = Paths.get("callfiles");
         for (Map.Entry<Path, String> entry : testerFiles.entrySet()) 
             plan.addFile(base.resolve(entry.getKey()), entry.getValue());
@@ -432,7 +433,7 @@ public class Main {
             	String contents = new String(entry.getValue(), StandardCharsets.UTF_8);
             	if (language.isMain(p, contents))
             		mainSourcePaths.add(p);
-            	else if (language.isSource(p) && !language.isUnitTest(p))
+            	else if (!language.isUnitTest(p))
             		dependentSourcePaths.add(p);
             }
         }
@@ -444,7 +445,7 @@ public class Main {
         Path submission = Paths.get("submission");
         for (Map.Entry<Path, byte[]> entry : useFiles.entrySet()) {
             Path p = entry.getKey();            
-        	if (submissionFiles.containsKey(p)) // This happens in Input mode with submitted inputs TODO: Really?
+        	if (inputMode && submissionFiles.containsKey(p)) // This happens in Input mode with submitted inputs TODO: Really?
                 plan.addFile(use.resolve(p), submissionFiles.get(p));
         	else        		
         		plan.addFile(use.resolve(entry.getKey()), entry.getValue());
@@ -465,7 +466,7 @@ public class Main {
     }
     
     public String reportComments(Properties metadata) {
-        report.comment("Submission", plan.getWorkDir().getFileName().toString());
+        report.comment("Submission", Util.createPrivateUID());
         // This is just a unique ID, can be used to check against cheating
          DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
          df.setTimeZone(TimeZone.getTimeZone("UTC"));
@@ -487,9 +488,9 @@ public class Main {
          return problemId;
     }
 
-    public Report run(Map<Path, String> submissionFiles, Map<Path, byte[]> problemFiles, Properties runProps, Properties metadata) throws IOException {
+    public Report run(Map<Path, String> submissionFiles, Map<Path, byte[]> problemFiles, 
+    		Properties runProps, Properties metadata, ResourceLoader resourceLoader) throws IOException {
         long startTime = System.currentTimeMillis();
-        String problemID = ""; // TODO: What for?
         try {
 
             // Set up report first in case anything else throws an exception 
@@ -540,8 +541,7 @@ public class Main {
 
             getMainAndDependentSourceFiles();            
 
-            problemID = reportComments(metadata);
-            // TODO: Used for name of report?
+            reportComments(metadata);
             
             Set<Path> missingFiles = copyFilesToPlan(submissionFiles);
             
@@ -558,7 +558,7 @@ public class Main {
                     Calls calls = annotations.findCalls();
                     mainSourcePaths.remove(calls.getFile());
                     dependentSourcePaths.add(calls.getFile());
-                    doCalls(calls);
+                    doCalls(calls, resourceLoader);
                 }
                 if (annotations.has("SUB")) {
                     Substitution sub = annotations.findSubstitution();
@@ -646,7 +646,8 @@ public class Main {
                 }
             }
             String remoteURL = runProps.getProperty("com.horstmann.codecheck.remote");            
-            plan.execute(report, remoteURL);
+            String scriptCommand = runProps.getProperty("com.horstmann.codecheck.checkscript");            
+            plan.execute(report, remoteURL, scriptCommand);
             
             if (!inputMode) { // Don't print submitted or provided files for run-only mode
                 report.header("studentFiles", "Submitted files");

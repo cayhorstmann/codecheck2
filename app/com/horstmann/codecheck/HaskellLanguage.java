@@ -34,7 +34,7 @@ public class HaskellLanguage implements Language {
    @Override 
    public Pattern mainPattern() { return mainPattern; }
 
-    @Override public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls) {
+    @Override public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls, ResourceLoader resourceLoader) {
         Map<Path, String> result = new HashMap<>();
         
         // Rewrite solution in module CodeCheckSolution

@@ -20,7 +20,6 @@ import javax.inject.Inject;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.typesafe.config.Config;
 
 import models.CodeCheck;
 import models.Util;
@@ -33,10 +32,8 @@ import play.mvc.Http;
 import play.mvc.Result;
 
 public class Check extends Controller {
-	// @Inject HttpExecutionContext ec;
 	private CodecheckExecutionContext ccec; 
 	@Inject private CodeCheck codeCheck;
-	@Inject private Config config;
 	
 	
 	// Classic HTML report
@@ -103,7 +100,6 @@ public class Check extends Controller {
 				String repo = "ext";
 				String problem = null;
 				String reportType = "NJS";
-				String callback = null;
 				String scoreCallback = null;
 				StringBuilder requestParams = new StringBuilder();
 				ObjectNode studentWork = JsonNodeFactory.instance.objectNode();
@@ -124,7 +120,6 @@ public class Check extends Controller {
 					
 					if ("repo".equals(key)) repo = value;
 					else if ("problem".equals(key)) problem = value;
-					else if ("callback".equals(key)) callback = value;
 					else if ("scoreCallback".equals(key)) scoreCallback = value;
 					else if ("ccu".equals(key) || "ccid".equals(key)) ccid = value; // TODO: Where from? 
 					else {
@@ -145,13 +140,7 @@ public class Check extends Controller {
 				String reportHTML = result.get("report").asText();
 				reportZipFiles.put(Paths.get("report.html"), reportHTML.getBytes(StandardCharsets.UTF_8));
 
-				byte[] reportZipBytes;
-				if (config.hasPath("com.horstmann.codecheck.storePassword")) {
-					reportZipBytes = com.horstmann.codecheck.Util.signedZip(reportZipFiles,
-							config.getString("com.horstmann.codecheck.storePassword").toCharArray(),
-							config.getString("com.horstmann.codecheck.storeLocation"));
-				} else 
-					reportZipBytes = com.horstmann.codecheck.Util.zip(reportZipFiles);
+				byte[] reportZipBytes = codeCheck.signZip(reportZipFiles);
 					
 				// TODO Need to sign
 				String reportZip = Base64.getEncoder().encodeToString(reportZipBytes); 
@@ -172,13 +161,8 @@ public class Check extends Controller {
 				}
 				
 				result.put("zip", reportZip);
-				Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();				
-				// TODO: Delete submissionDir unless flag is set to keep it?
-				// Util.deleteDirectory(submissionDir);
-				if (callback == null)
-					return ok(result).withCookies(newCookie);
-				else
-					return ok(Jsonp.jsonp(callback, result)).withCookies(newCookie); // TODO: Include "zip" here?
+				Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();
+				return ok(result).withCookies(newCookie).as("application/json");
 			} catch (Exception ex) {
 				return internalServerError(Util.getStackTrace(ex));
 			}

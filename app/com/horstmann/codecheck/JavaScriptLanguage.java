@@ -1,5 +1,6 @@
 package com.horstmann.codecheck;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -39,7 +40,7 @@ public class JavaScriptLanguage implements Language {
     }
         
     @Override
-    public Map<Path, String> writeTester(Path file, String contents, List<Call> calls) {        
+    public Map<Path, String> writeTester(Path file, String contents, List<Call> calls, ResourceLoader resourceLoader) throws IOException {        
         String moduleName = moduleOf(file);
         Set<String> functionNames = new TreeSet<>();
         for (Calls.Call call : calls) functionNames.add(call.name);
@@ -70,7 +71,7 @@ public class JavaScriptLanguage implements Language {
         }
         Map<Path, String> paths = new HashMap<>();
         paths.put(pathOf(moduleName + "CodeCheck"), Util.join(lines, "\n"));
-        paths.put(Paths.get("codecheck.js"), Util.readString(getClass().getResourceAsStream("codecheck.js"))); // TODO mjs when we support ECMAScript modules
+        paths.put(Paths.get("codecheck.js"), resourceLoader.loadResourceAsString("codecheck.js")); // TODO mjs when we support ECMAScript modules
         return paths;
     }
 

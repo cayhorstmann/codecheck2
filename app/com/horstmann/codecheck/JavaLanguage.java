@@ -37,7 +37,7 @@ public class JavaLanguage implements Language {
     }
 
     @Override
-    public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls) {
+    public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls, ResourceLoader resourceLoader) {
         String className = moduleOf(file);
         List<String> lines = Util.lines(contents);
         int i = 0;
@@ -119,11 +119,11 @@ public class JavaLanguage implements Language {
     @Override
     public String process(Path file, Map<Path, String> submissionFiles) {
         if (file.getFileName().toString().equals("checkstyle.xml")) {
-            String args = "";
+            String cmd = "CheckStyle";
             for (Path p : submissionFiles.keySet()) {
-                if (isSource(p)) args += " " + p;
+                if (isSource(p)) cmd += " " + p;
             }
-            return "CheckStyle " + args;
+            return cmd;
         } else return null;
     }
     

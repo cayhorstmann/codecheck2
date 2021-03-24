@@ -34,7 +34,7 @@ public class SMLLanguage implements Language {
    @Override 
    public Pattern mainPattern() { return mainPattern; }
 
-    public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls) {        
+    public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls, ResourceLoader resourceLoader) {        
         String moduleName = moduleOf(file);
         
         Path testFile = Paths.get("testCodeCheck.sml");

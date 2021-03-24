@@ -27,7 +27,7 @@ public class ScalaLanguage implements Language {
     }
 
     @Override
-    public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls) {
+    public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls, ResourceLoader resourceLoader) {
         List<String> lines = Util.lines(contents);
         
         // Find class name

@@ -3,17 +3,13 @@ package models;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -41,8 +37,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.typesafe.config.Config;
 
-import play.Logger;
-
 @Singleton
 public class S3Connection {
 	private Config config;
@@ -50,7 +44,7 @@ public class S3Connection {
 	private AmazonS3 amazonS3;
 	private AmazonDynamoDB amazonDynamoDB;
 	
-	public @Inject S3Connection(Config config) {
+	@Inject public S3Connection(Config config) {
 		this.config = config;
 		String s3AccessKey = config.getString("com.horstmann.codecheck.s3.accessKey");
 		String s3SecretKey = config.getString("com.horstmann.codecheck.s3.secretKey");

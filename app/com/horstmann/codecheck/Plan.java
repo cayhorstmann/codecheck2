@@ -6,16 +6,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
 
 public class Plan {
     private Language language;
@@ -23,21 +20,14 @@ public class Plan {
     private Map<Path, byte[]> files = new Util.FileMap();
     private Map<Path, byte[]> outputs = new Util.FileMap();
     private StringBuilder scriptBuilder = new StringBuilder();
-    private Path workDir;
     private int nextID = 0;
     private static int MIN_TIMEOUT = 3; // TODO: Maybe better to switch interleaveio and timeout? 
     private boolean debug;
     
     public Plan(Language language, boolean debug) throws IOException {
         this.language = language;
-        workDir = Util.createTempDirectory();
         this.debug = debug;
         if (debug) addScript("debug");        
-    }
-    
-    // TODO: Is used as a unique ID in report--eliminate
-    public Path getWorkDir() {
-        return workDir;
     }
     
     public String nextID(String prefix) {
@@ -159,49 +149,40 @@ public class Plan {
     
     public void process(String dir, String cmd) {
         addScript("prepare " + dir + " use submission");
-        addScript("process " + dir + cmd);
+        addScript("process " + dir + " " + cmd);
     }
         
-    public void execute(Report report, String remoteURL) throws IOException, InterruptedException {
+    public void execute(Report report, String remoteURL, String scriptCommand) throws IOException, InterruptedException {
         files.put(Paths.get("script"), scriptBuilder.toString().getBytes(StandardCharsets.UTF_8));        
         if (remoteURL == null)
-            executeLocally(report);
+            executeLocally(scriptCommand, report);
         else
             executeRemotely(remoteURL, report);
         for (Runnable task : tasks) 
             task.run(); 
     }
 
-    private void executeLocally(Report report)
+    private void executeLocally(String scriptCommand, Report report)
             throws IOException, InterruptedException {
+    	Path requestZip = Files.createTempFile("codecheck-request", ".zip",
+   			PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-r--r--")));;
+    	Path responseZip = null;
         try {
-            for (Map.Entry<Path, byte[]> entry : files.entrySet()) {
-                Path target = workDir.resolve(entry.getKey());
-                Files.createDirectories(target.getParent());
-                Files.write(target, entry.getValue());
-            }
-            Path scriptFile = workDir.resolve("script");
-            Set<PosixFilePermission> perms = Files.getPosixFilePermissions(scriptFile);
-            perms.add(PosixFilePermission.OWNER_EXECUTE); // TODO Which permission? 
-            Files.setPosixFilePermissions(scriptFile, perms);
-            ProcessBuilder builder = new ProcessBuilder("./script").directory(workDir.toFile());            
-            Process process = builder.start();
+            if (debug) System.out.println("Request files at " + requestZip);
+            Files.write(requestZip, Util.zip(files));        	
             int millis = 30000; // TODO
-            boolean completed = process.waitFor(millis, TimeUnit.MILLISECONDS);
-            if (!completed) {
-                process.destroyForcibly();
-                report.systemError("\nTimeout after " + millis + " milliseconds\n");
-            }            
-            Path outDir = workDir.resolve("out");            
-            try (Stream<Path> entries = Files.walk(outDir)) 
-            {
-                entries.forEach(entry -> {
-                    if (Files.isRegularFile(entry))
-                        outputs.put(outDir.relativize(entry), Util.readBytes(entry));
-                });
-            }
+            String result = Util.runProcess(scriptCommand + " " + requestZip.toString(), millis);
+            String[] lines = result.split("\n");
+            int n = lines.length - 1;
+            if (lines[n].trim().isEmpty()) n--;
+            responseZip = Paths.get(lines[n]);
+            if (debug) System.out.println("Response files at " + responseZip);
+            outputs = Util.unzip(Files.readAllBytes(responseZip));            
         } finally {
-            if (!debug) Util.deleteDirectory(workDir);
+            if (!debug) {
+            	Files.deleteIfExists(requestZip);
+            	if (responseZip != null) Files.deleteIfExists(responseZip);
+            }
         }
     }
     

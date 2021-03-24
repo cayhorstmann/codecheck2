@@ -59,10 +59,11 @@ public class Calls {
         } 
     }
 
-    public Map<Path, String> writeTester(Map<Path, byte[]> solutionFiles) throws IOException {
+    public Map<Path, String> writeTester(Map<Path, byte[]> solutionFiles, Map<Path, byte[]> useFiles, ResourceLoader resourceLoader) throws IOException {
         if (lastGroup < calls.size() - 1)
             throw new CodeCheckException("No function below CALL in " + file + "\n");
-        String contents = new String(solutionFiles.get(file), StandardCharsets.UTF_8);
-        return language.writeTester(file, contents, calls);
+        String contents = Util.getString(solutionFiles, file);
+        if (contents.isEmpty()) contents = Util.getString(useFiles, file);
+        return language.writeTester(file, contents, calls, resourceLoader);
     }
 }

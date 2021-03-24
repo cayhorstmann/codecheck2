@@ -1,14 +1,21 @@
 package models;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.KeyStore;
 import java.util.Map;
 import java.util.Properties;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipOutputStream;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -19,14 +26,46 @@ import javax.script.ScriptException;
 
 import com.horstmann.codecheck.Main;
 import com.horstmann.codecheck.Report;
+import com.horstmann.codecheck.ResourceLoader;
 import com.typesafe.config.Config;
 
+import jdk.security.jarsigner.JarSigner;
+import play.Logger;
 import play.api.Environment;
 
 @Singleton
 public class CodeCheck {
-	@Inject private Config config;
-	@Inject private S3Connection s3conn;
+	private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");	
+	private Config config;
+	private S3Connection s3conn;
+	private Environment playEnv;
+	private JarSigner signer;
+	private String remoteURL;
+	private ResourceLoader resourceLoader;
+	
+	@Inject public CodeCheck(Config config, S3Connection s3conn, Environment playEnv) {
+		this.config = config;
+		this.s3conn = s3conn;
+		this.playEnv = playEnv;
+		remoteURL = config.getString("com.horstmann.codecheck.remote");
+		resourceLoader = new ResourceLoader() {
+			@Override
+			public InputStream loadResource(String path) throws IOException {
+				return playEnv.classLoader().getResourceAsStream("public/resources/" + path);
+			}
+		};
+		try {
+			String keyStorePath = config.getString("com.horstmann.codecheck.storeLocation");
+			char[] password = config.getString("com.horstmann.codecheck.storePassword").toCharArray();
+	        KeyStore ks = KeyStore.getInstance(new File(keyStorePath), password);
+	        KeyStore.ProtectionParameter protParam = new KeyStore.PasswordProtection(password);	
+	        KeyStore.PrivateKeyEntry pkEntry = (KeyStore.PrivateKeyEntry) ks.getEntry("codecheck", protParam);
+		    signer = new JarSigner.Builder(pkEntry).build();			
+		} catch (Exception e) {
+			logger.warn("Cannot load keystore", e);
+		}
+	}
+	
 
 	public Map<Path, byte[]> loadProblem(String repo, String problemName, String studentId) throws IOException, ScriptException, NoSuchMethodException {
 		Map<Path, byte[]> problemFiles = loadProblem(repo, problemName);
@@ -35,8 +74,6 @@ public class CodeCheck {
 		return problemFiles;
 	}
 
-	@Inject Environment playEnv;
-	
 	public void replaceParametersInDirectory(String studentId, Map<Path, byte[]> problemFiles)
 			throws ScriptException, NoSuchMethodException, IOException {
 		Path paramPath = Paths.get("param.js"); 
@@ -122,10 +159,32 @@ public class CodeCheck {
 			Map<Path, String> submissionFiles, Properties metaData) throws IOException, InterruptedException {
 		Properties properties = new Properties();
 		properties.put("com.horstmann.codecheck.report", reportType);
-		properties.put("com.horstmann.codecheck.remote", config.getString("com.horstmann.codecheck.remote"));
-		properties.put("com.horstmann.codecheck.debug", config.getString("com.horstmann.codecheck.debug"));
+		properties.put("com.horstmann.codecheck.remote", remoteURL);
+		if (config.hasPath("com.horstmann.codecheck.debug"))
+			properties.put("com.horstmann.codecheck.debug", config.getString("com.horstmann.codecheck.debug"));
 		
-		Report report = new Main().run(submissionFiles, problemFiles, properties, metaData);
+		Report report = new Main().run(submissionFiles, problemFiles, properties, metaData, resourceLoader);
 		return report;
+	}	
+	
+	
+    public byte[] signZip(Map<Path, byte[]> contents) throws IOException {  
+    	if (signer == null) return com.horstmann.codecheck.Util.zip(contents);
+    	Path tempFile = Files.createTempFile(null, ".zip");
+    	OutputStream fout = Files.newOutputStream(tempFile);
+        ZipOutputStream zout = new ZipOutputStream(fout);
+        for (Map.Entry<Path, byte[]> entry : contents.entrySet()) {
+           ZipEntry ze = new ZipEntry(entry.getKey().toString());
+           zout.putNextEntry(ze);
+           zout.write(entry.getValue());
+           zout.closeEntry();
+        }
+        zout.close();	    	
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (ZipFile in = new ZipFile(tempFile.toFile())) {
+           signer.sign(in, out);
+        }
+        Files.delete(tempFile);
+        return out.toByteArray(); 
 	}	
 }

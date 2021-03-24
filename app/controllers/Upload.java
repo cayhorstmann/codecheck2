@@ -26,12 +26,9 @@ import play.mvc.Result;
 
 public class Upload extends Controller {
 	final String repo = "ext";
-	@Inject
-	private S3Connection s3conn;
-	@Inject
-	private Config config;
-	@Inject
-	private CodeCheck codeCheck;
+	@Inject	private S3Connection s3conn;
+	@Inject	private Config config;
+	@Inject	private CodeCheck codeCheck;
 
 	public Result uploadFiles(Http.Request request) {
 		return uploadFiles(request, Util.createPublicUID(), Util.createPrivateUID());

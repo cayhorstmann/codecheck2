@@ -1,5 +1,6 @@
 package com.horstmann.codecheck;
 
+import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -110,11 +111,15 @@ public interface Language {
      * @return true if it is a "main" file
      */
     default boolean isMain(Path fileName, String contents) { 
+        String extension = getExtension();
+        // Don't call isSource because that may have been overridden to classify 
+        // header files as source
+        if (!fileName.toString().endsWith("." + extension)) return false;
     	Pattern p = mainPattern();
     	if (p == null)
     		return moduleOf(fileName).matches(".*(Runn|Test)er[0-9]*");
     	else
-    		return isSource(fileName) && p.matcher(contents).find();
+    		return p.matcher(contents).find();
     }
 
     /**
@@ -133,9 +138,12 @@ public interface Language {
      * @param file the relative path of the submitted/solved file
      * @param contents the file contents
      * @param calls the calls to be made
-     * @return a map containing the file paths and contents of the the tester and any helper files
+     * @return a map containing the file paths and contents of the the tester and any helper files, or null if this language
+     * cannot produce a CALL tester.
      */
-    Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls);
+    default Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls, ResourceLoader resourceLoader) throws IOException {
+    	return null;
+    }
 
     default String[] pseudoCommentDelimiters() { return new String[] { "//", "" }; }
 

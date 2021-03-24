@@ -2,7 +2,6 @@ package com.horstmann.codecheck;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -25,17 +24,13 @@ import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.UnrecoverableEntryException;
-import java.security.cert.CertificateException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -43,11 +38,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
-
-import jdk.security.jarsigner.JarSigner;
 
 public class Util {
     private static Random generator = new Random();
@@ -91,7 +83,6 @@ public class Util {
     
     public static Path createTempDirectory() throws IOException {
         return Files.createTempDirectory("codecheck");
-        // Don't do it in /tmp, or the Java tools will fail on Cygwin 
     }
     
     public static Path createTempFile() throws IOException {
@@ -184,6 +175,45 @@ public class Util {
         t.printStackTrace(new PrintWriter(out));
         return out.toString();
     }
+    
+	public static String runProcess(String command, int millis) {
+		try {
+			Process process = Runtime.getRuntime().exec(command);
+			boolean completed = process.waitFor(millis, TimeUnit.MILLISECONDS);
+
+			Scanner in = new Scanner(process.getErrorStream(), "UTF-8");
+			StringBuilder result = new StringBuilder();
+			while (in.hasNextLine()) {
+				result.append(in.nextLine());
+				result.append("\n");
+			}
+			in.close();
+			if (result.length() > 0)
+				return result.toString();
+
+			in = new Scanner(process.getInputStream(), "UTF-8");
+			result = new StringBuilder();
+			while (in.hasNextLine()) {
+				result.append(in.nextLine());
+				result.append("\n");
+			}
+			in.close();
+
+            if (!completed) {
+            	process.destroyForcibly();
+            	result.append("\nTimeout after " + millis + " milliseconds\n");
+            }
+			
+			// CAUTION: Apparently, one can't just large input from the process
+			// stdout
+			// http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4062587
+			return result.toString().trim();
+		} catch (Exception ex) {
+			return ex.getMessage();
+		}
+	}
+	
+    
     
     public static String unescapeJava(String s) {
         StringBuilder out = new StringBuilder();
@@ -314,43 +344,7 @@ public class Util {
         zout.close();
         return bout.toByteArray();
     }
-    
-    public static byte[] signedZip(Map<Path, byte[]> contents, char[] password, String keyStorePath) throws IOException {    	    	
-        try {
-        	Path tempFile = Files.createTempFile(null, ".zip");
-        	OutputStream fout = Files.newOutputStream(tempFile);
-            ZipOutputStream zout = new ZipOutputStream(fout);
-            for (Map.Entry<Path, byte[]> entry : contents.entrySet()) {
-               ZipEntry ze = new ZipEntry(entry.getKey().toString());
-               zout.putNextEntry(ze);
-               zout.write(entry.getValue());
-               zout.closeEntry();
-            }
-            zout.close();	    	
-        	
-	        KeyStore ks = KeyStore.getInstance(new File(keyStorePath), password);
-	        KeyStore.ProtectionParameter protParam =
-	           new KeyStore.PasswordProtection(password);
-	
-	        KeyStore.PrivateKeyEntry pkEntry = (KeyStore.PrivateKeyEntry)
-	           ks.getEntry("codecheck", protParam);
-	
-	        JarSigner signer = new JarSigner.Builder(pkEntry)
-	           .build();
-	
-	        ByteArrayOutputStream out = new ByteArrayOutputStream();
-	        try (ZipFile in = new ZipFile(tempFile.toFile())) {
-	           signer.sign(in, out);
-	        }
-	        Files.delete(tempFile);
-	        return out.toByteArray(); 
-        } catch (CertificateException | NoSuchAlgorithmException | UnrecoverableEntryException | KeyStoreException e) {
-        	// TODO: Log exception
-        	return zip(contents);
-		}
-    }
-
-    
+        
     static class FileMap extends TreeMap<Path, byte[]> {
         public String toString() {
             StringBuilder result = new StringBuilder();
@@ -369,6 +363,17 @@ public class Util {
             return result.toString();
         }
     }
+    
+    public static String getString(Map<Path, byte[]> fileMap, Path p) {
+	   if (fileMap.containsKey(p)) 
+		   return new String(fileMap.get(p), StandardCharsets.UTF_8);		   
+	   else 
+		   return "";
+    }
+	   
+    public static void putString(Map<Path, byte[]> fileMap, Path p, String contents) {
+    	fileMap.put(p, contents.getBytes(StandardCharsets.UTF_8));
+    }    
     
     public static Map<Path, byte[]> unzip(byte[] bytes) throws IOException {
         Map<Path, byte[]> result = new FileMap(); 
