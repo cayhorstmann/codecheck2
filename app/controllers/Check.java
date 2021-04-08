@@ -20,12 +20,11 @@ import javax.inject.Inject;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.horstmann.codecheck.Util;
 
 import models.CodeCheck;
-import models.Util;
 import play.Logger;
 import play.libs.Json;
-import play.libs.Jsonp;
 import play.libs.concurrent.HttpExecution;
 import play.mvc.Controller;
 import play.mvc.Http;
@@ -52,14 +51,14 @@ public class Check extends Controller {
 		                repo = value;
 		            else if (key.equals("problem"))
 		                problem = value;
-		            else if (key.equals("ccu") || key.equals("ccid")) // TODO: Where does this come from???
+		            else if (key.equals("ccid")) // TODO: For testing of randomization?
 		            	ccid = value;
 		            else
 		            	submissionFiles.put(Paths.get(key), value);
 		        }
 		    	if (ccid == null) { 
 		            Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
-		            ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
+		            ccid = ccidCookie.map(Http.Cookie::value).orElse(com.horstmann.codecheck.Util.createPronouncableUID());
 				}
 				long startTime = System.nanoTime();			
 		        String report = codeCheck.run("html", repo, problem, ccid, submissionFiles).getText();
@@ -121,7 +120,7 @@ public class Check extends Controller {
 					if ("repo".equals(key)) repo = value;
 					else if ("problem".equals(key)) problem = value;
 					else if ("scoreCallback".equals(key)) scoreCallback = value;
-					else if ("ccu".equals(key) || "ccid".equals(key)) ccid = value; // TODO: Where from? 
+					else if ("ccid".equals(key)) ccid = value; // TODO: For testing of randomization? 
 					else {
 						Path p = Paths.get(key);					
 						submissionFiles.put(p, value);
@@ -131,7 +130,7 @@ public class Check extends Controller {
 				}
 				if (ccid == null) { 
 		            Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
-		            ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
+		            ccid = ccidCookie.map(Http.Cookie::value).orElse(com.horstmann.codecheck.Util.createPronouncableUID());
 				};				
 				Logger.of("com.horstmann.codecheck.check").info("checkNJS: " + requestParams);
 				//TODO last param should be submissionDir
@@ -156,7 +155,7 @@ public class Check extends Controller {
 					
 					String resultText = Json.stringify(augmentedResult);
 					Logger.of("com.horstmann.codecheck.lti").info("Request: " + scoreCallback + " " + resultText);
-					String response = Util.httpPost(scoreCallback, resultText, "application/json");
+					String response = com.horstmann.codecheck.Util.httpPost(scoreCallback, resultText, "application/json");
 					Logger.of("com.horstmann.codecheck.lti").info("Response: " + response);
 				}
 				

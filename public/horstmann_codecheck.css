@@ -1,0 +1,98 @@
+.studentFiles, .providedFiles { 
+    display: none; 
+}
+
+.ace_editor { 
+    border: 1px solid #eee;
+    min-height: 1em;
+    min-width: 50em;
+    width: 100%;
+}
+
+.ace_hidden-cursors {
+    opacity:0
+}
+
+.ace_scrollbar {
+    display: none;
+}
+
+
+.editor { 
+    width: 80%; 
+    margin-left: 1em;
+}
+
+.codecheckSubmit { 
+    padding: 0.8em; 
+}
+
+.codecheckFilename {
+    color:#0054a8;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+    margin-left: 1.18em;
+    font-weight: bold;
+    font-family: "DejaVuSans", sans-serif;
+    font-size: 0.85em;
+}
+
+.codecheck-submit-response .header {
+    color:#0054a8;
+    font-weight: bold;
+    font-family: "DejaVuSans", sans-serif;
+    font-size: 1em;
+    margin-left: 0em;
+}
+
+.codecheck-submit-response .item {
+    font-weight: bold;
+}
+
+.codecheck-submit-response .pass {
+    color: green;
+}
+
+.codecheck-submit-response  .fail {
+    color: red;
+}
+
+.codecheck-submit-response .note {
+    color: blue;
+    font-weight: bold;
+}
+
+.codecheck-submit-response table.file td {
+    padding-right: 1em; background: #FFF;
+}
+
+.codecheck-submit-response .linenumber {
+    color: gray;
+}
+
+.codecheck-submit-response td, .codecheck-submit-response th {
+    background: #EEE;
+    margin: 0.5em;
+    padding: 0.25em;
+}
+
+.codecheck-submit-response table.output td {
+    vertical-align: top;
+}
+
+.codecheck-submit-response div.footnotes {
+    display: none;
+}
+
+.codecheck-submit-response, .codecheck-submit-response p {
+    font-family: "DejaVuSans", sans-serif;
+    font-size: .9em;
+    margin-left: 1em;
+    margin-bottom: 1em;
+}
+
+.editor {
+    font-family:"DejaVuSansMonoSemiCondensed", monospace;
+    font-size: 0.8em;
+}
+

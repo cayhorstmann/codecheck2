@@ -30,7 +30,7 @@
    <property name="ant.build.javac.target" value="11"/>
 
    <path id="classpath">
-      <fileset dir="${basedir}/checker/lib">
+      <fileset dir="${basedir}/cli/lib">
 	       <include name="*.jar"/>
       </fileset>
    </path>
@@ -63,7 +63,7 @@
   </target>
   
   <target name="jar" description="Makes the JAR file" depends="compile">
-    <jar destfile="checker/codecheck.jar" basedir="${build.dir}">
+    <jar destfile="cli/codecheck.jar" basedir="${build.dir}">
       <manifest>
         <attribute name="Main-Class" value="com.horstmann.codecheck.Runner" />
       </manifest>
@@ -72,7 +72,7 @@
 
   <target name="dist" depends="jar">
     <copy todir="${distdir}" preservelastmodified="true">
-        <fileset dir="${basedir}/checker">
+        <fileset dir="${basedir}/cli">
            <include name="codecheck.jar"/>
            <include name="codecheck"/>
            <include name="lib/**"/>

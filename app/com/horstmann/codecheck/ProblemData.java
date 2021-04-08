@@ -1,4 +1,4 @@
-package models;
+package com.horstmann.codecheck;
 
 import java.util.LinkedHashMap;
 import java.util.List;

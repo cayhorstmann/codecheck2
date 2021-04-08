@@ -36,24 +36,15 @@ public class Annotations {
         this.language = language;
     }
 
-    public void read(Map<Path, byte[]> useOrSolutionFiles, Map<Path, byte[]> knownSolutionFiles, boolean inputMode, Report r) {
-        for (Map.Entry<Path, byte[]> entry : useOrSolutionFiles.entrySet()) read(entry.getKey(), entry.getValue(), false);
-        for (Map.Entry<Path, byte[]> entry : knownSolutionFiles.entrySet()) read(entry.getKey(), entry.getValue(), true);
-        for (Annotation a : annotations) {
-            if (a.key.equals("HIDE") && !solutions.contains(a.path)) hidden.add(a.path);
-        }
-        
-        for (Annotation a : annotations) {
-            if (!validAnnotations.contains(a.key))
-                r.systemError("Unknown pseudocomment " + a.key + " in " + a.path);
-        }
+    public void read(Map<Path, byte[]> files) {
+        for (Map.Entry<Path, byte[]> entry : files.entrySet()) read(entry.getKey(), entry.getValue());
     }
 
-    private void read(Path p, byte[] contents, boolean knownSolution) {
+    private void read(Path p, byte[] contents) {
+    	if (!language.isSource(p)) return; 
     	String[] delims = language.pseudoCommentDelimiters();
         Pattern pattern = Pattern.compile("(.*\\s|)" + delims[0] + "([A-Z\\[\\]]+)(\\s.*|)" + delims[1] + "\\s*");
         List<String> lines =  Util.lines(contents);
-        if (knownSolution) solutions.add(p);
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i).trim();
             Matcher matcher = pattern.matcher(line);
@@ -61,6 +52,8 @@ public class Annotations {
                 Annotation a = new Annotation();
                 a.before = matcher.group(1).trim();
                 a.key = matcher.group(2);
+                if (!validAnnotations.contains(a.key))
+                    throw new CodeCheckException("Unknown pseudocomment " + a.key + " in " + a.path);                
                 keys.add(a.key);
                 a.args = matcher.group(3).trim();
                 a.next = "";
@@ -71,6 +64,8 @@ public class Annotations {
                 }
                 if (Arrays.asList("SOLUTION", "SHOW", "EDIT").contains(a.key)) 
                     solutions.add(p);
+                if (a.key.equals("HIDE")) 
+                	hidden.add(p);
                 a.path = p;
                 annotations.add(a);
             }

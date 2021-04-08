@@ -18,15 +18,13 @@ import javax.inject.Inject;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.horstmann.codecheck.Problem;
+import com.horstmann.codecheck.Util;
 
 import models.CodeCheck;
 import models.LTI;
-import models.Problem;
-import models.ProblemData;
 import models.S3Connection;
-import models.Util;
 import play.Logger;
-import play.libs.Json;
 import play.mvc.Controller;
 import play.mvc.Http;
 import play.mvc.Result;
@@ -42,21 +40,21 @@ public class LTIProblem extends Controller {
 	 	Map<String, String[]> postParams = request.body().asFormUrlEncoded();
 	 	if (!lti.validate(request)) throw new IllegalArgumentException("Failed OAuth validation");
 	 	
-    	String userID = Util.getParam(postParams, "user_id");
-		if (Util.isEmpty(userID)) throw new IllegalArgumentException("No user id");
+    	String userID = com.horstmann.codecheck.Util.getParam(postParams, "user_id");
+		if (com.horstmann.codecheck.Util.isEmpty(userID)) throw new IllegalArgumentException("No user id");
 
-		String toolConsumerID = Util.getParam(postParams, "tool_consumer_instance_guid");
-		String contextID = Util.getParam(postParams, "context_id");
-		String resourceLinkID = Util.getParam(postParams, "resource_link_id");
+		String toolConsumerID = com.horstmann.codecheck.Util.getParam(postParams, "tool_consumer_instance_guid");
+		String contextID = com.horstmann.codecheck.Util.getParam(postParams, "context_id");
+		String resourceLinkID = com.horstmann.codecheck.Util.getParam(postParams, "resource_link_id");
 
 		String resourceID = toolConsumerID + "/" + contextID + "/" + resourceLinkID; 
 	    
 
     	ObjectNode ltiNode = JsonNodeFactory.instance.objectNode();
 
-		ltiNode.put("lis_outcome_service_url", Util.getParam(postParams, "lis_outcome_service_url"));		
-		ltiNode.put("lis_result_sourcedid", Util.getParam(postParams, "lis_result_sourcedid"));		
-		ltiNode.put("oauth_consumer_key", Util.getParam(postParams, "oauth_consumer_key"));		
+		ltiNode.put("lis_outcome_service_url", com.horstmann.codecheck.Util.getParam(postParams, "lis_outcome_service_url"));		
+		ltiNode.put("lis_result_sourcedid", com.horstmann.codecheck.Util.getParam(postParams, "lis_result_sourcedid"));		
+		ltiNode.put("oauth_consumer_key", com.horstmann.codecheck.Util.getParam(postParams, "oauth_consumer_key"));		
 
 		ltiNode.put("submissionID", resourceID + " " + userID);		
 		ltiNode.put("retrieveURL", "/lti/retrieve");
@@ -68,7 +66,7 @@ public class LTIProblem extends Controller {
 	private String rewriteRelativeLinks(String urlString) throws IOException {
 		URL url = new URL(urlString);
 		InputStream in = url.openStream();
-		String contents = new String(Util.readAllBytes(in), StandardCharsets.UTF_8);
+		String contents = new String(in.readAllBytes(), StandardCharsets.UTF_8);
 		in.close();
 		int i1 = urlString.indexOf("/", 8); // after https://
 		String domain = urlString.substring(0, i1);
@@ -123,12 +121,12 @@ public class LTIProblem extends Controller {
     		// TODO: Now the client will do the LTI communication. CodeCheck should do it.
 			ObjectNode ltiNode = ltiNode(request);
             Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
-		    String ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
+		    String ccid = ccidCookie.map(Http.Cookie::value).orElse(com.horstmann.codecheck.Util.createPronouncableUID());
 			
 		    Map<Path, byte[]> problemFiles = codeCheck.loadProblem(repo, problemName, ccid);
 	        Problem problem = new Problem(problemFiles);
-	        ProblemData data = problem.getData();	        
-    		ObjectNode problemNode = (ObjectNode) Json.toJson(problem.getData());
+	        Problem.DisplayData data = problem.getProblemData();
+    		ObjectNode problemNode = models.Util.toJson(data);
     		problemNode.put("url", "/checkNJS"); 
     		problemNode.put("repo", repo);
     		problemNode.put("problem", problemName);

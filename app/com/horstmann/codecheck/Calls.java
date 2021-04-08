@@ -1,7 +1,6 @@
 package com.horstmann.codecheck;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -59,11 +58,11 @@ public class Calls {
         } 
     }
 
-    public Map<Path, String> writeTester(Map<Path, byte[]> solutionFiles, Map<Path, byte[]> useFiles, ResourceLoader resourceLoader) throws IOException {
+    public Map<Path, String> writeTester(Problem problem, ResourceLoader resourceLoader) throws IOException {
         if (lastGroup < calls.size() - 1)
             throw new CodeCheckException("No function below CALL in " + file + "\n");
-        String contents = Util.getString(solutionFiles, file);
-        if (contents.isEmpty()) contents = Util.getString(useFiles, file);
+        String contents = Util.getString(problem.getSolutionFiles(), file);
+        if (contents.isEmpty()) contents = Util.getString(problem.getUseFiles(), file);
         return language.writeTester(file, contents, calls, resourceLoader);
     }
 }

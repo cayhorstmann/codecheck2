@@ -52,7 +52,7 @@ public class Plan {
         String errorReport = getOutputString(compileDir, "_errors");
         if (errorReport == null) return true;         
         if (errorReport.trim().equals(""))
-        	report.error("Compilation Failed");
+        	report.error("Compilation failed");
         else {
             report.error(errorReport);
             report.errors(language.errors(errorReport));
@@ -65,7 +65,7 @@ public class Plan {
         String errorReport = getOutputString(compileDir, "_errors");
         if (errorReport == null) return true;         
         if (errorReport.trim().equals(""))
-        	report.systemError("Compilation Failed");
+        	report.systemError("Compilation of solution ailed");
         else 
             report.systemError(errorReport);        
         score.setInvalid();
@@ -154,7 +154,7 @@ public class Plan {
         
     public void execute(Report report, String remoteURL, String scriptCommand) throws IOException, InterruptedException {
         files.put(Paths.get("script"), scriptBuilder.toString().getBytes(StandardCharsets.UTF_8));        
-        if (remoteURL == null)
+        if (remoteURL == null || remoteURL.isEmpty())
             executeLocally(scriptCommand, report);
         else
             executeRemotely(remoteURL, report);
@@ -168,15 +168,17 @@ public class Plan {
    			PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-r--r--")));;
     	Path responseZip = null;
         try {
-            if (debug) System.out.println("Request files at " + requestZip);
+            if (debug) System.out.println(requestZip);
             Files.write(requestZip, Util.zip(files));        	
-            int millis = 30000; // TODO
+            int millis = 30000; // TODO`
             String result = Util.runProcess(scriptCommand + " " + requestZip.toString(), millis);
+            if (debug) System.out.println(result); 
             String[] lines = result.split("\n");
             int n = lines.length - 1;
             if (lines[n].trim().isEmpty()) n--;
             responseZip = Paths.get(lines[n]);
-            if (debug) System.out.println("Response files at " + responseZip);
+            if (!Files.exists(responseZip))
+            	throw new CodeCheckException("comrun failed.\n" + result);
             outputs = Util.unzip(Files.readAllBytes(responseZip));            
         } finally {
             if (!debug) {

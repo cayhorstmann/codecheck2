@@ -6,15 +6,15 @@ import play.mvc.Controller;
 import play.mvc.Http;
 import play.mvc.Http.RequestBody;
 import play.mvc.Result;
-import models.Util;
+import com.horstmann.codecheck.Util;
 
 public class Application extends Controller {
    private Pattern dfPattern = Pattern.compile("(?s:.*?(?<percent>[0-9]+)%.*)");
    
     public Result health(Http.Request request) {
        try {
-          String df = com.horstmann.codecheck.Util.runProcess("/bin/df /", 1000);
-          String mp = com.horstmann.codecheck.Util.runProcess("/usr/bin/mpstat 2 1", 3000);
+          String df = Util.runProcess("/bin/df /", 1000);
+          String mp = Util.runProcess("/usr/bin/mpstat 2 1", 3000);
           Matcher matcher = dfPattern.matcher(df);
           if (matcher.matches()) {
              String percent =  matcher.group("percent");

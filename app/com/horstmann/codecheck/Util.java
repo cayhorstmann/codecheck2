@@ -7,14 +7,15 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -22,11 +23,14 @@ import java.nio.file.Path;
 import java.nio.file.PathMatcher;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
-import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -44,6 +48,16 @@ import java.util.zip.ZipOutputStream;
 public class Util {
     private static Random generator = new Random();
 
+    // Generics
+    
+	public static <T> Iterable<T> iterable(Iterator<T> iterator) { 
+	    return new Iterable<T>() { 
+	        public Iterator<T> iterator() { return iterator; } 
+	    }; 
+	}
+    
+    // String handling
+
     public static <T> String join(Collection<T> items, String separator) {
         return items.stream().map(Object::toString).collect(Collectors.joining(separator));
     }
@@ -51,6 +65,9 @@ public class Util {
     public static <T> String join(T[] items, String separator) {
         return Stream.of(items).map(Object::toString).collect(Collectors.joining(separator));
     }
+    
+    public static boolean isEmpty(String str) { return str == null || str.isEmpty(); }
+		
     public static List<String> lines(String contents) {
         return contents.lines().collect(Collectors.toList());
     }
@@ -59,36 +76,90 @@ public class Util {
     	return new String(contents, StandardCharsets.UTF_8).lines().collect(Collectors.toList());
     }
     
-    public static String createPrivateUID() {
-        return new BigInteger(128, generator).toString(36).toUpperCase();               
-    }
-    
-    public static boolean sameContents(Path p1, Path p2) throws IOException {
-        return Files.exists(p1)
-                && Files.exists(p2)
-                && Arrays.equals(Files.readAllBytes(p1), Files.readAllBytes(p2));
+	public static int countLines(String s) {
+		if (s == null)
+			return 0;
+		int lines = 0;
+		for (int i = 0; i < s.length(); i++)
+			if (s.charAt(i) == '\n')
+				lines++;
+		return lines;
+	}
+	
+	public static StringBuilder removeTrailingNewline(StringBuilder b) {
+		if (b.length() > 0 && b.charAt(b.length() - 1) == '\n')
+			b.deleteCharAt(b.length() - 1);
+		return b;
+	}
+	
+    public static String truncate(String str, int maxlen) {
+        if (str.length() > maxlen) return str.substring(0, maxlen - 3) + "...";
+        else return str;
     }
 
+	// Paths
+	
     public static Path tail(Path p) {
         if (p.getNameCount() < 2) return p;
         return p.subpath(1, p.getNameCount());
     }
     
-    public static String removeExtension(Path p) {
+	public static String extension(Path path) {
+		String name = path.toString();
+		int n = name.lastIndexOf('.');
+		if (n == -1)
+			return "";
+		else
+			return name.substring(n + 1).toLowerCase();
+	}
+
+	public static String removeExtension(Path p) {
         String result = p.toString();
         int n = result.lastIndexOf(".");
         if (n >= 0) result = result.substring(0, n);
         return result;
+    }    	
+
+    /**
+     * Yields all paths not matching a set of name patterns 
+     * @param paths a set of paths
+     * @param namePatterns A set of name patterns in glob syntax. CAUTION: Directory
+     * patterns such as __pycache__/** are NOT supported. 
+     * @return the paths whose file names don't match any of the given name patterns
+     */
+    public static Set<Path> filterNot(Set<Path> paths, String... namePatterns) {
+        Set<Path> result = new TreeSet<>();
+        PathMatcher[] matcher = new PathMatcher[namePatterns.length];
+        for (int i = 0; i < matcher.length; i++)
+            matcher[i] = FileSystems.getDefault().getPathMatcher(
+                             "glob:" + namePatterns[i]);
+        for (Path p : paths) {
+            boolean matchesOne = false;
+            for (int i = 0; i < matcher.length && !matchesOne; i++)
+                if (matcher[i].matches(p.getFileName()))
+                    matchesOne = true;
+            if (!matchesOne)
+                result.add(p);
+        }
+        return result;
     }
-    
-    public static Path createTempDirectory() throws IOException {
-        return Files.createTempDirectory("codecheck");
+
+    public static boolean matches(Path path, String... namePatterns) {
+    	for (String glob : namePatterns) {
+    		PathMatcher matcher = FileSystems.getDefault().getPathMatcher(
+                                  "glob:" + glob.replace("/", FileSystems.getDefault().getSeparator()));
+    		if (matcher.matches(path)) return true;
+    	}
+    	return false;
     }
-    
-    public static Path createTempFile() throws IOException {
-        return Files.createTempFile("codecheck", "");
+
+    // Files	
+	
+	public static boolean sameContents(Path p1, Path p2) throws IOException {
+        return Files.exists(p1)
+                && Files.exists(p2)
+                && Arrays.equals(Files.readAllBytes(p1), Files.readAllBytes(p2));
     }
-    
 
     public static String read(Path path) {
         try {
@@ -100,75 +171,41 @@ public class Util {
         }
     }
     
-    public static void write(Path path, String contents) throws IOException {
-        Files.write(path, contents.getBytes(StandardCharsets.UTF_8));
-    }
-    
-    public static String readString(InputStream in) {
-        try {
-            return new String(readAllBytes(in), "UTF-8");
-        } catch (IOException ex) {
-            return null;
-        }
-    }
-    
-    public static byte[] readAllBytes(InputStream in) throws IOException {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        copy(in, out);
-        out.close();
-        return out.toByteArray();
-    }
-    
-    public static void copy(InputStream in, OutputStream out) throws IOException {
-        final int BLOCKSIZE = 1024;
-        byte[] bytes = new byte[BLOCKSIZE];
-        int len;
-        while ((len = in.read(bytes)) != -1) out.write(bytes, 0, len);
-    }
-
-    @SuppressWarnings("unchecked")
     public static List<String> readLines(Path path) {
         try {
             return java.nio.file.Files.readAllLines(path,
                     StandardCharsets.UTF_8);
         } catch (IOException ex) {
-            return Collections.EMPTY_LIST;
+            return Collections.emptyList();
         }
     }
 
-
-    public static byte[] readBytes(Path path) {
-        try {
-            return java.nio.file.Files.readAllBytes(path);
-        } catch (IOException ex) {
-            return null;
-        }
-    }
-
-    public static void deleteDirectory(Path start) throws IOException {
-        if (start == null) 
-            return;
-        Files.walkFileTree(start, new SimpleFileVisitor<Path>() {
-            @Override
-            public FileVisitResult visitFile(Path file,
-                    BasicFileAttributes attrs) throws IOException {
-                Files.delete(file);
-                return FileVisitResult.CONTINUE;
-            }
-
-            @Override
-            public FileVisitResult postVisitDirectory(Path dir, IOException e)
-                    throws IOException {
-                if (e == null) {
-                    Files.delete(dir);
-                    return FileVisitResult.CONTINUE;
-                } else {
-                    // directory iteration failed
-                    throw e;
-                }
-            }
-        });
-    }
+	public static void deleteDirectory(Path start) throws IOException {
+		if (start == null) return;
+		if (!Files.exists(start)) return;
+		Files.walkFileTree(start, new SimpleFileVisitor<Path>() {
+			@Override
+			public FileVisitResult visitFile(Path file,
+					BasicFileAttributes attrs) throws IOException {
+				Files.delete(file);
+				return FileVisitResult.CONTINUE;
+			}
+	
+			@Override
+			public FileVisitResult postVisitDirectory(Path dir, IOException e)
+					throws IOException {
+				if (e == null) {
+					Files.delete(dir);
+					return FileVisitResult.CONTINUE;
+				} else {
+					// directory iteration failed
+					throw e;
+				}
+			}
+		});
+	}
+    
+    // Stack traces, process, etc.
 
     public static String getStackTrace(Throwable t) {
         StringWriter out = new StringWriter();
@@ -181,41 +218,43 @@ public class Util {
 			Process process = Runtime.getRuntime().exec(command);
 			boolean completed = process.waitFor(millis, TimeUnit.MILLISECONDS);
 
-			Scanner in = new Scanner(process.getErrorStream(), "UTF-8");
+			String err = new String(process.getErrorStream().readAllBytes(), "UTF-8");
+			process.getErrorStream().close();
+			String out = new String(process.getInputStream().readAllBytes(), "UTF-8");
+			process.getInputStream().close();
 			StringBuilder result = new StringBuilder();
-			while (in.hasNextLine()) {
-				result.append(in.nextLine());
-				result.append("\n");
-			}
-			in.close();
-			if (result.length() > 0)
-				return result.toString();
-
-			in = new Scanner(process.getInputStream(), "UTF-8");
-			result = new StringBuilder();
-			while (in.hasNextLine()) {
-				result.append(in.nextLine());
-				result.append("\n");
-			}
-			in.close();
-
+			result.append(err);
             if (!completed) {
             	process.destroyForcibly();
             	result.append("\nTimeout after " + millis + " milliseconds\n");
             }
-			
-			// CAUTION: Apparently, one can't just large input from the process
-			// stdout
-			// http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=4062587
-			return result.toString().trim();
+			result.append(out);
+			return result.toString();
 		} catch (Exception ex) {
 			return ex.getMessage();
 		}
 	}
 	
+    // Escaping
     
-    
-    public static String unescapeJava(String s) {
+	public static StringBuilder htmlEscape(CharSequence s) {
+		StringBuilder b = new StringBuilder();
+		if (s == null) return b;
+		for (int i = 0; i < s.length(); i++) {
+			char c = s.charAt(i);
+			if (c == '<')
+				b.append("&lt;");
+			else if (c == '>')
+				b.append("&gt;");
+			else if (c == '&')
+				b.append("&amp;");
+			else
+				b.append(c);
+		}
+		return b;
+	}
+
+	public static String unescapeJava(String s) {
         StringBuilder out = new StringBuilder();
         StringBuilder unicode = new StringBuilder(4);
         boolean hadSlash = false;
@@ -257,80 +296,7 @@ public class Util {
         return out.toString();
     }
     
-    public static String truncate(String str, int maxlen) {
-        if (str.length() > maxlen) return str.substring(0, maxlen - 3) + "...";
-        else return str;
-    }
-
-    /**
-     * Yields all paths not matching a set of name patterns 
-     * @param paths a set of paths
-     * @param namePatterns A set of name patterns in glob syntax. CAUTION: Directory
-     * patterns such as __pycache__/** are NOT supported. 
-     * @return the paths whose file names don't match any of the given name patterns
-     */
-    public static Set<Path> filterNot(Set<Path> paths, String... namePatterns) {
-        Set<Path> result = new TreeSet<>();
-        PathMatcher[] matcher = new PathMatcher[namePatterns.length];
-        for (int i = 0; i < matcher.length; i++)
-            matcher[i] = FileSystems.getDefault().getPathMatcher(
-                             "glob:" + namePatterns[i]);
-        for (Path p : paths) {
-            boolean matchesOne = false;
-            for (int i = 0; i < matcher.length && !matchesOne; i++)
-                if (matcher[i].matches(p.getFileName()))
-                    matchesOne = true;
-            if (!matchesOne)
-                result.add(p);
-        }
-        return result;
-    }
-
-    public static boolean matches(Path path, String... namePatterns) {
-    	for (String glob : namePatterns) {
-    		PathMatcher matcher = FileSystems.getDefault().getPathMatcher(
-                                  "glob:" + glob.replace("/", FileSystems.getDefault().getSeparator()));
-    		if (matcher.matches(path)) return true;
-    	}
-    	return false;
-    }
-
-    public static void copyAll(Collection<Path> paths, Path fromDir, Path toDir)  throws IOException {
-        for (Path p : paths) {
-            Path source = fromDir.resolve(p);
-            Path target = toDir.resolve(p);
-            Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
-        }        
-    }
-    
-    public static void zip(Path source, Path zipPath) throws IOException {
-        URI uri;
-        try {
-                uri = new URI("jar", zipPath.toUri().toString(), null);
-                Files.deleteIfExists(zipPath);
-                // Constructs the URI jar:file://myfile.zip
-                try (FileSystem zipfs = FileSystems.newFileSystem(uri,
-                                Collections.singletonMap("create", "true"))) {
-                        Files.walk(source).forEach(p -> {
-                                try {
-                                        String target = source.relativize(p).toString();
-                                        if (target.length() > 0) {
-                                                Path q = zipfs.getPath("/" + target);
-                                                if (Files.isDirectory(p))
-                                                        Files.createDirectory(q);
-                                                else
-                                                        Files.copy(p, q);
-                                        }
-                                } catch (IOException ex) {
-                                        throw new java.io.UncheckedIOException(ex);
-                        }});
-                }
-        } catch (URISyntaxException e) {
-                throw new IOException(e);
-        } catch (java.io.UncheckedIOException ex) {
-                throw ex.getCause();
-        }
-    }
+    // TreeMap<Path, byte[]>
     
     public static byte[] zip(Map<Path, byte[]> contents) throws IOException {
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
@@ -382,7 +348,7 @@ public class Util {
         while ((entry = zin.getNextEntry()) != null)
         {
         	if (!entry.isDirectory())
-        		result.put(Paths.get(entry.getName()), readAllBytes(zin));
+        		result.put(Paths.get(entry.getName()), zin.readAllBytes());
             zin.closeEntry();
         }
         zin.close();
@@ -397,7 +363,7 @@ public class Util {
             @Override
             public FileVisitResult visitFile(Path file,
                     BasicFileAttributes attrs) throws IOException {
-                result.put(dir.relativize(file), readBytes(file));
+                result.put(dir.relativize(file), Files.readAllBytes(file));
                 return FileVisitResult.CONTINUE;
             }
         });
@@ -419,9 +385,11 @@ public class Util {
         return result;
     }
     
+    // HTTP
+    
     public static byte[] fileUpload(String urlString, String fieldName, String fileName, byte[] bytes) throws IOException {
         final int TIMEOUT = 90000; // 90 seconds
-        String boundary = "===" + Util.createPrivateUID() + "===";
+        String boundary = "===" + createPrivateUID() + "===";
         URL url = new URL(urlString);
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setConnectTimeout(TIMEOUT);
@@ -468,4 +436,138 @@ public class Util {
             throw new IOException("Status: " + status);
         }        
     }
+    
+	public static String httpPost(String urlString, String content, String contentType) {
+		StringBuilder result = new StringBuilder();
+		try {
+			URL url = new URL(urlString);
+			HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+			connection.setRequestProperty("Content-Type", contentType);
+			connection.setDoOutput(true);
+			try (OutputStream out = connection.getOutputStream()) {
+				out.write(content.getBytes("UTF-8"));
+			}
+			int response = connection.getResponseCode();
+			result.append(response);
+			result.append("\n");
+			try (Scanner in = new Scanner(connection.getInputStream(), "UTF-8")) {
+				while (in.hasNextLine()) {
+					result.append(in.nextLine());
+					result.append("\n");
+				}
+			}
+			catch (IOException e) {
+			    InputStream err = connection.getErrorStream();
+			    if (err == null) throw e;
+			    try (Scanner in = new Scanner(err, "UTF-8")) {
+			        result.append(in.nextLine());
+			        result.append("\n");
+			    }
+			}			
+		} catch (Throwable ex) {
+			result.append(getStackTrace(ex));
+		}
+		return result.toString();		
+	}
+	
+	public static String getParam(Map<String, String[]> params, String key) {
+		String[] values = params.get(key);
+		if (values == null || values.length == 0) return null;
+		else return values[0];
+	}
+	
+	public static String paramsToString(Map<String, String[]> params) {
+		if (params == null) return "null";
+		StringBuilder result = new StringBuilder();
+		result.append("{");
+		for (String key : params.keySet()) {
+			if (result.length() > 1) result.append(", ");
+			result.append(key); 
+			result.append("=");
+			result.append(Arrays.toString(params.get(key)));
+		}
+		result.append("}");
+		return result.toString();
+	}
+	/**
+	 * Yields a map of query parameters in a HTTP URI
+	 * @param url the HTTP URL
+	 * @return the map of query parameters or an empty map if there are none
+	 * For example, if uri is http://fred.com?name=wilma&passw%C3%B6rd=c%26d%3De
+	 * then the result is { "name" -> "wilma", "passwörd" -> "c&d=e" }
+	 */
+	public static Map<String, String> getParams(String url)
+	{		
+		// https://www.talisman.org/~erlkonig/misc/lunatech%5Ewhat-every-webdev-must-know-about-url-encoding/
+		Map<String, String> params = new HashMap<>();
+		String rawQuery;
+		try {
+			rawQuery = new URI(url).getRawQuery();
+			if (rawQuery != null) {
+				for (String kvpair : rawQuery.split("&"))
+				{
+					int n = kvpair.indexOf("=");
+					params.put(
+						URLDecoder.decode(kvpair.substring(0, n), "UTF-8"), 
+						URLDecoder.decode(kvpair.substring(n + 1), "UTF-8"));
+				}
+			}
+		} catch (UnsupportedEncodingException e) {
+			// UTF-8 is supported
+		} catch (URISyntaxException e1) {
+			// Return empty map
+		}
+		return params;
+	}
+
+	public static boolean exists(String url) {
+		boolean result = false;
+		try {
+			HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+			try {
+				conn.connect();
+				result = conn.getHeaderField(null).contains("200");
+			} finally {
+				conn.disconnect();
+			}
+		} catch (Exception ex) {
+		}
+		return result;
+	}
+    
+    // UIDs
+    
+    public static String createPrivateUID() {
+        return new BigInteger(128, generator).toString(36).toUpperCase();               
+    }
+    
+	public static String createPublicUID() {
+		return datePrefix() + new BigInteger(128, generator).toString(36);		
+	}
+
+	private static String datePrefix() {
+		return DateTimeFormatter.ofPattern("yyMMddkkmm").format(LocalDateTime.now());
+	}
+	private static String vowels = "aeiouy";
+	private static String consonants = "bcdfghjklmnpqrstvwxz";
+
+	public static String createPronouncableUID() {
+		StringBuilder result = new StringBuilder();
+		int len = 16;
+		int b = Util.generator.nextInt(2);
+		for (int i = 0; i < len; i++) {
+			String s = i % 2 == b ? Util.consonants : vowels;
+			int n = Util.generator.nextInt(s.length());
+			result.append(s.charAt(n));
+			if (i % 4 == 3 && i < len - 1) {
+				result.append('-');
+				b = Util.generator.nextInt(2);
+			}
+		}
+		return result.toString();
+	}
+
+	public static boolean isPronouncableUID(String s) {
+		return s.matches("(([aeiouy][bcdfghjklmnpqrstvwxz]){2}|([bcdfghjklmnpqrstvwxz][aeiouy]){2})(-(([aeiouy][bcdfghjklmnpqrstvwxz]){2}|([bcdfghjklmnpqrstvwxz][aeiouy]){2})){3}");
+	}
 }

@@ -5,7 +5,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -35,7 +35,8 @@ public class JavaScriptLanguage implements Language {
         if (!isSource(p))
             return false;
         for (String line : Util.lines(contents)) 
-            if (line.matches("^\\s*export\\s+.*$")) return false;
+        	// https://nodejs.org/api/modules.html
+            if (line.matches("^\\s*(exports\\.|module\\.exports\\s*=).*$")) return false;
         return true;
     }
         
@@ -69,7 +70,7 @@ public class JavaScriptLanguage implements Language {
             lines.add("console.log(codecheck.deepEquals(actual, expected))");
             lines.add("}");            
         }
-        Map<Path, String> paths = new HashMap<>();
+        Map<Path, String> paths = new LinkedHashMap<>();
         paths.put(pathOf(moduleName + "CodeCheck"), Util.join(lines, "\n"));
         paths.put(Paths.get("codecheck.js"), resourceLoader.loadResourceAsString("codecheck.js")); // TODO mjs when we support ECMAScript modules
         return paths;

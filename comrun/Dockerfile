@@ -32,6 +32,7 @@ ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 # RUN useradd -u 1011 -ms /bin/bash server
 RUN useradd -u 1012 -ms /bin/bash comrunner
 # RUN echo "server ALL = (comrunner) NOPASSWD: ALL" >> /etc/sudoers
+ENV COMRUN_USER=comrunner
 
 # https://unix.stackexchange.com/questions/174257/how-to-disable-sudo-related-logging-for-successful-command-execution-under-cento
 RUN echo "Defaults:root !syslog, !pam_session" >> /etc/sudoers

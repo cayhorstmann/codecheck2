@@ -12,13 +12,13 @@ import java.util.TreeMap;
 import javax.inject.Inject;
 import javax.script.ScriptException;
 
+import com.horstmann.codecheck.Problem;
 import com.horstmann.codecheck.Report;
+import com.horstmann.codecheck.Util;
 import com.typesafe.config.Config;
 
 import models.CodeCheck;
-import models.Problem;
 import models.S3Connection;
-import models.Util;
 import play.libs.Files.TemporaryFile;
 import play.mvc.Controller;
 import play.mvc.Http;
@@ -31,7 +31,7 @@ public class Upload extends Controller {
 	@Inject	private CodeCheck codeCheck;
 
 	public Result uploadFiles(Http.Request request) {
-		return uploadFiles(request, Util.createPublicUID(), Util.createPrivateUID());
+		return uploadFiles(request, com.horstmann.codecheck.Util.createPublicUID(), Util.createPrivateUID());
 	}
 
 	public Result editedFiles(Http.Request request, String problem, String editKey) {
@@ -74,12 +74,12 @@ public class Upload extends Controller {
 	private void saveProblem(String problem, Map<Path, byte[]> problemFiles) throws IOException {
 		boolean isOnS3 = s3conn.isOnS3("ext");
 		if (isOnS3) {
-			byte[] problemZip = com.horstmann.codecheck.Util.zip(problemFiles);
+			byte[] problemZip = Util.zip(problemFiles);
 			s3conn.putToS3(problemZip, repo, problem);
 		} else {
 			Path extDir = java.nio.file.Paths.get(config.getString("com.horstmann.codecheck.repo.ext"));
 			Path problemDir = extDir.resolve(problem);
-			Util.deleteDirectory(problemDir); // Delete any prior contents so that it is replaced by new zip file
+			com.horstmann.codecheck.Util.deleteDirectory(problemDir); // Delete any prior contents so that it is replaced by new zip file
 			Files.createDirectories(problemDir);
 			
 			for (Map.Entry<Path, byte[]> entry : problemFiles.entrySet()) {
@@ -90,7 +90,7 @@ public class Upload extends Controller {
 	}
 
 	public Result uploadProblem(Http.Request request) {
-		return uploadProblem(request, Util.createPublicUID(), Util.createPrivateUID());
+		return uploadProblem(request, com.horstmann.codecheck.Util.createPublicUID(), Util.createPrivateUID());
 	}
 
 	private boolean checkEditKey(String problem, String editKey) throws IOException {
@@ -127,7 +127,7 @@ public class Upload extends Controller {
 			TemporaryFile tempZipFile = tempZipPart.getRef();
 			Path savedPath = tempZipFile.path();
 			byte[] contents = Files.readAllBytes(savedPath);
-			Map<Path, byte[]> problemFiles = com.horstmann.codecheck.Util.unzip(contents);
+			Map<Path, byte[]> problemFiles = Util.unzip(contents);
 			problemFiles = fixZip(problemFiles);
 			Path editKeyPath = Paths.get("edit.key");
 			if (!problemFiles.containsKey(editKeyPath)) 
@@ -143,7 +143,7 @@ public class Upload extends Controller {
 	private String checkProblem(Http.Request request, String problem, Map<Path, byte[]> problemFiles)
 			throws IOException, InterruptedException, NoSuchMethodException, ScriptException {
 		Map<Path, byte[]> newProblemFiles = new TreeMap<>(problemFiles);
-		String studentId = Util.createPronouncableUID();
+		String studentId = com.horstmann.codecheck.Util.createPronouncableUID();
 		codeCheck.replaceParametersInDirectory(studentId, newProblemFiles);
 		String report = check(problem, newProblemFiles, studentId);
 		StringBuilder response = new StringBuilder();
@@ -200,13 +200,15 @@ public class Upload extends Controller {
 	}
 
 	private static Path longestCommonPrefix(Path p, Path q) {
+		if (p == null) return q;
+		if (q == null) return p;
 		int i = 0;
 		boolean matching = true;
 		while (matching && i < Math.min(p.getNameCount(), q.getNameCount())) {
 			if (p.getName(i).equals(q.getName(i))) i++;
 			else matching = false;
 		}
-		return p.subpath(0, i);
+		return i == 0 ? null : p.subpath(0, i);
 	}
 	
 	private static Map<Path, byte[]> fixZip(Map<Path, byte[]> problemFiles) throws IOException {
@@ -215,7 +217,7 @@ public class Upload extends Controller {
 			if (r == null) r = p;
 			else r = longestCommonPrefix(r, p);
 		}
-		if (r.getNameCount() == 0) return problemFiles;
+		if (r == null) return problemFiles;
 		Map<Path, byte[]> fixedProblemFiles = new TreeMap<>();
 		for (Map.Entry<Path, byte[]> entry : problemFiles.entrySet()) {
 			fixedProblemFiles.put(r.relativize(entry.getKey()), entry.getValue());
@@ -225,27 +227,12 @@ public class Upload extends Controller {
 
 	private String check(String problem, Map<Path, byte[]> problemFiles, String studentId)
 			throws IOException, InterruptedException, NoSuchMethodException, ScriptException {
-		// Copy solution files into submission for checking
+		Problem p = new Problem(problemFiles);
 		Map<Path, String> submissionFiles = new TreeMap<>();
-		boolean oldStyle = problemFiles.keySet().stream().anyMatch(p -> p.getName(0).toString().equals("student")); // TODO: -> Problem		
-		if (oldStyle) {
-            for (Path p : problemFiles.keySet()) {
-            	if (!com.horstmann.codecheck.Util.matches(com.horstmann.codecheck.Util.tail(p), ".*", "*~", "check.properties", "*.zy")) {
-            		String initial = p.getName(0).toString(); 
-            		if (initial.equals("solution")) {
-            			submissionFiles.put(Util.tail(p), new String(problemFiles.get(p), StandardCharsets.UTF_8));            			
-            		}            		
-            	}
-            }
-		} else {
-			boolean runMode = problemFiles.containsKey(Paths.get("Input"));  // TODO: -> Problem
-			for (Map.Entry<Path, byte[]> entry : problemFiles.entrySet()) {
-				Path p = entry.getKey();
-				String contents = new String(entry.getValue(), StandardCharsets.UTF_8);
-				if (runMode || Problem.isSolution(p, contents))
-					submissionFiles.put(p, contents);
-			}
-		}
+		for (Map.Entry<Path, byte[]> entry : p.getSolutionFiles().entrySet()) 
+			submissionFiles.put(entry.getKey(), new String(entry.getValue(), StandardCharsets.UTF_8));			
+		for (Map.Entry<Path, byte[]> entry : p.getInputFiles().entrySet()) 
+			submissionFiles.put(entry.getKey(), new String(entry.getValue(), StandardCharsets.UTF_8));			
 		Report report = codeCheck.run("html", repo, problem, studentId, submissionFiles);
 		return report.getText(); 
 	}

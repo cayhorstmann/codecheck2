@@ -27,6 +27,7 @@ import javax.script.ScriptException;
 import com.horstmann.codecheck.Main;
 import com.horstmann.codecheck.Report;
 import com.horstmann.codecheck.ResourceLoader;
+import com.horstmann.codecheck.Util;
 import com.typesafe.config.Config;
 
 import jdk.security.jarsigner.JarSigner;
@@ -40,18 +41,20 @@ public class CodeCheck {
 	private S3Connection s3conn;
 	private Environment playEnv;
 	private JarSigner signer;
-	private String remoteURL;
 	private ResourceLoader resourceLoader;
 	
 	@Inject public CodeCheck(Config config, S3Connection s3conn, Environment playEnv) {
 		this.config = config;
 		this.s3conn = s3conn;
 		this.playEnv = playEnv;
-		remoteURL = config.getString("com.horstmann.codecheck.remote");
 		resourceLoader = new ResourceLoader() {
 			@Override
 			public InputStream loadResource(String path) throws IOException {
 				return playEnv.classLoader().getResourceAsStream("public/resources/" + path);
+			}
+			@Override
+			public String getProperty(String key) {
+				return config.hasPath(key) ? config.getString(key) : null;
 			}
 		};
 		try {
@@ -85,8 +88,7 @@ public class CodeCheck {
 			engine.eval(new InputStreamReader(in, StandardCharsets.UTF_8));
 			//seeding unique student id
 			((Invocable) engine).invokeMethod(engine.get("Math"), "seedrandom", studentId);
-			engine.eval(Files.newBufferedReader(paramPath));
-			Files.delete(paramPath);
+			engine.eval(Util.getString(problemFiles, paramPath));
 			for (Path p : Util.filterNot(problemFiles.keySet(), "*.jar", "*.gif", "*.png", "*.jpg", "*.wav")) {
 				String contents = new String(problemFiles.get(p), StandardCharsets.UTF_8);
 				String result = replaceParametersInFile(contents, engine);
@@ -132,14 +134,14 @@ public class CodeCheck {
 	
 	public Map<Path, byte[]> loadProblem(String repo, String problemName) throws IOException {
 		if (s3conn.isOnS3(repo)) {
-			return com.horstmann.codecheck.Util.unzip(s3conn.readFromS3(repo, problemName));
+			return Util.unzip(s3conn.readFromS3(repo, problemName));
 		} else {
 			Path repoPath = Paths.get(config.getString("com.horstmann.codecheck.repo."
 							+ repo));
 			// TODO: That comes from Problems.java--fix it there
 			if (problemName.startsWith("/"))
 				problemName = problemName.substring(1);
-			return com.horstmann.codecheck.Util.descendantFiles(repoPath.resolve(problemName));			
+			return Util.descendantFiles(repoPath.resolve(problemName));			
 		}
 	}
 	
@@ -151,25 +153,12 @@ public class CodeCheck {
 		metaData.put("User", ccid);
 		metaData.put("Problem", (repo + "/" + problem).replaceAll("[^\\pL\\pN_/-]", ""));
 		
-		return run(reportType, repo, problem, problemFiles, submissionFiles, metaData);
+		return new Main().run(submissionFiles, problemFiles, reportType, metaData, resourceLoader);
 	}
-
-	private Report run(String reportType, String repo,
-			String problem, Map<Path, byte[]> problemFiles,
-			Map<Path, String> submissionFiles, Properties metaData) throws IOException, InterruptedException {
-		Properties properties = new Properties();
-		properties.put("com.horstmann.codecheck.report", reportType);
-		properties.put("com.horstmann.codecheck.remote", remoteURL);
-		if (config.hasPath("com.horstmann.codecheck.debug"))
-			properties.put("com.horstmann.codecheck.debug", config.getString("com.horstmann.codecheck.debug"));
-		
-		Report report = new Main().run(submissionFiles, problemFiles, properties, metaData, resourceLoader);
-		return report;
-	}	
 	
 	
     public byte[] signZip(Map<Path, byte[]> contents) throws IOException {  
-    	if (signer == null) return com.horstmann.codecheck.Util.zip(contents);
+    	if (signer == null) return Util.zip(contents);
     	Path tempFile = Files.createTempFile(null, ".zip");
     	OutputStream fout = Files.newOutputStream(tempFile);
         ZipOutputStream zout = new ZipOutputStream(fout);

@@ -17,10 +17,10 @@ import javax.inject.Inject;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.horstmann.codecheck.Util;
 
 import models.LTI;
 import models.S3Connection;
-import models.Util;
 import oauth.signpost.exception.OAuthCommunicationException;
 import oauth.signpost.exception.OAuthExpectationFailedException;
 import oauth.signpost.exception.OAuthMessageSignerException;
@@ -43,7 +43,7 @@ public class LTIAssignment extends Controller {
 	private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
 	
 	public static boolean isInstructor(Map<String, String[]> postParams) {
-		String role = Util.getParam(postParams, "roles");
+		String role = com.horstmann.codecheck.Util.getParam(postParams, "roles");
 		return role != null && (role.contains("Faculty") || role.contains("TeachingAssistant") || role.contains("Instructor"));
 	}
 	
@@ -75,18 +75,18 @@ public class LTIAssignment extends Controller {
 	 	
 		if (!isInstructor(postParams)) 
 			return badRequest("Instructor role is required to create an assignment.");
-    	String userID = Util.getParam(postParams, "user_id");
-		if (Util.isEmpty(userID)) return badRequest("No user id");
+    	String userID = com.horstmann.codecheck.Util.getParam(postParams, "user_id");
+		if (com.horstmann.codecheck.Util.isEmpty(userID)) return badRequest("No user id");
 
-		String toolConsumerID = Util.getParam(postParams, "tool_consumer_instance_guid");
+		String toolConsumerID = com.horstmann.codecheck.Util.getParam(postParams, "tool_consumer_instance_guid");
 		String userLMSID = toolConsumerID + "/" + userID;
 
 		ObjectNode assignmentNode = JsonNodeFactory.instance.objectNode();
 		
-		String launchPresentationReturnURL = Util.getParam(postParams, "launch_presentation_return_url");
+		String launchPresentationReturnURL = com.horstmann.codecheck.Util.getParam(postParams, "launch_presentation_return_url");
 	    assignmentNode.put("launchPresentationReturnURL", launchPresentationReturnURL);
     	assignmentNode.put("saveURL", "/lti/saveAssignment");
-    	assignmentNode.put("assignmentID", Util.createPublicUID());
+    	assignmentNode.put("assignmentID", com.horstmann.codecheck.Util.createPublicUID());
     	assignmentNode.put("editKey", userLMSID);
     	
 		return ok(views.html.editAssignment.render(assignmentNode.toString(), false));
@@ -188,12 +188,12 @@ public class LTIAssignment extends Controller {
 	 		return badRequest("Failed OAuth validation");
 	 	}	 	
 	 	
-    	String userID = Util.getParam(postParams, "user_id");
-		if (Util.isEmpty(userID)) return badRequest("No user id");
+    	String userID = com.horstmann.codecheck.Util.getParam(postParams, "user_id");
+		if (com.horstmann.codecheck.Util.isEmpty(userID)) return badRequest("No user id");
 
-		String toolConsumerID = Util.getParam(postParams, "tool_consumer_instance_guid");
-		String contextID = Util.getParam(postParams, "context_id");
-		String resourceLinkID = Util.getParam(postParams, "resource_link_id");
+		String toolConsumerID = com.horstmann.codecheck.Util.getParam(postParams, "tool_consumer_instance_guid");
+		String contextID = com.horstmann.codecheck.Util.getParam(postParams, "context_id");
+		String resourceLinkID = com.horstmann.codecheck.Util.getParam(postParams, "resource_link_id");
 
 		String userLMSID = toolConsumerID + "/" + userID;
 
@@ -237,16 +237,16 @@ public class LTIAssignment extends Controller {
         	assignmentNode.set("problems", groups.get(Math.abs(userID.hashCode()) % groups.size()));
         	assignmentNode.remove("editKey");
 
-    		String lisOutcomeServiceURL = Util.getParam(postParams, "lis_outcome_service_url");
-        	String lisResultSourcedID = Util.getParam(postParams, "lis_result_sourcedid");
-        	String oauthConsumerKey = Util.getParam(postParams, "oauth_consumer_key");
+    		String lisOutcomeServiceURL = com.horstmann.codecheck.Util.getParam(postParams, "lis_outcome_service_url");
+        	String lisResultSourcedID = com.horstmann.codecheck.Util.getParam(postParams, "lis_result_sourcedid");
+        	String oauthConsumerKey = com.horstmann.codecheck.Util.getParam(postParams, "oauth_consumer_key");
         	
-    	    if (Util.isEmpty(lisOutcomeServiceURL)) 
+    	    if (com.horstmann.codecheck.Util.isEmpty(lisOutcomeServiceURL)) 
               	return badRequest("lis_outcome_service_url missing.");
     		else
     			ltiNode.put("lisOutcomeServiceURL", lisOutcomeServiceURL);
     		
-    		if (Util.isEmpty(lisResultSourcedID)) 
+    		if (com.horstmann.codecheck.Util.isEmpty(lisResultSourcedID)) 
     			return badRequest("lis_result_sourcedid missing.");
     		else
     			ltiNode.put("lisResultSourcedID", lisResultSourcedID);

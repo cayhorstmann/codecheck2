@@ -16,9 +16,9 @@ POST /echo                    controllers.Application.echo(request: Request)
 GET  /assets/*file            controllers.Assets.versioned(path="/public", file: Asset)
 
 # Classic HTML
-GET	 /files						        controllers.Files.filesHTML(request: Request, repo: String ?= "ext", problem: String, ccid: String ?= null)
-GET	 /files/:problem				  controllers.Files.filesHTML(request: Request, repo: String ?= "ext", problem: String, ccid: String ?= null)
-GET  /files/:repo/:problem		controllers.Files.filesHTML(request: Request, repo: String, problem: String,          ccid: String ?= null)
+GET	 /files						        controllers.Files.filesHTML2(request: Request, repo: String ?= "ext", problem: String, ccid: String ?= null)
+GET	 /files/:problem				  controllers.Files.filesHTML2(request: Request, repo: String ?= "ext", problem: String, ccid: String ?= null)
+GET  /files/:repo/:problem		controllers.Files.filesHTML2(request: Request, repo: String, problem: String,          ccid: String ?= null)
 POST /checkNJS					      controllers.Check.checkNJS(request: Request)
 # GET called from interactive element with jsonp result--TODO: Does this still happen???
 GET  /checkNJS					      controllers.Check.checkNJS(request: Request)

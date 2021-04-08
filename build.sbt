@@ -27,6 +27,7 @@ enablePlugins(DockerPlugin)
 
 dockerBaseImage := "openjdk:11"
 dockerEntrypoint := Seq("bin/play-codecheck", "-Dplay.server.pidfile.path=/dev/null")
+dockerExposedPorts ++= Seq(9000, 9001)
 
 import com.typesafe.sbt.packager.docker.DockerChmodType
 dockerChmodType := DockerChmodType.UserGroupWriteExecute

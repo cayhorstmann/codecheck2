@@ -1,8 +1,6 @@
 package com.horstmann.codecheck;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
@@ -13,7 +11,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -32,37 +29,16 @@ public class Main {
     
     private int timeoutMillis;
     private int maxOutputLen;
-    private Properties checkProperties;
     private Report report;
-    private Map<Path, byte[]> useFiles = new Util.FileMap(); 
-        // the files (sources and inputs) from problemFiles that must be copied to the directory 
-        // in which the submission/solution program is run
-    private Map<Path, byte[]> solutionFiles = new Util.FileMap(); 
-        // the source files from problemFiles that make up the solution, same keys as submissionFiles
+    private Problem problem;
+    // TODO: Move these into Problem instance
     private Set<Path> mainSourcePaths = new TreeSet<>(); 
         // the source files that contain main
     private Set<Path> dependentSourcePaths = new TreeSet<>();
         // all other source files
 
-    private boolean inputMode = false;
-    
     private Score score = new Score();
     private Comparison comp = new Comparison();
-    private Language language = null;
-    private Language[] languages = {
-       new JavaLanguage(),
-       new PythonLanguage(),
-       new CLanguage(),
-       new CppLanguage(),
-       new ScalaLanguage(),
-       new MatlabLanguage(),
-       new RacketLanguage(),
-       new JavaScriptLanguage(),
-       new CSharpLanguage(),
-       new HaskellLanguage(),
-       new SMLLanguage()
-    };
-    private Annotations annotations;
     private Plan plan;
 
     /**
@@ -90,7 +66,7 @@ public class Main {
         }
         
         Report report = new Main().run(submissionFiles, problemFiles, 
-    		System.getProperties(), metadata, new CommandLineResourceLoader());
+    		System.getProperty("com.horstmann.codecheck.report"), metadata, new CommandLineResourceLoader());
         report.save(submissionDir, "report");        
     }
 
@@ -100,8 +76,6 @@ public class Main {
         int timeout = timeoutMillis / n;
         int maxOutput = maxOutputLen / n;
         for (int i = 0; i < n; i++) {
-            // TODO: No sense compiling if first (unsubstituted) student program not working
-            // This can be a useful optimization elsewhere
         	String contents = submissionFiles.get(mainFile);
             String subtituted = sub.substitute(contents, i); 
             String fileID = "submissionsubfiles" + i;
@@ -109,7 +83,7 @@ public class Main {
             plan.addFile(Paths.get(fileID).resolve(mainFile), subtituted);
             plan.compile(compileID, "submission " + fileID, mainFile, dependentSourcePaths);
             plan.run(compileID, compileID, mainFile, null, null, timeout, maxOutput, false);
-            contents = new String(solutionFiles.get(mainFile), StandardCharsets.UTF_8);
+            contents = new String(problem.getSolutionFiles().get(mainFile), StandardCharsets.UTF_8);
             subtituted = sub.substitute(contents, i); 
             fileID = "solutionsubfiles" + i;
             compileID = "solutionsub" + i;            
@@ -140,7 +114,7 @@ public class Main {
     }
 
     private void doCalls(Calls calls, ResourceLoader resourceLoader) throws Exception {        
-        Map<Path, String> testerFiles = calls.writeTester(solutionFiles, useFiles, resourceLoader);
+        Map<Path, String> testerFiles = calls.writeTester(problem, resourceLoader);
         Path base = Paths.get("callfiles");
         for (Map.Entry<Path, String> entry : testerFiles.entrySet()) 
             plan.addFile(base.resolve(entry.getKey()), entry.getValue());
@@ -193,8 +167,8 @@ public class Main {
 
     private void runUnitTests() {
         List<Path> unitTests = new ArrayList<>();
-        for (Path p : useFiles.keySet()) {
-            if (language.isUnitTest(p)) 
+        for (Path p : problem.getUseFiles().keySet()) {
+            if (problem.getLanguage().isUnitTest(p)) 
                 unitTests.add(p);
         }
         if (unitTests.size() > 0) {
@@ -207,7 +181,7 @@ public class Main {
                     report.run(p.toString());
                     if (!plan.checkCompiled(id, report, score)) return; 
                     String outerr = plan.outerr(id);                    
-                    language.reportUnitTest(outerr, report, score);                
+                    problem.getLanguage().reportUnitTest(outerr, report, score);                
                 });
                             
             }
@@ -230,7 +204,7 @@ public class Main {
         });
     }
 
-    private void testInputs(Map<String, String> inputs, Path mainFile, Annotations annotations) throws Exception {
+    private void testInputs(Map<String, String> inputs, Path mainFile) throws Exception {
         /*
          * If there are no inputs, we feed in one empty input to execute the program.
          */
@@ -238,28 +212,28 @@ public class Main {
             inputs.put("", ""); 
         
         plan.compile("submissionrun", "submission", mainFile, dependentSourcePaths);
-        boolean runSolution = !inputMode && !annotations.isSample(mainFile);
+        boolean runSolution = !problem.getInputMode() && !problem.getAnnotations().isSample(mainFile);
         if (runSolution) 
             plan.compile("solutionrun", "solution", mainFile, dependentSourcePaths);
 
         plan.addTask(() -> {
-        	report.header("run", inputMode ? "Output" : "Testing " + mainFile);
-        	plan.checkCompiled("submissionrun", report, score);
+        	report.header("run", problem.getInputMode() ? "Output" : "Testing " + mainFile);
         	if (runSolution)
         		plan.checkSolutionCompiled("solutionrun", report, score); 
+        	plan.checkCompiled("submissionrun", report, score);
     	});
         for (String test : inputs.keySet()) {
             String input = inputs.get(test);
-            testInput(mainFile, annotations, runSolution, test, input, timeoutMillis / inputs.size(), maxOutputLen / inputs.size());
+            testInput(mainFile, runSolution, test, input, timeoutMillis / inputs.size(), maxOutputLen / inputs.size());
         }
     }
 
-    private void testInput(Path mainFile, Annotations annotations,
+    private void testInput(Path mainFile, 
             boolean runSolution, String test, String input, int timeout, int maxOutput)
             throws Exception {
-        List<String> runargs = annotations.findKeys("ARGS");
+        List<String> runargs = problem.getAnnotations().findKeys("ARGS");
         if (runargs.size() == 0) runargs.add("");
-        String out = annotations.findUniqueKey("OUT");
+        String out = problem.getAnnotations().findUniqueKey("OUT");
         List<String> outFiles = out == null ? Collections.emptyList() : Arrays.asList(out.trim().split("\\s+"));
         
         String runNumber = test.replace("test", "").trim();
@@ -267,9 +241,9 @@ public class Main {
             if (!plan.compiled("submissionrun")) return;
             report.run(!test.equals("Input") && runNumber.length() > 0 ? "Test " + runNumber : null);
         });
-        boolean interleaveio = language.echoesStdin() == Language.Interleave.ALWAYS ||
-            language.echoesStdin() == Language.Interleave.UNGRADED && test.equals("Input");
-        if (input == null || input.equals("")) interleaveio = false;
+        boolean interleaveio = problem.getLanguage().echoesStdin() == Language.Interleave.ALWAYS ||
+            problem.getLanguage().echoesStdin() == Language.Interleave.UNGRADED && test.equals("Input");
+        if (input == null || input.isBlank()) interleaveio = false;
         else if (!input.endsWith("\n")) input += "\n";
         
         // TODO: Language settings
@@ -363,109 +337,49 @@ public class Main {
         });
     }
     
-    private void getSolutionAndUseFiles(Map<Path, String> submissionFiles, Map<Path, byte[]> problemFiles)  throws IOException {
-    	boolean oldStyle = problemFiles.keySet().stream().anyMatch(p -> p.getName(0).toString().equals("student")); // TODO: -> Problem
-    	if (oldStyle) { // old style with student and solution directories
-            Path checkPropertiesPath = Paths.get("student/check.properties");
-            if (problemFiles.containsKey(checkPropertiesPath)) {
-            	try (InputStream in = new ByteArrayInputStream(problemFiles.get(checkPropertiesPath))) {
-                    checkProperties.load(in);
-                }
-            }
-            for (Path p : problemFiles.keySet()) {
-            	if (!Util.matches(Util.tail(p), ".*", "*~", "check.properties", "*.zy")) {
-            		String initial = p.getName(0).toString(); 
-            		if (initial.equals("student")) {
-            			useFiles.put(Util.tail(p), problemFiles.get(p));
-            		}
-            		else if (initial.equals("solution")) {
-            			solutionFiles.put(Util.tail(p), problemFiles.get(p));            			
-            		}            		
-            	}
-            }
-
-            annotations.read(useFiles, solutionFiles, /* inputMode = */ false, report);
-        } else {
-            for (Path p : problemFiles.keySet()) {
-            	if (!Util.matches(p, ".*", "*~", "*.class", "a.out", "*.pyc",  
-                    "index.html", "index.ch", "problem.html", 
-                    "Input", "*.in", "q.properties", "check.properties", "param.js", "edit.key", "*.zy")) {
-            		useFiles.put(p, problemFiles.get(p));
-            	}
-            }
-            inputMode = problemFiles.containsKey(Paths.get("Input"));
-            annotations.read(useFiles, Collections.emptyMap(), inputMode, report);
-            // Move any files annotated with SOLUTION, SHOW or EDIT to solution 
-            for (Path p : annotations.getSolutions()) {
-            	solutionFiles.put(p, useFiles.get(p));
-            	useFiles.remove(p);
-            }
-
-            if (inputMode) {
-                Set<Path> useFilePaths = new HashSet<Path>(useFiles.keySet());
-                for (Path p : useFilePaths) {
-                    if (language.isSource(p) && !annotations.getHidden().contains(p)) {
-                    	solutionFiles.put(p, useFiles.get(p));
-                    	useFiles.remove(p);
-                    }
-                }
-            }                 
-        }
-
-        if (solutionFiles.isEmpty()) {                                   
-            throw new CodeCheckException("No solution files found");
-        }
-    }
-    
     private void getMainAndDependentSourceFiles() {
-    	for (Map.Entry<Path, byte[]> entry : solutionFiles.entrySet()) {
+    	for (Map.Entry<Path, byte[]> entry : problem.getSolutionFiles().entrySet()) {
             Path p = entry.getKey();
             String contents = new String(entry.getValue(), StandardCharsets.UTF_8);
-            if (language.isMain(p, contents))
+            if (problem.getLanguage().isMain(p, contents))
                 mainSourcePaths.add(p);
-            else if (!language.isUnitTest(p))
+            else if (!problem.getLanguage().isUnitTest(p))
                 dependentSourcePaths.add(p);
         }
         
-        for (Map.Entry<Path, byte[]> entry : useFiles.entrySet()) {
+        for (Map.Entry<Path, byte[]> entry : problem.getUseFiles().entrySet()) {
             Path p = entry.getKey();
-            if (language.isSource(p)) {
+            if (problem.getLanguage().isSource(p)) {
             	String contents = new String(entry.getValue(), StandardCharsets.UTF_8);
-            	if (language.isMain(p, contents))
+            	if (problem.getLanguage().isMain(p, contents))
             		mainSourcePaths.add(p);
-            	else if (!language.isUnitTest(p))
+            	else if (!problem.getLanguage().isUnitTest(p))
             		dependentSourcePaths.add(p);
             }
         }
     }
 
-    public Set<Path> copyFilesToPlan(Map<Path, String> submissionFiles) {
+    public void copyFilesToPlan(Map<Path, String> submissionFiles) {
         Path use = Paths.get("use");
         Path solution = Paths.get("solution");
         Path submission = Paths.get("submission");
-        for (Map.Entry<Path, byte[]> entry : useFiles.entrySet()) {
-            Path p = entry.getKey();            
-        	if (inputMode && submissionFiles.containsKey(p)) // This happens in Input mode with submitted inputs TODO: Really?
-                plan.addFile(use.resolve(p), submissionFiles.get(p));
-        	else        		
-        		plan.addFile(use.resolve(entry.getKey()), entry.getValue());
+        for (Map.Entry<Path, byte[]> entry : problem.getUseFiles().entrySet()) 
+    		plan.addFile(use.resolve(entry.getKey()), entry.getValue());
+        for (Map.Entry<Path, byte[]> entry : problem.getInputFiles().entrySet()) {
+        	Path p = entry.getKey();
+        	if (!submissionFiles.containsKey(p)) throw new CodeCheckException("Missing file " + p);
+        	plan.addFile(use.resolve(p), submissionFiles.get(p));
         }
         
-        Set<Path> missingFiles = new TreeSet<>();
-        for (Map.Entry<Path, byte[]> entry : solutionFiles.entrySet()) {
+        for (Map.Entry<Path, byte[]> entry : problem.getSolutionFiles().entrySet()) {
             Path p = entry.getKey();            
             plan.addFile(solution.resolve(p), entry.getValue());
-            if (submissionFiles.containsKey(p))
-                plan.addFile(submission.resolve(p), submissionFiles.get(p));
-            else {
-                report.error("Missing file " + p);
-                missingFiles.add(p); // TODO: How can this happen? Why not abort?
-            }
+        	if (!submissionFiles.containsKey(p)) throw new CodeCheckException("Missing file " + p);
+            plan.addFile(submission.resolve(p), submissionFiles.get(p));
         }        
-        return missingFiles;
     }
     
-    public String reportComments(Properties metadata) {
+    public void reportComments(Properties metadata) {
         report.comment("Submission", Util.createPrivateUID());
         // This is just a unique ID, can be used to check against cheating
          DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
@@ -473,29 +387,19 @@ public class Main {
          String currentTime = df.format(new Date());
          report.comment("Time", currentTime);
          report.footnote(currentTime);
-         String problemId = annotations.findUniqueKey("ID");
-         if (problemId == null) {
-             problemId = Util.removeExtension(solutionFiles.keySet().iterator().next().getFileName());                
-         }
-         else {
-             problemId = problemId.replaceAll("[^A-Za-z0-9]", "").toLowerCase();
-         }
              
-         report.comment("ID", problemId);
+         report.comment("ID", problem.getId());
 
          for (Map.Entry<Object, Object> entries : metadata.entrySet())
         	 report.comment(entries.getKey().toString(), entries.getValue().toString());
-         return problemId;
     }
 
     public Report run(Map<Path, String> submissionFiles, Map<Path, byte[]> problemFiles, 
-    		Properties runProps, Properties metadata, ResourceLoader resourceLoader) throws IOException {
+    		String reportType, Properties metadata, ResourceLoader resourceLoader) throws IOException {
         long startTime = System.currentTimeMillis();
         try {
-
             // Set up report first in case anything else throws an exception 
             
-            String reportType = runProps.getProperty("com.horstmann.codecheck.report");
             if ("Text".equals(reportType))
                 report = new TextReport("Report");
             else if ("JSON".equals(reportType))
@@ -505,36 +409,15 @@ public class Main {
             else
                 report = new HTMLReport("Report");
             
-            // Guess language from problem files
-            Set<Path> files = problemFiles.keySet();
-            for (int k = 0; language == null && k < languages.length; k++) {
-                if (languages[k].isLanguage(files)) 
-                    language = languages[k];
-            }
-            if (language == null) throw new CodeCheckException("Cannot find language from " + files);
+            problem = new Problem(problemFiles);
 
-            plan = new Plan(language, runProps.getProperty("com.horstmann.codecheck.debug") != null);
+            plan = new Plan(problem.getLanguage(), resourceLoader.getProperty("com.horstmann.codecheck.debug") != null);
             
-            checkProperties = new Properties();
-            annotations = new Annotations(language);
-            getSolutionAndUseFiles(submissionFiles, problemFiles);
-            
-            
-            timeoutMillis = DEFAULT_TIMEOUT_MILLIS;
-            String timeoutProperty = runProps.getProperty("com.horstmann.codecheck.timeout");
-            if (timeoutProperty != null)
-            	timeoutMillis = Integer.parseInt(timeoutProperty);
-            timeoutMillis = (int) annotations.findUniqueDoubleKey("TIMEOUT", timeoutMillis);
-            
-            maxOutputLen = DEFAULT_MAX_OUTPUT_LEN;
-            String maxOutputLenProperty = runProps.getProperty("com.horstmann.codecheck.maxoutputlen");
-            if (maxOutputLenProperty != null)
-                maxOutputLen = Integer.parseInt(maxOutputLenProperty);
-            maxOutputLen = (int) annotations.findUniqueDoubleKey("MAXOUTPUTLEN", maxOutputLen);
-            
-            double tolerance = annotations.findUniqueDoubleKey("TOLERANCE", DEFAULT_TOLERANCE);
-            boolean ignoreCase = !"false".equalsIgnoreCase(annotations.findUniqueKey("IGNORECASE"));
-            boolean ignoreSpace = !"false".equalsIgnoreCase(annotations.findUniqueKey("IGNORESPACE"));
+            timeoutMillis = (int) problem.getAnnotations().findUniqueDoubleKey("TIMEOUT", DEFAULT_TIMEOUT_MILLIS);
+            maxOutputLen = (int) problem.getAnnotations().findUniqueDoubleKey("MAXOUTPUTLEN", DEFAULT_MAX_OUTPUT_LEN);        
+            double tolerance = problem.getAnnotations().findUniqueDoubleKey("TOLERANCE", DEFAULT_TOLERANCE);
+            boolean ignoreCase = !"false".equalsIgnoreCase(problem.getAnnotations().findUniqueKey("IGNORECASE"));
+            boolean ignoreSpace = !"false".equalsIgnoreCase(problem.getAnnotations().findUniqueKey("IGNORESPACE"));
             comp.setTolerance(tolerance);
             comp.setIgnoreCase(ignoreCase);
             comp.setIgnoreSpace(ignoreSpace);            
@@ -543,58 +426,52 @@ public class Main {
 
             reportComments(metadata);
             
-            Set<Path> missingFiles = copyFilesToPlan(submissionFiles);
+            copyFilesToPlan(submissionFiles);
             
+            // TODO: This would be nice to have in Problem, except that one might later need to remove checkstyle.xml
             // the use files that the students are entitled to see
-            Set<Path> printFiles = Util.filterNot(useFiles.keySet(),  
+            Set<Path> printFiles = Util.filterNot(problem.getUseFiles().keySet(),  
                     "*.png", "*.PNG", "*.gif", "*.GIF", "*.jpg", "*.jpeg", "*.JPG", "*.bmp", "*.BMP",
                     "*.jar", "*.pdf");      
 
-            printFiles.removeAll(annotations.getHidden());
-            printFiles.removeAll(solutionFiles.keySet());
+            printFiles.removeAll(problem.getAnnotations().getHidden());
+            printFiles.removeAll(problem.getSolutionFiles().keySet());
             
-            if (annotations.checkConditions(submissionFiles, report)) {
-                if (annotations.has("CALL")) {
-                    Calls calls = annotations.findCalls();
+            if (problem.getAnnotations().checkConditions(submissionFiles, report)) {
+                if (problem.getAnnotations().has("CALL")) {
+                    Calls calls = problem.getAnnotations().findCalls();
                     mainSourcePaths.remove(calls.getFile());
                     dependentSourcePaths.add(calls.getFile());
                     doCalls(calls, resourceLoader);
                 }
-                if (annotations.has("SUB")) {
-                    Substitution sub = annotations.findSubstitution();
+                if (problem.getAnnotations().has("SUB")) {
+                    Substitution sub = problem.getAnnotations().findSubstitution();
                     mainSourcePaths.remove(sub.getFile());
                     //dependentSourceFiles.add(sub.getFile());
                     doSubstitutions(submissionFiles, sub);
                 }
                 
-                Map<String, String> inputs = new TreeMap<>(); // TODO: Legacy
+                Map<String, String> inputs = new TreeMap<>(); 
                 for (String i : new String[] { "", "1", "2", "3", "4", "5", "6", "7", "8", "9" }) {
                     String key = "test" + i + ".in";
                     
-                    String in = checkProperties.getProperty(key);
-                    if (in != null)
-                        in += "\n";
-                    else {
-                    	Path p = Paths.get(key);
-                    	byte[] contents = null;
+                	Path p = Paths.get(key);
+                	byte[] contents = null;
+                	if (problemFiles.containsKey(p))
+                		contents = problemFiles.get(p);
+                	else {
+                		p = Paths.get("student").resolve(key);
                     	if (problemFiles.containsKey(p))
-                    		contents = problemFiles.get(p);
-                    	else {
-                    		p = Paths.get("student").resolve(key);
-                        	if (problemFiles.containsKey(p))
-                        		contents = problemFiles.get(p);                    				
-                    	}
-                    	if (contents != null)
-                    		in = new String(contents, StandardCharsets.UTF_8);
-                    }
-                    if (in != null)
-                        inputs.put("test" + i, in);
+                    		contents = problemFiles.get(p);                    				
+                	}
+                	if (contents != null) 
+                		inputs.put("test" + i, new String(contents, StandardCharsets.UTF_8));
                 }
                 int inIndex = inputs.size();
-                for (String s : annotations.findKeys("IN")) {
+                for (String s : problem.getAnnotations().findKeys("IN")) {
                     inputs.put("test" + ++inIndex, Util.unescapeJava(s));
                 }
-                if (inputMode) { 
+                if (problem.getInputMode()) { 
                     Path p = Paths.get("Input");
                     inputs.put("Input", submissionFiles.get(p));
                 }
@@ -604,8 +481,8 @@ public class Main {
                 List<Path> testerFiles = new ArrayList<>();
                 List<Path> runFiles = new ArrayList<>();
                 for (Path mainSourceFile : mainSourcePaths) {
-                    if (language.isTester(mainSourceFile) && !solutionFiles.keySet().contains(mainSourceFile)
-                             && !annotations.isSample(mainSourceFile) && !inputMode)
+                    if (problem.getLanguage().isTester(mainSourceFile) && !problem.getSolutionFiles().keySet().contains(mainSourceFile)
+                             && !problem.getAnnotations().isSample(mainSourceFile) && !problem.getInputMode())
                         testerFiles.add(mainSourceFile);
                     else
                         runFiles.add(mainSourceFile);
@@ -614,54 +491,45 @@ public class Main {
                 if (testerFiles.size() > 0) {
                     report.header("tester", "Testers");
                     for (Path testerFile : testerFiles)
-                        if (missingFiles.contains(testerFile)) {
-                            report.error("Missing " + testerFile);
-                            score.setInvalid();
-                        }
-                        else
-                            runTester(testerFile, timeoutMillis / testerFiles.size(), maxOutputLen / testerFiles.size());
+                        runTester(testerFile, timeoutMillis / testerFiles.size(), maxOutputLen / testerFiles.size());
                 }
 
                 if (runFiles.size() > 0) {
                     for (Path runFile : runFiles)
-                        if (missingFiles.contains(runFile)) {
-                            report.error("Missing " + runFile);
-                            score.setInvalid();
-                        }
-                        else
-                            testInputs(inputs, runFile, annotations);
+                        testInputs(inputs, runFile);
                 }
                 // Process checkstyle.xml etc.
-                for (Path p : useFiles.keySet()) {
-                    String cmd = language.process(p, submissionFiles);
+                for (Path p : problem.getUseFiles().keySet()) {
+                    String cmd = problem.getLanguage().process(p, submissionFiles);
                     if (cmd != null) {
                         printFiles.remove(p);
                         String id = plan.nextID("process");
                         plan.process(id, cmd);
                         plan.addTask(() -> {
                             String result = plan.outerr(id);
-                            language.reportProcessResult(result, report, score);
+                            problem.getLanguage().reportProcessResult(result, report, score);
                         });
                     }
                 }
             }
-            String remoteURL = runProps.getProperty("com.horstmann.codecheck.remote");            
-            String scriptCommand = runProps.getProperty("com.horstmann.codecheck.checkscript");            
+            String remoteURL = resourceLoader.getProperty("com.horstmann.codecheck.comrun.remote");            
+            String scriptCommand = resourceLoader.getProperty("com.horstmann.codecheck.comrun.local");  
+            if (remoteURL == null && scriptCommand == null) scriptCommand = "/opt/codecheck/codecheck";
             plan.execute(report, remoteURL, scriptCommand);
             
-            if (!inputMode) { // Don't print submitted or provided files for run-only mode
+            if (!problem.getInputMode()) { // Don't print submitted or provided files for run-only mode
                 report.header("studentFiles", "Submitted files");
                 /*
                  * Iterate over solutionFiles because submissionFiles may have additional files
                  * when running the codecheck script
                  */
-                for (Path p : solutionFiles.keySet())   
+                for (Path p : problem.getSolutionFiles().keySet())   
                     report.file(p.toString(), submissionFiles.get(p));
     		
                 if (printFiles.size() > 0) {
                     report.header("providedFiles", "Provided files");
                     for (Path p : printFiles)
-                        report.file(p.toString(), new String(useFiles.get(p), StandardCharsets.UTF_8));
+                        report.file(p.toString(), new String(problem.getUseFiles().get(p), StandardCharsets.UTF_8));
                 }
             }
         } catch (Throwable t) {
@@ -669,8 +537,8 @@ public class Main {
             else t.printStackTrace();
         } finally {
             if (report != null) {
-                if (annotations != null && !annotations.has("NOSCORE") 
-                        && !inputMode) 
+                if (problem != null && problem.getAnnotations() != null && !problem.getAnnotations().has("NOSCORE") 
+                        && !problem.getInputMode()) 
                     report.add(score);
                 long endTime = System.currentTimeMillis();
                 report.comment("Elapsed", (endTime - startTime) + " ms");

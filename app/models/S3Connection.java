@@ -66,7 +66,8 @@ public class S3Connection {
 	}
 
 	public boolean isOnS3(String repo) {
-		return !config.hasPath("com.horstmann.codecheck.repo." + repo);
+		String key = "com.horstmann.codecheck.repo." + repo;
+		return !config.hasPath(key)	|| config.getString(key).isEmpty();
 	}
 	
 	public boolean isOnS3(String repo, String key) {

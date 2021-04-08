@@ -19,6 +19,7 @@ application-log*
 gcloud
 deploy
 checkall
+testdiff
 /bin
 checker/docker/build
 todo.txt

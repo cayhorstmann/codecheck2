@@ -59,7 +59,7 @@ function compile {
   esac 
   if [[ ${PIPESTATUS[0]} != 0 ]] ; then
     mv $BASE/out/$DIR/_compile $BASE/out/$DIR/_errors
-    find -name *.class -exec rm {} \;
+    find -name "*.class" -exec rm {} \;
   fi  
 }
 

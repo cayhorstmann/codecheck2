@@ -81,7 +81,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import models.S3Connection;
-import models.Util;
+import com.horstmann.codecheck.Util;
 import play.Logger;
 import play.mvc.Controller;
 import play.mvc.Http;
@@ -115,13 +115,13 @@ public class Assignment extends Controller {
     			else if (problemDescriptor.matches("[a-zA-Z0-9_]+(-[a-zA-Z0-9_]+)*")) {	
     				qid = problemDescriptor;
     				problemURL = "https://www.interactivities.ws/" + problemDescriptor + ".xhtml";
-    				if (Util.exists(problemURL))
+    				if (com.horstmann.codecheck.Util.exists(problemURL))
     					checked = true;
     				else
     					problemURL = "https://codecheck.it/files?repo=wiley&problem=" + problemDescriptor;            				            					
     			}
     			else throw new IllegalArgumentException("Bad problem: " + problemDescriptor);
-    			if (!checked && !Util.exists(problemURL))
+    			if (!checked && !com.horstmann.codecheck.Util.exists(problemURL))
     				throw new IllegalArgumentException("Cannot find " + problemDescriptor);            	
             	problem.put("URL", problemURL);
             	if (qid != null) problem.put("qid", qid);
@@ -163,7 +163,7 @@ public class Assignment extends Controller {
 			ObjectNode problem = (ObjectNode) p;
 			double weight = problem.get("weight").asDouble();
 			sum += weight;
-			for (String key : Util.iterable(submissions.fieldNames())) {
+			for (String key : com.horstmann.codecheck.Util.iterable(submissions.fieldNames())) {
 				if (isProblemKeyFor(key, problem)) {	
 					ObjectNode submission = (ObjectNode) submissions.get(key);
 					result += weight * submission.get("score").asDouble();
@@ -217,7 +217,7 @@ public class Assignment extends Controller {
     public Result work(Http.Request request, String assignmentID, String ccid, String editKey, 
     		boolean isStudent) 
     		throws IOException, GeneralSecurityException {
-    	String prefix = Util.prefix(request);
+    	String prefix = models.Util.prefix(request);
     	String workID = "";
     	boolean editKeySaved = true;
 
@@ -234,17 +234,17 @@ public class Assignment extends Controller {
     				if (editKeyCookie.isPresent()) 
     					editKey = editKeyCookie.get().value();
     				else { // This shouldn't happen, but if it does, clear ID
-        				ccid = Util.createPronouncableUID();
+        				ccid = com.horstmann.codecheck.Util.createPronouncableUID();
                        	editKey = Util.createPrivateUID();
                        	editKeySaved = false;    					
     				}
     			} else { // First time on this browser
-    				ccid = Util.createPronouncableUID();
+    				ccid = com.horstmann.codecheck.Util.createPronouncableUID();
                    	editKey = Util.createPrivateUID();
                    	editKeySaved = false;
     			}
     		} else if (editKey == null) { // Clear ID request
-    			ccid = Util.createPronouncableUID();
+    			ccid = com.horstmann.codecheck.Util.createPronouncableUID();
                	editKey = Util.createPrivateUID();
                	editKeySaved = false;    			
     		}
@@ -352,7 +352,7 @@ public class Assignment extends Controller {
     			return badRequest("Edit key does not match");
     	}
     	else { // New assignment or clone 
-    		assignmentID = Util.createPublicUID();
+    		assignmentID = com.horstmann.codecheck.Util.createPublicUID();
         	params.put("assignmentID", assignmentID);
         	if (params.has("editKey"))
         		editKey = params.get("editKey").asText();
@@ -364,7 +364,7 @@ public class Assignment extends Controller {
     	}
     	s3conn.writeJsonObjectToDynamoDB("CodeCheckAssignments", params);
 
-    	String prefix = Util.prefix(request);
+    	String prefix = models.Util.prefix(request);
     	String assignmentURL = prefix + "/private/assignment/" + assignmentID + "/" + editKey;
 		params.put("viewAssignmentURL", assignmentURL);
     	

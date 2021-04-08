@@ -1,8 +1,9 @@
 #!/bin/bash
 
-# This program expects that a user "comrunner" exists. It receives
-# as argument a zip file with a file "script" in the root, a directory
-# "in" with inputs and other directories with source and auxiliary files.
+# This program receives as argument a zip file with a file "script"
+# in the root, a directory "in" with inputs and other directories
+# with source and auxiliary files.
+
 # The "script" file may contain the following directives:
 # prepare targetDir sourceDir sourceDir ...
 #   The target directory is created, and all source directories are
@@ -29,6 +30,10 @@
 # When the script completes, it zips up the contents of the
 # out directory and prints its location.
 #
+# The script instructions are executed with the user in the environment
+# variable COMRUN_USER, or the user "comrunner" if the environment
+# variable is not set.
+#
 # This program is invoked from the trivial server.js application
 # which receives a zip file with the script, sources, and auxiliary
 # files and returns a zip with the outputs.
@@ -39,11 +44,15 @@ if [[ ! -e /tmp/codecheck ]] ; then
   chmod 733 /tmp/codecheck
 fi
 
+if [[ -z $COMRUN_USER ]] ; then
+  COMRUN_USER=comrunner
+fi
+
 BASEDIR=$(dirname $0)
 WORKDIR=$(mktemp -d /tmp/codecheck/workXXXXXXXXXXXXXXXXXXXX)
 chmod 777 $WORKDIR
 cd $WORKDIR
-sudo -u comrunner unzip -q $1
+sudo -u $COMRUN_USER unzip -q $1
 DEBUG=""
 
 cp $BASEDIR/preload.sh compile
@@ -70,12 +79,12 @@ if [[ -z $DEBUG ]] ; then
   rm $1
 fi
 
-sudo -u comrunner ./compile
-sudo -u comrunner nice -15 ./runsolution
+sudo -u $COMRUN_USER ./compile 2>&1
+sudo -u $COMRUN_USER nice -15 ./runsolution 2>&1
 if [[ -z $DEBUG ]] ; then
-  sudo -u comrunner rm -rf solution*
+  sudo -u $COMRUN_USER rm -rf solution*
 fi
-sudo -u comrunner nice -15 ./runsubmission
+sudo -u $COMRUN_USER nice -15 ./runsubmission 2>&1
 
 OUTFILE=$(mktemp /tmp/codecheck/responseXXXXXXXXXXXXXXXXXXXX.zip)
 # Otherwise zip tries to read $OUTFILE
@@ -86,7 +95,7 @@ zip -r - . > $OUTFILE 2>/dev/null
 if [[ -z $DEBUG ]] ; then
   cd /tmp/codecheck
   rm $WORKDIR/compile $WORKDIR/runsolution $WORKDIR/runsubmission  
-  sudo -u comrunner rm -rf $WORKDIR/*
+  sudo -u $COMRUN_USER rm -rf $WORKDIR/*
   rm -rf $WORKDIR
 fi
 

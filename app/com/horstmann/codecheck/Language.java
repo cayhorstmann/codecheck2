@@ -8,11 +8,34 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public interface Language {
+    static Language[] languages = {
+       new JavaLanguage(),
+       new PythonLanguage(),
+       new CLanguage(),
+       new CppLanguage(),
+       new ScalaLanguage(),
+       new MatlabLanguage(),
+       new RacketLanguage(),
+       new JavaScriptLanguage(),
+       new CSharpLanguage(),
+       new HaskellLanguage(),
+       new SMLLanguage()
+    };
 
+	static Language languageFor(Set<Path> files) {
+		Language language = null;
+		for (int k = 0; language == null && k < languages.length; k++) {
+            if (languages[k].isLanguage(files)) 
+                language = languages[k];
+        }
+		return language;
+	}
+    
     /**
      * Gets the extension required for source files in this language. 
      * @return the extension (without a period), or null if there 
@@ -21,7 +44,9 @@ public interface Language {
     String getExtension(); 
     
     /**
-     * Tests if a file is a source file in this language.
+     * Tests if a file is a source file in this language. Some languages 
+     * may have multiple forms of source files, e.g. C++ has 
+     * .cpp and .h source files
      * @param p the path to the file
      * @return true if it is a source file
      */

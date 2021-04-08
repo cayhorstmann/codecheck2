@@ -1,1 +1,4 @@
-For project info, go to the [Wiki](https://github.com/cayhorstmann/codecheck/wiki)
+= CodeCheck =
+
+* [Description](https://codecheck.io)
+* [Build Instructions](https://horstmann.com/codecheck/build-instructions.html)

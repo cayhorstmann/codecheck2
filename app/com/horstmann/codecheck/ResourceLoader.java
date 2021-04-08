@@ -9,4 +9,5 @@ public interface ResourceLoader {
 	default String loadResourceAsString(String path) throws IOException { 
 		return new String(loadResource(path).readAllBytes(), StandardCharsets.UTF_8);
 	}
+	String getProperty(String key);
 }

@@ -6,6 +6,7 @@ import java.io.OutputStream;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.AbstractMap;
@@ -51,8 +52,8 @@ public class LTI {
 	 			entries.add(new AbstractMap.SimpleEntry<>(entry.getKey(), s));
 	 	String url = Util.prefix(request) + request.uri();
 	 	
-	 	String key = Util.getParam(postParams, OAUTH_KEY_PARAMETER);
-	 	for (Map.Entry<String, String> entry : Util.getParams(url).entrySet())
+	 	String key = com.horstmann.codecheck.Util.getParam(postParams, OAUTH_KEY_PARAMETER);
+	 	for (Map.Entry<String, String> entry : com.horstmann.codecheck.Util.getParams(url).entrySet())
 	 		entries.add(entry);
 	 	int n = url.lastIndexOf("?"); 
 	 	if (n >= 0) url = url.substring(0, n);
@@ -132,7 +133,7 @@ public class LTI {
 			logger.info(request.getResponseCode() + " " + request.getResponseMessage());
 		try {
 			InputStream in = request.getInputStream();
-			String body = new String(Util.readAllBytes(in), "UTF-8");
+			String body = new String(in.readAllBytes(), StandardCharsets.UTF_8);
 			Matcher matcher1 = codeMajorPattern.matcher(body);
 			Matcher matcher2 = descriptionPattern.matcher(body);
 			String message = "";
@@ -144,7 +145,7 @@ public class LTI {
 			return message;			
 		} catch (Exception e) {			
 			InputStream in = request.getErrorStream();
-			String body = new String(Util.readAllBytes(in), "UTF-8");
+			String body = new String(in.readAllBytes(), StandardCharsets.UTF_8);
 			logger.info("Response error received from LMS: " + e.getMessage() + ": " + body);
 			return body;
 		}

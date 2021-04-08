@@ -48,7 +48,7 @@ function grade {
 
     cd "$SUBMISSIONDIR"
 
-    JOPTS="-Duser.language=en -Duser.country=US -Dcom.horstmann.codecheck -Dcom.horstmann.codecheck.checkscript=$(dirname $0)/check $JAVA_OPTS"
+    JOPTS="-Duser.language=en -Duser.country=US -Dcom.horstmann.codecheck -Dcom.horstmann.codecheck.comrun.local=$(dirname $0)/comrun $JAVA_OPTS"
 
     if [ ! -z "$DEBUG" ] ; then
         JOPTS="$JOPTS -Dcom.horstmann.codecheck.debug" 
@@ -62,6 +62,9 @@ function grade {
 
 STARTDIR=`pwd`
 BASEDIR=`dirname $0`
+
+COMRUN_USER=$(whoami)
+export COMRUN_USER
 
 # Pick up env settings and set JAVA_HOME
 
@@ -121,14 +124,14 @@ do
              REPORT=report.html
              ;;
          l)
-           JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck.remote=http://localhost:8080/api/upload"
+           JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck.comrun.remote=http://localhost:8080/api/upload"
            ;;
          r)
            if [[ -z $REMOTE_URL ]] ; then
              echo "Set REMOTE_URL to the URL of the remote comrun server"
              exit
            else
-             JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck.remote=${REMOTE_URL}/api/upload"
+             JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck.comrun.remote=${REMOTE_URL}/api/upload"
            fi
            ;;
      esac

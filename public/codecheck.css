@@ -37,7 +37,11 @@
 
 body { 
 	font-family: sans;
-	font-size: 1.2em; 
+}
+
+code, pre {
+	font-family: DejaVuSansMonoSemiCondensed;
+	font-size: 110%;
 }
 
 .editor { 
