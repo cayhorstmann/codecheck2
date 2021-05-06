@@ -4,7 +4,6 @@ import java.util.regex.*;
 
 import play.mvc.Controller;
 import play.mvc.Http;
-import play.mvc.Http.RequestBody;
 import play.mvc.Result;
 import com.horstmann.codecheck.Util;
 
@@ -29,9 +28,4 @@ public class Application extends Controller {
           return internalServerError(Util.getStackTrace(ex));
        }
     }   
-    
-    public Result echo(Http.Request request) {
-    	RequestBody body = request.body();
-    	return ok("Received: " + body.asJson());
-    }
 }

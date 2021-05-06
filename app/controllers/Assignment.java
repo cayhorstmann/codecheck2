@@ -388,6 +388,7 @@ public class Assignment extends Controller {
 			ObjectNode submissionNode = JsonNodeFactory.instance.objectNode();
 			submissionNode.put("submissionID", submissionID);
 			submissionNode.put("submittedAt", now.toString());
+			// TODO: NPE in logs for the line below
 			submissionNode.put("state", problemsNode.get(problemID).get("state").toString());
 			submissionNode.put("score", problemsNode.get(problemID).get("score").asDouble());
 			s3conn.writeJsonObjectToDynamoDB("CodeCheckSubmissions", submissionNode);

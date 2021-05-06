@@ -130,7 +130,7 @@ public class LTI {
 		out.close();
 		// request.connect();
 		if (request.getResponseCode() != 200)
-			logger.info(request.getResponseCode() + " " + request.getResponseMessage());
+			logger.warn("passbackGradeToLMS: Not successful" + request.getResponseCode() + " " + request.getResponseMessage());
 		try {
 			InputStream in = request.getInputStream();
 			String body = new String(in.readAllBytes(), StandardCharsets.UTF_8);
@@ -140,13 +140,13 @@ public class LTI {
 			if (matcher1.find()) message += matcher1.group(1);
 			if (matcher2.find()) message += ": " + matcher2.group(1);
 			if (message.length() == 0) message = body;
-			// TODO: Log error only? message not starting with success
-			logger.info("Response body received from LMS: " + body);
+			if (!body.contains("<imsx_codeMajor>success</imsx_codeMajor>"))
+				logger.warn("passbackGradeToLMS: Not successful " + body);
 			return message;			
 		} catch (Exception e) {			
 			InputStream in = request.getErrorStream();
 			String body = new String(in.readAllBytes(), StandardCharsets.UTF_8);
-			logger.info("Response error received from LMS: " + e.getMessage() + ": " + body);
+			logger.warn("passbackGradeToLMS: Response error " + e.getMessage() + ": " + body);
 			return body;
 		}
 	}			

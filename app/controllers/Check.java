@@ -35,7 +35,7 @@ public class Check extends Controller {
 	@Inject private CodeCheck codeCheck;
 	
 	
-	// Classic HTML report
+	// Classic HTML report, used in Core Java for the Impatient 2e
 	public CompletableFuture<Result> checkHTML(Http.Request request) throws IOException, InterruptedException {
 		Map<String, String[]> params = request.body().asFormUrlEncoded();
 		return CompletableFuture.supplyAsync(() -> {
@@ -132,7 +132,7 @@ public class Check extends Controller {
 		            Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
 		            ccid = ccidCookie.map(Http.Cookie::value).orElse(com.horstmann.codecheck.Util.createPronouncableUID());
 				};				
-				Logger.of("com.horstmann.codecheck.check").info("checkNJS: " + requestParams);
+				//Logger.of("com.horstmann.codecheck.check").info("checkNJS: " + requestParams);
 				//TODO last param should be submissionDir
 				String report = codeCheck.run(reportType, repo, problem, ccid, submissionFiles).getText();
 				ObjectNode result = (ObjectNode) Json.parse(report);

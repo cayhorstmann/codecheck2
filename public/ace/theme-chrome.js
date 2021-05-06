@@ -1,9 +1,9 @@
-ace.define("ace/theme/chrome",["require","exports","module","ace/lib/dom"], function(require, exports, module) {
+define("ace/theme/chrome",["require","exports","module","ace/lib/dom"], function(require, exports, module) {
 
 exports.isDark = false;
 exports.cssClass = "ace-chrome";
 exports.cssText = ".ace-chrome .ace_gutter {\
-background: #ebebeb;\
+background: #F3F3F4;\
 color: #333;\
 overflow : hidden;\
 }\
@@ -25,7 +25,10 @@ color: rgb(191, 191, 191);\
 color: rgb(88, 72, 246);\
 }\
 .ace-chrome .ace_constant.ace_language {\
-color: rgb(88, 92, 246);\
+color: black;\
+}\
+.ace-chrome .ace_constant.ace_language.ace_boolean{\
+color: #427b2d;\
 }\
 .ace-chrome .ace_constant.ace_library {\
 color: rgb(6, 150, 14);\
@@ -37,7 +40,7 @@ color: white;\
 .ace-chrome .ace_fold {\
 }\
 .ace-chrome .ace_support.ace_function {\
-color: rgb(60, 76, 114);\
+color: #000000;\
 }\
 .ace-chrome .ace_support.ace_constant {\
 color: rgb(6, 150, 14);\
@@ -52,19 +55,19 @@ font-style:italic;\
 color:#FD971F;\
 }\
 .ace-chrome .ace_keyword.ace_operator {\
-color: rgb(104, 118, 135);\
+color: black;\
 }\
 .ace-chrome .ace_comment {\
-color: #236e24;\
+color: #0054a8;\
 }\
 .ace-chrome .ace_comment.ace_doc {\
-color: #236e24;\
+color: #0054a8;\
 }\
 .ace-chrome .ace_comment.ace_doc.ace_tag {\
-color: #236e24;\
+color: black;\
 }\
 .ace-chrome .ace_constant.ace_numeric {\
-color: rgb(0, 0, 205);\
+color: #427b2d;\
 }\
 .ace-chrome .ace_variable {\
 color: rgb(49, 132, 149);\
@@ -104,8 +107,8 @@ background-color : #dcdcdc;\
 background: rgb(250, 250, 255);\
 border: 1px solid rgb(200, 200, 250);\
 }\
+.ace-chrome .ace_keyword {color: #c82254;}\
 .ace-chrome .ace_storage,\
-.ace-chrome .ace_keyword,\
 .ace-chrome .ace_meta.ace_tag {\
 color: rgb(147, 15, 128);\
 }\
@@ -113,7 +116,7 @@ color: rgb(147, 15, 128);\
 color: rgb(255, 0, 0)\
 }\
 .ace-chrome .ace_string {\
-color: #1A1AA6;\
+color: #00615a;\
 }\
 .ace-chrome .ace_entity.ace_other.ace_attribute-name {\
 color: #994409;\
@@ -125,4 +128,10 @@ background: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAACCAYAAACZ
 
 var dom = require("../lib/dom");
 dom.importCssString(exports.cssText, exports.cssClass);
-});
+});                (function() {
+                    window.require(["ace/theme/chrome"], function(m) {
+                        if (typeof module == "object" && typeof exports == "object" && module) {
+                            module.exports = m;
+                        }
+                    });
+                })();                        

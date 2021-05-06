@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -105,15 +106,15 @@ public class Problem {
 
 
 	public Map<Path, byte[]> getUseFiles() {
-		return useFiles;
+		return Collections.unmodifiableMap(useFiles);
 	}
 	
 	public Map<Path, byte[]> getSolutionFiles() {
-		return solutionFiles;
+		return Collections.unmodifiableMap(solutionFiles);
 	}
 	
 	public Map<Path, byte[]> getInputFiles() {
-		return inputFiles;
+		return Collections.unmodifiableMap(inputFiles);
 	}
 	
 	public boolean getInputMode() {
@@ -178,7 +179,7 @@ public class Problem {
 
 		return result.toString();
 	}
-	
+
 	private static boolean isPseudocomment(String line, String type, String start, String end) {
 		line = line.trim();
 		if (!line.startsWith(start + type))
@@ -194,6 +195,59 @@ public class Problem {
 		return Character.isWhitespace(line.charAt(slen + tlen));
 	}
 
+	private void clearPseudoComments(String[] lines, int from, int to) {
+		String[] delims = language.pseudoCommentDelimiters();
+		String start = delims[0];
+		String end = delims[1];
+		for (int i = from; i < to; i++) {
+			String line = lines[i];
+			if (line != null) {
+				if (isPseudocomment(line, "SOLUTION", start, end)
+						|| isPseudocomment(line, "SAMPLE", start, end) 
+						|| isPseudocomment(line, "CALL", start, end)
+						|| isPseudocomment(line, "ID", start, end) 
+						|| isPseudocomment(line, "ARGS", start, end)
+						|| isPseudocomment(line, "IN", start, end) 
+						|| isPseudocomment(line, "OUT", start, end)
+						|| isPseudocomment(line, "IGNORECASE", start, end)
+						|| isPseudocomment(line, "IGNORESPACE", start, end)
+						|| isPseudocomment(line, "TOLERANCE", start, end)
+						|| isPseudocomment(line, "MAXOUTPUTLEN", start, end)
+						|| isPseudocomment(line, "TIMEOUT", start, end)
+						|| isPseudocomment(line, "NOSCORE", start, end)) {
+					lines[i] = null;
+				} else if (isPseudocomment(line, "REQUIRED", start, end)
+					|| isPseudocomment(line, "FORBIDDEN", start, end)) {
+					lines[i] = null;
+					if (i < lines.length - 1) {
+						String nextLine = lines[i + 1].trim();
+						if (nextLine.startsWith(start) && nextLine.endsWith(end)) {
+							lines[i + 1] = null;
+							i++;
+						}
+					}
+				} else if (line.contains(start + "SUB ")) {
+					int n = lines[i].indexOf(start + "SUB");
+					int n2 = end.equals("") ? lines[i].length() : lines[i].indexOf(end, n) + end.length();
+					lines[i] = lines[i].substring(0, n) + lines[i].substring(n2);
+				}
+			}
+		} 				
+	}
+	
+	private String removePseudoComments(String contents) {
+		String[] lines = contents.split("\n");
+		clearPseudoComments(lines, 0, lines.length);
+		StringBuilder result = new StringBuilder();
+		for (String l : lines) {
+			if (l != null) {
+				result.append(l);
+				result.append("\n");
+			}
+		}
+		return result.toString();
+	}
+	
 	/**
 	 * Yields a list of sections, alternating with editable and noneditable
 	 * sections. Starts with an editable section or null if the initial section
@@ -229,11 +283,12 @@ public class Problem {
 			boolean hiding = false;
 			boolean editOnPreviousLine = false;
 			boolean startWithEdit = false;
-			for (int i = 0; i < lines.length; i++) {
+			for (int i = 0; i < lines.length; i++) {			
 				String line = lines[i].trim();
 				if (isPseudocomment(line, "EDIT", start, end)) {
 					hiding = false;
 					if (!editOnPreviousLine) { // emit preceding readonly section
+						clearPseudoComments(lines, sectionStart, i);
 						StringBuilder section = new StringBuilder();
 						for (int j = sectionStart; j < i; j++) {
 							if (lines[j] != null) {
@@ -253,9 +308,9 @@ public class Problem {
 					}
 					editOnPreviousLine = true;
 
-					String showString = start + "EDIT";
-					int n1 = lines[i].indexOf(showString);
-					int n2 = showString.length();
+					String editString = start + "EDIT";
+					int n1 = lines[i].indexOf(editString);
+					int n2 = editString.length();
 					int n3 = lines[i].lastIndexOf(end);
 					if (n1 + n2 < n3)
 						lines[i] = lines[i].substring(0, n1) + lines[i].substring(n1 + n2 + 1, n3);
@@ -263,6 +318,7 @@ public class Problem {
 						lines[i] = ""; // Edit section is never empty
 				} else {
 					if (editOnPreviousLine) { // emit edit section
+						clearPseudoComments(lines, sectionStart, i);
 						StringBuilder section = new StringBuilder();
 						for (int j = sectionStart; j < i; j++) {
 							if (lines[j] != null) {
@@ -285,28 +341,7 @@ public class Problem {
 						hiding = true;
 					if (hiding)
 						lines[i] = null;
-					else if (isPseudocomment(line, "SOLUTION", start, end)
-							|| isPseudocomment(line, "SAMPLE", start, end) || isPseudocomment(line, "CALL", start, end)
-							|| isPseudocomment(line, "ID", start, end) || isPseudocomment(line, "ARGS", start, end)
-							|| isPseudocomment(line, "IN", start, end) || isPseudocomment(line, "OUT", start, end)
-							|| isPseudocomment(line, "IGNORECASE", start, end)
-							|| isPseudocomment(line, "IGNORESPACE", start, end)
-							|| isPseudocomment(line, "TOLERANCE", start, end)
-							|| isPseudocomment(line, "MAXOUTPUTLEN", start, end)
-							|| isPseudocomment(line, "TIMEOUT", start, end)
-							|| isPseudocomment(line, "NOSCORE", start, end)) {
-						lines[i] = null;
-					} else if (isPseudocomment(line, "REQUIRED", start, end)
-							|| isPseudocomment(line, "FORBIDDEN", start, end)) {
-						lines[i] = null;
-						if (i < lines.length - 1) {
-							String nextLine = lines[i + 1].trim();
-							if (nextLine.startsWith(start) && nextLine.endsWith(end)) {
-								lines[i + 1] = null;
-								i++;
-							}
-						}
-					} else if (isPseudocomment(line, "SHOW", start, end)) {
+					if (isPseudocomment(line, "SHOW", start, end)) {
 						hiding = false;
 						String showString = start + "SHOW";
 						int n1 = lines[i].indexOf(showString);
@@ -316,14 +351,11 @@ public class Problem {
 							lines[i] = lines[i].substring(0, n1) + lines[i].substring(n1 + n2 + 1, n3);
 						else
 							lines[i] = null;
-					} else if (line.contains(start + "SUB ")) {
-						int n = lines[i].indexOf(start + "SUB");
-						int n2 = end.equals("") ? lines[i].length() : lines[i].indexOf(end, n) + end.length();
-						lines[i] = lines[i].substring(0, n) + lines[i].substring(n2);
 					}
 				}
 			}
 			// Emit final section
+			clearPseudoComments(lines, sectionStart, lines.length);
 			StringBuilder section = new StringBuilder();
 			for (int j = sectionStart; j < lines.length; j++) {
 				if (lines[j] != null) {
@@ -367,34 +399,13 @@ public class Problem {
 						lines[i] = null;
 				} else if (hiding) {
 					lines[i] = null;
-				} else if (isPseudocomment(line, "CALL", start, end) || isPseudocomment(line, "SAMPLE", start, end)
-						|| isPseudocomment(line, "ID", start, end) || isPseudocomment(line, "ARGS", start, end)
-						|| isPseudocomment(line, "IN", start, end) || isPseudocomment(line, "OUT", start, end)
-						|| isPseudocomment(line, "IGNORECASE", start, end)
-						|| isPseudocomment(line, "IGNORESPACE", start, end)
-						|| isPseudocomment(line, "TOLERANCE", start, end)
-						|| isPseudocomment(line, "MAXOUTPUTLEN", start, end)
-						|| isPseudocomment(line, "TIMEOUT", start, end)
-						|| isPseudocomment(line, "NOSCORE", start, end)) {
-					lines[i] = null;
-				} else if (isPseudocomment(line, "REQUIRED", start, end)
-						|| isPseudocomment(line, "FORBIDDEN", start, end)) {
-					lines[i] = null;
-					String nextLine = lines[i + 1].trim();
-					if (nextLine.startsWith(start) && nextLine.endsWith(end)) {
-						lines[i + 1] = null;
-						i++;
-					}
-				} else if (line.contains(start + "SUB ")) {
-					int n = lines[i].indexOf(start + "SUB");
-					int n2 = end.equals("") ? lines[i].length() : lines[i].indexOf(end, n) + end.length();
-					lines[i] = lines[i].substring(0, n) + lines[i].substring(n2);
 				}
 			}
 			if (isSolution && !somethingHidden) {
 				result.add("");
 				return result;
 			}
+			clearPseudoComments(lines, 0, lines.length);
 			StringBuilder allRemainingLines = new StringBuilder();
 			for (String l : lines) {
 				if (l != null) {
@@ -422,20 +433,26 @@ public class Problem {
 		data.useFiles = new LinkedHashMap<String, String>();
 		for (Map.Entry<Path, byte[]> entry : useFiles.entrySet()) {
 			Path path = entry.getKey();
-			if (language.isSource(path) && !annotations.getHidden().contains(path) || isTextFile(path)) {
+			if (language.isSource(path) && !solutionFiles.containsKey(path) && !annotations.getHidden().contains(path) || isTextFile(path)) {
 				String contents = new String(entry.getValue(), StandardCharsets.UTF_8);
-				data.useFiles.put(path.toString(), contents);
+				data.useFiles.put(path.toString(), removePseudoComments(contents));
 			}
 		}
-		for (Map.Entry<Path, byte[]> entry : solutionFiles.entrySet()) {
-			Path path = entry.getKey();
-			String contents = new String(entry.getValue(), StandardCharsets.UTF_8);
-			data.requiredFiles.put(path.toString(), processHideShow(contents));
-		}
-		for (Map.Entry<Path, byte[]> entry : inputFiles.entrySet()) {
-			Path path = entry.getKey();
-			String contents = new String(entry.getValue(), StandardCharsets.UTF_8);
-			data.requiredFiles.put(path.toString(), List.of(contents));
+		if (oldStyle) {
+			for (Path path : solutionFiles.keySet()) {
+				data.requiredFiles.put(path.toString(), List.of(removePseudoComments(Util.getString(useFiles, path))));
+			}
+		} else {
+			for (Map.Entry<Path, byte[]> entry : solutionFiles.entrySet()) {
+				Path path = entry.getKey();
+				String contents = new String(entry.getValue(), StandardCharsets.UTF_8);
+				data.requiredFiles.put(path.toString(), processHideShow(contents));
+			}
+			for (Map.Entry<Path, byte[]> entry : inputFiles.entrySet()) {
+				Path path = entry.getKey();
+				String contents = new String(entry.getValue(), StandardCharsets.UTF_8);
+				data.requiredFiles.put(path.toString(), List.of(contents));
+			}
 		}
 		return data;
 	}

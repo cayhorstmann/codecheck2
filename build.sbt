@@ -26,7 +26,7 @@ enablePlugins(JavaAppPackaging)
 enablePlugins(DockerPlugin)
 
 dockerBaseImage := "openjdk:11"
-dockerEntrypoint := Seq("bin/play-codecheck", "-Dplay.server.pidfile.path=/dev/null")
+dockerEntrypoint := Seq("bin/play-codecheck", "-Dplay.server.pidfile.path=/dev/null", "-Dnashorn.args=--no-deprecation-warning")
 dockerExposedPorts ++= Seq(9000, 9001)
 
 import com.typesafe.sbt.packager.docker.DockerChmodType

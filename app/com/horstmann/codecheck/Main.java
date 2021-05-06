@@ -83,7 +83,7 @@ public class Main {
             plan.addFile(Paths.get(fileID).resolve(mainFile), subtituted);
             plan.compile(compileID, "submission " + fileID, mainFile, dependentSourcePaths);
             plan.run(compileID, compileID, mainFile, null, null, timeout, maxOutput, false);
-            contents = new String(problem.getSolutionFiles().get(mainFile), StandardCharsets.UTF_8);
+            contents = Util.getString(problem.getSolutionFiles(), mainFile);
             subtituted = sub.substitute(contents, i); 
             fileID = "solutionsubfiles" + i;
             compileID = "solutionsub" + i;            
@@ -151,11 +151,17 @@ public class Main {
                     outcomes[i] = lines.get(2).equals("true");                
                 } else {
                     // Error in compilation or execution
+                	// We assume that the solution correctly produces a single line
+                	// Most likely, the rest is an exception report, and the true/false never came
                     StringBuilder msg = new StringBuilder();
-                    for (String line : lines) { msg.append(line); msg.append('\n'); }
+                    for (int j = 1; j < lines.size(); j++) {
+                    	String line = lines.get(j); 
+                    	if (j < lines.size() - 1 || !(line.equals("true") || line.equals("false")))
+                    	msg.append(line); msg.append('\n'); 
+                    }
                     String message = msg.toString(); 
                                     
-                    expected[i] = "";  
+                    expected[i] = lines.size() > 0 ? lines.get(0) : "";  
                     actual[i] = message;
                     outcomes[i] = false;
                 }

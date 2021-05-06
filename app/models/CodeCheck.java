@@ -39,14 +39,12 @@ public class CodeCheck {
 	private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");	
 	private Config config;
 	private S3Connection s3conn;
-	private Environment playEnv;
 	private JarSigner signer;
 	private ResourceLoader resourceLoader;
 	
 	@Inject public CodeCheck(Config config, S3Connection s3conn, Environment playEnv) {
 		this.config = config;
 		this.s3conn = s3conn;
-		this.playEnv = playEnv;
 		resourceLoader = new ResourceLoader() {
 			@Override
 			public InputStream loadResource(String path) throws IOException {
@@ -83,8 +81,7 @@ public class CodeCheck {
 		if (problemFiles.containsKey(paramPath)) {
 			ScriptEngineManager engineManager = new ScriptEngineManager();
 			ScriptEngine engine = engineManager.getEngineByName("nashorn");
-			String preload = "public/preload.js";
-			InputStream in = playEnv.classLoader().getResourceAsStream(preload);
+			InputStream in = resourceLoader.loadResource("preload.js");
 			engine.eval(new InputStreamReader(in, StandardCharsets.UTF_8));
 			//seeding unique student id
 			((Invocable) engine).invokeMethod(engine.get("Math"), "seedrandom", studentId);

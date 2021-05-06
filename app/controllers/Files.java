@@ -1,6 +1,7 @@
 package controllers;
 
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.time.Duration;
@@ -14,6 +15,7 @@ import javax.script.ScriptException;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.horstmann.codecheck.Problem;
 import com.horstmann.codecheck.Util;
+import com.typesafe.config.Config;
 
 import models.CodeCheck;
 import play.Logger;
@@ -22,6 +24,93 @@ import play.mvc.Http;
 import play.mvc.Result;
 
 public class Files extends Controller {
+	@Inject	private CodeCheck codeCheck;	
+	private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
+	@Inject private Config config;			
+	
+	String start2 = "<!DOCTYPE html>\n<html><head>\n"
+			+ "<title>CodeCheck</title>"
+			+ "<meta http-equiv='content-type' content='text/html; charset=UTF-8' />\n"
+			+ "<script src='/assets/download.js'></script>\n" 
+			+ "<script src='/assets/ace/ace.js'></script>\n"
+			+ "<script src='/assets/ace/theme-kuroir.js'></script>\n"
+			+ "<script src='/assets/ace/theme-chrome.js'></script>\n"
+			+ "<script src='/assets/codecheck2.js'></script>\n"
+			+ "<script src='/assets/horstmann_codecheck.js'></script>\n"
+			+ "<link type='text/css' rel='stylesheet' href='/assets/codecheck.css'/>\n" 
+			+ "<link type='text/css' rel='stylesheet' href='/assets/horstmann_codecheck.css'/>\n" 
+			+ "</head><body>\n";
+	String mid2 = "<div class='horstmann_codecheck'><script type='text/javascript'>//<![CDATA[\n" 
+			+ "horstmann_codecheck.setup.push(";
+	String end2 = ")\n"  
+			+ "// ]]>\n"  
+			+ "</script></div>\n"  
+			+ "</body>\n" 
+			+ "</html>";
+	
+	public Result filesHTML2(Http.Request request, String repo, String problemName, String ccid)
+			throws IOException, NoSuchMethodException, ScriptException {
+		if (ccid == null) {
+			Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
+			ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
+		}
+		Map<Path, byte[]> problemFiles;
+		try {
+			problemFiles = codeCheck.loadProblem(repo, problemName, ccid);
+		} catch (Exception e) {
+			logger.error("filesHTML2: Cannot load problem " + repo + "/" + " " + problemName + e.getMessage());
+			return badRequest("Cannot load problem");
+		}
+		Problem problem = new Problem(problemFiles);
+		ObjectNode data = models.Util.toJson(problem.getProblemData());
+		data.put("url",  models.Util.prefix(request) + "/checkNJS");
+		data.put("repo", repo);
+		data.put("problem", problemName);
+		String description = "";
+		if (data.has("description")) {
+			description = data.get("description").asText();
+			data.remove("description");
+		}
+		StringBuilder result = new StringBuilder();
+		result.append(start2);
+		result.append(description);
+		result.append(mid2);
+			result.append(data.toString());
+		result.append(end2);
+		// Wake up the checker
+		String remoteURL = config.getString("com.horstmann.codecheck.comrun.remote");
+		URL checkerWakeupURL = new URL(remoteURL + "/api/health");
+		new Thread(() -> { try {
+			checkerWakeupURL.openStream().readAllBytes();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} }).start();
+		Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();
+		return ok(result.toString()).withCookies(newCookie).as("text/html");
+	}
+
+	// TODO: Caution--this won't do the right thing with param.js randomness when
+	// used to prebuild UI like in ebook, Udacity
+	public Result fileData(Http.Request request, String repo, String problemName, String ccid)
+			throws IOException, NoSuchMethodException, ScriptException {
+		if (ccid == null) {
+			Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
+			ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
+		}
+		Map<Path, byte[]> problemFiles;
+		try {
+			problemFiles = codeCheck.loadProblem(repo, problemName, ccid);
+		} catch (Exception e) {
+			logger.error("fileData: Cannot load problem " + repo + "/" + problemName + " " + e.getMessage());
+			return badRequest("Cannot load problem");
+		}		
+		
+		Problem problem = new Problem(problemFiles);
+		Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();
+		return ok(models.Util.toJson(problem.getProblemData())).withCookies(newCookie);
+	}
+
+	// TODO: Legacy, also codecheck.js
 	private static String start = "<!DOCTYPE html>\n<html><head>\n"
 			+ "<meta http-equiv='content-type' content='text/html; charset=UTF-8' />\n"
 			+ "<script src='/assets/download.js'></script>\n" + "<script src='/assets/ace/ace.js'></script>\n"
@@ -45,25 +134,6 @@ public class Files extends Controller {
 	private static String useStart = "<p>Use the following {0,choice,1#file|2#files}:</p>\n";
 	private static String provideStart = "<p>Complete the following {0,choice,1#file|2#files}:</p>\n";
 
-	@Inject
-	private CodeCheck codeCheck;
-	private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
-
-	// TODO: Caution--this won't do the right thing with param.js randomness when
-	// used to prebuild UI like in ebook, Udacity
-	public Result fileData(Http.Request request, String repo, String problemName, String ccid)
-			throws IOException, NoSuchMethodException, ScriptException {
-		if (ccid == null) {
-			Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
-			ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
-		}
-		Map<Path, byte[]> problemFiles = codeCheck.loadProblem(repo, problemName, ccid);
-		Problem problem = new Problem(problemFiles);
-		Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();
-		return ok(models.Util.toJson(problem.getProblemData())).withCookies(newCookie);
-	}
-
-	// TODO: Legacy, also codecheck.js
 	public Result filesHTML(Http.Request request, String repo, String problemName, String ccid)
 			throws IOException, NoSuchMethodException, ScriptException {
 		if (ccid == null) {
@@ -74,8 +144,8 @@ public class Files extends Controller {
 		try {
 			problemFiles = codeCheck.loadProblem(repo, problemName, ccid);
 		} catch (Exception e) {
-			logger.info("filesHTML", e);
-			return badRequest("Cannot load problem");
+			logger.error("filesHTML: Cannot load problem " + repo + "/" + problemName + " " + e.getMessage());
+			return badRequest("Cannot load problem " + repo + "/" + problemName);
 		}
 		Problem problem = new Problem(problemFiles);
 		Problem.DisplayData data = problem.getProblemData();
@@ -183,59 +253,5 @@ public class Files extends Controller {
 
 		Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();
 		return ok(result.toString()).withCookies(newCookie).as("text/html");
-	}
-	
-	String start2 = "<!DOCTYPE html>\n<html><head>\n"
-			+ "<title>CodeCheck</title>"
-			+ "<meta http-equiv='content-type' content='text/html; charset=UTF-8' />\n"
-			+ "<script src='/assets/download.js'></script>\n" 
-			+ "<script src='/assets/ace/ace.js'></script>\n"
-			+ "<script src='/assets/ace/theme-kuroir.js'></script>\n"
-			+ "<script src='/assets/ace/theme-chrome.js'></script>\n"
-			+ "<script src='/assets/codecheck2.js'></script>\n"
-			+ "<script src='/assets/horstmann_codecheck.js'></script>\n"
-			+ "<link type='text/css' rel='stylesheet' href='/assets/codecheck.css'/>\n" 
-			+ "<link type='text/css' rel='stylesheet' href='/assets/horstmann_codecheck.css'/>\n" 
-			+ "</head><body>\n";
-	String mid2 = "<div class='horstmann_codecheck'><script type='text/javascript'>//<![CDATA[\n" 
-			+ "horstmann_codecheck.setup.push(";
-	String end2 = ")\n"  
-			+ "// ]]>\n"  
-			+ "</script></div>\n"  
-			+ "</body>\n" 
-			+ "</html>";
-	
-	public Result filesHTML2(Http.Request request, String repo, String problemName, String ccid)
-			throws IOException, NoSuchMethodException, ScriptException {
-		if (ccid == null) {
-			Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
-			ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
-		}
-		Map<Path, byte[]> problemFiles;
-		try {
-			problemFiles = codeCheck.loadProblem(repo, problemName, ccid);
-		} catch (Exception e) {
-			logger.info("filesHTML", e);
-			return badRequest("Cannot load problem");
-		}
-		Problem problem = new Problem(problemFiles);
-		ObjectNode data = models.Util.toJson(problem.getProblemData());
-		data.put("url",  models.Util.prefix(request) + "/checkNJS");
-		data.put("repo", repo);
-		data.put("problem", problemName);
-		String description = "";
-		if (data.has("description")) {
-			description = data.get("description").asText();
-			data.remove("description");
-		}
-		StringBuilder result = new StringBuilder();
-		result.append(start2);
-		result.append(description);
-		result.append(mid2);
-			result.append(data.toString());
-		result.append(end2);
-		Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();
-		return ok(result.toString()).withCookies(newCookie).as("text/html");
-	}
-	
+	}		
 }

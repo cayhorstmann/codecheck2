@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.horstmann.codecheck.Util;
 
+import models.JWT;
 import models.LTI;
 import models.S3Connection;
 import oauth.signpost.exception.OAuthCommunicationException;
@@ -32,14 +33,18 @@ import play.mvc.Security;
 
    
 /*
-Session cookie (LTI only)
+Session cookie (LTI Instructors only)
   "user": toolConsumerID + "/" + userID (needs toolConsumerID because it's used for secure identification)
+
+TODO: Can/should this be replaced with JWT? 
+
 */
 
 
 public class LTIAssignment extends Controller {
 	@Inject private S3Connection s3conn;
 	@Inject private LTI lti;
+	@Inject private JWT jwt;
 	private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
 	
 	public static boolean isInstructor(Map<String, String[]> postParams) {
@@ -225,8 +230,8 @@ public class LTIAssignment extends Controller {
 				assignmentNode.put("cloneURL", "/copyAssignment/" + assignmentID);
 			}
 	    	assignmentNode.put("sentAt", Instant.now().toString());				
-	    	String work = "{ assignmentID: '" + resourceID + "', workID: '" + userID + "', problems: {} }";
-	    	// TODO Here we show the resource ID for troubleshooting
+	    	String work = "{ problems: {} }";
+	    	// Show the resource ID for troubleshooting
 			return ok(views.html.workAssignment.render(assignmentNode.toString(), work, resourceID, "undefined" /* lti */))
 				.withNewSession()
 				.addingToSession(request, "user", userLMSID);
@@ -251,18 +256,24 @@ public class LTIAssignment extends Controller {
     		else
     			ltiNode.put("lisResultSourcedID", lisResultSourcedID);
     		ltiNode.put("oauthConsumerKey", oauthConsumerKey);
+    		ltiNode.put("jwt", jwt.generate(Map.of("resourceID", resourceID, "userID", userID)));
 
-			String work = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", resourceID, "workID", userID);
-			if (work == null) 
-				work = "{ assignmentID: '" + resourceID + "', workID: '" + userID + "', problems: {} }";
+			ObjectNode workNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckWork", "assignmentID", resourceID, "workID", userID);
+			String work = "";
+			if (workNode == null) 
+				work = "{ problems: {} }";
+			else {
+	    		// Delete assignmentID, workID since they are in jwt token
+				workNode.remove("assignmentID");
+				workNode.remove("workID");
+				work = workNode.toString();
+			}
     		
     		assignmentNode.put("isStudent", true);
         	assignmentNode.put("editKeySaved", true);
         	assignmentNode.put("sentAt", Instant.now().toString());		
 
-        	return ok(views.html.workAssignment.render(assignmentNode.toString(), work, userID, ltiNode.toString()))
-				.withNewSession()
-				.addingToSession(request, "user", userLMSID);    	    
+        	return ok(views.html.workAssignment.render(assignmentNode.toString(), work, userID, ltiNode.toString()));
 	    }
  	}
     
@@ -284,20 +295,26 @@ public class LTIAssignment extends Controller {
 		return ok(submissions); 	
 	}
     
-	// @Security.Authenticated(Secured.class) // Student TODO this really needs to be secure
 	public Result saveWork(Http.Request request) throws IOException, NoSuchAlgorithmException {
+		ObjectNode requestNode = (ObjectNode) request.body().asJson();
 		try {
-			ObjectNode requestNode = (ObjectNode) request.body().asJson();
 			ObjectNode workNode = (ObjectNode) requestNode.get("work");
+			String token = requestNode.get("jwt").asText();
+			Map<String, Object> claims = jwt.verify(token);
+			if (claims == null) 
+				return badRequest("Invalid token");
+			
 	    	ObjectNode result = JsonNodeFactory.instance.objectNode();
 	    	Instant now = Instant.now();
-			String resourceID = workNode.get("assignmentID").asText();
+	    	String resourceID = claims.get("resourceID").toString();
+			workNode.put("assignmentID", resourceID);
 			String assignmentID = assignmentOfResource(resourceID);
-			String workID = workNode.get("workID").asText();
+	    	String userID = claims.get("userID").toString();
+			workNode.put("workID", userID);
 			String problemID = workNode.get("tab").asText();
 			ObjectNode problemsNode = (ObjectNode) workNode.get("problems");
 			ObjectNode submissionNode = JsonNodeFactory.instance.objectNode();
-			String submissionID = resourceID + " " + workID + " " + problemID; 
+			String submissionID = resourceID + " " + userID + " " + problemID; 
 			submissionNode.put("submissionID", submissionID);
 			submissionNode.put("submittedAt", now.toString());
 			submissionNode.put("state", problemsNode.get(problemID).get("state").toString());
@@ -320,31 +337,36 @@ public class LTIAssignment extends Controller {
 			submitGradeToLMS(requestNode, (ObjectNode) requestNode.get("work"), result);
 			return ok(result);
         } catch (Exception e) {
-            logger.error(Util.getStackTrace(e));
-            return badRequest(e.getMessage());
+            logger.error("saveWork: " + requestNode + " " + e.getMessage());
+            return badRequest("saveWork: " + requestNode);
         }
 	}	
 	
-	// @Security.Authenticated(Secured.class) // Student TODO this really needs to be secure
 	public Result sendScore(Http.Request request) throws IOException, NoSuchAlgorithmException {
 		ObjectNode requestNode = (ObjectNode) request.body().asJson();
     	ObjectNode result = JsonNodeFactory.instance.objectNode();
     	result.put("submittedAt", Instant.now().toString());    	
 		try {
-			String workID = requestNode.get("workID").asText();
-			String resourceID = requestNode.get("resourceID").asText();
-	    	ObjectNode workNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckWork", "assignmentID", resourceID, "workID", workID);
+			String token = requestNode.get("jwt").asText();
+			Map<String, Object> claims = jwt.verify(token);
+			if (claims == null) 
+				return badRequest("Invalid token");
+
+	    	String userID = claims.get("userID").toString();
+	    	String resourceID = claims.get("resourceID").toString();
+			
+	    	ObjectNode workNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckWork", "assignmentID", resourceID, "workID", userID);
 	    	if (workNode == null) return badRequest("Work not found");
 			submitGradeToLMS(requestNode, workNode, result);
 			String outcome = result.get("outcome").asText();
 			if (!outcome.startsWith("success")) {
-				logger.info("sendScore: " + requestNode);
+				logger.error("sendScore: " + requestNode);
 				return badRequest(outcome);
 			}
 			return ok(result);
         } catch (Exception e) {
-            logger.error(Util.getStackTrace(e));
-            return badRequest(e.getMessage());
+            logger.error("sendScore: " + requestNode + " " + e.getMessage());
+            return badRequest("sendScore: " + requestNode);
         }
 	}	
 	

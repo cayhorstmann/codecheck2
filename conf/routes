@@ -6,41 +6,35 @@
 GET   /                       controllers.Default.redirect(to = "https://horstmann.com/codecheck/index.html")
 # Favicon
 GET   /favicon.ico            controllers.Assets.at(path="/public", file="favicon.ico")
-
+GET   /robots.txt             controllers.Assets.at(path="/public", file="robots.txt")
 
 # Health check
 GET  /health                  controllers.Application.health(request: Request)
-POST /echo                    controllers.Application.echo(request: Request)
 
 # Map static resources from the /public folder to the /assets URL path
 GET  /assets/*file            controllers.Assets.versioned(path="/public", file: Asset)
 
-# Classic HTML
+# Web interface 
 GET	 /files						        controllers.Files.filesHTML2(request: Request, repo: String ?= "ext", problem: String, ccid: String ?= null)
 GET	 /files/:problem				  controllers.Files.filesHTML2(request: Request, repo: String ?= "ext", problem: String, ccid: String ?= null)
 GET  /files/:repo/:problem		controllers.Files.filesHTML2(request: Request, repo: String, problem: String,          ccid: String ?= null)
 POST /checkNJS					      controllers.Check.checkNJS(request: Request)
-# GET called from interactive element with jsonp result--TODO: Does this still happen???
-GET  /checkNJS					      controllers.Check.checkNJS(request: Request)
 
-# Used by textbook-problems, cs046 Split 
+# Used by textbook-problems, cs046 Split, checknjs 
 GET  /fileData                controllers.Files.fileData(request: Request, repo: String ?= "ext", problem: String, ccid: String ?= null)
-
-# Classic HTML
-POST /check						        controllers.Check.checkHTML(request: Request)
 
 POST /uploadProblem                     controllers.Upload.uploadProblem(request: Request)
 POST /uploadFiles                       controllers.Upload.uploadFiles(request: Request)
-# TODO Legacy without /private
-GET  /edit/:problem/:editKey            controllers.Upload.editKeySubmit(request: Request, problem: String, editKey: String)
 GET  /private/problem/:problem/:editKey controllers.Upload.editKeySubmit(request: Request, problem: String, editKey: String)
 POST /editedFiles/:problem/:editKey     controllers.Upload.editedFiles(request: Request, problem: String, editKey: String)
 POST /editedProblem/:problem/:editKey   controllers.Upload.editedProblem(request: Request, problem: String, editKey: String)
 
-# Legacy--TODO: Eliminate?
+# Legacy--TODO: Eliminate
 GET	 /codecheck/files						controllers.Files.filesHTML(request: Request, repo: String ?= "ext", problem: String, ccu: String ?= null)
 GET	 /codecheck/files/:problem	controllers.Files.filesHTML(request: Request, repo: String ?= "ext", problem: String, ccu: String ?= null)
 POST /codecheck/check						controllers.Check.checkHTML(request: Request)
+# Used in Core Java for the Impatient 2e
+POST /check                     controllers.Check.checkHTML(request: Request)
 
 # Assignments
 

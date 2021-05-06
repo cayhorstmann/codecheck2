@@ -18,7 +18,8 @@ namespace codecheck {
       cout << "\"";
       for (size_t i = 0; i < x.length(); i++) {
          if (x[i] == '\0') cout << "\\0";
-         else if (0 < x[i] && x[i] < ' ' && x[i] != '\n')
+         else if (x[i] == '\n') cout << "\\n";
+         else if (0 < x[i] && x[i] < ' ')
             cout << "\\x" << hex << setw(2) << setfill('0') << (int) x[i] << dec;
          else if (x[i] == '\\' || x[i] == '"') cout << "\\" << x[i];
          else cout << x[i];
@@ -28,7 +29,8 @@ namespace codecheck {
    void print(const char* x) {
       cout << "\"";
       for (size_t i = 0; x[i] != '\0'; i++) {
-         if (0 < x[i] && x[i] < ' ' && x[i] != '\n')
+         if (x[i] == '\n') cout << "\\n";
+         else if (0 < x[i] && x[i] < ' ')
             cout << "\\x" << hex << setw(2) << setfill('0') << (int) x[i] << dec;
          else if (x[i] == '\\' || x[i] == '"') cout << "\\" << x[i];
          else cout << x[i];

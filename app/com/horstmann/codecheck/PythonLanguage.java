@@ -42,6 +42,12 @@ public class PythonLanguage implements Language {
         return false;
     }
 
+    /*
+     * TODO: Improve the printing
+     * Strings should be quoted and \n (and therefore \\, \") escaped
+     * Strings in lists should be double-quoted
+     */
+    
     @Override
     public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls, ResourceLoader resourceLoader) {
         String moduleName = moduleOf(file);

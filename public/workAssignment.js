@@ -184,7 +184,10 @@ window.addEventListener('DOMContentLoaded', () => {
   
   // Start of initialization
   
-  assignment.receivedAt = Date.now()  
+  assignment.receivedAt = Date.now()
+  
+  if (lti !== undefined) 
+    window.history.replaceState(null, '', '/')  
   
   for (const e of document.getElementsByClassName('ccid')) 
     if (studentID !== '') 
@@ -256,8 +259,7 @@ window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('submitLTIButton').appendChild(createButton('hc-command', 'Resend Score', async () => {
         try {
           responseDiv.textContent = ''
-          let request = { ...lti, workID: work.workID, resourceID: work.assignmentID }
-          let response = await postData("/lti/sendScore", request) // TODO: URLs from server
+          let response = await postData("/lti/sendScore", lti) // TODO: URLs from server
           responseDiv.textContent = response.outcome === 'success' ? `Score of ${percent(response.score)} recorded` : response.outcome 
         } catch (e) {
           responseDiv.textContent = e.message 

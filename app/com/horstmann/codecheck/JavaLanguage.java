@@ -73,7 +73,7 @@ public class JavaLanguage implements Language {
                     + (isStatic ? "Solution."  + className : "obj2") + "." + call.name + "(" + call.args
                     + ");");
             lines.add(i++,
-                    "            System.out.println(_toString(expected));");
+                    "            System.out.println(_toString(expected));");   
             lines.add(i++, "            Object actual = "
                     + (isStatic ? className : "obj1") + "." + call.name + "("
                     + call.args + ");");
@@ -86,7 +86,8 @@ public class JavaLanguage implements Language {
         lines.add(i++, "    }");
         lines.add(i++, "    private static String _toString(Object obj)");
         lines.add(i++, "    {");
-        lines.add(i++, "      if (obj == null) return \"null\";");
+        lines.add(i++, "      if (obj == null) return \"null\";");  
+        lines.add(i++, "      if (obj instanceof String) return \"\\\"\" + ((String) obj).replace(\"\\\\\", \"\\\\\\\\\").replace(\"\\\"\", \"\\\\\\\"\").replace(\"\\n\", \"\\\\n\") + \"\\\"\";");
         lines.add(i++, "      if (obj instanceof Object[])");
         lines.add(i++,
                 "         return java.util.Arrays.deepToString((Object[]) obj);");

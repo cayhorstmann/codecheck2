@@ -50,7 +50,7 @@ window.addEventListener('load', function () {
         editorDiv.setAttribute('name', elName)
         editorDiv.setAttribute('id', prefix + elName)
         editorDiv.classList.add('editor')
-        editorDiv.textContent = codeString.replace(/\n$/, '');
+        editorDiv.textContent = codeString.replace(/\r?\n$/, '');
         if (readonly)
           editorDiv.setAttribute('readonly', 'readonly');
         if (fileName === 'Input')
@@ -109,11 +109,10 @@ window.addEventListener('load', function () {
     
       for (let i = 0; i < useFileNames.length; i++) {
         let fileName = useFileNames[i]
-        //TODO: Make these RO Ace editors
         
         let editorDiv = document.createElement('div')
         editorDiv.classList.add('editor')
-        editorDiv.textContent = setup.useFiles[fileName].replace(/\n$/, '');
+        editorDiv.textContent = setup.useFiles[fileName].replace(/\r?\n$/, '');
         let editor = ace.edit(editorDiv)
         
         let fileObj = document.createElement('div')

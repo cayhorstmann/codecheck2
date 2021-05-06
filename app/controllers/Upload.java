@@ -200,8 +200,7 @@ public class Upload extends Controller {
 	}
 
 	private static Path longestCommonPrefix(Path p, Path q) {
-		if (p == null) return q;
-		if (q == null) return p;
+		if (p == null || q == null) return null;
 		int i = 0;
 		boolean matching = true;
 		while (matching && i < Math.min(p.getNameCount(), q.getNameCount())) {
@@ -213,8 +212,9 @@ public class Upload extends Controller {
 	
 	private static Map<Path, byte[]> fixZip(Map<Path, byte[]> problemFiles) throws IOException {
 		Path r = null;
+		boolean first = true;
 		for (Path p : problemFiles.keySet()) {
-			if (r == null) r = p;
+			if (first) { r = p; first = false; }
 			else r = longestCommonPrefix(r, p);
 		}
 		if (r == null) return problemFiles;

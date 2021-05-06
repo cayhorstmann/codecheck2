@@ -347,8 +347,9 @@ public class Util {
         ZipEntry entry;
         while ((entry = zin.getNextEntry()) != null)
         {
-        	if (!entry.isDirectory())
-        		result.put(Paths.get(entry.getName()), zin.readAllBytes());
+        	String name = entry.getName();
+        	if (!entry.isDirectory() && !name.startsWith("__MACOSX") && !name.endsWith(".DS_Store"))
+        		result.put(Paths.get(name), zin.readAllBytes());
             zin.closeEntry();
         }
         zin.close();

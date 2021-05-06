@@ -111,6 +111,8 @@ if (window.self !== window.top) {
       const mutationObserver = new MutationObserver(sendDocHeight);
     mutationObserver.observe(element === undefined ? document.body : element, { childList: true, subtree: true })    
   })
-}
+} else if (lti !== undefined) 
+  window.history.replaceState(null, '', '/')
+
 
 

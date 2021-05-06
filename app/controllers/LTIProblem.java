@@ -19,7 +19,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.horstmann.codecheck.Problem;
-import com.horstmann.codecheck.Util;
 
 import models.CodeCheck;
 import models.LTI;
@@ -111,7 +110,7 @@ public class LTIProblem extends Controller {
 			document = document.replace("<head>", "<head><script>const lti = " + ltiNode.toString() + "</script>");
 			return ok(document).as("text/html");
 		} catch (Exception ex) {
-			logger.info(Util.getStackTrace(ex));
+			logger.error("launch: Cannot load problem " + request + " " + ex.getMessage());
 			return badRequest(ex.getMessage());
 		}
  	}		
@@ -173,16 +172,16 @@ public class LTIProblem extends Controller {
             Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();    		
     		return ok(document).withCookies(newCookie).as("text/html");
     	}  catch (Exception ex) {
-			logger.info(Util.getStackTrace(ex));
+			logger.error("launchCodeCheck: Cannot load problem " + repo + "/" + problemName + " " + ex.getMessage());
 			return badRequest(ex.getMessage());
 		}
     }
 	
 	public Result send(Http.Request request) throws IOException, NoSuchAlgorithmException {
+		ObjectNode requestNode = (ObjectNode) request.body().asJson();
+		String submissionID = requestNode.get("submissionID").asText();
 		try {
-			ObjectNode requestNode = (ObjectNode) request.body().asJson();
 	    	Instant now = Instant.now();
-			String submissionID = requestNode.get("submissionID").asText();
 			ObjectNode submissionNode = JsonNodeFactory.instance.objectNode();
 			submissionNode.put("submissionID", submissionID);
 			submissionNode.put("submittedAt", now.toString());
@@ -198,22 +197,22 @@ public class LTIProblem extends Controller {
 			
 			return ok("");
         } catch (Exception e) {
-            logger.error(Util.getStackTrace(e));
+            logger.error("send: Cannot send submission " + submissionID + " " + e.getMessage());
             return badRequest(e.getMessage());
         }
 	}
 	
 	public Result retrieve(Http.Request request) throws IOException {
+		ObjectNode requestNode = (ObjectNode) request.body().asJson();
+		String submissionID = requestNode.get("submissionID").asText();
 		try {
-			ObjectNode requestNode = (ObjectNode) request.body().asJson();
-			String submissionID = requestNode.get("submissionID").asText();
 			ObjectNode result = s3conn.readJsonObjectFromDynamoDB("CodeCheckSubmissions", "submissionID", submissionID);
 			ObjectMapper mapper = new ObjectMapper();
 			result.set("state", mapper.readTree(result.get("state").asText()));
 			return ok(result);
 	    } catch (Exception e) {
-	        logger.error(Util.getStackTrace(e));
-	        return badRequest(e.getMessage());
+	        logger.error("retrieve: Cannot retrieve submission " + submissionID + " " + e.getMessage());
+	        return badRequest("retrieve: Cannot retrieve submission " + submissionID);
 	    }
 	}	
 }
