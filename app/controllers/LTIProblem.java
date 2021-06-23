@@ -158,6 +158,7 @@ public class LTIProblem extends Controller {
 				"    <script type='text/javascript' src='/assets/receiveMessage.js'></script> \n" + 
 				"  </head> \n" + 
 				"  <body>\n" + 
+				"    <p>Submission ID: " + ltiNode.get("submissionID").asText() + "</p>" +
 				"    <ol class='interactivities' id='interactivities'>\n" +
 				"      <li title='" + qid + "' id='" + qid + "'>\n" + 
 				"        <div class='hc-included'>\n" +
@@ -181,10 +182,10 @@ public class LTIProblem extends Controller {
 		ObjectNode requestNode = (ObjectNode) request.body().asJson();
 		String submissionID = requestNode.get("submissionID").asText();
 		try {
-	    	Instant now = Instant.now();
+			String submittedAt = Instant.now().toString();
 			ObjectNode submissionNode = JsonNodeFactory.instance.objectNode();
 			submissionNode.put("submissionID", submissionID);
-			submissionNode.put("submittedAt", now.toString());
+			submissionNode.put("submittedAt", submittedAt);
 			submissionNode.put("state", requestNode.get("state").toString());
 			double score = requestNode.get("score").asDouble();			
 			submissionNode.put("score", score);
@@ -194,8 +195,11 @@ public class LTIProblem extends Controller {
 			String sourcedID = requestNode.get("lis_result_sourcedid").asText();
 			String oauthConsumerKey = requestNode.get("oauth_consumer_key").asText();						
 	        lti.passbackGradeToLMS(outcomeServiceUrl, sourcedID, score, oauthConsumerKey); 
-			
-			return ok("");
+
+	        ObjectNode resultNode = JsonNodeFactory.instance.objectNode();
+	        resultNode.put("score", score);
+			resultNode.put("submittedAt", submittedAt);
+			return ok(resultNode);
         } catch (Exception e) {
             logger.error("send: Cannot send submission " + submissionID + " " + e.getMessage());
             return badRequest(e.getMessage());
@@ -206,7 +210,8 @@ public class LTIProblem extends Controller {
 		ObjectNode requestNode = (ObjectNode) request.body().asJson();
 		String submissionID = requestNode.get("submissionID").asText();
 		try {
-			ObjectNode result = s3conn.readJsonObjectFromDynamoDB("CodeCheckSubmissions", "submissionID", submissionID);
+			//ObjectNode result = s3conn.readJsonObjectFromDynamoDB("CodeCheckSubmissions", "submissionID", submissionID);
+			ObjectNode result = s3conn.readNewestJsonObjectFromDynamoDB("CodeCheckSubmissions", "submissionID", submissionID);			
 			ObjectMapper mapper = new ObjectMapper();
 			result.set("state", mapper.readTree(result.get("state").asText()));
 			return ok(result);

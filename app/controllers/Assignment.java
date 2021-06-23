@@ -9,7 +9,8 @@ package controllers;
  The "problem key" is normally the problem URL. However, for interactive or CodeCheck 
  problems in the textbook repo, it is the qid of the single question in the problem.
  
- Work is a map from problem keys to scores and states. 
+ CodeCheckWork is a map from problem keys to scores and states. It only stores the most recent version.
+ CodeCheckSubmissions is an append-only log of all submissions of a single problem. 
     
  Tables:
    

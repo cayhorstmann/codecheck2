@@ -166,7 +166,7 @@ function unittest {
   case _"$LANG" in 
     _Java)
       javac -cp .:$BASE/use/\*:$CODECHECK_HOME/lib/* $MAIN $@ 2>&1 | head --lines $MAXOUTPUTLEN> $BASE/out/$DIR/_compile
-      if [[ $? != 0 ]] ; then
+      if [[ ${PIPESTATUS[0]} != 0 ]] ; then
         mv $BASE/out/$DIR/_compile $BASE/out/$DIR/_errors
       else
         ulimit -d 1000000 -f 1000 -n 100 -v 10000000

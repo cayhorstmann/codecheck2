@@ -179,6 +179,13 @@ public class Problem {
 
 		return result.toString();
 	}
+	
+	private static boolean isPseudoComment(String line, String start, String end) {
+		for (String pseudoComment : Annotations.VALID_ANNOTATIONS) 
+			if (isPseudocomment(line, pseudoComment, start, end))
+				return true;
+		return false;
+	}
 
 	private static boolean isPseudocomment(String line, String type, String start, String end) {
 		line = line.trim();
@@ -202,35 +209,23 @@ public class Problem {
 		for (int i = from; i < to; i++) {
 			String line = lines[i];
 			if (line != null) {
-				if (isPseudocomment(line, "SOLUTION", start, end)
-						|| isPseudocomment(line, "SAMPLE", start, end) 
-						|| isPseudocomment(line, "CALL", start, end)
-						|| isPseudocomment(line, "ID", start, end) 
-						|| isPseudocomment(line, "ARGS", start, end)
-						|| isPseudocomment(line, "IN", start, end) 
-						|| isPseudocomment(line, "OUT", start, end)
-						|| isPseudocomment(line, "IGNORECASE", start, end)
-						|| isPseudocomment(line, "IGNORESPACE", start, end)
-						|| isPseudocomment(line, "TOLERANCE", start, end)
-						|| isPseudocomment(line, "MAXOUTPUTLEN", start, end)
-						|| isPseudocomment(line, "TIMEOUT", start, end)
-						|| isPseudocomment(line, "NOSCORE", start, end)) {
-					lines[i] = null;
-				} else if (isPseudocomment(line, "REQUIRED", start, end)
+				if (line.contains(start + "SUB ")) {
+					int n = lines[i].indexOf(start + "SUB");
+					int n2 = end.equals("") ? lines[i].length() : lines[i].indexOf(end, n) + end.length();
+					lines[i] = lines[i].substring(0, n) + lines[i].substring(n2);
+				} 
+				else if (isPseudocomment(line, "REQUIRED", start, end)
 					|| isPseudocomment(line, "FORBIDDEN", start, end)) {
 					lines[i] = null;
-					if (i < lines.length - 1) {
+					if (i < lines.length - 1 && lines[i + 1] != null) {
 						String nextLine = lines[i + 1].trim();
 						if (nextLine.startsWith(start) && nextLine.endsWith(end)) {
 							lines[i + 1] = null;
 							i++;
 						}
 					}
-				} else if (line.contains(start + "SUB ")) {
-					int n = lines[i].indexOf(start + "SUB");
-					int n2 = end.equals("") ? lines[i].length() : lines[i].indexOf(end, n) + end.length();
-					lines[i] = lines[i].substring(0, n) + lines[i].substring(n2);
-				}
+				} else if (isPseudoComment(line, start, end))
+					lines[i] = null;				
 			}
 		} 				
 	}

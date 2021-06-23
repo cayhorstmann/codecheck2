@@ -210,7 +210,7 @@ public class Main {
         });
     }
 
-    private void testInputs(Map<String, String> inputs, Path mainFile) throws Exception {
+    private void testInputs(Map<String, String> inputs, Path mainFile, boolean okToInterleave) throws Exception {
         /*
          * If there are no inputs, we feed in one empty input to execute the program.
          */
@@ -230,12 +230,12 @@ public class Main {
     	});
         for (String test : inputs.keySet()) {
             String input = inputs.get(test);
-            testInput(mainFile, runSolution, test, input, timeoutMillis / inputs.size(), maxOutputLen / inputs.size());
+            testInput(mainFile, runSolution, test, input, timeoutMillis / inputs.size(), maxOutputLen / inputs.size(), okToInterleave);
         }
     }
 
     private void testInput(Path mainFile, 
-            boolean runSolution, String test, String input, int timeout, int maxOutput)
+            boolean runSolution, String test, String input, int timeout, int maxOutput, boolean okToInterleave)
             throws Exception {
         List<String> runargs = problem.getAnnotations().findKeys("ARGS");
         if (runargs.size() == 0) runargs.add("");
@@ -247,8 +247,8 @@ public class Main {
             if (!plan.compiled("submissionrun")) return;
             report.run(!test.equals("Input") && runNumber.length() > 0 ? "Test " + runNumber : null);
         });
-        boolean interleaveio = problem.getLanguage().echoesStdin() == Language.Interleave.ALWAYS ||
-            problem.getLanguage().echoesStdin() == Language.Interleave.UNGRADED && test.equals("Input");
+        boolean interleaveio = okToInterleave && (problem.getLanguage().echoesStdin() == Language.Interleave.ALWAYS ||
+            problem.getLanguage().echoesStdin() == Language.Interleave.UNGRADED && test.equals("Input"));
         if (input == null || input.isBlank()) interleaveio = false;
         else if (!input.endsWith("\n")) input += "\n";
         
@@ -403,6 +403,7 @@ public class Main {
     public Report run(Map<Path, String> submissionFiles, Map<Path, byte[]> problemFiles, 
     		String reportType, Properties metadata, ResourceLoader resourceLoader) throws IOException {
         long startTime = System.currentTimeMillis();
+        boolean scoring = true;
         try {
             // Set up report first in case anything else throws an exception 
             
@@ -424,6 +425,8 @@ public class Main {
             double tolerance = problem.getAnnotations().findUniqueDoubleKey("TOLERANCE", DEFAULT_TOLERANCE);
             boolean ignoreCase = !"false".equalsIgnoreCase(problem.getAnnotations().findUniqueKey("IGNORECASE"));
             boolean ignoreSpace = !"false".equalsIgnoreCase(problem.getAnnotations().findUniqueKey("IGNORESPACE"));
+            boolean okToInterleave = !"false".equalsIgnoreCase(problem.getAnnotations().findUniqueKey("INTERLEAVE"));
+            scoring = !"false".equalsIgnoreCase(problem.getAnnotations().findUniqueKey("SCORING"));
             comp.setTolerance(tolerance);
             comp.setIgnoreCase(ignoreCase);
             comp.setIgnoreSpace(ignoreSpace);            
@@ -502,7 +505,7 @@ public class Main {
 
                 if (runFiles.size() > 0) {
                     for (Path runFile : runFiles)
-                        testInputs(inputs, runFile);
+                        testInputs(inputs, runFile, okToInterleave);
                 }
                 // Process checkstyle.xml etc.
                 for (Path p : problem.getUseFiles().keySet()) {
@@ -543,8 +546,7 @@ public class Main {
             else t.printStackTrace();
         } finally {
             if (report != null) {
-                if (problem != null && problem.getAnnotations() != null && !problem.getAnnotations().has("NOSCORE") 
-                        && !problem.getInputMode()) 
+                if (scoring && problem != null && !problem.getInputMode()) 
                     report.add(score);
                 long endTime = System.currentTimeMillis();
                 report.comment("Elapsed", (endTime - startTime) + " ms");

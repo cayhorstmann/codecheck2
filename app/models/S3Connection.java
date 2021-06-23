@@ -19,6 +19,7 @@ import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBQueryExpression;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.ItemCollection;
@@ -26,6 +27,8 @@ import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
 import com.amazonaws.services.dynamodbv2.document.RangeKeyCondition;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.document.spec.PutItemSpec;
+import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
+import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
@@ -33,6 +36,8 @@ import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.typesafe.config.Config;
@@ -46,6 +51,9 @@ public class S3Connection {
 	
 	@Inject public S3Connection(Config config) {
 		this.config = config;
+		// For local testing only--TODO: What exactly should work in this situation?
+		if (!config.hasPath("com.horstmann.codecheck.s3.accessKey")) return;
+		
 		String s3AccessKey = config.getString("com.horstmann.codecheck.s3.accessKey");
 		String s3SecretKey = config.getString("com.horstmann.codecheck.s3.secretKey");
 		String s3Region = config.getString("com.horstmann.codecheck.s3.region"); 
@@ -173,6 +181,32 @@ public class S3Connection {
     	return result == null ? null : (ObjectNode)(new ObjectMapper().readTree(result)); 
     }
     
+    public ObjectNode readNewestJsonObjectFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue) {
+    	DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
+    	Table table = dynamoDB.getTable(tableName); 
+    	QuerySpec spec = new QuerySpec()
+    			.withKeyConditionExpression(primaryKeyName + " = :primaryKey" )
+    			.withValueMap(new ValueMap().withString(":primaryKey", primaryKeyValue))
+    			.withScanIndexForward(false);
+    	
+    	ItemCollection<QueryOutcome> items = table.query(spec);
+    	try {
+	    	Iterator<Item> iterator = items.iterator();
+	    	if (iterator.hasNext()) {
+	    		String result = iterator.next().toJSON();
+	    		try {
+	    			return (ObjectNode)(new ObjectMapper().readTree(result));
+	    		} catch (JsonProcessingException ex) {
+	    			return null;
+	    		}
+	    	}
+	    	else
+	    		return null;
+    	} catch (ResourceNotFoundException ex) {
+    		return null;
+    	}
+    }
+            
     public String readJsonStringFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName, String sortKeyValue) throws IOException {
     	DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
     	Table table = dynamoDB.getTable(tableName); 

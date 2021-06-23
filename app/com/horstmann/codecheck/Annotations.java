@@ -13,10 +13,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Annotations {
-    private static Set<String> validAnnotations = new HashSet<>(Arrays.asList(
+    public static final Set<String> VALID_ANNOTATIONS = Set.of(
             "HIDE", "SHOW", "EDIT", "SOLUTION", "CALL", "SUB", "ID", "SAMPLE", "ARGS", 
             "IN", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "MAXOUTPUTLEN",
-            "REQUIRED", "FORBIDDEN", "NOSCORE"));    
+            "REQUIRED", "FORBIDDEN", "SCORING", "INTERLEAVE");    
     
     private class Annotation {
         Path path;
@@ -52,7 +52,7 @@ public class Annotations {
                 Annotation a = new Annotation();
                 a.before = matcher.group(1).trim();
                 a.key = matcher.group(2);
-                if (!validAnnotations.contains(a.key))
+                if (!VALID_ANNOTATIONS.contains(a.key))
                     throw new CodeCheckException("Unknown pseudocomment " + a.key + " in " + a.path);                
                 keys.add(a.key);
                 a.args = matcher.group(3).trim();

@@ -2,7 +2,7 @@ window.horstmann_codecheck = {
   setup: [],
 };
 
-if (typeof ace !== 'undefined') { ace.config.set('themePath', 'script'); }
+if (typeof ace !== 'undefined') { ace.config.set('themePath', 'script'); } 
 
 window.addEventListener('load', function () {
   'use strict';
