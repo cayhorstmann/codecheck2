@@ -523,7 +523,7 @@ public class Main {
             }
             String remoteURL = resourceLoader.getProperty("com.horstmann.codecheck.comrun.remote");            
             String scriptCommand = resourceLoader.getProperty("com.horstmann.codecheck.comrun.local");  
-            if (remoteURL == null && scriptCommand == null) scriptCommand = "/opt/codecheck/codecheck";
+            if (remoteURL == null && scriptCommand == null) scriptCommand = "/opt/codecheck/comrun";
             plan.execute(report, remoteURL, scriptCommand);
             
             if (!problem.getInputMode()) { // Don't print submitted or provided files for run-only mode

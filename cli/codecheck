@@ -52,10 +52,10 @@ function grade {
 
     if [ ! -z "$DEBUG" ] ; then
         JOPTS="$JOPTS -Dcom.horstmann.codecheck.debug" 
-        echo LC_ALL=en_US.UTF-8 "$JAVA_HOME"/bin/java $JOPTS -classpath $CLASSPATH com.horstmann.codecheck.Main "$SUBMISSIONDIR" "$PROBLEMDIR" $@
+        echo LC_ALL=en_US.UTF-8 "$JAVA" $JOPTS -classpath $CLASSPATH com.horstmann.codecheck.Main "$SUBMISSIONDIR" "$PROBLEMDIR" $@
     fi
 
-    LC_ALL=en_US.UTF-8 "$JAVA_HOME"/bin/java $JOPTS -classpath $CLASSPATH com.horstmann.codecheck.Main "$SUBMISSIONDIR" "$PROBLEMDIR" $@
+    LC_ALL=en_US.UTF-8 "$JAVA" $JOPTS -classpath $CLASSPATH com.horstmann.codecheck.Main "$SUBMISSIONDIR" "$PROBLEMDIR" $@
 }
 
 # Script start
@@ -74,10 +74,18 @@ if [ -e $BASEDIR/codecheck.env ] ; then
     set +o allexport
 fi    
 
-if [ -z "$JAVA_HOME" ] ; then
-    JAVA_HOME=$(dirname $(cd $(dirname $(which java)) && pwd -P))
-    echo Setting JAVA_HOME=$JAVA_HOME
+if [[ -z "$JAVA_HOME" ]] ; then
+  JAVA=$(command -v java)
+  if [[ -z "$JAVA" ]] ; then
+    echo Cannot find java executable. Set JAVA_HOME
     exit
+  fi
+else
+  JAVA="$JAVA_HOME"/bin/java
+  if [[ ! -e $JAVA ]] ; then
+    echo Cannot find $JAVA. Fix JAVA_HOME
+    exit
+  fi
 fi    
 
 # Set classpath
