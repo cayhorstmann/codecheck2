@@ -174,9 +174,9 @@ public interface Language {
 
     /**
      * The regex for recognizing a variable declaration in the language.
-     * @return the regex
+     * @return the regex, with groups name and rhs
      */
-    Pattern variablePattern();
+    Pattern variableDeclPattern();
 
     /**
      * Gets the separator between substitutions in SUB

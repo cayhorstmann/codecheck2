@@ -98,7 +98,7 @@ public class CppLanguage implements Language {
      * @see com.horstmann.codecheck.Language#variablePattern()
      */
     @Override
-    public Pattern variablePattern() {
+    public Pattern variableDeclPattern() {
         return pattern;
     }
     

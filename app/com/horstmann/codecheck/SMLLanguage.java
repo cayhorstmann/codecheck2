@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 
 
 public class SMLLanguage implements Language {
-   public String[] pseudoCommentDelimiters() { return new String[] { "\\(\\*", "\\*\\)" }; }
+   public String[] pseudoCommentDelimiters() { return new String[] { "(*", "*)" }; }
 
    @Override
     public String getExtension() {
@@ -81,7 +81,7 @@ public class SMLLanguage implements Language {
      * @see com.horstmann.codecheck.Language#variablePattern()
      */
     @Override
-    public Pattern variablePattern() {
+    public Pattern variableDeclPattern() {
         return variablePattern;
     }
    

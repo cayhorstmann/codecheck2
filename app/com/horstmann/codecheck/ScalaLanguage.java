@@ -77,5 +77,5 @@ public class ScalaLanguage implements Language {
             "(val|var)\\s+(?<name>\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)(\\s*:[^=]+\\s*)?\\s*=\\s*(?<rhs>[^;]+);.*");
 
     @Override
-    public Pattern variablePattern() { return variablePattern; }
+    public Pattern variableDeclPattern() { return variablePattern; }
 }

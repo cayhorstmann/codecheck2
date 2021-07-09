@@ -43,23 +43,21 @@ public class Annotations {
     private void read(Path p, byte[] contents) {
     	if (!language.isSource(p)) return; 
     	String[] delims = language.pseudoCommentDelimiters();
-        Pattern pattern = Pattern.compile("(.*\\s|)" + delims[0] + "([A-Z\\[\\]]+)(\\s.*|)" + delims[1] + "\\s*");
         List<String> lines =  Util.lines(contents);
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i).trim();
-            Matcher matcher = pattern.matcher(line);
-            if (matcher.matches()) {
+            String key = getPseudoComment(line, delims[0], delims[1]);
+            if (key != null) {
                 Annotation a = new Annotation();
-                a.before = matcher.group(1).trim();
-                a.key = matcher.group(2);
-                if (!VALID_ANNOTATIONS.contains(a.key))
-                    throw new CodeCheckException("Unknown pseudocomment " + a.key + " in " + a.path);                
+                int k = line.indexOf(delims[0] + key);
+                a.before = line.substring(0, k);
+                a.key = key;
                 keys.add(a.key);
-                a.args = matcher.group(3).trim();
+                a.args = line.substring(k + delims[0].length() + key.length(), line.length() - delims[1].length()).trim();
                 a.next = "";
                 if (i < lines.size() - 1) {
                     line = lines.get(i + 1);
-                    if (!pattern.matcher(line).matches())
+                    if (getPseudoComment(line, delims[0], delims[1]) == null)
                         a.next = line.trim();
                 }
                 if (Arrays.asList("SOLUTION", "SHOW", "EDIT").contains(a.key)) 
@@ -189,4 +187,32 @@ public class Annotations {
         }
         return calls;
     }
+
+	public static String getPseudoComment(String line, String start, String end) {
+		//TODO: Would be more efficient to find the [A-Z]+ after start and check if in VALID_ANNOTATIONS
+		for (String pseudoComment : VALID_ANNOTATIONS) 
+			if (isPseudocomment(line, pseudoComment, start, end))
+				return pseudoComment;
+		return null;
+	}
+
+	public static boolean isPseudocomment(String line, String type, String start, String end) {
+		line = line.trim();
+		if (type.equals("SUB")) {
+			if (!line.contains(start + type)) return false;
+		}
+		else { 
+			if (!line.startsWith(start + type)) return false;
+		}
+			
+		if (!line.endsWith(end))
+			return false;
+		int slen = start.length();
+		int tlen = type.length();
+		int elen = end.length();
+		if (line.length() == slen + tlen + elen)
+			return true;
+		// If there is stuff after the type, there must be a white space
+		return Character.isWhitespace(line.charAt(slen + tlen));
+	}
 }

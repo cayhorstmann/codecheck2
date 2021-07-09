@@ -180,28 +180,6 @@ public class Problem {
 		return result.toString();
 	}
 	
-	private static boolean isPseudoComment(String line, String start, String end) {
-		for (String pseudoComment : Annotations.VALID_ANNOTATIONS) 
-			if (isPseudocomment(line, pseudoComment, start, end))
-				return true;
-		return false;
-	}
-
-	private static boolean isPseudocomment(String line, String type, String start, String end) {
-		line = line.trim();
-		if (!line.startsWith(start + type))
-			return false;
-		if (!line.endsWith(end))
-			return false;
-		int slen = start.length();
-		int tlen = type.length();
-		int elen = end.length();
-		if (line.length() == slen + tlen + elen)
-			return true;
-		// If there is stuff after the type, there must be a white space
-		return Character.isWhitespace(line.charAt(slen + tlen));
-	}
-
 	private void clearPseudoComments(String[] lines, int from, int to) {
 		String[] delims = language.pseudoCommentDelimiters();
 		String start = delims[0];
@@ -214,8 +192,8 @@ public class Problem {
 					int n2 = end.equals("") ? lines[i].length() : lines[i].indexOf(end, n) + end.length();
 					lines[i] = lines[i].substring(0, n) + lines[i].substring(n2);
 				} 
-				else if (isPseudocomment(line, "REQUIRED", start, end)
-					|| isPseudocomment(line, "FORBIDDEN", start, end)) {
+				else if (Annotations.isPseudocomment(line, "REQUIRED", start, end)
+					|| Annotations.isPseudocomment(line, "FORBIDDEN", start, end)) {
 					lines[i] = null;
 					if (i < lines.length - 1 && lines[i + 1] != null) {
 						String nextLine = lines[i + 1].trim();
@@ -224,7 +202,7 @@ public class Problem {
 							i++;
 						}
 					}
-				} else if (isPseudoComment(line, start, end))
+				} else if (Annotations.getPseudoComment(line, start, end) != null)
 					lines[i] = null;				
 			}
 		} 				
@@ -263,14 +241,14 @@ public class Problem {
 		boolean hasEdit = false;
 		boolean hasShow = false;
 		for (int i = 0; i < lines.length && !hasEdit; ++i) {
-			if (isPseudocomment(lines[i], "EDIT", start, end)) {
+			if (Annotations.isPseudocomment(lines[i], "EDIT", start, end)) {
 				hasEdit = true;
 			}
-			if (isPseudocomment(lines[i], "SHOW", start, end)) {
+			if (Annotations.isPseudocomment(lines[i], "SHOW", start, end)) {
 				hasShow = true;
 			}
 		}
-		if (lines.length == 0 || isPseudocomment(lines[0], "HIDE", start, end) && !hasShow && !hasEdit)
+		if (lines.length == 0 || Annotations.isPseudocomment(lines[0], "HIDE", start, end) && !hasShow && !hasEdit)
 			return result; // Empty list means file is hidden
 
 		if (hasEdit) {
@@ -280,7 +258,7 @@ public class Problem {
 			boolean startWithEdit = false;
 			for (int i = 0; i < lines.length; i++) {			
 				String line = lines[i].trim();
-				if (isPseudocomment(line, "EDIT", start, end)) {
+				if (Annotations.isPseudocomment(line, "EDIT", start, end)) {
 					hiding = false;
 					if (!editOnPreviousLine) { // emit preceding readonly section
 						clearPseudoComments(lines, sectionStart, i);
@@ -332,11 +310,11 @@ public class Problem {
 					}
 					editOnPreviousLine = false;
 
-					if (isPseudocomment(line, "HIDE", start, end))
+					if (Annotations.isPseudocomment(line, "HIDE", start, end))
 						hiding = true;
 					if (hiding)
 						lines[i] = null;
-					if (isPseudocomment(line, "SHOW", start, end)) {
+					if (Annotations.isPseudocomment(line, "SHOW", start, end)) {
 						hiding = false;
 						String showString = start + "SHOW";
 						int n1 = lines[i].indexOf(showString);
@@ -374,14 +352,14 @@ public class Problem {
 
 			for (int i = 0; i < lines.length; i++) {
 				String line = lines[i].trim();
-				if (isPseudocomment(line, "SOLUTION", start, end)) {
+				if (Annotations.isPseudocomment(line, "SOLUTION", start, end)) {
 					isSolution = true;
 					lines[i] = null;
-				} else if (isPseudocomment(line, "HIDE", start, end)) {
+				} else if (Annotations.isPseudocomment(line, "HIDE", start, end)) {
 					hiding = true;
 					somethingHidden = true;
 					lines[i] = null;
-				} else if (isPseudocomment(line, "SHOW", start, end)) {
+				} else if (Annotations.isPseudocomment(line, "SHOW", start, end)) {
 					hiding = false;
 					isSolution = true;
 					String showString = start + "SHOW";

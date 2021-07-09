@@ -80,7 +80,7 @@ public class JavaScriptLanguage implements Language {
     private static Pattern pattern = Pattern.compile(patternString);
 
     @Override
-    public Pattern variablePattern() {
+    public Pattern variableDeclPattern() {
         return pattern;
     }    
 }

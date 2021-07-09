@@ -27,7 +27,7 @@ public class Substitution {
             this.file = file;
         else if (!this.file.equals(file))
             throw new CodeCheckException("SUB in " + this.file + " and " + file);
-        Pattern pattern = language.variablePattern();
+        Pattern pattern = language.variableDeclPattern();
         Matcher matcher = pattern.matcher(decl);
         if (matcher.matches()) {
             String name = matcher.group("name").trim();
@@ -64,8 +64,8 @@ public class Substitution {
         return r;
     }
 
-    String substitute(String contents, int n) throws IOException { 
-        Pattern pattern = language.variablePattern();
+    public String substitute(String contents, int n) throws IOException { 
+        Pattern pattern = language.variableDeclPattern();
         List<String> lines = Util.lines(contents);
         StringBuilder out = new StringBuilder();
         for (String line : lines) {
@@ -89,8 +89,8 @@ public class Substitution {
         return out.toString();
     }
     
-    void substitute(Path from, Path to, int n) throws IOException {
-        Pattern pattern = language.variablePattern();
+    private void substitute(Path from, Path to, int n) throws IOException {
+        Pattern pattern = language.variableDeclPattern();
         List<String> lines = Util.readLines(from);
         try (PrintWriter out = new PrintWriter(Files.newBufferedWriter(to, StandardCharsets.UTF_8))) {
             for (String line : lines) {
@@ -106,5 +106,4 @@ public class Substitution {
             }
         }
     }
-
 }

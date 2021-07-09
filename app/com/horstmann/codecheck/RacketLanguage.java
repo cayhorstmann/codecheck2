@@ -79,7 +79,7 @@ public class RacketLanguage implements Language {
     private static String patternString = ".*\\S\\s+(?<name>\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*(?<rhs>[^;]+);.*";
     private static Pattern pattern = Pattern.compile(patternString);
 
-    @Override public Pattern variablePattern() { return pattern; }
+    @Override public Pattern variableDeclPattern() { return pattern; }
 
     @Override
     public boolean isUnitTest(Path fileName) {
