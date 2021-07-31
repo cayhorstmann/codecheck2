@@ -32,7 +32,11 @@ publishArtifact in (Compile, packageDoc) := false
 EclipseKeys.projectFlavor := EclipseProjectFlavor.Java
 
 // Use .class files instead of generated .scala files for views and routes
-EclipseKeys.createSrc := EclipseCreateSrc.ValueSet(EclipseCreateSrc.ManagedClasses, EclipseCreateSrc.ManagedResources)
+//EclipseKeys.createSrc := EclipseCreateSrc.ValueSet(EclipseCreateSrc.ManagedClasses, EclipseCreateSrc.ManagedResources)
+// gives horrible error message
+// java.lang.NoSuchMethodError: 'scala.collection.immutable.Set sbt.internal.inc.Relations.products(java.io.File)'
+// [error] 	at com.typesafe.sbteclipse.core.EclipsePlugin$.$anonfun$copyManagedClasses$2(EclipsePlugin.scala:117)
+
 
 enablePlugins(JavaAppPackaging)
 enablePlugins(DockerPlugin)

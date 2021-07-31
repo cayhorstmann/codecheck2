@@ -78,9 +78,9 @@ public class Files extends Controller {
 			result.append(data.toString());
 		result.append(end2);
 		// Wake up the checker
-		String remoteURL = config.getString("com.horstmann.codecheck.comrun.remote");
-		URL checkerWakeupURL = new URL(remoteURL + "/api/health");
 		new Thread(() -> { try {
+                        String remoteURL = config.getString("com.horstmann.codecheck.comrun.remote");
+                        URL checkerWakeupURL = new URL(remoteURL + "/api/health");
 			checkerWakeupURL.openStream().readAllBytes();
 		} catch (IOException e) {
 			e.printStackTrace();

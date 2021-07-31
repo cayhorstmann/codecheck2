@@ -190,23 +190,18 @@ public class Annotations {
 
 	public static String getPseudoComment(String line, String start, String end) {
 		//TODO: Would be more efficient to find the [A-Z]+ after start and check if in VALID_ANNOTATIONS
-		for (String pseudoComment : VALID_ANNOTATIONS) 
-			if (isPseudocomment(line, pseudoComment, start, end))
-				return pseudoComment;
+		for (String type : VALID_ANNOTATIONS) 
+			if (isPseudocomment(line, type, start, end))
+				return type;
 		return null;
 	}
 
 	public static boolean isPseudocomment(String line, String type, String start, String end) {
 		line = line.trim();
-		if (type.equals("SUB")) {
-			if (!line.contains(start + type)) return false;
-		}
-		else { 
-			if (!line.startsWith(start + type)) return false;
-		}
+		if (!line.endsWith(end)) return false;
+		if (type.equals("SUB")) return line.contains(start + type + " ");
+		if (!line.startsWith(start + type)) return false;
 			
-		if (!line.endsWith(end))
-			return false;
 		int slen = start.length();
 		int tlen = type.length();
 		int elen = end.length();
