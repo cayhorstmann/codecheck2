@@ -656,6 +656,7 @@ window.addEventListener('load', function () {
         for (const fileElement of element.getElementsByClassName('file')) {
           const fileName = fileElement.getAttribute('name')
           indexMapping[fileName] = []
+          work[fileName] = []
           let editableCount = 0
           let suffix = 0
           for (const editorDiv of fileElement.children[1].children) {
@@ -674,7 +675,7 @@ window.addEventListener('load', function () {
           const fragmentIndex = parseInt(fragmentName.substring(i + 1))
           const editableIndex = indexMapping[fileName][fragmentIndex]
           if (editableIndex !== undefined)
-            work[fragmentName][editableIndex] = work.code
+            work[fileName][editableIndex] = work.code
         }
       } 
       for (let fileName in work) 
