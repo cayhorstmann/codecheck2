@@ -658,7 +658,7 @@ window.addEventListener('load', function () {
           indexMapping[fileName] = []
           let editableCount = 0
           let suffix = 0
-          for (const editorDiv of fileElement[1].children) {
+          for (const editorDiv of fileElement.children[1].children) {
               suffix++
               if (editorDiv.getAttribute('readonly') !== 'readonly') {
                 indexMapping[fileName][suffix] = editableCount
