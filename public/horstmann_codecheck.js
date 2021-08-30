@@ -647,7 +647,7 @@ window.addEventListener('load', function () {
     let downloadButton = undefined
     let editors = new Map()
 
-    function restoreState(element, state) { 
+    function restoreState(dummy, state) { // TODO: Eliminate dummy
       if (state === null) return;
       let work = state.work
       if ('studentWork' in state) { // TODO: Legacy state
