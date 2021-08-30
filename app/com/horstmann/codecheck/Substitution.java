@@ -1,9 +1,6 @@
 package com.horstmann.codecheck;
 
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -87,23 +84,5 @@ public class Substitution {
             }
         }
         return out.toString();
-    }
-    
-    private void substitute(Path from, Path to, int n) throws IOException {
-        Pattern pattern = language.variableDeclPattern();
-        List<String> lines = Util.readLines(from);
-        try (PrintWriter out = new PrintWriter(Files.newBufferedWriter(to, StandardCharsets.UTF_8))) {
-            for (String line : lines) {
-                Matcher matcher = pattern.matcher(line);
-                if (matcher.matches()) {
-                    String name = matcher.group("name");
-                    if (subs.containsKey(name)) {
-                        out.print(line.substring(0, matcher.start("rhs")));
-                        out.print(subs.get(name).get(n));
-                        out.println(line.substring(matcher.end("rhs")));
-                    } else out.println(line);
-                } else out.println(line);
-            }
-        }
     }
 }

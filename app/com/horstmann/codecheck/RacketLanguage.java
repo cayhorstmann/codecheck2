@@ -47,8 +47,6 @@ public class RacketLanguage implements Language {
     public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls, ResourceLoader resourceLoader) {
        String moduleName = moduleOf(file);       
         // Copy source/module.rkt to target/module-solution.rkt
-       Map<Path, String> testerFiles = new HashMap<>();
-       testerFiles.put(Paths.get(moduleName+ "-solution.rkt"), contents);
        StringBuilder out = new StringBuilder();
         
        out.append("#lang racket\n");
@@ -72,7 +70,9 @@ public class RacketLanguage implements Language {
        
        out.append(")))\n");        
         
+       Map<Path, String> testerFiles = new HashMap<>();
        testerFiles.put(Paths.get(moduleName + "CodeCheck.rkt"), out.toString());
+       testerFiles.put(Paths.get(moduleName+ "-solution.rkt"), contents);
        return testerFiles;
     }
     

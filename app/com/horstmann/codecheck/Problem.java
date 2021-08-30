@@ -16,8 +16,14 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Problem {
+	public static class EditorState {
+		public List<String> editors;
+		public List<String> fixed;
+		public List<String> tiles;
+	}
+	
 	public static class DisplayData {
-		public Map<String, List<String>> requiredFiles = new LinkedHashMap<>();
+		public Map<String, EditorState> requiredFiles = new LinkedHashMap<>();
 		public Map<String, String> useFiles = new LinkedHashMap<>();
 		public String description;
 	}
@@ -179,7 +185,8 @@ public class Problem {
 
 		return result.toString();
 	}
-	
+
+	//TODO: Should be in Annotations
 	private void clearPseudoComments(String[] lines, int from, int to) {
 		String[] delims = language.pseudoCommentDelimiters();
 		String start = delims[0];
@@ -187,13 +194,13 @@ public class Problem {
 		for (int i = from; i < to; i++) {
 			String line = lines[i];
 			if (line != null) {
-				if (line.contains(start + "SUB ")) {
+				Annotations.Annotation ann = Annotations.parse(line, start, end);
+				if (ann.key.equals("SUB")) {
 					int n = lines[i].indexOf(start + "SUB");
 					int n2 = end.equals("") ? lines[i].length() : lines[i].indexOf(end, n) + end.length();
 					lines[i] = lines[i].substring(0, n) + lines[i].substring(n2);
 				} 
-				else if (Annotations.isPseudocomment(line, "REQUIRED", start, end)
-					|| Annotations.isPseudocomment(line, "FORBIDDEN", start, end)) {
+				else if (ann.key.equals("REQUIRED") || ann.key.equals("FORBIDDEN")) {
 					lines[i] = null;
 					if (i < lines.length - 1 && lines[i + 1] != null) {
 						String nextLine = lines[i + 1].trim();
@@ -202,7 +209,7 @@ public class Problem {
 							i++;
 						}
 					}
-				} else if (Annotations.getPseudoComment(line, start, end) != null)
+				} else if (ann.isValid)
 					lines[i] = null;				
 			}
 		} 				
@@ -226,142 +233,161 @@ public class Problem {
 	 * sections. Starts with an editable section or null if the initial section
 	 * should be noneditable.
 	 */
-	private List<String> processHideShow(String contents) {
-		ArrayList<String> result = new ArrayList<String>();
+	private EditorState processHideShow(String contents) {
 		if (contents == null) {
-			result.add("");
-			return result;
+			ArrayList<String> editors = new ArrayList<String>();
+			editors.add("");
+			EditorState state = new EditorState();
+			state.editors = editors;
+			return state;
 		}
 
 		String[] delims = language.pseudoCommentDelimiters();
 		String start = delims[0];
 		String end = delims[1];
-		String[] lines = contents.split("\n");
+		String[] lines = contents.stripTrailing().split("\n");
 
 		boolean hasEdit = false;
 		boolean hasShow = false;
-		for (int i = 0; i < lines.length && !hasEdit; ++i) {
-			if (Annotations.isPseudocomment(lines[i], "EDIT", start, end)) {
-				hasEdit = true;
-			}
-			if (Annotations.isPseudocomment(lines[i], "SHOW", start, end)) {
-				hasShow = true;
+		boolean hasTile = false;
+		for (int i = 0; i < lines.length && !hasTile && !hasEdit; i++) {
+			Annotations.Annotation ann = Annotations.parse(lines[i], start, end); 
+			if (ann.key.equals("EDIT")) hasEdit = true;
+			else if (ann.key.equals("SHOW")) hasShow = true;
+			else if (ann.key.equals("TILE")) hasTile = true;			
+		}
+		if (lines.length == 0 || Annotations.parse(lines[0], start, end).key.equals("HIDE") && !hasShow && !hasEdit) {
+			EditorState state = new EditorState();			
+			state.editors = new ArrayList<String>(); // Empty list means file is hidden
+			return state;					
+		}
+		if (hasTile) {
+			return tileMode(lines, start, end);
+		} else if (hasEdit) {
+			return hideEditMode(lines, start, end);
+		} else { 
+			return hideShowMode(lines, start, end);
+		}
+	}
+
+
+	private EditorState hideShowMode(String[] lines, String start, String end) {
+		EditorState state = new EditorState();
+		state.editors = new ArrayList<String>();
+		boolean hiding = false;
+		boolean somethingHidden = false;
+		boolean isSolution = false;
+
+		for (int i = 0; i < lines.length; i++) {
+			String line = lines[i].trim();
+			Annotations.Annotation ann = Annotations.parse(line, start, end);
+					
+			if (ann.key.equals("SOLUTION")) {
+				isSolution = true;
+				lines[i] = null;
+			} else if (ann.key.equals("HIDE")) {
+				hiding = true;
+				somethingHidden = true;
+				lines[i] = null;
+			} else if (ann.key.equals("SHOW")) {
+				hiding = false;
+				isSolution = true;
+				String showString = start + "SHOW";
+				int n1 = lines[i].indexOf(showString);
+				int n2 = showString.length();
+				int n3 = lines[i].lastIndexOf(end);
+				if (n1 + n2 < n3)
+					lines[i] = lines[i].substring(0, n1) + lines[i].substring(n1 + n2 + 1, n3);
+				else
+					lines[i] = null;
+			} else if (hiding) {
+				lines[i] = null;
 			}
 		}
-		if (lines.length == 0 || Annotations.isPseudocomment(lines[0], "HIDE", start, end) && !hasShow && !hasEdit)
-			return result; // Empty list means file is hidden
+		if (isSolution && !somethingHidden) {
+			state.editors.add("");
+			return state;
+		}
+		clearPseudoComments(lines, 0, lines.length);
+		StringBuilder allRemainingLines = new StringBuilder();
+		for (String l : lines) {
+			if (l != null) {
+				allRemainingLines.append(l);
+				allRemainingLines.append("\n");
+			}
+		}
+		state.editors.add(allRemainingLines.toString());
+		return state;
+	}
 
-		if (hasEdit) {
-			int sectionStart = 0;
-			boolean hiding = false;
-			boolean editOnPreviousLine = false;
-			boolean startWithEdit = false;
-			for (int i = 0; i < lines.length; i++) {			
-				String line = lines[i].trim();
-				if (Annotations.isPseudocomment(line, "EDIT", start, end)) {
-					hiding = false;
-					if (!editOnPreviousLine) { // emit preceding readonly section
-						clearPseudoComments(lines, sectionStart, i);
-						StringBuilder section = new StringBuilder();
-						for (int j = sectionStart; j < i; j++) {
-							if (lines[j] != null) {
-								section.append(lines[j]);
-								section.append("\n");
-							}
-						}
-						if (section.length() == 0) // Don't add a blank readonly section at the top
-						{
-							if (result.size() > 0)
-								result.add("\n");
-							else
-								startWithEdit = true;
-						} else
-							result.add(section.toString());
-						sectionStart = i;
-					}
-					editOnPreviousLine = true;
-
-					String editString = start + "EDIT";
-					int n1 = lines[i].indexOf(editString);
-					int n2 = editString.length();
-					int n3 = lines[i].lastIndexOf(end);
-					if (n1 + n2 < n3)
-						lines[i] = lines[i].substring(0, n1) + lines[i].substring(n1 + n2 + 1, n3);
-					else
-						lines[i] = ""; // Edit section is never empty
-				} else {
-					if (editOnPreviousLine) { // emit edit section
-						clearPseudoComments(lines, sectionStart, i);
-						StringBuilder section = new StringBuilder();
-						for (int j = sectionStart; j < i; j++) {
-							if (lines[j] != null) {
-								section.append(lines[j]);
-								section.append("\n");
-							}
-						}
-						if (section.toString().trim().length() == 0) {
-							section.insert(0, "\n");
+	private EditorState hideEditMode(String[] lines, String start, String end) {
+		EditorState state = new EditorState();
+		state.editors = new ArrayList<String>();
+		int sectionStart = 0;
+		boolean hiding = false;
+		boolean editOnPreviousLine = false;
+		boolean startWithEdit = false;
+		for (int i = 0; i < lines.length; i++) {			
+			String line = lines[i].trim();
+			Annotations.Annotation ann = Annotations.parse(line, start, end); 
+			if (ann.key.equals("EDIT")) {
+				hiding = false;
+				if (!editOnPreviousLine) { // emit preceding readonly section
+					clearPseudoComments(lines, sectionStart, i);
+					StringBuilder section = new StringBuilder();
+					for (int j = sectionStart; j < i; j++) {
+						if (lines[j] != null) {
+							section.append(lines[j]);
 							section.append("\n");
 						}
-						if (result.size() == 0)
-							startWithEdit = true;
-						result.add(section.toString());
-						sectionStart = i;
 					}
-					editOnPreviousLine = false;
-
-					if (Annotations.isPseudocomment(line, "HIDE", start, end))
-						hiding = true;
-					if (hiding)
-						lines[i] = null;
-					if (Annotations.isPseudocomment(line, "SHOW", start, end)) {
-						hiding = false;
-						String showString = start + "SHOW";
-						int n1 = lines[i].indexOf(showString);
-						int n2 = showString.length();
-						int n3 = lines[i].lastIndexOf(end);
-						if (n1 + n2 < n3)
-							lines[i] = lines[i].substring(0, n1) + lines[i].substring(n1 + n2 + 1, n3);
+					if (section.length() == 0) // Don't add a blank readonly section at the top
+					{
+						if (state.editors.size() > 0)
+							state.editors.add("\n");
 						else
-							lines[i] = null;
+							startWithEdit = true;
+					} else
+						state.editors.add(section.toString());
+					sectionStart = i;
+				}
+				editOnPreviousLine = true;
+
+				String editString = start + "EDIT";
+				int n1 = lines[i].indexOf(editString);
+				int n2 = editString.length();
+				int n3 = lines[i].lastIndexOf(end);
+				if (n1 + n2 < n3)
+					lines[i] = lines[i].substring(0, n1) + lines[i].substring(n1 + n2 + 1, n3);
+				else
+					lines[i] = ""; // Edit section is never empty
+			} else {
+				if (editOnPreviousLine) { // emit edit section
+					clearPseudoComments(lines, sectionStart, i);
+					StringBuilder section = new StringBuilder();
+					for (int j = sectionStart; j < i; j++) {
+						if (lines[j] != null) {
+							section.append(lines[j]);
+							section.append("\n");
+						}
 					}
+					if (section.toString().trim().length() == 0) {
+						section.insert(0, "\n");
+						section.append("\n");
+					}
+					if (state.editors.size() == 0)
+						startWithEdit = true;
+					state.editors.add(section.toString());
+					sectionStart = i;
 				}
-			}
-			// Emit final section
-			clearPseudoComments(lines, sectionStart, lines.length);
-			StringBuilder section = new StringBuilder();
-			for (int j = sectionStart; j < lines.length; j++) {
-				if (lines[j] != null) {
-					section.append(lines[j]);
-					section.append("\n");
-				}
-			}
-			if (editOnPreviousLine && section.toString().trim().length() == 0) {
-				section.insert(0, "\n");
-				section.append("\n");
-			}
+				editOnPreviousLine = false;
 
-			result.add(section.toString());
-			if (!startWithEdit)
-				result.add(0, null);
-			return result;
-		} else { // SHOW mode
-			boolean hiding = false;
-			boolean somethingHidden = false;
-			boolean isSolution = false;
-
-			for (int i = 0; i < lines.length; i++) {
-				String line = lines[i].trim();
-				if (Annotations.isPseudocomment(line, "SOLUTION", start, end)) {
-					isSolution = true;
-					lines[i] = null;
-				} else if (Annotations.isPseudocomment(line, "HIDE", start, end)) {
+				if (ann.key.equals("HIDE"))
 					hiding = true;
-					somethingHidden = true;
+				if (hiding)
 					lines[i] = null;
-				} else if (Annotations.isPseudocomment(line, "SHOW", start, end)) {
+				if (ann.key.equals("SHOW")) {
 					hiding = false;
-					isSolution = true;
 					String showString = start + "SHOW";
 					int n1 = lines[i].indexOf(showString);
 					int n2 = showString.length();
@@ -370,25 +396,174 @@ public class Problem {
 						lines[i] = lines[i].substring(0, n1) + lines[i].substring(n1 + n2 + 1, n3);
 					else
 						lines[i] = null;
-				} else if (hiding) {
-					lines[i] = null;
 				}
 			}
-			if (isSolution && !somethingHidden) {
-				result.add("");
-				return result;
-			}
-			clearPseudoComments(lines, 0, lines.length);
-			StringBuilder allRemainingLines = new StringBuilder();
-			for (String l : lines) {
-				if (l != null) {
-					allRemainingLines.append(l);
-					allRemainingLines.append("\n");
-				}
-			}
-			result.add(allRemainingLines.toString());
-			return result;
 		}
+		// Emit final section
+		clearPseudoComments(lines, sectionStart, lines.length);
+		StringBuilder section = new StringBuilder();
+		for (int j = sectionStart; j < lines.length; j++) {
+			if (lines[j] != null) {
+				section.append(lines[j]);
+				section.append("\n");
+			}
+		}
+		if (editOnPreviousLine && section.toString().trim().length() == 0) {
+			section.insert(0, "\n");
+			section.append("\n");
+		}
+
+		state.editors.add(section.toString());
+		if (!startWithEdit)
+			state.editors.add(0, null);
+		return state;
+	}
+	/*
+//TILE
+
+makes each line (until the next pseudocomment) a draggable tile. 
+An opening brace groups with the preceding non-brace line. 
+For example, this is a single tile:
+
+if (x == 0)
+{
+
+//TILE n
+
+makes the next n lines to a tile, then reverts to single line tiles
+
+//GOOD
+
+moves next lines to the left as single line tiles, until the next //TILE. 
+Braces are captured as with TILE. 
+Note: Anything before the first TILE is implicitly GOOD
+
+//GOOD n
+
+makes the next n lines into a good tile, then reverts to single good tiles.
+
+//BAD code
+//BAD n 
+// code 1
+// code 2
+// ...
+// code n
+
+Adds to the distractors of the preceding tile. 
+However, BAD tiles following good tiles become global distractors. That means
+global distractors either follow //GOOD or are on top
+
+When a { follows one or more //BAD in tile mode (not global), it is added to all preceding distractors 
+and the tile preceding them. 
+ 
+	 */
+
+	private static String removeComments(StringBuilder tile, String start, String end) {
+		int i = tile.indexOf(start);
+		int j = tile.lastIndexOf(end);
+		if (i < 0 || j < 0) return tile.toString();
+		return tile.substring(0, i) + tile.substring(i + start.length(), j) + tile.substring(j + end.length());
+	}
+	
+	private EditorState tileMode(String[] lines, String start, String end) {
+		EditorState state = new EditorState();
+		state.fixed = new ArrayList<String>();
+		state.tiles = new ArrayList<String>();
+		ArrayList<List<String>> draggable = new ArrayList<List<String>>();
+		ArrayList<String> currentGroup = new ArrayList<String>();		
+		
+		boolean tileMode = false;
+		for (int i = 0; i < lines.length; i++) {			
+			String line = lines[i].trim();
+			Annotations.Annotation ann = Annotations.parse(line, start, end);
+			int arg = -1;
+			if (ann.isValid) {
+				try { arg = Integer.parseInt(ann.args); } catch (NumberFormatException ex) {} 
+			}
+			if (ann.key.equals("TILE")) {
+				tileMode = true;
+				if (currentGroup.size() > 0) {
+					draggable.add(currentGroup);
+					currentGroup = new ArrayList<String>();
+				}
+				
+				if (arg > 0) {
+					StringBuilder tile = new StringBuilder();
+					for (int j = 1; j <= arg; j++) {
+						if (j > 1) tile.append("\n");
+						tile.append(lines[j]);
+					}
+					currentGroup.add(tile.toString());
+					i += arg;
+				} 
+			} else if (ann.key.equals("GOOD")) {
+				tileMode = false;
+				if (arg > 0) {
+					StringBuilder tile = new StringBuilder();
+					for (int j = 1; j <= arg; j++) {
+						if (j > 1) tile.append("\n");
+						tile.append(lines[j]);
+					}
+					state.fixed.add(tile.toString());
+					i += arg;					
+				}
+			} else if (ann.key.equals("BAD")) {
+				if (arg > 0) {
+					StringBuilder tile = new StringBuilder();
+					for (int j = 1; j <= arg; j++) {
+						if (j > 1) tile.append("\n");
+						tile.append(lines[j]);
+					}
+					(tileMode ? currentGroup : state.fixed).add(removeComments(tile, start, end));
+					i += arg;
+				} else {
+					(tileMode ? currentGroup : state.fixed).add(ann.before + ann.args);
+				}
+			} else if (tileMode) {
+				if (line.strip().equals("{")) {
+					if (currentGroup.size() > 0) {
+						ArrayList<String> withBrace = new ArrayList<String>();
+						for (String tile :currentGroup) {
+							withBrace.add(tile + "\n" + line);
+						}
+						draggable.add(withBrace);
+						currentGroup = new ArrayList<String>();
+					}
+				} else if (!ann.isValid) {
+					if (currentGroup.size() > 0) {
+						draggable.add(currentGroup);
+						currentGroup = new ArrayList<String>();
+					}
+					currentGroup.add(line);
+				}
+			} else if (!ann.isValid) {
+				if (i < lines.length - 1 && lines[i + 1].strip().equals("{")) {
+					state.fixed.add(line + "\n" + lines[i + 1]);
+					i++;
+				} else {
+					state.fixed.add(line);
+				}
+			}
+		}
+		if (currentGroup.size() > 0) 
+			draggable.add(currentGroup);
+		for (List<String> group : draggable) 
+			Collections.shuffle(group);
+		// TODO: Normalize indentations on left to tabs
+		// Strip initial space on right
+		for (List<String> group : draggable) {
+			Collections.shuffle(group);
+			state.tiles.addAll(group);
+		}
+		// Put all the right braces at the end
+		for (int i = state.tiles.size() - 1; i >= 0; i--) {
+			if (state.tiles.get(i).equals("}")) {
+				state.tiles.remove(i);
+				state.tiles.add("}");
+			}
+		}
+		
+		return state;
 	}
 
 	private static boolean isTextFile(String p) { return p.toLowerCase().endsWith(".txt"); }
@@ -413,7 +588,9 @@ public class Problem {
 		}
 		if (oldStyle) {
 			for (Path path : solutionFiles.keySet()) {
-				data.requiredFiles.put(path.toString(), List.of(removePseudoComments(Util.getString(useFiles, path))));
+				EditorState state = new EditorState();
+				state.editors = List.of(removePseudoComments(Util.getString(useFiles, path))); 
+				data.requiredFiles.put(path.toString(), state);
 			}
 		} else {
 			for (Map.Entry<Path, byte[]> entry : solutionFiles.entrySet()) {
@@ -424,7 +601,9 @@ public class Problem {
 			for (Map.Entry<Path, byte[]> entry : inputFiles.entrySet()) {
 				Path path = entry.getKey();
 				String contents = new String(entry.getValue(), StandardCharsets.UTF_8);
-				data.requiredFiles.put(path.toString(), List.of(contents));
+				EditorState state = new EditorState();
+				state.editors = List.of(contents);
+				data.requiredFiles.put(path.toString(), state);
 			}
 		}
 		return data;

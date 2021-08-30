@@ -147,6 +147,6 @@ public class JavaLanguage implements Language {
     
     public Interleave echoesStdin() { return Interleave.ALWAYS; }
 
-    private static Pattern ERROR_PATTERN = Pattern.compile(".+/(?<file>[^/]+\\.java):(?<line>[0-9]+): error: (?<msg>.+)");
+    private static Pattern ERROR_PATTERN = Pattern.compile("(.+/)?(?<file>[^/]+\\.java):(?<line>[0-9]+): error: (?<msg>.+)");
     @Override public Pattern errorPattern() { return ERROR_PATTERN; }        
 }

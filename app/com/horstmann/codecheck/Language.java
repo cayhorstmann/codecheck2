@@ -24,7 +24,8 @@ public interface Language {
        new JavaScriptLanguage(),
        new CSharpLanguage(),
        new HaskellLanguage(),
-       new SMLLanguage()
+       new SMLLanguage(),
+       new DartLanguage()
     };
 
 	static Language languageFor(Set<Path> files) {

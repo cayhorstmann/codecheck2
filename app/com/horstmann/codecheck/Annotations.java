@@ -9,22 +9,46 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class Annotations {
     public static final Set<String> VALID_ANNOTATIONS = Set.of(
             "HIDE", "SHOW", "EDIT", "SOLUTION", "CALL", "SUB", "ID", "SAMPLE", "ARGS", 
             "IN", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "MAXOUTPUTLEN",
-            "REQUIRED", "FORBIDDEN", "SCORING", "INTERLEAVE");    
-    
-    private class Annotation {
-        Path path;
-        String key;
-        String args;
-        String before;
-        String next;
+            "REQUIRED", "FORBIDDEN", "SCORING", "INTERLEAVE", "TILE", "GOOD", "BAD");    
+
+    public static class Annotation {
+    	public boolean isValid;
+        public Path path;
+        public String key = "";
+        public String args;
+        public String before;
+        public String next = "";
     }
+    
+	public static Annotation parse(String line, String start, String end) {
+		Annotation ann = new Annotation();
+		int i = line.indexOf(start);
+		if (i < 0) return ann;
+		String before = line.substring(0, i); 
+		i += start.length();
+		String line1 = line.stripTrailing();
+		if (!line1.endsWith(end)) return ann;
+		int j = line1.length() - end.length(); 
+		int k = i;
+		while (k < j && Character.isAlphabetic(line.charAt(k))) k++;
+		if (k < j && !Character.isWhitespace(line.charAt(k))) return ann;
+		String key = line.substring(i, k);
+		if (!VALID_ANNOTATIONS.contains(key)) return ann;
+		// Only SUB can have non-blank BEFORE
+		if (!before.isBlank() && !key.equals("SUB")) return ann;
+		ann.isValid = true;
+		ann.before = before;
+		ann.key = key;
+		ann.args = line.substring(k, j).strip();
+		return ann;
+	}    	        
+    
 
     private Language language;
     private List<Annotation> annotations = new ArrayList<>();
@@ -40,27 +64,26 @@ public class Annotations {
         for (Map.Entry<Path, byte[]> entry : files.entrySet()) read(entry.getKey(), entry.getValue());
     }
 
+    public static String getArg(String line, String key, String start, String end) {
+        int k = line.indexOf(start + key);
+    	return line.substring(k + start.length() + key.length(), line.length() - end.length()).strip();    	
+    }
+    
     private void read(Path p, byte[] contents) {
     	if (!language.isSource(p)) return; 
     	String[] delims = language.pseudoCommentDelimiters();
         List<String> lines =  Util.lines(contents);
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i).trim();
-            String key = getPseudoComment(line, delims[0], delims[1]);
-            if (key != null) {
-                Annotation a = new Annotation();
-                int k = line.indexOf(delims[0] + key);
-                a.before = line.substring(0, k);
-                a.key = key;
+            Annotation a = parse(line, delims[0], delims[1]);
+            if (a.isValid) {
                 keys.add(a.key);
-                a.args = line.substring(k + delims[0].length() + key.length(), line.length() - delims[1].length()).trim();
-                a.next = "";
                 if (i < lines.size() - 1) {
                     line = lines.get(i + 1);
-                    if (getPseudoComment(line, delims[0], delims[1]) == null)
+                    if (!parse(line, delims[0], delims[1]).isValid)
                         a.next = line.trim();
                 }
-                if (Arrays.asList("SOLUTION", "SHOW", "EDIT").contains(a.key)) 
+                if (Arrays.asList("SOLUTION", "SHOW", "EDIT", "TILE").contains(a.key)) 
                     solutions.add(p);
                 if (a.key.equals("HIDE")) 
                 	hidden.add(p);
@@ -187,27 +210,4 @@ public class Annotations {
         }
         return calls;
     }
-
-	public static String getPseudoComment(String line, String start, String end) {
-		//TODO: Would be more efficient to find the [A-Z]+ after start and check if in VALID_ANNOTATIONS
-		for (String type : VALID_ANNOTATIONS) 
-			if (isPseudocomment(line, type, start, end))
-				return type;
-		return null;
-	}
-
-	public static boolean isPseudocomment(String line, String type, String start, String end) {
-		line = line.trim();
-		if (!line.endsWith(end)) return false;
-		if (type.equals("SUB")) return line.contains(start + type + " ");
-		if (!line.startsWith(start + type)) return false;
-			
-		int slen = start.length();
-		int tlen = type.length();
-		int elen = end.length();
-		if (line.length() == slen + tlen + elen)
-			return true;
-		// If there is stuff after the type, there must be a white space
-		return Character.isWhitespace(line.charAt(slen + tlen));
-	}
 }

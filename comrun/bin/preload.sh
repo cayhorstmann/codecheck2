@@ -35,6 +35,9 @@ function compile {
     _CSharp)
       mcs -o Prog.exe $@  > $BASE/out/$DIR/_compile 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_compile
       ;;
+    _Dart)
+      dart --disable-analytics compile exe -o prog $@ > $BASE/out/$DIR/_compile 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_compile
+      ;;
     _Haskell)
       ghc -o prog $@ > $BASE/out/$DIR/_compile 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_compile
       ;;
@@ -82,7 +85,7 @@ function run {
   cd $BASE/$DIR
   mkdir -p $BASE/out/$ID
   case _"$LANG" in 
-    _C|_Cpp|_Haskell|_SML)
+    _C|_Cpp|_Dart|_Haskell|_SML)
       ulimit -d 100000 -f 1000 -n 100 -v 100000
       if [[ -e prog ]] ; then
         if [[ $INTERLEAVEIO == "true" ]] ; then

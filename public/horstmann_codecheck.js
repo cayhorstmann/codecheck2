@@ -1,3 +1,6 @@
+//TODO
+let horstmann_common = { iOS: false }
+
 window.horstmann_codecheck = {
   setup: [],
 };
@@ -7,57 +10,704 @@ if (typeof ace !== 'undefined') { ace.config.set('themePath', 'script'); }
 window.addEventListener('load', function () {
   'use strict';
 
-  function initElement(element, setup, prefix) {
+  function createRearrange(fileName, setup) {
+    'use strict';
+
+    // Element-scoped variables
+    const INDENT_STRING = '\u2002\u2002\u2002' // en space
+    const MIN_INDENT = 3 // Minimum number of indent lines shown
+    const left = document.createElement('div')
+    const right = document.createElement('div')
+    let drag = undefined   
+    let indentWidth = undefined
+
+    function getClientXY(e) {
+      return e.touches ? {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY
+      } : {
+        x: e.clientX,
+        y: e.clientY
+      }
+    }
+
+    function createTile(text) {
+      let tileDiv = document.createElement('div')
+      tileDiv.classList.add('tile')
+      tileDiv.classList.add('hc-code')
+      tileDiv.textContent = text
+      return tileDiv
+    }
+
+    function setIndent(tileDiv, indent) {
+      tileDiv.style.marginLeft = ((indent + 1) * indentWidth) + 'px'
+      tileDiv.indent = indent
+    }
+
+    function shiftTile(tileDiv, droppedTileX) {      
+      let leftX = left.getBoundingClientRect().left // TODO: Adjust for margin
+      let indent = Math.max(0, Math.round((droppedTileX - leftX) / indentWidth - 1))
+      setIndent(tileDiv, indent)
+    }
+
+    
+    function measureIndentWidth() {
+      // Measure indent width
+      let tileDiv = createTile()
+      let span = document.createElement('span')
+      span.innerHTML = INDENT_STRING
+      tileDiv.appendChild(span)
+      left.appendChild(tileDiv)
+      indentWidth = Math.round(span.getBoundingClientRect().width)
+      left.removeChild(tileDiv)
+
+      
+      if (indentWidth === 0) 
+        setTimeout(measureIndentWidth, 2000)
+      else {
+        left.style.background = `repeating-linear-gradient( to right, transparent 0px ${indentWidth}px, #aeede9 ${indentWidth}px ${indentWidth + 1}px )`
+        for (let i = 1; i < left.children.length; i++) {
+          let tileDiv = left.children[i]
+          setIndent(tileDiv, tileDiv.indent)
+        }
+        right.children[0].focus()
+      }
+    }
+
+    function stickyBrace(tileDiv) {
+      if (tileDiv.parentNode !== left) return
+      if (!tileDiv.textContent.endsWith('{')) return
+      
+      // Is a } available to the right? 
+      let rightBrace = null
+      for (let i = 0; rightBrace === null && i < right.children.length; i++)
+        if (right.children[i].textContent === '}') rightBrace = right.children[i]
+      if (rightBrace === null) return
+
+      // Is there a } tile below with matching indent? If so, return 
+      let i = 0
+      while (left.children[i] !== tileDiv) i++
+      i++
+      let done = false
+      while (!done && i < left.children.length) {
+        let tileDivBelow = left.children[i]
+        if (tileDivBelow.indent === tileDiv.indent && tileDivBelow.textContent.trim().startsWith('}')) return
+        else if (tileDivBelow.indent < tileDiv.indent) done = true
+        else i++
+      }
+      
+      // Still here ... move the rightBrace 
+
+      right.removeChild(rightBrace)
+      left.insertBefore(rightBrace, tileDiv.nextSibling)      
+      setIndent(rightBrace, tileDiv.indent)
+    }
+
+    function insertDroppedTileLeft(tileDiv, droppedTileX, droppedTileY) {
+      const droppedTileCenterY = droppedTileY + tileDiv.clientHeight / 2
+      
+      let leftX = left.getBoundingClientRect().left // TODO: Adjust for margin
+      let indent = Math.max(0, Math.round((droppedTileX - leftX) / indentWidth - 1))
+      setIndent(tileDiv, indent)
+
+      let done = false
+      let fromRight = tileDiv.parentNode === right
+      let i = 0
+      tileDiv.parentNode.removeChild(tileDiv)
+      while (i < left.children.length && !done) {
+        let child = left.children[i]
+        let bounds = child.getBoundingClientRect() 
+        if (droppedTileCenterY < bounds.top + child.clientHeight) {
+          left.insertBefore(tileDiv, child)
+          done = true
+        }
+        else 
+          i++
+      }      
+      if (!done) 
+        left.appendChild(tileDiv)
+      if (fromRight) stickyBrace(tileDiv)
+      tileDiv.focus()
+    }
+
+    function insertDroppedTileRight(tileDiv) {
+      tileDiv.parentNode.removeChild(tileDiv)
+      right.appendChild(tileDiv)
+      tileDiv.style.marginLeft = ''
+      right.children[0].focus()
+    }
+
+    function makeTile(text, isFixed) {
+      let tileDiv = createTile()
+      if (isFixed) {
+        let indent = 0
+        while (text[indent] === '\t') indent++
+        tileDiv.textContent = text.substr(indent)
+        tileDiv.classList.add('fixed')
+        tileDiv.setAttribute('draggable', false);
+        tileDiv.tabIndex = -1
+        setIndent(tileDiv, indent)
+      }
+      else {
+        tileDiv.textContent = text
+        tileDiv.setAttribute('draggable', true);
+        tileDiv.tabIndex = 0
+        const mousedownListener = function(e) {
+          if (tileDiv !== document.activeElement) {
+            tileDiv.focus()
+          }
+          else if (Array.prototype.indexOf.call(left.children, tileDiv) >= 0) {
+            shiftTile(tileDiv, getClientXY(e).x - indentWidth / 2)
+            tileDiv.blur()
+          }
+          e.stopPropagation() // So that the left/right div doesn't get it
+          // Don't call e.preventDefault(), or dragging no longer works
+        }
+        tileDiv.addEventListener('mousedown', mousedownListener)
+        tileDiv.addEventListener('touchstart', mousedownListener)
+        
+        tileDiv.addEventListener('dragstart', function(e) {
+          e.dataTransfer.effectAllowed = 'all';
+          e.dataTransfer.setData('text/plain', tileDiv.textContent); // Firefox needs this 
+          let bounds = tileDiv.getBoundingClientRect()
+          let p = getClientXY(e)
+          drag = {
+            tile: tileDiv,
+            x: p.x - bounds.left,
+            y: p.y - bounds.top
+          }
+          
+          if (horstmann_common.iOS) { // iOS uselessly scales down the preview image
+            drag.x = 32
+            drag.y = 32
+            // A 64 x 64 icon
+            // SVG didn't work on iOS 12
+            // A 400 x 40 rectangle got scaled down so the left side
+            // was useless for positioning
+            let img = document.createElement('img')
+            img.src = 'data:image/png;base64,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'
+            e.dataTransfer.setDragImage(img, 32, 32)
+          }
+        })            
+        tileDiv.addEventListener('dragend', function(e) {
+          drag = undefined
+        })
+        tileDiv.addEventListener('keydown', function(e) {
+          if (e.keyCode === 37) { // left
+            moveLeftRight(tileDiv, -1)
+          } else if (e.keyCode === 39) { // right
+            moveLeftRight(tileDiv, 1)
+          } else if (e.keyCode === 38) { // up
+            moveUpDown(tileDiv, -1)
+          } else if (e.keyCode === 40) { // down
+            moveUpDown(tileDiv, 1)
+          } else {
+            return true;
+          }
+          e.stopPropagation();
+          e.preventDefault()
+          return false; 
+        })
+      }
+      tileDiv.addEventListener('keypress', function(e) {
+        if (37 <= e.keyCode && e.keyCode <= 40) {
+          e.stopPropagation();
+          e.preventDefault()          
+          return false;
+        } else if (e.keyCode === 125) { // }
+          stickyBrace(tileDiv)
+          return true;
+        }
+      })
+      tileDiv.addEventListener('keyup', function(e) {
+        if (37 <= e.keyCode && e.keyCode <= 40) {
+          e.stopPropagation();
+          e.preventDefault()          
+          return false;
+        }
+      })
+      
+      return tileDiv
+    }
+
+    function moveUpDown(tileDiv, dy) {
+      let parent = tileDiv.parentNode
+      if (parent === right) return
+      if (dy === -1) {
+        let sibling = tileDiv.previousSibling
+        if (sibling != tileDiv.parentNode.firstChild)
+          parent.insertBefore(tileDiv, sibling)
+      }
+      else {
+        let sibling = tileDiv.nextSibling
+        if (sibling) 
+          parent.insertBefore(tileDiv, sibling.nextSibling)
+      }
+      tileDiv.focus()
+    }
+
+    function moveLeftRight(tileDiv, dx) {
+      let parent = tileDiv.parentNode
+      let indent = tileDiv.indent + dx
+
+      if (parent === right) {
+        left.appendChild(tileDiv)
+        setIndent(tileDiv, 0)
+      }
+      else if (0 <= indent) {
+        setIndent(tileDiv, indent)
+      } else {
+        right.appendChild(tileDiv)
+        tileDiv.style.marginLeft = 0
+      }
+      tileDiv.focus()
+    }  
+
+    const mousedownListener = function(e) {
+      let focusedElement = document.activeElement
+      let tileOnLeft = Array.prototype.indexOf.call(left.children, focusedElement) >= 0
+      let tileOnRight = Array.prototype.indexOf.call(right.children, focusedElement) >= 0
+      if (!tileOnLeft && !tileOnRight) return
+      if (e.target === left) {
+        let p = getClientXY(e)
+        let droppedTileX = p.x - indentWidth / 2
+        let droppedTileY = p.y - indentWidth / 2
+
+        insertDroppedTileLeft(focusedElement, droppedTileX, droppedTileY)
+      }
+      else if (tileOnLeft)
+        insertDroppedTileRight(focusedElement)
+    }
+
+    function initialize() {  
+      left.classList.add('left')
+      right.classList.add('right')
+      const both = document.createElement('div')
+      both.appendChild(left)
+      both.appendChild(right)
+
+      measureIndentWidth()
+
+      // Add event listeners
+      left.addEventListener('mousedown', mousedownListener)
+      left.addEventListener('touchstart', mousedownListener)
+      right.addEventListener('mousedown', mousedownListener)
+      right.addEventListener('touchstart', mousedownListener)
+      
+      left.addEventListener('dragenter', function(e) {
+        if (drag === undefined) return // Some sort of foreign drop
+        e.preventDefault()
+        left.classList.add('dragover')
+      })
+      left.addEventListener('dragleave', function(e) {
+        left.classList.remove('dragover')
+      })      
+      left.addEventListener('dragover', function(e) {
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'move'
+      })
+      left.addEventListener('drop', function(e) {
+        left.classList.remove('dragover')
+        if (drag === undefined) return // Some sort of foreign drop
+        let tileDiv = drag.tile
+        let p = getClientXY(e)
+        let droppedTileX = p.x - drag.x
+        let droppedTileY = p.y - drag.y
+        drag = undefined        
+        insertDroppedTileLeft(tileDiv, droppedTileX, droppedTileY)
+        e.preventDefault()
+      })
+
+      right.addEventListener('dragenter', function(e) {
+        e.preventDefault() 
+        right.classList.add('dragover')
+      })
+      right.addEventListener('dragleave', function(e) {
+        right.classList.remove('dragover')
+      })
+      right.addEventListener('dragover', function(e) {
+        e.preventDefault() 
+        e.dataTransfer.dropEffect = 'move'
+      })
+      right.addEventListener('drop', function(e) {
+        right.classList.remove('dragover')
+        if (drag === undefined) return // Some sort of foreign drop
+        e.preventDefault() 
+        let tileDiv = drag.tile
+        drag = undefined
+        insertDroppedTileRight(tileDiv)
+      })
+
+      for (const fixed of setup.fixed)
+        left.appendChild(makeTile(fixed, true))
+      for (const tile of setup.tiles)
+        right.appendChild(makeTile(tile, false))
+      both.classList.add('horstmann_rearrange')
+
+      return both
+    }
+
+    function getState() {
+      const leftTiles = []
+      const group = []
+      for (const tile of left.children) {
+        if (tile.classList.contains('fixed')) {
+          leftTiles.push(group)
+          group.length = 0
+        }
+        else
+          group.push({ text: tile.textContent, indent: tile.indent })
+      }
+      leftTiles.push(group)
+      
+      return {
+        left: leftTiles,
+        right: [...right.children].map(tile => tile.textContent)
+      }    
+    }
+
+    function restoreState(state) {
+      let i = 0
+      let leftTiles = [...left.children]
+      for (const tile of leftTiles) {
+        if (tile.classList.contains('fixed')) {
+          let group = state.left[i]
+          i++
+          for (let j = group.length - 1; j >= 0; j--) {
+            const newTile = makeTile(group[j].text)
+            newTile.indent = group[j].indent
+            left.insertBefore(newTile)
+          }
+        }
+        else
+          left.removeChild(tile)
+      }
+      for (const g of state.left[i]) {
+        const newTile = makeTile(g.text, false)
+        newTile.indent = g.indent
+        left.appendChild(newTile)      
+      }
+      right.innerHTML = ''
+      for (const text of state.right) {
+        const newTile = makeTile(text, false)
+        right.appendChild(newTile)      
+      }
+    }
+
+    function getText() {
+      let content = ''
+      for (const tile of left.children) 
+        for (const line of tile.textContent.split('\n')) 
+          content += '\t'.repeat(tile.indent) + line + '\n'
+      return content
+    }
+
+    function errorAnnotation(lineNumber, message) {
+      let l = 1
+      for (const tile of left.children) {
+        const lines = tile.textContent.split('\n').length
+        if (l <= lineNumber && lineNumber < l + lines) {
+          tile.classList.add('hc-bad')
+          tile.title = message        
+        }
+        l += lines
+      }    
+    }
+
+    function clearErrorAnnotations() {
+      for (const tile of left.children) {
+        tile.classList.remove('hc-bad')
+        tile.title = ''
+      }
+    }  
+    
+    return {
+      initialize,
+      getState,
+      restoreState,
+      getText,
+      errorAnnotation,
+      clearErrorAnnotations,
+    }
+  }
+
+  // ..................................................................
+
+  // https://stackoverflow.com/questions/24963246/ace-editor-simply-re-enable-command-after-disabled-it
+  function setCommandEnabled(editor, name, enabled) {
+    var command = editor.commands.byName[name]
+    if (!command.bindKeyOriginal) 
+      command.bindKeyOriginal = command.bindKey
+    command.bindKey = enabled ? command.bindKeyOriginal : null;
+    editor.commands.addCommand(command);
+    // special case for backspace and delete which will be called from
+    // textarea if not handled by main commandb binding
+    if (!enabled) {
+      var key = command.bindKeyOriginal;
+      if (key && typeof key == 'object')
+        key = key[editor.commands.platform];
+      if (/backspace|delete/i.test(key))
+        editor.commands.bindKey(key, 'null')
+    }
+  }
+  
+  function setupAceEditor(editorDiv, editor, fileName, readonly) {
+    let ext = fileName.match(/\.[^.]+$/)
+    if (ext) ext = ext[0]
+    if (ext === '.java') {
+      editor.getSession().setMode('ace/mode/java');
+    } else if (ext === '.cpp' || ext === '.h') {
+      editor.getSession().setMode('ace/mode/c_cpp');
+    } else if (ext === '.py') {
+      editor.getSession().setMode('ace/mode/python');
+    } else {
+      editor.getSession().setMode('ace/mode/text');
+    }
+    editor.setOption('autoScrollEditorIntoView', true);
+    editor.setOption('displayIndentGuides', false);
+    editor.setOption('tabSize', 3);
+    editor.setOption('useWorker', true);
+    editor.setOption('highlightActiveLine', false);
+    editor.setOption('highlightGutterLine', false);
+    editor.setOption('showFoldWidgets', false);
+    editor.setOption('newLineMode', 'unix');
+    editor.setOption('showPrintMargin', false);
+    editor.setFontSize(14);
+    // https://stackoverflow.com/questions/28311086/modify-the-gutter-of-ajax-org-cloud9-editor-ace-editor
+    editor.session.gutterRenderer =  {
+      getWidth: function(session, lastLineNumber, config) {
+        return 3 * config.characterWidth;
+      },
+      getText: function(session, row) {
+        return session.getOption('firstLineNumber') + row;
+      }
+    };
+
+    if (readonly) {
+      editor.setReadOnly(true);
+      // https://stackoverflow.com/questions/32806060/is-there-a-programmatic-way-to-hide-the-cursor-in-ace-editor
+      editor.renderer.$cursorLayer.element.style.display = 'none'
+      editor.setTheme('ace/theme/kuroir');
+      let lines = editor.getSession().getDocument().getLength();
+      editor.setOptions({
+        minLines: lines,
+        maxLines: lines
+      });                
+      // https://github.com/ajaxorg/ace/issues/266
+      editor.textInput.getElement().tabIndex = -1
+    } else {
+      editor.setTheme('ace/theme/chrome');
+      
+      let editorHandleTextFieldEvents = function (e) {
+        if (e.keyCode === 37 || e.keyCode === 39) // left or right
+          e.stopPropagation();
+      }
+
+      editor.textInput.getElement().addEventListener('keyup', editorHandleTextFieldEvents)
+      editor.textInput.getElement().addEventListener('keydown', editorHandleTextFieldEvents)
+
+      editor.on('focus', function() {
+        setCommandEnabled(editor, 'indent', true)
+        setCommandEnabled(editor, 'outdent', true)
+      })
+
+      editor.commands.addCommand({
+        name: 'escape',
+        bindKey: {win: 'Esc', mac: 'Esc'},
+        exec: function() {
+          setCommandEnabled(editor, 'indent', false)
+          setCommandEnabled(editor, 'outdent', false)
+        }
+      });
+    }
+    let tas = editorDiv.getElementsByTagName('textarea')
+    for (let i = 0; i < tas.length; i++) {
+      tas[i].setAttribute('aria-label', 'Complete this code')
+    }
+  }        
+
+  function createAceEditors(fileName, setup) {
+    let editorsDiv = document.createElement('div')        
+    function initialize() {
+      let editorCount = 0;
+      let update = function() {
+        let totalLines = 0;
+        for (const editorDiv of editorsDiv.children) {
+          let editor = ace.edit(editorDiv)
+          let editorSession = editor.getSession()
+          editorSession.clearAnnotations()
+          editorSession.setOption('firstLineNumber', totalLines + 1)
+          let lines = editorSession.getDocument().getLength()
+          editor.setOptions({
+            minLines: lines,
+            maxLines: lines
+          })        
+          editor.resize()
+          totalLines += lines
+        }
+      }
+
+      for (let i = 0; i < setup.length; i++) {
+        let contentSegment = setup[i]
+        if (contentSegment === null)
+          continue
+        
+        let readonly = i % 2 !== 0; 
+        let editorDiv = document.createElement('div')
+        editorDiv.classList.add('editor')
+        if (fileName === 'Input')
+          editorDiv.classList.add('input')
+        editorDiv.textContent = contentSegment.replace(/\r?\n$/, '')
+        let editor = ace.edit(editorDiv)
+        if (readonly)
+          editorDiv.setAttribute('readonly', 'readonly')
+        else
+          editor.on('change', update)
+        setupAceEditor(editorDiv, editor, fileName, readonly)        
+        
+        editorsDiv.appendChild(editorDiv)
+      }
+      update()
+      
+      return editorsDiv
+    }
+
+    function getText() {
+      let content = ''
+      for (const editorDiv of editorsDiv.children) {
+        content += ace.edit(editorDiv).getValue() + '\n';
+      }
+      return content
+    }
+
+    function clearErrorAnnotations() { 
+      for (const editorDiv of editorsDiv.children) 
+        ace.edit(editorDiv).getSession().clearAnnotations()
+    }
+    
+    function errorAnnotation(line, message) {
+      let totalLines = 0
+      for (const editorDiv of editorsDiv.children) {
+        const editorSession = ace.edit(editorDiv).getSession();
+        let length = editorSession.getDocument().getLength() 
+        totalLines += length;
+        if (totalLines >= line) {
+          let annotations = editorSession.getAnnotations()
+          annotations.push({
+            row: line - (totalLines - length) - 1, // ace editor lines are 0-indexed
+            text: message,
+            type: 'error'
+          })
+          editorSession.setAnnotations(annotations);
+          return;
+        }
+      }
+    }
+
+    function restoreState(state) {
+      let editableCount = 0
+      for (const editorDiv of editorsDiv.children) {
+        if (editorDiv.getAttribute('readonly') !== 'readonly') {
+          let editor = ace.edit(editorDiv)
+          editor.setValue(state[editableCount])
+          editor.clearSelection()            
+          editableCount++
+        }
+      }
+    }
+
+    function getState() {
+      let editableCount = 0
+      let state = []
+      for (const editorDiv of editorsDiv.children) {
+        if (editorDiv.getAttribute('readonly') !== 'readonly') {
+          state.push(ace.edit(editorDiv).getValue())
+          editableCount++
+        }
+      }
+      return state
+    }
+    
+    return {
+      initialize,
+      getState,
+      restoreState,
+      getText,
+      errorAnnotation,
+      clearErrorAnnotations,
+    }      
+  }
+
+  // ..................................................................
+
+  function initElement(element, setup, prefix) {    
     let form = undefined
     let response = undefined
     let submitButton = undefined
     let downloadButton = undefined
+    let editors = new Map()
 
     function restoreState(element, state) { 
       if (state === null) return;
-      let studentWork = Array.isArray(state) ? state : state.studentWork
-      for (let i = 0; i < studentWork.length; i++) {
-        let editorDiv = document.getElementById(
-          prefix + studentWork[i].problemName)
-        let editor = ace.edit(editorDiv)
-        editor.setValue(studentWork[i].code)
-        editor.clearSelection()
-      }
+      let work = state.work
+      if ('studentWork' in state) { // TODO: Legacy state
+        work = {}
+        const indexMapping = {}
+        
+        for (const entry of state.studentWork) {
+          const fragmentName = entry.problemName
+          let i = fragmentName.lastIndexOf('-')
+          const fileName = fragmentName.substring(0, i)
+          if (!(fileName in indexMapping)) {
+            indexMapping[fileName] = []
+            const grandparent = element.getElementsByName(fileName)
+            let editableCount = 0
+            let suffix = 0
+            for (const editorDiv of grandparent[1].children) {
+              suffix++
+              if (editorDiv.getAttribute('readonly') !== 'readonly') {
+                indexMapping[fileName][suffix] = editableCount
+                editableCount++
+              }
+            }
+          }
+          
+          const fragmentIndex = parseInt(fragmentName.substring(i + 1))
+          const editableIndex = indexMapping[fileName][fragmentIndex]
+          if (editableIndex !== undefined)
+            work[fragmentName][editableIndex] = work.code
+        }
+      } 
+      for (let fileName in work) 
+        editors.get(fileName).restoreState(work[fileName])
       if (state.hasOwnProperty('scoreText')) {
         response.textContent = 'Score: ' + state.scoreText
       }
+    }    
+
+    function editorFor(fileName, fileSetup) {
+      if ('tiles' in fileSetup)
+        return createRearrange(fileName, fileSetup)
+      else if ('editors' in fileSetup)
+        return createAceEditors(fileName, fileSetup.editors)
+      else
+        return createAceEditors(fileName, fileSetup)
     }
-  
+    
     function appendRequiredFile(fileName, directoryPrefix) {
       let fileDiv = document.createElement('div')
-      fileDiv.setAttribute('id', prefix + fileName)
       fileDiv.setAttribute('name', fileName)
       fileDiv.classList.add('file')
       let filenameDiv = document.createElement('div')
       filenameDiv.textContent = directoryPrefix + fileName
       filenameDiv.classList.add('codecheckFilename')
       fileDiv.appendChild(filenameDiv)
-      let numArr = setup.requiredFiles[fileName];
-      let editorCount = 0;
-      for (let i = 0; i < numArr.length; i++) {
-        let codeString = numArr[i];
-        if (codeString === null)
-          continue;
       
-        let readonly = i % 2 !== 0; 
-        let elName = fileName + '-' + (++editorCount);
-        let editorDiv = document.createElement('div')
-        editorDiv.setAttribute('name', elName)
-        editorDiv.setAttribute('id', prefix + elName)
-        editorDiv.classList.add('editor')
-        editorDiv.textContent = codeString.replace(/\r?\n$/, '');
-        if (readonly)
-          editorDiv.setAttribute('readonly', 'readonly');
-        if (fileName === 'Input')
-        editorDiv.classList.add('input')
+      let fileSetup = setup.requiredFiles[fileName];
+      let editor = editorFor(fileName, fileSetup)
+      editors.set(fileName, editor)
+      fileDiv.appendChild(editor.initialize());     
       
-        fileDiv.appendChild(editorDiv);
-      }
       form.appendChild(fileDiv);
     }
   
@@ -170,12 +820,10 @@ window.addEventListener('load', function () {
       response.classList.add('codecheck-submit-response')
       form.appendChild(response)
       
-      prepareSubmit(setup.url, prefix);
+      prepareSubmit(setup.url);
 
       element.appendChild(form)
-      
-      setupAceEditors(element);      
-      
+            
       let initialState = getState();
       resetButton.addEventListener('click', function() {
         restoreState(element, initialState)
@@ -185,175 +833,13 @@ window.addEventListener('load', function () {
       })
     }
 
-    // https://stackoverflow.com/questions/24963246/ace-editor-simply-re-enable-command-after-disabled-it
-    function setCommandEnabled(editor, name, enabled) {
-      var command = editor.commands.byName[name]
-      if (!command.bindKeyOriginal) 
-        command.bindKeyOriginal = command.bindKey
-      command.bindKey = enabled ? command.bindKeyOriginal : null;
-      editor.commands.addCommand(command);
-      // special case for backspace and delete which will be called from
-      // textarea if not handled by main commandb binding
-      if (!enabled) {
-        var key = command.bindKeyOriginal;
-        if (key && typeof key == "object")
-          key = key[editor.commands.platform];
-        if (/backspace|delete/i.test(key))
-          editor.commands.bindKey(key, "null")
-      }
-    }
-    
-    function setupAceEditor(editorDiv, editor, fileName, readonly) {
-      let ext = fileName.match(/\.[^.]+$/)
-      if (ext) ext = ext[0]
-      if (ext === '.java') {
-        editor.getSession().setMode('ace/mode/java');
-      } else if (ext === '.cpp' || ext === '.h') {
-        editor.getSession().setMode('ace/mode/c_cpp');
-      } else if (ext === '.py') {
-        editor.getSession().setMode('ace/mode/python');
-      } else {
-        editor.getSession().setMode('ace/mode/text');
-      }
-      editor.setOption('autoScrollEditorIntoView', true);
-      editor.setOption('displayIndentGuides', false);
-      editor.setOption('tabSize', 3);
-      editor.setOption('useWorker', true);
-      editor.setOption('highlightActiveLine', false);
-      editor.setOption('highlightGutterLine', false);
-      editor.setOption('showFoldWidgets', false);
-      editor.setOption('newLineMode', 'unix');
-      editor.setOption('showPrintMargin', false);
-      editor.setFontSize(14);
-      // https://stackoverflow.com/questions/28311086/modify-the-gutter-of-ajax-org-cloud9-editor-ace-editor
-      editor.session.gutterRenderer =  {
-        getWidth: function(session, lastLineNumber, config) {
-          return 3 * config.characterWidth;
-        },
-        getText: function(session, row) {
-          return session.getOption('firstLineNumber') + row;
-        }
-      };
-
-      if (readonly) {
-        editor.setReadOnly(true);
-        // https://stackoverflow.com/questions/32806060/is-there-a-programmatic-way-to-hide-the-cursor-in-ace-editor
-        editor.renderer.$cursorLayer.element.style.display = 'none'
-        editor.setTheme('ace/theme/kuroir');
-        let lines = editor.getSession().getDocument().getLength();
-        editor.setOptions({
-          minLines: lines,
-          maxLines: lines
-        });                
-        // https://github.com/ajaxorg/ace/issues/266
-        editor.textInput.getElement().tabIndex = -1
-      } else {
-        editor.setTheme('ace/theme/chrome');
-        
-        let editorHandleTextFieldEvents = function (e) {
-          if (e.keyCode === 37 || e.keyCode === 39) // left or right
-            e.stopPropagation();
-        }
-
-        editor.textInput.getElement().addEventListener('keyup', editorHandleTextFieldEvents)
-        editor.textInput.getElement().addEventListener('keydown', editorHandleTextFieldEvents)
-
-        editor.on('focus', function() {
-          setCommandEnabled(editor, "indent", true)
-          setCommandEnabled(editor, "outdent", true)
-        })
-
-        editor.commands.addCommand({
-          name: "escape",
-          bindKey: {win: "Esc", mac: "Esc"},
-          exec: function() {
-            setCommandEnabled(editor, "indent", false)
-            setCommandEnabled(editor, "outdent", false)
-          }
-        });
-      }
-      let tas = editorDiv.getElementsByTagName('textarea')
-      for (let i = 0; i < tas.length; i++) {
-        tas[i].setAttribute('aria-label', 'Complete this code')
-      }
-    }
-    
-    function setupAceEditors() {
-      let files = element.getElementsByClassName('file');
-      for (let i = 0; i < files.length; i++) {
-        let fileId = files[i].getAttribute('id')
-        let editorDivs = files[i].getElementsByClassName('editor');
-        let editors = [];
-        for (let k = 0; k < editorDivs.length; k++)
-          editors.push(ace.edit(editorDivs[k]));
-        for (let k = 0; k < editors.length; k++) {
-          let readonly = editorDivs[k].getAttribute('readonly')=='readonly'
-          setupAceEditor(editorDivs[k], editors[k], fileId, readonly)
-        }
-        let update = function() {
-          let totalLines = 0;
-          for (let k = 0; k < editors.length; k++) {
-            let editorSession = editors[k].getSession()
-            editorSession.clearAnnotations()
-            editorSession.setOption('firstLineNumber', totalLines + 1);
-            let lines = editors[k].getSession().getDocument().getLength();
-            editors[k].setOptions({
-              minLines: lines,
-              maxLines: lines
-            });        
-            editors[k].resize();
-            totalLines += lines;
-          }
-        };
-        for (let k = 0; k < editors.length; k++) {
-          editors[k].on('change', update);
-        }
-        update();
-      }
-    }
-    
-    function highlightLine(file, line, message) {
-      let totalLines = 0;
-      let fileDiv = document.getElementById(prefix + file) 
-      if (fileDiv === null) return // This happens if there is an error in a tester
-      let editorDivs = fileDiv.getElementsByClassName('editor');
-      let editors = [];
-      for (let k = 0; k < editorDivs.length; k++)
-        editors.push(ace.edit(editorDivs[k]));
-      for (let k = 0; k < editors.length; k++) {
-        let editorSession = editors[k].getSession();
-        let length = editorSession.getDocument().getLength() 
-        totalLines += length;
-        if (totalLines >= line) {
-          let annotations = editorSession.getAnnotations()
-          annotations.push({
-            row: line - (totalLines - length) - 1, // ace editor lines are 0-indexed
-            text: message,
-            type: 'error'
-          })
-          editorSession.setAnnotations(annotations);
-          return;
-        }
-      }
-    }
-    
-    function clearErrorAnnotations() { 
-      let editorDivs = form.getElementsByClassName('editor');
-      for (let k = 0; k < editorDivs.length; k++)
-        ace.edit(editorDivs[k]).getSession().clearAnnotations()
-    }
-    
     function getState() {
-      let studentWork = [];
-      let editorDivs = element.getElementsByClassName('editor');
-      for (let i = 0; i < editorDivs.length; i++) {
-        let editor = ace.edit(editorDivs[i]);
-        if (!editorDivs[i].classList.contains('readonly'))
-          studentWork.push({problemName: editorDivs[i].getAttribute('name'), code: editor.getValue()});
-      }
-      return { studentWork: studentWork }
+      const work = {}
+      for (const [filename, editor] of editors) 
+          work[filename] = editor.getState()
+      return { work }
     }
-  
+        
     function setState(scoreText) {
       element.state = getState();
       element.state.scoreText = scoreText
@@ -380,43 +866,31 @@ window.addEventListener('load', function () {
         downloadButton.data = data
       }
               
-      clearErrorAnnotations();                
       if ('errors' in data) {
-        for (let i = 0; i < data['errors'].length; i++) {
-          let error = data['errors'][i]; 
-          highlightLine(error['file'], error['line'], error['message']); }
+        for (const error of data.errors) 
+          editors.get(error['file']).errorAnnotation(error['line'], error['message'])
       }
     }
     
-    function prepareSubmit(url, prefix) {
+    function prepareSubmit(url) {
       submitButton.addEventListener('click', function() {
-        clearErrorAnnotations();        
         response.textContent = 'Submitting...'
         let params = {}
-        let inputs = form.getElementsByTagName('input');
-        for (let i = 0; i < inputs.length; i++) {
-          let name = inputs[i].getAttribute('name')
+        // Hidden inputs
+        for (const input of form.getElementsByTagName('input')) {
+          let name = input.getAttribute('name')
           if (name !== null) 
-            params[name] = inputs[i].getAttribute('value')
+            params[name] = input.getAttribute('value')
         }
-        
-        let files = form.getElementsByClassName('file');
-        for (let i = 0; i < files.length; i++) {
-          let allContent = "";
-          let editorDivs = files[i].getElementsByClassName('editor');
-          for (let k = 0; k < editorDivs.length; k++) {
-            if (k > 0) allContent += "\n"
-            allContent += ace.edit(editorDivs[k]).getValue();
-          }
-          let filename = files[i].getAttribute('name');
-          params[filename] = allContent
+
+        for (const [filename, editor] of editors) {
+          editor.clearErrorAnnotations()
+          params[filename] = editor.getText()
         }
         
         submitButton.classList.add('hc-disabled')
         if (downloadButton !== undefined) downloadButton.style.display = 'none'
 
-        // TODO: Do I need to do anything about CORS?
-        // withCredentials???
         let xhr = new XMLHttpRequest()
         xhr.withCredentials = true
         xhr.timeout = 300000 // 5 minutes
@@ -434,20 +908,20 @@ window.addEventListener('load', function () {
         xhr.send(JSON.stringify(params))
       })
     }
-      
+
+    // ..................................................................
     // Start of initElement
-    element.classList.add('vstdonthighlight')
-    element.classList.add('vst-click')    
       
     initUI()
       
     horstmann_config.retrieve_state && horstmann_config.retrieve_state(element, restoreState);
   }
 
+  // ..................................................................
+ 
   // Start of event listener
-  let elements = document.getElementsByClassName('horstmann_codecheck')  
+  let elements = document.getElementsByClassName('horstmann_codecheck')
   for (let index = 0; index < elements.length; index++) 
     initElement(elements[index],
-                window.horstmann_codecheck.setup[index],
-                'horstmann_codecheck' + (index + 1) + '-') 
+                window.horstmann_codecheck.setup[index]) 
 });

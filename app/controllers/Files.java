@@ -159,9 +159,9 @@ public class Files extends Controller {
 		result.append(MessageFormat.format(before, url));
 		result.append(MessageFormat.format(provideStart, data.requiredFiles.size()));
 
-		for (Map.Entry<String, List<String>> entry : data.requiredFiles.entrySet()) {
+		for (Map.Entry<String, Problem.EditorState> entry : data.requiredFiles.entrySet()) {
 			String file = entry.getKey();
-			List<String> conts = entry.getValue();
+			List<String> conts = entry.getValue().editors;
 
 			if (file.equals("Input") && conts.get(0).trim().length() == 0) {
 				// Make a hidden field with blank input

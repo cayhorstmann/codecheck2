@@ -148,3 +148,65 @@ code, pre {
 
 
 
+/* Rearrange */
+
+.horstmann_rearrange .hc-hand {
+    font-size: 111%; /* 1/0.9 */
+}
+
+.horstmann_rearrange > div {
+    display: table;
+    width: 100%;
+}
+
+.horstmann_rearrange .left {
+    display: table-cell;
+    vertical-align: top;
+    overflow: hidden;
+    white-space: pre-wrap;
+    padding: 1.25em 0.62em 5em 0em;    
+    width: 50%;
+}
+
+.horstmann_rearrange .right {
+    display: table-cell;
+    vertical-align: top;
+    padding: 1.25em 0.62em 1.25em 0.62em;
+    overflow: hidden;
+    width: 50%;
+    white-space: pre-wrap;
+}
+
+.horstmann_rearrange .left, .horstmann_rearrange .right {
+  font-family: DejaVuSansMonoSemiCondensed;
+  font-size: 110%;
+    user-select: none;
+    -moz-user-select: none;      /* Firefox */
+    -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none;   /* Safari */
+    -ms-user-select: none;       /* Internet Explorer/Edge */        
+}
+
+
+.horstmann_rearrange .tile {
+    margin-top: 0.5em; // CSH
+    margin-bottom: 0.5em;
+    padding: 0.3em;
+    overflow: hidden;
+    background: #F3F3F4;
+    cursor: move;
+}
+
+.horstmann_rearrange .fixed {
+    background: #D3D3D3;
+    margin-top: 0.6em;
+    margin-bottom: 0.6em;    
+}
+
+.horstmann_rearrange .dragover * {
+    pointer-events: none;
+}
+
+.horstmann_rearrange .hc-bad {
+    background: #F4D3DD;
+}
