@@ -675,7 +675,7 @@ window.addEventListener('load', function () {
           const fragmentIndex = parseInt(fragmentName.substring(i + 1))
           const editableIndex = indexMapping[fileName][fragmentIndex]
           if (editableIndex !== undefined)
-            work[fileName][editableIndex] = work.code
+            work[fileName][editableIndex] = entry.code
         }
       } 
       for (let fileName in work) 
