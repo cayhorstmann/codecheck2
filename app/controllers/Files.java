@@ -113,9 +113,11 @@ public class Files extends Controller {
 	// TODO: Legacy, also codecheck.js
 	private static String start = "<!DOCTYPE html>\n<html><head>\n"
 			+ "<meta http-equiv='content-type' content='text/html; charset=UTF-8' />\n"
-			+ "<script src='/assets/download.js'></script>\n" + "<script src='/assets/ace/ace.js'></script>\n"
+			+ "<script src='/assets/download.js'></script>\n" 
+			+ "<script src='/assets/ace/ace.js'></script>\n"
 			+ "<script src='/assets/codecheck.js'></script>\n"
-			+ "<link type='text/css' rel='stylesheet' href='/assets/codecheck.css'/>\n" + "</head><body>\n";
+			+ "<link type='text/css' rel='stylesheet' href='/assets/codecheck.css'/>\n" 
+			+ "</head><body>\n";
 	private static String before = "<form method=\"post\" action=\"{0}\">\n";
 
 	private static String fileAreaBefore = "<div id=\"{0}\" name=\"{0}\" rows=\"{1}\" cols=\"80\" class=\"editor {2}\">";

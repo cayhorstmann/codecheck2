@@ -1,5 +1,11 @@
 /*
 
+  Shim translating the VitalSource protocol to parent frame messaging.
+  Was meant for codecheck, but now we use codecheck2.js
+  TODO Isn't actually used with interactives--they still use the old version
+  TODO Modernize the old one and place here. No LTI, just parent messaging
+  TODO Or use codecheck2, so that horstmann_config's functions are overwritten, wiping out VitalSource
+  
   Protocol to parent frame:
 
 data.
@@ -62,6 +68,7 @@ if (!('Education' in window.EPUB)) {
         window.parent.postMessage(data, '*' )
         sendDocHeight()
       }
+      // TODO: Why??? 
       postData(lti.sendURL, { 
         state: param.state, 
         score: param.score,

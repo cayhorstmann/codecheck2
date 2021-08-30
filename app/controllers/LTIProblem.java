@@ -136,8 +136,14 @@ public class LTIProblem extends Controller {
 				"  <head>\n" + 
 				"    <meta http-equiv='content-type' content='text/html; charset=UTF-8'/>\n" + 
 				"    <title>Interactivities</title> \n" + 
-				"    <script type='text/javascript' src='https://www.interactivities.ws/script/horstmann_all_min.js'></script> \n" + 
-				"    <link type='text/css' rel='stylesheet' href='https://www.interactivities.ws/css/horstmann_all_min.css'></link>\n" + 
+				"    <script src='/assets/download.js'></script>\n" + 
+				"    <script src='/assets/ace/ace.js'></script>\n" +
+				"    <script src='/assets/ace/theme-kuroir.js'></script>\n" +
+				"    <script src='/assets/ace/theme-chrome.js'></script>\n" +
+				"    <script src='/assets/codecheck2.js'></script>\n" +
+				"    <script src='/assets/horstmann_codecheck.js'></script>\n" +
+				"    <link type='text/css' rel='stylesheet' href='/assets/codecheck.css'/>\n" + 
+				"    <link type='text/css' rel='stylesheet' href='/assets/horstmann_codecheck.css'/>\n" + 
 				"    <style type='text/css'>\n" + 
 				"      ol.interactivities > li {\n" + 
 				"        list-style: none;\n" + 
@@ -150,12 +156,11 @@ public class LTIProblem extends Controller {
 				"      }\n" + 
 				"    </style>\n" + 
 				"    <script type='text/javascript'>//<![CDATA[\n" +
-				"const lti = " + ltiNode.toString() + 
+				"horstmann_config.lti = " + ltiNode.toString() + 
 				"\nhorstmann_codecheck.setup.push(\n" +
 				problemNode.toString() + 
 				")\n" +
 				"\n//]]></script>\n" + 
-				"    <script type='text/javascript' src='/assets/receiveMessage.js'></script> \n" + 
 				"  </head> \n" + 
 				"  <body>\n" + 
 				"    <p>Submission ID: " + ltiNode.get("submissionID").asText() + "</p>" +
@@ -210,7 +215,6 @@ public class LTIProblem extends Controller {
 		ObjectNode requestNode = (ObjectNode) request.body().asJson();
 		String submissionID = requestNode.get("submissionID").asText();
 		try {
-			//ObjectNode result = s3conn.readJsonObjectFromDynamoDB("CodeCheckSubmissions", "submissionID", submissionID);
 			ObjectNode result = s3conn.readNewestJsonObjectFromDynamoDB("CodeCheckSubmissions", "submissionID", submissionID);			
 			ObjectMapper mapper = new ObjectMapper();
 			result.set("state", mapper.readTree(result.get("state").asText()));
