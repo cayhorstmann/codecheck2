@@ -653,25 +653,24 @@ window.addEventListener('load', function () {
       if ('studentWork' in state) { // TODO: Legacy state
         work = {}
         const indexMapping = {}
-        
-        for (const entry of state.studentWork) {
-          const fragmentName = entry.problemName
-          let i = fragmentName.lastIndexOf('-')
-          const fileName = fragmentName.substring(0, i)
-          if (!(fileName in indexMapping)) {
-            indexMapping[fileName] = []
-            const grandparent = element.getElementsByName(fileName)
-            let editableCount = 0
-            let suffix = 0
-            for (const editorDiv of grandparent[1].children) {
+        for (const fileElement of element.getElementsByClassName('file')) {
+          const fileName = fileElement.getAttribute('name')
+          indexMapping[fileName] = []
+          let editableCount = 0
+          let suffix = 0
+          for (const editorDiv of fileElement[1].children) {
               suffix++
               if (editorDiv.getAttribute('readonly') !== 'readonly') {
                 indexMapping[fileName][suffix] = editableCount
                 editableCount++
               }
-            }
-          }
-          
+            }          
+        }
+        
+        for (const entry of state.studentWork) {
+          const fragmentName = entry.problemName
+          let i = fragmentName.lastIndexOf('-')
+          const fileName = fragmentName.substring(0, i)
           const fragmentIndex = parseInt(fragmentName.substring(i + 1))
           const editableIndex = indexMapping[fileName][fragmentIndex]
           if (editableIndex !== undefined)
