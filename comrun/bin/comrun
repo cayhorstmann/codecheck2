@@ -70,6 +70,8 @@ do
   elif [[ $LINE =~ ^debug$ ]] ; then
     DEBUG="true"
     echo $WORKDIR
+  elif [[ $STAGING != "" ]] ; then
+    echo $LINE >> debug
   fi
 done < script
 
@@ -85,6 +87,11 @@ if [[ -z $DEBUG ]] ; then
   sudo -u $COMRUN_USER rm -rf solution*
 fi
 sudo -u $COMRUN_USER nice -15 ./runsubmission 2>&1
+
+if [[ $STAGING != "" && -e debug ]] ; then
+  chmod +x debug
+  ./debug > out/_debug 2>&1
+fi
 
 OUTFILE=$(mktemp /tmp/codecheck/responseXXXXXXXXXXXXXXXXXXXX.zip)
 # Otherwise zip tries to read $OUTFILE

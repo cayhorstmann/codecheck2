@@ -48,7 +48,7 @@ function compile {
       touch $BASE/out/$DIR/_compile
       ;;
     _Racket)
-      echo Racket > $BASE/out/$ID/_compile      
+      echo Racket > $BASE/out/$DIR/_compile      
       ;;
     _Python)
       python3 -m py_compile $@ 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_compile
