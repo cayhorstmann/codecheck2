@@ -54,6 +54,7 @@ chmod 777 $WORKDIR
 cd $WORKDIR
 sudo -u $COMRUN_USER unzip -q $1
 DEBUG=""
+STAGING="-staging"
 
 cp $BASEDIR/preload.sh compile
 cp $BASEDIR/preload.sh runsolution
@@ -88,8 +89,9 @@ if [[ -z $DEBUG ]] ; then
 fi
 sudo -u $COMRUN_USER nice -15 ./runsubmission 2>&1
 
-if [[ $STAGING != "" && -e debug ]] ; then
+if [[ -e debug ]] ; then
   chmod +x debug
+  mkdir -p out # In case there is no out
   ./debug > out/_debug 2>&1
 fi
 
