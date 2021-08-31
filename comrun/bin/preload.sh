@@ -44,8 +44,11 @@ function compile {
     _Java)
       javac -cp .:$BASE/use/\*.jar $@ > $BASE/out/$DIR/_compile 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_compile
       ;;
-    _JavaScript|_Matlab|_Racket)
+    _JavaScript|_Matlab)
       touch $BASE/out/$DIR/_compile
+      ;;
+    _Racket)
+      echo Racket > $BASE/out/$ID/_compile      
       ;;
     _Python)
       python3 -m py_compile $@ 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_compile
