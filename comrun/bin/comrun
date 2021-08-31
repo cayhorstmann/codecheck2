@@ -71,7 +71,7 @@ do
     DEBUG="true"
     echo $WORKDIR
   elif [[ $STAGING != "" ]] ; then
-    echo $LINE >> debug
+    echo $LINE >> other
   fi
 done < script
 
@@ -88,15 +88,21 @@ if [[ -z $DEBUG ]] ; then
 fi
 sudo -u $COMRUN_USER nice -15 ./runsubmission 2>&1
 
-if [[ -e debug ]] ; then
-  chmod +x debug
-  mkdir -p out # In case there is no out
-  ./debug > out/_debug 2>&1
+mkdir -p out # In case there is no out
+
+if [[ $STAGING != "" ]] ; then
+  if [[ -e other ]] ; then
+    chmod +x other
+    ./other >> out/_staging 2>&1
+  else
+    # To remind of staging mode
+    touch out/_staging
+  fi
 fi
+
 
 OUTFILE=$(mktemp /tmp/codecheck/responseXXXXXXXXXXXXXXXXXXXX.zip)
 # Otherwise zip tries to read $OUTFILE
-mkdir -p out # In case there is no out
 cd out
 zip -r - . > $OUTFILE 2>/dev/null
 
