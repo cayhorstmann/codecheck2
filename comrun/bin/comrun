@@ -55,11 +55,6 @@ cd $WORKDIR
 sudo -u $COMRUN_USER unzip -q $1
 DEBUG=""
 
-# TODO Remove
-mkdir out
-cp $0 out/_comrun
-STAGING="-staging"
-
 cp $BASEDIR/preload.sh compile
 cp $BASEDIR/preload.sh runsolution
 cp $BASEDIR/preload.sh runsubmission
