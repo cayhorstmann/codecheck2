@@ -136,7 +136,7 @@ function run {
       fi
       ;;
     _Racket)
-      ulimit -d 100000 -f 1000 -n 100 -v 1000000 
+      # ulimit -d 100000 -f 1000 -n 100 -v 1000000 
       if grep -qE '\(define\s+\(\s*main\s+' $MAIN ; then
         timeout -v -s 9 ${TIMEOUT}s racket -tm $MAIN $@ < $BASE/in/$ID 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$ID/_run
       else
