@@ -66,7 +66,7 @@ window.addEventListener('load', function () {
         setTimeout(measureIndentWidth, 2000)
       else {
         left.style.background = `repeating-linear-gradient( to right, transparent 0px ${indentWidth}px, #aeede9 ${indentWidth}px ${indentWidth + 1}px )`
-        for (let i = 1; i < left.children.length; i++) {
+        for (let i = 0; i < left.children.length; i++) {
           let tileDiv = left.children[i]
           setIndent(tileDiv, tileDiv.indent)
         }
@@ -140,13 +140,24 @@ window.addEventListener('load', function () {
     function makeTile(text, isFixed) {
       let tileDiv = createTile()
       if (isFixed) {
-        let indent = 0
-        while (text[indent] === '\t') indent++
-        tileDiv.textContent = text.substr(indent)
+        let lines = text.split('\n')
+        let minIndent = Number.MAX_SAFE_INTEGER
+        for (const line of lines) {
+          let indent = 0
+          while (line[indent] === '\t') indent++
+          minIndent = Math.min(minIndent, indent)
+        }
+        let strippedText = ''
+        for (const line of lines) {
+          if (strippedText !== '') strippedText += '\n'
+          strippedText = strippedText + line.substring(minIndent).replace('\t', '   ')
+        }          
+        tileDiv.textContent = strippedText
+
         tileDiv.classList.add('fixed')
         tileDiv.setAttribute('draggable', false);
         tileDiv.tabIndex = -1
-        setIndent(tileDiv, indent)
+        setIndent(tileDiv, minIndent)
       }
       else {
         tileDiv.textContent = text
@@ -265,8 +276,9 @@ window.addEventListener('load', function () {
 
     const mousedownListener = function(e) {
       let focusedElement = document.activeElement
-      let tileOnLeft = Array.prototype.indexOf.call(left.children, focusedElement) >= 0
-      let tileOnRight = Array.prototype.indexOf.call(right.children, focusedElement) >= 0
+      if (focusedElement.classList.contains('fixed')) return
+      let tileOnLeft = [...left.children].indexOf(focusedElement) >= 0
+      let tileOnRight = [...right.children].indexOf(focusedElement) >= 0
       if (!tileOnLeft && !tileOnRight) return
       if (e.target === left) {
         let p = getClientXY(e)
@@ -374,7 +386,7 @@ window.addEventListener('load', function () {
           let group = state.left[i]
           i++
           for (let j = group.length - 1; j >= 0; j--) {
-            const newTile = makeTile(group[j].text)
+            const newTile = makeTile(group[j].text, false)
             newTile.indent = group[j].indent
             left.insertBefore(newTile)
           }

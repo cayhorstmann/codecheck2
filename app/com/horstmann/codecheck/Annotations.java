@@ -15,7 +15,7 @@ public class Annotations {
     public static final Set<String> VALID_ANNOTATIONS = Set.of(
             "HIDE", "SHOW", "EDIT", "SOLUTION", "CALL", "SUB", "ID", "SAMPLE", "ARGS", 
             "IN", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "MAXOUTPUTLEN",
-            "REQUIRED", "FORBIDDEN", "SCORING", "INTERLEAVE", "TILE", "GOOD", "BAD");    
+            "REQUIRED", "FORBIDDEN", "SCORING", "INTERLEAVE", "TILE", "FIXED", "BAD");    
 
     public static class Annotation {
     	public boolean isValid;

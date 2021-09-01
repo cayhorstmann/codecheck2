@@ -12,6 +12,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -432,15 +434,11 @@ if (x == 0)
 
 makes the next n lines to a tile, then reverts to single line tiles
 
-//GOOD
+//FIXED
 
-moves next lines to the left as single line tiles, until the next //TILE. 
-Braces are captured as with TILE. 
-Note: Anything before the first TILE is implicitly GOOD
-
-//GOOD n
-
-makes the next n lines into a good tile, then reverts to single good tiles.
+moves next lines to the left as single line tiles, until the next //FIXED or //TILE. 
+ 
+Note: Anything before the first TILE is implicitly FIXED
 
 //BAD code
 //BAD n 
@@ -451,30 +449,65 @@ makes the next n lines into a good tile, then reverts to single good tiles.
 
 Adds to the distractors of the preceding tile. 
 However, BAD tiles following good tiles become global distractors. That means
-global distractors either follow //GOOD or are on top
+global distractors either follow //FIXED or are on top
 
 When a { follows one or more //BAD in tile mode (not global), it is added to all preceding distractors 
 and the tile preceding them. 
  
 	 */
-
+	
 	private static String removeComments(StringBuilder tile, String start, String end) {
 		int i = tile.indexOf(start);
 		int j = tile.lastIndexOf(end);
 		if (i < 0 || j < 0) return tile.toString();
 		return tile.substring(0, i) + tile.substring(i + start.length(), j) + tile.substring(j + end.length());
 	}
+
+	private static int lengthOfWhitespacePrefix(String line) {
+		int k = 0;
+		while (k < line.length() && Character.isWhitespace(line.charAt(k))) k++;
+		return k;
+	}
 	
+	private static List<Integer> indents(String[] lines) {
+		SortedSet<Integer> prefixLengths = new TreeSet<>();
+		for (String line : lines)		
+			if (!line.isBlank())
+				prefixLengths.add(lengthOfWhitespacePrefix(line));			
+		return new ArrayList<>(prefixLengths);
+	}
+	
+	private void normalizeIndentation(String[] lines, List<Integer> indents) {
+		for (int i = 0; i < lines.length; i++) {
+			int k = lengthOfWhitespacePrefix(lines[i]);
+			lines[i] = "\t".repeat(indents.indexOf(k)) + lines[i].substring(k);
+		}
+	}
+	
+	private void stripIndentation(String[] lines) {
+		int shortestPrefix = Integer.MAX_VALUE;
+		for (int i = 0; i < lines.length; i++)			
+			shortestPrefix = Math.min(shortestPrefix, lengthOfWhitespacePrefix(lines[i]));
+		for (int i = 0; i < lines.length; i++) {
+			lines[i] = lines[i].substring(shortestPrefix);
+		}		
+	}
+		
 	private EditorState tileMode(String[] lines, String start, String end) {
 		EditorState state = new EditorState();
 		state.fixed = new ArrayList<String>();
 		state.tiles = new ArrayList<String>();
+		ArrayList<String> globalDistractors = new ArrayList<String>(); 
 		ArrayList<List<String>> draggable = new ArrayList<List<String>>();
 		ArrayList<String> currentGroup = new ArrayList<String>();		
-		
+		List<Integer> indents = indents(lines);
+		// Before doing anything else, kill any trailing \r
+		for (int i = 0; i < lines.length; i++) {
+			lines[i] = lines[i].stripTrailing();
+		}		
 		boolean tileMode = false;
 		for (int i = 0; i < lines.length; i++) {			
-			String line = lines[i].trim();
+			String line = lines[i];
 			Annotations.Annotation ann = Annotations.parse(line, start, end);
 			int arg = -1;
 			if (ann.isValid) {
@@ -491,34 +524,25 @@ and the tile preceding them.
 					StringBuilder tile = new StringBuilder();
 					for (int j = 1; j <= arg; j++) {
 						if (j > 1) tile.append("\n");
-						tile.append(lines[j]);
+						tile.append(lines[i + j]);
 					}
 					currentGroup.add(tile.toString());
 					i += arg;
 				} 
-			} else if (ann.key.equals("GOOD")) {
-				tileMode = false;
-				if (arg > 0) {
-					StringBuilder tile = new StringBuilder();
-					for (int j = 1; j <= arg; j++) {
-						if (j > 1) tile.append("\n");
-						tile.append(lines[j]);
-					}
-					state.fixed.add(tile.toString());
-					i += arg;					
-				}
 			} else if (ann.key.equals("BAD")) {
 				if (arg > 0) {
 					StringBuilder tile = new StringBuilder();
 					for (int j = 1; j <= arg; j++) {
 						if (j > 1) tile.append("\n");
-						tile.append(lines[j]);
+						tile.append(lines[i + j]);
 					}
-					(tileMode ? currentGroup : state.fixed).add(removeComments(tile, start, end));
+					(tileMode ? currentGroup : globalDistractors).add(removeComments(tile, start, end));
 					i += arg;
 				} else {
-					(tileMode ? currentGroup : state.fixed).add(ann.before + ann.args);
+					(tileMode ? currentGroup : globalDistractors).add(ann.before + ann.args);
 				}
+			} else if (ann.key.equals("FIXED")) {
+				tileMode = false;
 			} else if (tileMode) {
 				if (line.strip().equals("{")) {
 					if (currentGroup.size() > 0) {
@@ -536,24 +560,49 @@ and the tile preceding them.
 					}
 					currentGroup.add(line);
 				}
-			} else if (!ann.isValid) {
-				if (i < lines.length - 1 && lines[i + 1].strip().equals("{")) {
-					state.fixed.add(line + "\n" + lines[i + 1]);
-					i++;
-				} else {
-					state.fixed.add(line);
+			} else { // Region of fixed
+				boolean done = false;
+				StringBuilder tile = new StringBuilder();
+				while (!done) {
+					if (i == lines.length) done = true;
+					else {
+						line = lines[i];
+						ann = Annotations.parse(line, start, end);
+						if (ann.isValid) {
+							if (Set.of("FIXED", "BAD", "TILE").contains(ann.key)) 
+								done = true; 
+							i--;
+						} else {
+							if (tile.length() > 0) tile.append("\n");
+							tile.append(line);
+							i++;
+						}
+					}
 				}
+				state.fixed.add(tile.toString());				
 			}
 		}
 		if (currentGroup.size() > 0) 
 			draggable.add(currentGroup);
+		for (String distractor : globalDistractors)
+			draggable.add(List.of(distractor));
 		for (List<String> group : draggable) 
 			Collections.shuffle(group);
-		// TODO: Normalize indentations on left to tabs
-		// Strip initial space on right
 		for (List<String> group : draggable) {
 			Collections.shuffle(group);
 			state.tiles.addAll(group);
+		}
+		for (int i = 0; i < state.fixed.size(); i++) {
+			String[] contents = state.fixed.get(i).split("\n");
+			normalizeIndentation(contents, indents);
+			state.fixed.set(i, String.join("\n", contents));			
+		}
+		
+		for (int i = 0; i < state.tiles.size(); i++) {
+			String[] contents = state.tiles.get(i).split("\n");
+			normalizeIndentation(contents, indents);
+			stripIndentation(contents);
+			state.tiles.set(i, String.join("\n", contents));			
 		}
 		// Put all the right braces at the end
 		for (int i = state.tiles.size() - 1; i >= 0; i--) {
@@ -561,8 +610,7 @@ and the tile preceding them.
 				state.tiles.remove(i);
 				state.tiles.add("}");
 			}
-		}
-		
+		}			
 		return state;
 	}
 
