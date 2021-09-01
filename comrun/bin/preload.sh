@@ -139,13 +139,12 @@ function run {
       fi
       ;;
     _Racket)
-      # ulimit -d 100000 -f 1000 -n 100 -v 1000000
-      echo Racket > $BASE/out/$ID/_run
-      #if grep -qE '\(define\s+\(\s*main\s+' $MAIN ; then
-      #  timeout -v -s 9 ${TIMEOUT}s racket -tm $MAIN $@ < $BASE/in/$ID 2>&1 | head --lines $MAXOUTPUTLEN >> $BASE/out/$ID/_run
-      #else
-      #  timeout -v -s 9 ${TIMEOUT}s racket -t $MAIN $@ < $BASE/in/$ID 2>&1 | head --lines $MAXOUTPUTLEN >> $BASE/out/$ID/_run
-      #fi    
+      ulimit -d 100000 -f 1000 -n 100 -v 1000000
+      if grep -qE '\(define\s+\(\s*main\s+' $MAIN ; then
+        timeout -v -s 9 ${TIMEOUT}s racket -tm $MAIN $@ < $BASE/in/$ID 2>&1 | head --lines $MAXOUTPUTLEN >> $BASE/out/$ID/_run
+      else
+        timeout -v -s 9 ${TIMEOUT}s racket -t $MAIN $@ < $BASE/in/$ID 2>&1 | head --lines $MAXOUTPUTLEN >> $BASE/out/$ID/_run
+      fi    
       ;;
     _Scala)
       ulimit -d 1000000 -f 1000 -n 100 -v 10000000
