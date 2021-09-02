@@ -440,27 +440,33 @@ moves next lines to the left as single line tiles, until the next //FIXED or //T
  
 Note: Anything before the first TILE is implicitly FIXED
 
-//BAD code
-//BAD n 
+//OR code
+//OR n 
 // code 1
 // code 2
 // ...
 // code n
 
 Adds to the distractors of the preceding tile. 
-However, BAD tiles following good tiles become global distractors. That means
+However, OR tiles following good tiles become global distractors. That means
 global distractors either follow //FIXED or are on top
 
-When a { follows one or more //BAD in tile mode (not global), it is added to all preceding distractors 
+When a { follows one or more //OR in tile mode (not global), it is added to all preceding distractors 
 and the tile preceding them. 
  
 	 */
 	
 	private static String removeComments(StringBuilder tile, String start, String end) {
-		int i = tile.indexOf(start);
-		int j = tile.lastIndexOf(end);
-		if (i < 0 || j < 0) return tile.toString();
-		return tile.substring(0, i) + tile.substring(i + start.length(), j) + tile.substring(j + end.length());
+		String[] lines = tile.toString().split("\n");
+		StringBuilder result = new StringBuilder();
+		for (String line : lines) {
+			if (result.length() > 0) result.append("\n");
+			int i = line.indexOf(start);
+			int j = line.lastIndexOf(end);
+			if (i < 0 || j < 0) result.append(line);
+			else result.append(line.substring(0, i) + line.substring(i + start.length(), j) + line.substring(j + end.length()));
+		}
+		return result.toString();
 	}
 
 	private static int lengthOfWhitespacePrefix(String line) {
@@ -529,7 +535,7 @@ and the tile preceding them.
 					currentGroup.add(tile.toString());
 					i += arg;
 				} 
-			} else if (ann.key.equals("BAD")) {
+			} else if (ann.key.equals("OR")) {
 				if (arg > 0) {
 					StringBuilder tile = new StringBuilder();
 					for (int j = 1; j <= arg; j++) {
@@ -553,7 +559,7 @@ and the tile preceding them.
 						draggable.add(withBrace);
 						currentGroup = new ArrayList<String>();
 					}
-				} else if (!ann.isValid) {
+				} else if (!ann.isValid && !line.isBlank()) {
 					if (currentGroup.size() > 0) {
 						draggable.add(currentGroup);
 						currentGroup = new ArrayList<String>();
@@ -569,9 +575,11 @@ and the tile preceding them.
 						line = lines[i];
 						ann = Annotations.parse(line, start, end);
 						if (ann.isValid) {
-							if (Set.of("FIXED", "BAD", "TILE").contains(ann.key)) 
+							if (Set.of("FIXED", "OR", "TILE").contains(ann.key)) { 
 								done = true; 
-							i--;
+								i--;
+							} else 
+								i++;
 						} else {
 							if (tile.length() > 0) tile.append("\n");
 							tile.append(line);
@@ -586,8 +594,7 @@ and the tile preceding them.
 			draggable.add(currentGroup);
 		for (String distractor : globalDistractors)
 			draggable.add(List.of(distractor));
-		for (List<String> group : draggable) 
-			Collections.shuffle(group);
+		Collections.shuffle(draggable);
 		for (List<String> group : draggable) {
 			Collections.shuffle(group);
 			state.tiles.addAll(group);

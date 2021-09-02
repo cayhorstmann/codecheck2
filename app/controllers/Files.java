@@ -77,16 +77,23 @@ public class Files extends Controller {
 		result.append(mid2);
 			result.append(data.toString());
 		result.append(end2);
+		wakeupChecker();
+		Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();
+		return ok(result.toString()).withCookies(newCookie).as("text/html");
+	}
+
+	private void wakeupChecker() {
 		// Wake up the checker
-		new Thread(() -> { try {
-                        String remoteURL = config.getString("com.horstmann.codecheck.comrun.remote");
-                        URL checkerWakeupURL = new URL(remoteURL + "/api/health");
+		String path = "com.horstmann.codecheck.comrun.remote"; 
+		if (!config.hasPath(path)) return;
+		String remoteURL = config.getString(path);
+		if (remoteURL.isBlank()) return;
+		new Thread(() -> { try {                        
+            URL checkerWakeupURL = new URL(remoteURL + "/api/health");
 			checkerWakeupURL.openStream().readAllBytes();
 		} catch (IOException e) {
 			e.printStackTrace();
 		} }).start();
-		Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();
-		return ok(result.toString()).withCookies(newCookie).as("text/html");
 	}
 
 	// TODO: Caution--this won't do the right thing with param.js randomness when
