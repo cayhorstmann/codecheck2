@@ -109,7 +109,7 @@ public class JavaLanguage implements Language {
         return testFiles;
     }
     
-    private static String patternString = "\\s*[A-Za-z0-9_<>\\[\\]]+\\s+(?<name>\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*(?<rhs>[^;]+);.*";
+    private static String patternString = "\\s*((public|static|final|private|protected)\\s+)*[A-Za-z0-9_<>\\[\\]]+\\s+(?<name>\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*(?<rhs>[^;]+);.*";
     private static Pattern pattern = Pattern.compile(patternString);
 
     @Override
