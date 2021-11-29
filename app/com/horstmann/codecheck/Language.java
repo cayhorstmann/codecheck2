@@ -189,24 +189,22 @@ public interface Language {
     default Pattern unitTestFailurePattern() { return Pattern.compile("$."); }
     
     default void reportUnitTest(String result, Report report, Score score) {
-        Matcher matcher = unitTestSuccessPattern().matcher(result);
-        int runs = 0;
-        int failures = 0;
-        if (matcher.find())
-        {
-           runs = Integer.parseInt(matcher.group("runs"));
-        }
-        else
-        {
-           matcher = unitTestFailurePattern().matcher(result);
-           if (matcher.find())
-           {
-              failures = Integer.parseInt(matcher.group("failures"));
-              runs = Integer.parseInt(matcher.group("runs"));
-           }
-        }
         report.output(result);
-        score.add(runs - failures, runs, report);
+        Matcher matcher = unitTestSuccessPattern().matcher(result);
+        if (matcher.find()) {
+           int runs = Integer.parseInt(matcher.group("runs"));
+           score.add(runs, runs, report);
+        }
+        else {
+           matcher = unitTestFailurePattern().matcher(result);
+           if (matcher.find()) {
+              int runs = Integer.parseInt(matcher.group("runs"));
+              int failures = Integer.parseInt(matcher.group("failures"));
+              score.add(runs - failures, runs, report);
+           }
+           else 
+        	   report.systemError("Cannot determine unit test outcome");        
+       }        
     }
 
     /**

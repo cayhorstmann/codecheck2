@@ -110,8 +110,8 @@ public class PythonLanguage implements Language {
     
     public boolean isUnitTest(Path fileName) { return fileName.toString().matches(".*Test[0-9]*.py"); }
     
-    private static final Pattern successPattern = Pattern.compile("Ran (?<runs>[0-9]+) tests in [0-9.]+s\\s+OK");
-    private static final Pattern failurePattern = Pattern.compile("Ran (?<runs>[0-9]+) tests in [0-9.]+s\\s+FAILED \\([^=]+=(?<failures>[0-9]+)\\)");
+    private static final Pattern successPattern = Pattern.compile("Ran (?<runs>[0-9]+) tests? in [0-9.]+s\\s+OK");
+    private static final Pattern failurePattern = Pattern.compile("Ran (?<runs>[0-9]+) tests? in [0-9.]+s\\s+FAILED \\([^=]+=(?<failures>[0-9]+)\\)");
     @Override public Pattern unitTestSuccessPattern() { return successPattern; }
     @Override public Pattern unitTestFailurePattern() { return failurePattern; }    
 }
