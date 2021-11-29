@@ -6,6 +6,8 @@ maintainer := "cay@horstmann.com"
 
 scalaVersion := "2.12.8"
 
+javacOptions ++= Seq("-source", "11", "-target", "11")
+
 lazy val root = (project in file(".")).enablePlugins(PlayJava)
 
 libraryDependencies ++= Seq(
