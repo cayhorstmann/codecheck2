@@ -144,6 +144,7 @@ public class Upload extends Controller {
 			throws IOException, InterruptedException, NoSuchMethodException, ScriptException {
 		Map<Path, byte[]> newProblemFiles = new TreeMap<>(problemFiles);
 		String studentId = com.horstmann.codecheck.Util.createPronouncableUID();
+		// TODO tracer: If tracer problem, skip check
 		codeCheck.replaceParametersInDirectory(studentId, newProblemFiles);
 		String report = check(problem, newProblemFiles, studentId);
 		StringBuilder response = new StringBuilder();

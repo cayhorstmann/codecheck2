@@ -1,6 +1,3 @@
-//TODO
-let horstmann_common = { iOS: false }
-
 window.horstmann_codecheck = {
   setup: [],
 };
@@ -188,7 +185,7 @@ window.addEventListener('load', function () {
             y: p.y - bounds.top
           }
           
-          if (horstmann_common.iOS) { // iOS uselessly scales down the preview image
+          if (typeof horstmann_common === 'object' && horstmann_common.iOS) { // iOS uselessly scales down the preview image
             drag.x = 32
             drag.y = 32
             // A 64 x 64 icon

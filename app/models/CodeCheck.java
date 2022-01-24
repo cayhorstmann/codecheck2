@@ -70,7 +70,7 @@ public class CodeCheck {
 
 	public Map<Path, byte[]> loadProblem(String repo, String problemName, String studentId) throws IOException, ScriptException, NoSuchMethodException {
 		Map<Path, byte[]> problemFiles = loadProblem(repo, problemName);
-		
+		// TODO tracer: If tracer problem, skip replacement
 		replaceParametersInDirectory(studentId, problemFiles);
 		return problemFiles;
 	}

@@ -123,7 +123,9 @@ public class LTIProblem extends Controller {
 		    String ccid = ccidCookie.map(Http.Cookie::value).orElse(com.horstmann.codecheck.Util.createPronouncableUID());
 			
 		    Map<Path, byte[]> problemFiles = codeCheck.loadProblem(repo, problemName, ccid);
-	        Problem problem = new Problem(problemFiles);
+			// TODO tracer: If tracer problem, produce tracer web page whose changes are reported back 
+
+		    Problem problem = new Problem(problemFiles);
 	        Problem.DisplayData data = problem.getProblemData();
     		ObjectNode problemNode = models.Util.toJson(data);
     		problemNode.put("url", "/checkNJS"); 

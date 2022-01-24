@@ -43,9 +43,18 @@ EclipseKeys.projectFlavor := EclipseProjectFlavor.Java
 enablePlugins(JavaAppPackaging)
 enablePlugins(DockerPlugin)
 
+import com.typesafe.sbt.packager.docker._
+
 dockerBaseImage := "openjdk:11"
 dockerEntrypoint := Seq("bin/play-codecheck", "-Dplay.server.pidfile.path=/dev/null", "-Dnashorn.args=--no-deprecation-warning")
 dockerExposedPorts ++= Seq(9000, 9001)
 
 import com.typesafe.sbt.packager.docker.DockerChmodType
 dockerChmodType := DockerChmodType.UserGroupWriteExecute
+lazy val fixDockerCommands = taskKey[Seq[com.typesafe.sbt.packager.docker.CmdLike]]("Fixes docker commands")
+
+dockerCommands := {
+  val n = dockerCommands.value.indexWhere(p => p.toString.contains("USER"))
+  val cmds = dockerCommands.value.splitAt(n + 1)
+  cmds._1 ++ List(Cmd("RUN", "mkdir", "-p", "/opt/codecheck/ext")) ++ cmds._2  
+}

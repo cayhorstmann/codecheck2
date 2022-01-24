@@ -61,6 +61,7 @@ public class Files extends Controller {
 			logger.error("filesHTML2: Cannot load problem " + repo + "/" + " " + problemName + e.getMessage());
 			return badRequest("Cannot load problem");
 		}
+		// TODO tracer: If tracer problem, produce tracer web page instead
 		Problem problem = new Problem(problemFiles);
 		ObjectNode data = models.Util.toJson(problem.getProblemData());
 		data.put("url",  models.Util.prefix(request) + "/checkNJS");
