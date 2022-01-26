@@ -54,7 +54,10 @@ dockerChmodType := DockerChmodType.UserGroupWriteExecute
 lazy val fixDockerCommands = taskKey[Seq[com.typesafe.sbt.packager.docker.CmdLike]]("Fixes docker commands")
 
 dockerCommands := {
-  val n = dockerCommands.value.indexWhere(p => p.toString.contains("USER"))
-  val cmds = dockerCommands.value.splitAt(n + 1)
-  cmds._1 ++ List(Cmd("RUN", "mkdir", "-p", "/opt/codecheck/ext")) ++ cmds._2  
+  val n = dockerCommands.value.lastIndexWhere(p => p.toString.contains("USER"))
+  val cmds = dockerCommands.value.splitAt(n)
+  cmds._1 ++ List(
+      Cmd("RUN", """["mkdir", "-pv", "/opt/codecheck/ext"]"""), 
+      Cmd("RUN", """["chmod", "-R", "u=rwX,g=rwX", "/opt/codecheck"]"""),
+    ) ++ cmds._2    
 }
