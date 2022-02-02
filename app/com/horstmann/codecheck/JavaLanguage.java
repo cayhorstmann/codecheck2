@@ -134,8 +134,8 @@ public class JavaLanguage implements Language {
         score.pass(result.equals("Starting audit...\nAudit done.\n"), report);
     }
 
-    private static final Pattern successPattern = Pattern.compile("OK \\((?<runs>[0-9]+) tests\\)");
-    private static final Pattern failurePattern = Pattern.compile("Tests run: (?<runs>[0-9]+),\\s+Failures: (?<failures>[0-9]+)");
+    private static final Pattern successPattern = Pattern.compile("OK \\((?<runs>[0-9]+) tests?\\)");
+    private static final Pattern failurePattern = Pattern.compile("Tests run: (?<runs>[0-9]+),\\s+Failures?: (?<failures>[0-9]+)");
     @Override public Pattern unitTestSuccessPattern() { return successPattern; }
     @Override public Pattern unitTestFailurePattern() { return failurePattern; }
     
