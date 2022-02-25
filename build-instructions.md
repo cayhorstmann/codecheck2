@@ -245,41 +245,8 @@ Alternatively, you can test with the locally running web app. In
 Play Server Deployment {#server-deployment}
 ----------------------
 
-In Amazon S3, create a bucket such as `ext.mydomain.com` to hold
-the uploaded CodeCheck problems. Use a policy such as
-
-    {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Effect": "Allow",
-                "Action": [
-                    "s3:GetObject"
-                ],
-                "Resource": [
-                    "arn:aws:s3:::*.mybucket.mydomain.com/*"
-                ]
-            },
-            {
-                "Effect": "Allow",
-                "Action": [
-                    "s3:*"
-                ],
-                "Resource": [
-                    "arn:aws:s3:::ext.mybucket.mydomain.com"
-                ]
-            },
-            {
-                "Effect": "Allow",
-                "Action": [
-                    "s3:*"
-                ],
-                "Resource": [
-                    "arn:aws:s3:::ext.mybucket.mydomain.com/*"
-                ]
-            }
-        ]
-    }
+In Amazon S3, create a bucket whose name starts with the four characters `ext.` and an arbitrary suffix, such as `ext.mydomain.com` to hold
+the uploaded CodeCheck problems. Set the ACL so that the bucket owner has all access rights and nobody else has any.
 
 In your Google Cloud Run project, add another service `play-codecheck`.
 
@@ -290,9 +257,10 @@ Add the following to `conf/production.conf`:
 
     com.horstmann.codecheck.s3.accessKey= your AWS credentials
     com.horstmann.codecheck.s3.secretKey=
-    com.horstmann.codecheck.s3bucketsuffix="mybucket.mydomain.com"
+    com.horstmann.codecheck.s3bucketsuffix="mydomain.com"
     com.horstmann.codecheck.s3.region=your AWS region such as "us-west-1"
     com.horstmann.codecheck.repo.ext=""
+    com.horstmann.codecheck.storeLocation=""
 
 Deploy the `play-codecheck` service:
 

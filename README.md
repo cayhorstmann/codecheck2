@@ -1,4 +1,5 @@
-= CodeCheck =
+CodeCheck^®^
+============
 
 * [Description](https://codecheck.io)
-* [Build Instructions](https://horstmann.com/codecheck/build-instructions.html)
+* [Build Instructions](https://github.com/cayhorstmann/codecheck2/blob/main/build-instructions.md)
