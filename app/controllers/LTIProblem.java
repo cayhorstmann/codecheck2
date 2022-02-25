@@ -218,7 +218,7 @@ public class LTIProblem extends Controller {
 			if (data.description != null)
 				result.append(data.description);
 			result.append(tracerScriptStart);
-			result.append("horstmann_config.lti = " + ltiNode.toString() + "\n")
+			result.append("horstmann_config.lti = " + ltiNode.toString() + "\n");
 			result.append(Util.getString(problemFiles, Path.of("tracer.js")));
 			result.append(tracerEnd);
     	}  catch (Exception ex) {
