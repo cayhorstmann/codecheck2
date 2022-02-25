@@ -221,6 +221,8 @@ public class LTIProblem extends Controller {
 			result.append("horstmann_config.lti = " + ltiNode.toString() + "\n");
 			result.append(Util.getString(problemFiles, Path.of("tracer.js")));
 			result.append(tracerEnd);
+            Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();    		
+    		return ok(result.toString()).withCookies(newCookie).as("text/html");
     	}  catch (Exception ex) {
 			logger.error("launchTracer: Cannot load problem " + repo + "/" + problemName + " " + ex.getMessage());
 			return badRequest(ex.getMessage());
