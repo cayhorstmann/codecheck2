@@ -1,4 +1,4 @@
-let horstmann_config = {
+window.horstmann_config = {
   inIframe: function () {
     try {
       return window.self !== window.top
