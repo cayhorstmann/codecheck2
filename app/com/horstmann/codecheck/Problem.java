@@ -73,7 +73,8 @@ public class Problem {
     		for (Path p : problemFiles.keySet()) {
             	if (!Util.matches(p, ".*", "*~", "*.class", "a.out", "*.pyc",  
                     "index.html", "index.ch", "problem.html", 
-                    "Input", "*.in", "q.properties", "check.properties", "param.js", "edit.key", "*.zy")) {
+                    "Input", "*.in", "q.properties", "check.properties",
+                    "tracer.js", "param.js", "edit.key", "*.zy")) {
             		useFiles.put(p, problemFiles.get(p));
             	}
             }
@@ -107,7 +108,7 @@ public class Problem {
             			}
             		}            
         }   
-        if (solutionFiles.isEmpty()) {                                   
+        if (solutionFiles.isEmpty() && !problemFiles.containsKey(Path.of("tracer.js"))) {                                   
             throw new CodeCheckException("No solution files found");
         }
 	}

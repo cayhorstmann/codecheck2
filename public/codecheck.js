@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function () {
-	
+  // TODO: Legacy	
   // For embedding CodeCheck in an iframe
   
   function getScore() { // TODO: Remove when decommissioning v1

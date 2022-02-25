@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.horstmann.codecheck.Problem;
+import com.horstmann.codecheck.Util;
 
 import models.CodeCheck;
 import models.LTI;
@@ -123,7 +124,6 @@ public class LTIProblem extends Controller {
 		    String ccid = ccidCookie.map(Http.Cookie::value).orElse(com.horstmann.codecheck.Util.createPronouncableUID());
 			
 		    Map<Path, byte[]> problemFiles = codeCheck.loadProblem(repo, problemName, ccid);
-			// TODO tracer: If tracer problem, produce tracer web page whose changes are reported back 
 
 		    Problem problem = new Problem(problemFiles);
 	        Problem.DisplayData data = problem.getProblemData();
@@ -184,7 +184,51 @@ public class LTIProblem extends Controller {
 			return badRequest(ex.getMessage());
 		}
     }
+    
+    private static String tracerStart = "<!DOCTYPE html>\n"
+			+ "<html>\n"
+			+ "<head>\n"
+			+ "  <meta charset=\"utf-8\">\n"
+			+ "  <link href='https://horstmann.com/codecheck/css/codecheck_tracer.css' rel='stylesheet' type='text/css'/>  "
+			+ "  <title>CodeCheck Tracer</title>\n"
+			+ "  <script src='/assets/codecheck2.js'></script>\n"
+			+ "</head>\n"
+			+ "<body>\n";
+	private static String tracerScriptStart = "    <div class='codecheck_tracer'>\n"
+			+ "      <script type='module'>//<![CDATA[\n";
+	private static String tracerEnd = "// ]]>\n"
+			+ "      </script>\n"
+			+ "  </div>\n"
+			+ "</body>\n"
+			+ "</html>";    
 	
+    public Result launchTracer(Http.Request request, String repo, String problemName) {
+    	try {    		
+			// TODO: Now the client will do the LTI communication. CodeCheck should do it.
+			ObjectNode ltiNode = ltiNode(request);
+	        Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
+		    String ccid = ccidCookie.map(Http.Cookie::value).orElse(com.horstmann.codecheck.Util.createPronouncableUID());
+			
+		    Map<Path, byte[]> problemFiles = codeCheck.loadProblem(repo, problemName, ccid);
+	
+		    Problem problem = new Problem(problemFiles);
+			StringBuilder result = new StringBuilder();
+			Problem.DisplayData data = problem.getProblemData();			
+			result.append(tracerStart);
+			result.append("    <p>Submission ID: " + ltiNode.get("submissionID").asText() + "</p>" +
+);
+			if (data.description != null)
+				result.append(data.description);
+			result.append(tracerScriptStart);
+			result.append("horstmann_config.lti = " + ltiNode.toString() + "\n")
+			result.append(Util.getString(problemFiles, Path.of("tracer.js")));
+			result.append(tracerEnd);
+    	}  catch (Exception ex) {
+			logger.error("launchTracer: Cannot load problem " + repo + "/" + problemName + " " + ex.getMessage());
+			return badRequest(ex.getMessage());
+		}    
+    }
+    
 	public Result send(Http.Request request) throws IOException, NoSuchAlgorithmException {
 		ObjectNode requestNode = (ObjectNode) request.body().asJson();
 		String submissionID = requestNode.get("submissionID").asText();

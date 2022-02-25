@@ -19,10 +19,12 @@ GET  /script/theme-kuroir.js  controllers.Assets.at(path="/public/ace", file="th
 GET  /assets/*file            controllers.Assets.versioned(path="/public", file: Asset)
 
 # Web interface 
-GET	 /files						        controllers.Files.filesHTML2(request: Request, repo: String ?= "ext", problem: String, ccid: String ?= null)
-GET	 /files/:problem				  controllers.Files.filesHTML2(request: Request, repo: String ?= "ext", problem: String, ccid: String ?= null)
+GET	 /files						controllers.Files.filesHTML2(request: Request, repo: String ?= "ext", problem: String, ccid: String ?= null)
+GET	 /files/:problem			controllers.Files.filesHTML2(request: Request, repo: String ?= "ext", problem: String, ccid: String ?= null)
 GET  /files/:repo/:problem		controllers.Files.filesHTML2(request: Request, repo: String, problem: String,          ccid: String ?= null)
-POST /checkNJS					      controllers.Check.checkNJS(request: Request)
+POST /checkNJS					controllers.Check.checkNJS(request: Request)
+GET	 /tracer/:problem			controllers.Files.tracer(request: Request, repo: String ?= "ext", problem: String, ccid: String ?= null)
+GET  /tracer/:repo/:problem		controllers.Files.tracer(request: Request, repo: String, problem: String,          ccid: String ?= null)
 
 # Used by textbook-problems, cs046 Split, checknjs 
 GET  /fileData                controllers.Files.fileData(request: Request, repo: String ?= "ext", problem: String, ccid: String ?= null)

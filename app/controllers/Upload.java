@@ -58,11 +58,11 @@ public class Upload extends Controller {
 				String filename = params.get("filename" + n)[0];
 				if (filename.trim().length() > 0) {
 					String contents = params.get("contents" + n)[0];
-					problemFiles.put(Paths.get(filename), contents.getBytes(StandardCharsets.UTF_8));
+					problemFiles.put(Path.of(filename), contents.getBytes(StandardCharsets.UTF_8));
 				}
 				n++;
 			}
-			problemFiles.put(Paths.get("edit.key"), editKey.getBytes(StandardCharsets.UTF_8));
+			problemFiles.put(Path.of("edit.key"), editKey.getBytes(StandardCharsets.UTF_8));
 			saveProblem(problem, problemFiles);
 			String response = checkProblem(request, problem, problemFiles);
 			return ok(response).as("text/html").addingToSession(request, "pid", problem);
@@ -77,7 +77,7 @@ public class Upload extends Controller {
 			byte[] problemZip = Util.zip(problemFiles);
 			s3conn.putToS3(problemZip, repo, problem);
 		} else {
-			Path extDir = java.nio.file.Paths.get(config.getString("com.horstmann.codecheck.repo.ext"));
+			Path extDir = java.nio.file.Path.of(config.getString("com.horstmann.codecheck.repo.ext"));
 			Path problemDir = extDir.resolve(problem);
 			com.horstmann.codecheck.Util.deleteDirectory(problemDir); // Delete any prior contents so that it is replaced by new zip file
 			Files.createDirectories(problemDir);
@@ -95,7 +95,7 @@ public class Upload extends Controller {
 
 	private boolean checkEditKey(String problem, String editKey) throws IOException {
 		Map<Path, byte[]> problemFiles = codeCheck.loadProblem(repo, problem);
-		Path editKeyPath = Paths.get("edit.key");
+		Path editKeyPath = Path.of("edit.key");
 		if (problemFiles.containsKey(editKeyPath)) {
 			String correctEditKey = new String(problemFiles.get(editKeyPath), StandardCharsets.UTF_8);
 			return editKey.equals(correctEditKey.trim());
@@ -129,7 +129,7 @@ public class Upload extends Controller {
 			byte[] contents = Files.readAllBytes(savedPath);
 			Map<Path, byte[]> problemFiles = Util.unzip(contents);
 			problemFiles = fixZip(problemFiles);
-			Path editKeyPath = Paths.get("edit.key");
+			Path editKeyPath = Path.of("edit.key");
 			if (!problemFiles.containsKey(editKeyPath)) 
 				problemFiles.put(editKeyPath, editKey.getBytes(StandardCharsets.UTF_8));
 			saveProblem(problem, problemFiles);
@@ -143,29 +143,37 @@ public class Upload extends Controller {
 	private String checkProblem(Http.Request request, String problem, Map<Path, byte[]> problemFiles)
 			throws IOException, InterruptedException, NoSuchMethodException, ScriptException {
 		Map<Path, byte[]> newProblemFiles = new TreeMap<>(problemFiles);
-		String studentId = com.horstmann.codecheck.Util.createPronouncableUID();
-		// TODO tracer: If tracer problem, skip check
-		codeCheck.replaceParametersInDirectory(studentId, newProblemFiles);
-		String report = check(problem, newProblemFiles, studentId);
 		StringBuilder response = new StringBuilder();
+		String type;
+		String report = null;
+		if (problemFiles.containsKey(Path.of("tracer.js"))) {
+			type = "tracer";
+		} else {
+			type = "files";
+			String studentId = com.horstmann.codecheck.Util.createPronouncableUID();
+			codeCheck.replaceParametersInDirectory(studentId, newProblemFiles);
+			report = check(problem, newProblemFiles, studentId);
+		}
 		response.append(
 				"<html><head><title></title><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"/>");
 		response.append("<body style=\"font-family: sans\">");
 		String prefix = (request.secure() ? "https://" : "http://") + request.host() + "/";
-		String problemUrl = prefix + "files/" + problem;
+		String problemUrl = prefix + type + "/" + problem;
 		response.append("Public URL (for your students): ");
 		response.append("<a href=\"" + problemUrl + "\" target=\"_blank\">" + problemUrl + "</a>");
-		Path editKeyPath = Paths.get("edit.key");
+		Path editKeyPath = Path.of("edit.key");
 		if (problemFiles.containsKey(editKeyPath)) {
 			String editKey = new String(problemFiles.get(editKeyPath), StandardCharsets.UTF_8);			
 			String editURL = prefix + "private/problem/" + problem + "/" + editKey;
 			response.append("<br/>Edit URL (for you only): ");
 			response.append("<a href=\"" + editURL + "\" target=\"_blank\">" + editURL + "</a>");
 		}
-		String run = Base64.getEncoder().encodeToString(report.getBytes(StandardCharsets.UTF_8));
-		response.append(
-			"<br/><iframe height=\"400\" style=\"width: 90%; margin: 2em;\" src=\"data:text/html;base64," + run
+		if (report != null) {
+			String run = Base64.getEncoder().encodeToString(report.getBytes(StandardCharsets.UTF_8));
+			response.append(
+					"<br/><iframe height=\"400\" style=\"width: 90%; margin: 2em;\" src=\"data:text/html;base64," + run
 							+ "\"></iframe>");
+		}
 		response.append("</li>\n");
 		response.append("</ul><p></body></html>\n");
 		return response.toString();
@@ -176,7 +184,7 @@ public class Upload extends Controller {
 			return badRequest("No problem id");
 		try {
 			Map<Path, byte[]> problemFiles = codeCheck.loadProblem(repo, problem);
-			Path editKeyPath = Paths.get("edit.key");
+			Path editKeyPath = Path.of("edit.key");
 			if (!problemFiles.containsKey(editKeyPath)) 
 				return badRequest("Wrong edit key " + editKey + " for problem " + problem);
 			String correctEditKey = new String(problemFiles.get(editKeyPath), StandardCharsets.UTF_8);

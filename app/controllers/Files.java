@@ -61,7 +61,6 @@ public class Files extends Controller {
 			logger.error("filesHTML2: Cannot load problem " + repo + "/" + " " + problemName + e.getMessage());
 			return badRequest("Cannot load problem");
 		}
-		// TODO tracer: If tracer problem, produce tracer web page instead
 		Problem problem = new Problem(problemFiles);
 		ObjectNode data = models.Util.toJson(problem.getProblemData());
 		data.put("url",  models.Util.prefix(request) + "/checkNJS");
@@ -97,6 +96,50 @@ public class Files extends Controller {
 		} }).start();
 	}
 
+	private static String tracerStart = "<!DOCTYPE html>\n"
+			+ "<html>\n"
+			+ "<head>\n"
+			+ "  <meta charset=\"utf-8\">\n"
+			+ "  <link href='https://horstmann.com/codecheck/css/codecheck_tracer.css' rel='stylesheet' type='text/css'/>  "
+			+ "  <title>CodeCheck Tracer</title>\n"
+			+ "  <script src='/assets/codecheck2.js'></script>\n"
+			+ "</head>\n"
+			+ "<body>\n";
+	private static String tracerScriptStart = "    <div class='codecheck_tracer'>\n"
+			+ "      <script type='module'>//<![CDATA[\n";
+	private static String tracerEnd = "// ]]>\n"
+			+ "      </script>\n"
+			+ "  </div>\n"
+			+ "</body>\n"
+			+ "</html>";
+	
+	public Result tracer(Http.Request request, String repo, String problemName, String ccid)
+			throws IOException {
+		if (ccid == null) {
+			Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
+			ccid = ccidCookie.map(Http.Cookie::value).orElse(Util.createPronouncableUID());
+		}
+		Map<Path, byte[]> problemFiles;
+		try {
+			problemFiles = codeCheck.loadProblem(repo, problemName, ccid);
+		} catch (Exception e) {
+			logger.error("filesHTML: Cannot load problem " + repo + "/" + problemName + " " + e.getMessage());
+			return badRequest("Cannot load problem " + repo + "/" + problemName);
+		}
+		Problem problem = new Problem(problemFiles);
+		Problem.DisplayData data = problem.getProblemData();
+		StringBuilder result = new StringBuilder();
+		result.append(tracerStart);
+		if (data.description != null)
+			result.append(data.description);
+		result.append(tracerScriptStart);
+		result.append(Util.getString(problemFiles, Path.of("tracer.js")));
+		result.append(tracerEnd);
+
+		Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();
+		return ok(result.toString()).withCookies(newCookie).as("text/html");
+	}
+		
 	// TODO: Caution--this won't do the right thing with param.js randomness when
 	// used to prebuild UI like in ebook, Udacity
 	public Result fileData(Http.Request request, String repo, String problemName, String ccid)

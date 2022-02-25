@@ -70,14 +70,13 @@ public class CodeCheck {
 
 	public Map<Path, byte[]> loadProblem(String repo, String problemName, String studentId) throws IOException, ScriptException, NoSuchMethodException {
 		Map<Path, byte[]> problemFiles = loadProblem(repo, problemName);
-		// TODO tracer: If tracer problem, skip replacement
 		replaceParametersInDirectory(studentId, problemFiles);
 		return problemFiles;
 	}
 
 	public void replaceParametersInDirectory(String studentId, Map<Path, byte[]> problemFiles)
 			throws ScriptException, NoSuchMethodException, IOException {
-		Path paramPath = Paths.get("param.js"); 
+		Path paramPath = Path.of("param.js"); 
 		if (problemFiles.containsKey(paramPath)) {
 			ScriptEngineManager engineManager = new ScriptEngineManager();
 			ScriptEngine engine = engineManager.getEngineByName("nashorn");
@@ -133,7 +132,7 @@ public class CodeCheck {
 		if (s3conn.isOnS3(repo)) {
 			return Util.unzip(s3conn.readFromS3(repo, problemName));
 		} else {
-			Path repoPath = Paths.get(config.getString("com.horstmann.codecheck.repo."
+			Path repoPath = Path.of(config.getString("com.horstmann.codecheck.repo."
 							+ repo));
 			// TODO: That comes from Problems.java--fix it there
 			if (problemName.startsWith("/"))
