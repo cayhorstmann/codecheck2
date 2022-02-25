@@ -107,6 +107,10 @@ GET /lti/config               controllers.LTIAssignment.config(request: Request)
 POST /files/:problem          controllers.LTIProblem.launchCodeCheck(request: Request, repo: String = "ext", problem: String)
 POST /files/:repo/:problem    controllers.LTIProblem.launchCodeCheck(request: Request, repo: String, problem: String)
 
+# LTI Tracer
+POST /tracer/:problem          controllers.LTIProblem.launchTracer(request: Request, repo: String = "ext", problem: String)
+POST /tracer/:repo/:problem    controllers.LTIProblem.launchTracer(request: Request, repo: String, problem: String)
+
 # LTI Interactive Problems
 POST /lti/problem             controllers.LTIProblem.launch(request: Request)
 POST /lti/retrieve            controllers.LTIProblem.retrieve(request: Request)
