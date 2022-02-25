@@ -204,7 +204,6 @@ public class LTIProblem extends Controller {
 	
     public Result launchTracer(Http.Request request, String repo, String problemName) {
     	try {    		
-			// TODO: Now the client will do the LTI communication. CodeCheck should do it.
 			ObjectNode ltiNode = ltiNode(request);
 	        Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
 		    String ccid = ccidCookie.map(Http.Cookie::value).orElse(com.horstmann.codecheck.Util.createPronouncableUID());
@@ -215,8 +214,7 @@ public class LTIProblem extends Controller {
 			StringBuilder result = new StringBuilder();
 			Problem.DisplayData data = problem.getProblemData();			
 			result.append(tracerStart);
-			result.append("    <p>Submission ID: " + ltiNode.get("submissionID").asText() + "</p>" +
-);
+			result.append("    <p>Submission ID: " + ltiNode.get("submissionID").asText() + "</p>");
 			if (data.description != null)
 				result.append(data.description);
 			result.append(tracerScriptStart);
