@@ -285,6 +285,6 @@ public interface Language {
             return result;
         }
         else 
-        	return null;
+        	return Collections.emptyList();
     }
 }

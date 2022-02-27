@@ -17,11 +17,43 @@ import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 public class Problem {
+	@JsonSerialize(using = TileSerializer.class)
+	public static class Tile {
+		public String code;
+		public String text;
+	}
+	
+	public static class TileSerializer extends JsonSerializer<Tile> {
+	    @Override
+	    public void serialize(Tile value, JsonGenerator jgen,
+	        SerializerProvider provider) throws IOException, JsonProcessingException {
+	    	if (value.text.isBlank()) 
+	    		jgen.writeString(value.code);
+	    	else {
+	    		jgen.writeStartObject();
+	    		jgen.writeStringField("code", value.code);
+	    		jgen.writeStringField("text", value.text);
+	    		jgen.writeEndObject();
+	    	}
+	    }
+
+	    @Override
+	    public Class<Tile> handledType() {
+	        return Tile.class;
+	    }
+	}
+	
 	public static class EditorState {
 		public List<String> editors;
-		public List<String> fixed;
-		public List<String> tiles;
+		public List<Tile> fixed;
+		public List<Tile> tiles;
 	}
 	
 	public static class DisplayData {
@@ -42,6 +74,8 @@ public class Problem {
     private Annotations annotations;
 	private boolean inputMode = false;
 	private boolean oldStyle; // separate student/solution directories
+	private String start; // pseudocode delimiters
+	private String end;
 
 	private static final Pattern IMG_PATTERN = Pattern
 			.compile("[<]\\s*[iI][mM][gG]\\s*[sS][rR][cC]\\s*[=]\\s*['\"]([^'\"]*)['\"][^>]*[>]");
@@ -51,6 +85,9 @@ public class Problem {
         language = Language.languageFor(problemFiles.keySet());        
         if (language == null) throw new CodeCheckException("Cannot find language from " + problemFiles.keySet());
         annotations = new Annotations(language);
+		String[] delims = language.pseudoCommentDelimiters();
+		start = delims[0];
+		end = delims[1];
         
     	oldStyle = problemFiles.keySet().stream().anyMatch(p -> p.getName(0).toString().equals("student")); 
     	if (oldStyle) {
@@ -191,9 +228,6 @@ public class Problem {
 
 	//TODO: Should be in Annotations
 	private void clearPseudoComments(String[] lines, int from, int to) {
-		String[] delims = language.pseudoCommentDelimiters();
-		String start = delims[0];
-		String end = delims[1];
 		for (int i = from; i < to; i++) {
 			String line = lines[i];
 			if (line != null) {
@@ -245,9 +279,6 @@ public class Problem {
 			return state;
 		}
 
-		String[] delims = language.pseudoCommentDelimiters();
-		String start = delims[0];
-		String end = delims[1];
 		String[] lines = contents.stripTrailing().split("\n");
 
 		boolean hasEdit = false;
@@ -265,16 +296,16 @@ public class Problem {
 			return state;					
 		}
 		if (hasTile) {
-			return tileMode(lines, start, end);
+			return tileMode(lines);
 		} else if (hasEdit) {
-			return hideEditMode(lines, start, end);
+			return hideEditMode(lines);
 		} else { 
-			return hideShowMode(lines, start, end);
+			return hideShowMode(lines);
 		}
 	}
 
 
-	private EditorState hideShowMode(String[] lines, String start, String end) {
+	private EditorState hideShowMode(String[] lines) {
 		EditorState state = new EditorState();
 		state.editors = new ArrayList<String>();
 		boolean hiding = false;
@@ -323,7 +354,7 @@ public class Problem {
 		return state;
 	}
 
-	private EditorState hideEditMode(String[] lines, String start, String end) {
+	private EditorState hideEditMode(String[] lines) {
 		EditorState state = new EditorState();
 		state.editors = new ArrayList<String>();
 		int sectionStart = 0;
@@ -453,11 +484,27 @@ However, OR tiles following good tiles become global distractors. That means
 global distractors either follow //FIXED or are on top
 
 When a { follows one or more //OR in tile mode (not global), it is added to all preceding distractors 
-and the tile preceding them. 
+and the tile preceding them.
+
+If a tile has one or more //PSEUDO comments, then 
+
+whitespace1 code1//PSEUDO pseudocode1
+whitespace2 code2//PSEUDO pseudocode2
+...
+
+is transformed to the submitted code 
+
+whitespace1 code1
+whitespace2 code2
+
+and the code to be displayed on the tiles
+
+whitespace1 pseudocode1
+whitespace2 pseudocode2
  
 	 */
 	
-	private static String removeComments(StringBuilder tile, String start, String end) {
+	private String removeComments(StringBuilder tile) {
 		String[] lines = tile.toString().split("\n");
 		StringBuilder result = new StringBuilder();
 		for (String line : lines) {
@@ -484,6 +531,25 @@ and the tile preceding them.
 		return new ArrayList<>(prefixLengths);
 	}
 	
+	public Tile makeTile(String contents, boolean fixed, List<Integer> indents) {
+		String[] lines = contents.split("\n");
+		normalizeIndentation(lines, indents);
+		if (!fixed) stripIndentation(lines);
+		ArrayList<String> pseudoLines = new ArrayList<>();
+		for (int i = 0; i < lines.length; i++) {
+			Annotations.Annotation ann = Annotations.parse(lines[i], start, end);
+			if (ann.key.equals("PSEUDO")) {
+				int ws = lengthOfWhitespacePrefix(lines[i]);
+				pseudoLines.add(lines[i].substring(0, ws) + ann.args);
+				lines[i] = ann.before;
+			}
+		}			
+		Tile tile = new Tile();
+		tile.code = String.join("\n", lines);
+		tile.text = String.join("\n", pseudoLines);
+		return tile;
+	}
+	
 	private void normalizeIndentation(String[] lines, List<Integer> indents) {
 		for (int i = 0; i < lines.length; i++) {
 			int k = lengthOfWhitespacePrefix(lines[i]);
@@ -498,12 +564,12 @@ and the tile preceding them.
 		for (int i = 0; i < lines.length; i++) {
 			lines[i] = lines[i].substring(shortestPrefix);
 		}		
-	}
-		
-	private EditorState tileMode(String[] lines, String start, String end) {
+	}			
+
+	private EditorState tileMode(String[] lines) {
 		EditorState state = new EditorState();
-		state.fixed = new ArrayList<String>();
-		state.tiles = new ArrayList<String>();
+		state.fixed = new ArrayList<Tile>();
+		state.tiles = new ArrayList<Tile>();
 		ArrayList<String> globalDistractors = new ArrayList<String>(); 
 		ArrayList<List<String>> draggable = new ArrayList<List<String>>();
 		ArrayList<String> currentGroup = new ArrayList<String>();		
@@ -528,7 +594,7 @@ and the tile preceding them.
 				}
 				
 				if (arg > 0) {
-					StringBuilder tile = new StringBuilder();
+					StringBuilder tile = new StringBuilder(); 
 					for (int j = 1; j <= arg; j++) {
 						if (j > 1) tile.append("\n");
 						tile.append(lines[i + j]);
@@ -538,12 +604,12 @@ and the tile preceding them.
 				} 
 			} else if (ann.key.equals("OR")) {
 				if (arg > 0) {
-					StringBuilder tile = new StringBuilder();
+					StringBuilder tile = new StringBuilder(); 
 					for (int j = 1; j <= arg; j++) {
 						if (j > 1) tile.append("\n");
 						tile.append(lines[i + j]);
 					}
-					(tileMode ? currentGroup : globalDistractors).add(removeComments(tile, start, end));
+					(tileMode ? currentGroup : globalDistractors).add(removeComments(tile));
 					i += arg;
 				} else {
 					(tileMode ? currentGroup : globalDistractors).add(ann.before + ann.args);
@@ -551,7 +617,7 @@ and the tile preceding them.
 			} else if (ann.key.equals("FIXED")) {
 				tileMode = false;
 			} else if (tileMode) {
-				if (line.strip().equals("{")) {
+				if (line.strip().equals("{")) { 
 					if (currentGroup.size() > 0) {
 						ArrayList<String> withBrace = new ArrayList<String>();
 						for (String tile :currentGroup) {
@@ -560,7 +626,7 @@ and the tile preceding them.
 						draggable.add(withBrace);
 						currentGroup = new ArrayList<String>();
 					}
-				} else if (!ann.isValid && !line.isBlank()) {
+				} else if ((!ann.isValid || ann.key.equals("PSEUDO")) && !line.isBlank()) {
 					if (currentGroup.size() > 0) {
 						draggable.add(currentGroup);
 						currentGroup = new ArrayList<String>();
@@ -575,20 +641,20 @@ and the tile preceding them.
 					else {
 						line = lines[i];
 						ann = Annotations.parse(line, start, end);
-						if (ann.isValid) {
+						if (ann.isValid && !ann.key.equals("PSEUDO")) {
 							if (Set.of("FIXED", "OR", "TILE").contains(ann.key)) { 
 								done = true; 
 								i--;
 							} else 
 								i++;
 						} else {
-							if (tile.length() > 0) tile.append("\n");
+							if (tile.length() > 0) tile.append("\n"); 
 							tile.append(line);
 							i++;
 						}
 					}
 				}
-				state.fixed.add(tile.toString());				
+				state.fixed.add(makeTile(tile.toString(), /* fixed = */ true, indents)); 				
 			}
 		}
 		if (currentGroup.size() > 0) 
@@ -598,25 +664,14 @@ and the tile preceding them.
 		Collections.shuffle(draggable);
 		for (List<String> group : draggable) {
 			Collections.shuffle(group);
-			state.tiles.addAll(group);
-		}
-		for (int i = 0; i < state.fixed.size(); i++) {
-			String[] contents = state.fixed.get(i).split("\n");
-			normalizeIndentation(contents, indents);
-			state.fixed.set(i, String.join("\n", contents));			
-		}
-		
-		for (int i = 0; i < state.tiles.size(); i++) {
-			String[] contents = state.tiles.get(i).split("\n");
-			normalizeIndentation(contents, indents);
-			stripIndentation(contents);
-			state.tiles.set(i, String.join("\n", contents));			
+			for (String tile : group)
+				state.tiles.add(makeTile(tile, /* fixed = */ false, indents)); 
 		}
 		// Put all the right braces at the end
 		for (int i = state.tiles.size() - 1; i >= 0; i--) {
-			if (state.tiles.get(i).equals("}")) {
-				state.tiles.remove(i);
-				state.tiles.add("}");
+			if (state.tiles.get(i).code.equals("}")) { 
+				Tile brace = state.tiles.remove(i);
+				state.tiles.add(brace); 
 			}
 		}			
 		return state;

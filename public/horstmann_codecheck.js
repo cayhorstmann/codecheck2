@@ -12,11 +12,11 @@ window.addEventListener('load', function () {
 
     // Element-scoped variables
     const INDENT_STRING = '\u2002\u2002\u2002' // en space
-    const MIN_INDENT = 3 // Minimum number of indent lines shown
     const left = document.createElement('div')
     const right = document.createElement('div')
     let drag = undefined   
     let indentWidth = undefined
+    const codeMap = new Map()
 
     function getClientXY(e) {
       return e.touches ? {
@@ -47,6 +47,10 @@ window.addEventListener('load', function () {
       setIndent(tileDiv, indent)
     }
 
+    function codeOf(tile) {
+      let code = codeMap.get(tile)
+	  return code === undefined ? tile.textContent : code 	
+    }
     
     function measureIndentWidth() {
       // Measure indent width
@@ -73,12 +77,12 @@ window.addEventListener('load', function () {
 
     function stickyBrace(tileDiv) {
       if (tileDiv.parentNode !== left) return
-      if (!tileDiv.textContent.endsWith('{')) return
+      if (!codeOf(tileDiv).endsWith('{')) return
       
       // Is a } available to the right? 
       let rightBrace = null
       for (let i = 0; rightBrace === null && i < right.children.length; i++)
-        if (right.children[i].textContent === '}') rightBrace = right.children[i]
+        if (codeOf(right.children[i]) === '}') rightBrace = right.children[i]
       if (rightBrace === null) return
 
       // Is there a } tile below with matching indent? If so, return 
@@ -88,7 +92,7 @@ window.addEventListener('load', function () {
       let done = false
       while (!done && i < left.children.length) {
         let tileDivBelow = left.children[i]
-        if (tileDivBelow.indent === tileDiv.indent && tileDivBelow.textContent.trim().startsWith('}')) return
+        if (tileDivBelow.indent === tileDiv.indent && codeOf(tileDivBelow).trim().startsWith('}')) return
         else if (tileDivBelow.indent < tileDiv.indent) done = true
         else i++
       }
@@ -134,27 +138,41 @@ window.addEventListener('load', function () {
       right.children[0].focus()
     }
 
-    function makeTile(text, isFixed) {
+    function makeTile(contents, isFixed) {
       let tileDiv = createTile()
+	  let text
+	  if (typeof contents === 'object') {
+		text = contents.text
+		if ('code' in contents) {
+		  codeMap.set(tileDiv, contents.code)
+		  tileDiv.classList.add('pseudo')   		     
+        }		
+	  }
+	  else {
+	    text = contents
+	  }
       if (isFixed) {
-        let lines = text.split('\n')
-        let minIndent = Number.MAX_SAFE_INTEGER
-        for (const line of lines) {
-          let indent = 0
-          while (line[indent] === '\t') indent++
-          minIndent = Math.min(minIndent, indent)
-        }
-        let strippedText = ''
-        for (const line of lines) {
-          if (strippedText !== '') strippedText += '\n'
-          strippedText = strippedText + line.substring(minIndent).replace('\t', '   ')
-        }          
-        tileDiv.textContent = strippedText
-
         tileDiv.classList.add('fixed')
         tileDiv.setAttribute('draggable', false);
         tileDiv.tabIndex = -1
-        setIndent(tileDiv, minIndent)
+	    if (typeof contents === 'object' && 'indent' in contents) {
+	        setIndent(tileDiv, contents.indent)		
+	    } else {
+	        let lines = text.split('\n')
+	        let minIndent = Number.MAX_SAFE_INTEGER
+	        for (const line of lines) {
+	          let indent = 0
+	          while (line[indent] === '\t') indent++
+	          minIndent = Math.min(minIndent, indent)
+	        }
+	        let strippedText = ''
+	        for (const line of lines) {
+	          if (strippedText !== '') strippedText += '\n'
+	          strippedText += line.substring(minIndent).replace('\t', '   ')
+	        }          
+	        tileDiv.textContent = strippedText
+	        setIndent(tileDiv, minIndent)
+		}
       }
       else {
         tileDiv.textContent = text
@@ -200,6 +218,9 @@ window.addEventListener('load', function () {
         tileDiv.addEventListener('dragend', function(e) {
           drag = undefined
         })
+        
+        // TODO: keyCode deprecated https://stackoverflow.com/questions/35394937/keyboardevent-keycode-deprecated-what-does-this-mean-in-practice
+        
         tileDiv.addEventListener('keydown', function(e) {
           if (e.keyCode === 37) { // left
             moveLeftRight(tileDiv, -1)
@@ -348,9 +369,9 @@ window.addEventListener('load', function () {
       })
 
       for (const fixed of setup.fixed)
-        left.appendChild(makeTile(fixed, true))
+        left.appendChild(makeTile(fixed, true)) 
       for (const tile of setup.tiles)
-        right.appendChild(makeTile(tile, false))
+        right.appendChild(makeTile(tile, false)) 
       both.classList.add('horstmann_rearrange')
 
       return both
@@ -364,18 +385,27 @@ window.addEventListener('load', function () {
           leftTiles.push(group)
           group.length = 0
         }
-        else
-          group.push({ text: tile.textContent, indent: tile.indent })
+        else {
+		  let state = { text: tile.textContent, indent: tile.indent }
+		  let code = codeMap.get(tile)
+		  if (code !== undefined) state.code = code  
+          group.push(state) 
+        } 
       }
       leftTiles.push(group)
       
       return {
         left: leftTiles,
-        right: [...right.children].map(tile => tile.textContent)
+        right: [...right.children].map(tile => {
+            let code = codeMap.get(tile)
+		    if (code !== undefined) return { text: tile.textContent, code }  
+	        else return tile.textContent
+	      })  
       }    
     }
 
     function restoreState(state) {
+	  codeMap.clear()
       let i = 0
       let leftTiles = [...left.children]
       for (const tile of leftTiles) {
@@ -383,38 +413,43 @@ window.addEventListener('load', function () {
           let group = state.left[i]
           i++
           for (let j = group.length - 1; j >= 0; j--) {
-            const newTile = makeTile(group[j].text, false)
-            newTile.indent = group[j].indent
+            const newTile = makeTile(group[j], false)
             left.insertBefore(newTile)
           }
         }
         else
           left.removeChild(tile)
       }
-      for (const g of state.left[i]) {
-        const newTile = makeTile(g.text, false)
-        newTile.indent = g.indent
+      for (const t of state.left[i]) {
+        const newTile = makeTile(t, false) 
         left.appendChild(newTile)      
       }
       right.innerHTML = ''
-      for (const text of state.right) {
-        const newTile = makeTile(text, false)
+      for (const t of state.right) {
+        const newTile = makeTile(t, false) 
         right.appendChild(newTile)      
       }
     }
 
     function getText() {
       let content = ''
-      for (const tile of left.children) 
-        for (const line of tile.textContent.split('\n')) 
-          content += '\t'.repeat(tile.indent) + line + '\n'
+      for (const tile of left.children) {
+	    let code = codeMap.get(tile)
+        if (tile.classList.contains('fixed') && code !== undefined) 
+          content += code + '\n'
+        else {
+	      if (code === undefined) code = tile.textContent 
+          for (const line of code.split('\n'))
+            content += '\t'.repeat(tile.indent) + line + '\n'
+  		}
+      }
       return content
     }
 
     function errorAnnotation(lineNumber, message) {
       let l = 1
       for (const tile of left.children) {
-        const lines = tile.textContent.split('\n').length
+        const lines = codeOf(tile).split('\n').length
         if (l <= lineNumber && lineNumber < l + lines) {
           tile.classList.add('hc-bad')
           tile.title = message        
@@ -864,7 +899,7 @@ window.addEventListener('load', function () {
       horstmann_config.score_change_listener && horstmann_config.score_change_listener(element, element.state, score)
     }
 
-    function successfulSubmission(data) {
+    function successfulSubmission(data) {      	
       let report = data['report']
       let start = report.indexOf('<body>')
       let end = report.indexOf('</body>')

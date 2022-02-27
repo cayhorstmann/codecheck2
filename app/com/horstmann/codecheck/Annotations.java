@@ -15,7 +15,8 @@ public class Annotations {
     public static final Set<String> VALID_ANNOTATIONS = Set.of(
             "HIDE", "SHOW", "EDIT", "SOLUTION", "CALL", "SUB", "ID", "SAMPLE", "ARGS", 
             "IN", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "MAXOUTPUTLEN",
-            "REQUIRED", "FORBIDDEN", "SCORING", "INTERLEAVE", "TILE", "FIXED", "OR");    
+            "REQUIRED", "FORBIDDEN", "SCORING", "INTERLEAVE", "TILE", "FIXED", "OR", "PSEUDO");    
+    public static final Set<String> NON_BLANK_BEFORE_OK = Set.of("SUB", "PSEUDO"); 
 
     public static class Annotation {
     	public boolean isValid;
@@ -40,8 +41,8 @@ public class Annotations {
 		if (k < j && !Character.isWhitespace(line.charAt(k))) return ann;
 		String key = line.substring(i, k);
 		if (!VALID_ANNOTATIONS.contains(key)) return ann;
-		// Only SUB can have non-blank BEFORE
-		if (!before.isBlank() && !key.equals("SUB")) return ann;
+		// Only a few annotations can have non-blank before
+		if (!before.isBlank() && !NON_BLANK_BEFORE_OK.contains(key)) return ann;
 		ann.isValid = true;
 		ann.before = before;
 		ann.key = key;

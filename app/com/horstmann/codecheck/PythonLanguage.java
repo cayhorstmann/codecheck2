@@ -95,18 +95,11 @@ public class PythonLanguage implements Language {
         return new String[] { "##", "" };
     }
 
-    private static String patternString = "\\s*(?<name>[A-Za-z][A-Za-z0-9]*)\\s*=\\s*(?<rhs>.+)";
-    private static Pattern pattern = Pattern.compile(patternString);
+    private static Pattern varPattern = Pattern.compile("\\s*(?<name>[A-Za-z][A-Za-z0-9]*)\\s*=\\s*(?<rhs>.+)");
+    @Override public Pattern variableDeclPattern() { return varPattern; }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.horstmann.codecheck.Language#variablePattern()
-     */
-    @Override
-    public Pattern variableDeclPattern() {
-        return pattern;
-    }
+    private static Pattern errPattern = Pattern.compile("(?<msg>.*)[\"(](?<file>[A-Za-z0-9_]+\\.py)\"?, line (?<line>[0-9]+).*");    
+    @Override public Pattern errorPattern() { return errPattern; }
     
     public boolean isUnitTest(Path fileName) { return fileName.toString().matches(".*Test[0-9]*.py"); }
     

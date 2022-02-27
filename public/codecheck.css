@@ -1,55 +1,68 @@
 @charset "utf-8";
+
 @font-face {
   font-family: "DejaVuSansMonoSemiCondensed";
   font-style: normal;
   font-weight: normal;
-  src: url("https://horstmann.com/DejaVuSansMonoCondensed.otf"), local("DejaVuSansMonoCondensed")  
+  src: url("https://horstmann.com/fonts/DejaVuSansMonoSemiCondensed.woff")
 }
 
-
-.studentFiles, .providedFiles { 
-	display: none; 
+@font-face {
+  font-family: "MarkingPen";
+  font-style: normal;
+  font-weight: normal;
+  src: url("https://horstmann.com/fonts/MarkingPen.woff")
 }
 
-.ace_editor { 
-    /* border: 1px solid #EEE; */
-    /* TODO: If we want a border, put all editor divs inside a div with a border */
-	min-width: 700px; 
+.pseudo {
+  font-family: "MarkingPen";
+}
+
+.studentFiles, .providedFiles {
+  display: none;
+}
+
+.ace_editor {
+  /* border: 1px solid #EEE; */
+  /* TODO: If we want a border, put all editor divs inside a div with a border */
+  min-width: 700px;
 }
 
 .ace_gutter {
-	width: 4em !important;
+  width: 4em !important;
 }
 
 .ace_gutter-cell {
-    padding-right: 1em !important;
+  padding-right: 1em !important;
 }
 
 .ace_gutter-layer {
-    display: inline !important;
+  display: inline !important;
 }
 
-.ace_hidden-cursors {opacity:0}
+.ace_hidden-cursors {
+  opacity: 0
+}
 
 .ace_scrollbar {
-    display: none;
+  display: none;
 }
 
-body { 
-	font-family: sans;
+body {
+  font-family: sans;
 }
 
 code, pre {
-	font-family: DejaVuSansMonoSemiCondensed;
-	font-size: 110%;
+  font-family: DejaVuSansMonoSemiCondensed;
+  font-size: 110%;
 }
 
-.editor { 
-	width: 80%; 
+.editor {
+  width: 80%;
 }
- 
-#submit { 
-	margin: 0.8em; 
+
+#submit {
+  margin: 0.8em;
 }
 
 .exercise-button {
@@ -62,69 +75,67 @@ code, pre {
 }
 
 .exercise-iframe {
-    width: 100%;
-    border-width: 0;
-  overflow: hidden; 
+  width: 100%;
+  border-width: 0;
+  overflow: hidden;
 }
 
 /* Shape for all buttons */
-
 .hc-button {
-    font-weight: bold;
-    color: #FFFFFF;
-    cursor: pointer;
-    padding: 0.2em .56em;
-    border-radius: 0.56em;
-    position: relative;
-    font-size: 75%;
-    margin-left: 1em;
-    margin-right: 1em;
-    user-select: none;
-    display: inline-block;
-    text-decoration: none;     
+  font-weight: bold;
+  color: #FFFFFF;
+  cursor: pointer;
+  padding: 0.2em .56em;
+  border-radius: 0.56em;
+  position: relative;
+  font-size: 75%;
+  margin-left: 1em;
+  margin-right: 1em;
+  user-select: none;
+  display: inline-block;
+  text-decoration: none;
 }
 
-#buttons > hc-button { 
-	margin-bottom: 0.5em; 
+#buttons>hc-button {
+  margin-bottom: 0.5em;
 }
 
 /* Button states */
-
 .hc-button:focus {
-    border: solid 0.2em #c0c0c0;
-    border-radius: 0.56em;
+  border: solid 0.2em #c0c0c0;
+  border-radius: 0.56em;
 }
 
 .hc-button.hc-step.hc-disabled {
-    background: #707070;
-    pointer-events: none; 
+  background: #707070;
+  pointer-events: none;
 }
 
 .hc-button.hc-start, .hc-button.hc-step.active {
-    background: #005a70;
+  background: #005a70;
 }
 
 .hc-button.hc-step {
-    background: #0054a8;
+  background: #0054a8;
 }
 
 .hc-button.hc-command {
-    background: #E19042;
+  background: #E19042;
 }
 
 .ccid, .ccurl {
-  font-family: "DejaVuSansMonoSemiCondensed";	
+  font-family: "DejaVuSansMonoSemiCondensed";
 }
 
 #response {
-	border: solid thin red;
-	padding: 0.5em;
-	margin-top: 0.5em;
-	margin-bottom: 0.5em;
+  border: solid thin red;
+  padding: 0.5em;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
 }
 
 #response:empty {
-	border: none;
+  border: none;
 }
 
 #abovebuttons {
@@ -132,81 +143,77 @@ code, pre {
   padding-top: 0.5em;
 }
 
-#ccidBullets > li {
-	padding-top: 0.35em;
-	padding-bottom: 0.35em;
+#ccidBullets>li {
+  padding-top: 0.35em;
+  padding-bottom: 0.35em;
 }
 
 #buttonDiv {
   padding-top: 0.35em;
-  padding-bottom: 0.35em;	
+  padding-bottom: 0.35em;
 }
 
 #submissions td {
-	background-color: #eee;
+  background-color: #eee;
 }
-
-
 
 /* Rearrange */
-
 .horstmann_rearrange .hc-hand {
-    font-size: 111%; /* 1/0.9 */
+  font-size: 111%; /* 1/0.9 */
 }
 
-.horstmann_rearrange > div {
-    display: table;
-    width: 100%;
+.horstmann_rearrange>div {
+  display: table;
+  width: 100%;
 }
 
 .horstmann_rearrange .left {
-    display: table-cell;
-    vertical-align: top;
-    overflow: hidden;
-    white-space: pre-wrap;
-    padding: 1.25em 0.62em 5em 0em;    
-    width: 50%;
+  display: table-cell;
+  vertical-align: top;
+  overflow: hidden;
+  white-space: pre-wrap;
+  padding: 1.25em 0.62em 5em 0em;
+  width: 50%;
 }
 
 .horstmann_rearrange .right {
-    display: table-cell;
-    vertical-align: top;
-    padding: 1.25em 0.62em 1.25em 0.62em;
-    overflow: hidden;
-    width: 50%;
-    white-space: pre-wrap;
+  display: table-cell;
+  vertical-align: top;
+  padding: 1.25em 0.62em 1.25em 0.62em;
+  overflow: hidden;
+  width: 50%;
+  white-space: pre-wrap;
 }
 
 .horstmann_rearrange .left, .horstmann_rearrange .right {
   font-family: DejaVuSansMonoSemiCondensed;
   font-size: 110%;
-    user-select: none;
-    -moz-user-select: none;      /* Firefox */
-    -webkit-touch-callout: none; /* iOS Safari */
-    -webkit-user-select: none;   /* Safari */
-    -ms-user-select: none;       /* Internet Explorer/Edge */        
+  user-select: none;
+  -moz-user-select: none; /* Firefox */
+  -webkit-touch-callout: none; /* iOS Safari */
+  -webkit-user-select: none; /* Safari */
+  -ms-user-select: none; /* Internet Explorer/Edge */
 }
 
-
 .horstmann_rearrange .tile {
-    margin-top: 0.5em; // CSH
-    margin-bottom: 0.5em;
-    padding: 0.3em;
-    overflow: hidden;
-    background: #F3F3F4;
-    cursor: move;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  padding: 0.3em;
+  overflow: hidden;
+  background: #F3F3F4;
+  cursor: move;
 }
 
 .horstmann_rearrange .fixed {
-    background: #D3D3D3;
-    margin-top: 0.6em;
-    margin-bottom: 0.6em;    
+  background: #D3D3D3;
+  margin-top: 0.6em;
+  margin-bottom: 0.6em;
 }
 
 .horstmann_rearrange .dragover * {
-    pointer-events: none;
+  pointer-events: none;
 }
 
 .horstmann_rearrange .hc-bad {
-    background: #F4D3DD;
+  background: #F4D3DD;
 }
