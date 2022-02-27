@@ -52,7 +52,7 @@ public class Plan {
         String errorReport = getOutputString(compileDir, "_errors");
         if (errorReport == null) return true;         
         if (errorReport.trim().equals(""))
-        	report.error("Compilation failed");
+            report.error("Compilation failed");
         else {
             report.error(errorReport);
             report.errors(language.errors(errorReport));
@@ -65,7 +65,7 @@ public class Plan {
         String errorReport = getOutputString(compileDir, "_errors");
         if (errorReport == null) return true;         
         if (errorReport.trim().equals(""))
-        	report.systemError("Compilation of solution ailed");
+            report.systemError("Compilation of solution ailed");
         else 
             report.systemError(errorReport);        
         score.setInvalid();
@@ -164,12 +164,12 @@ public class Plan {
 
     private void executeLocally(String scriptCommand, Report report)
             throws IOException, InterruptedException {
-    	Path requestZip = Files.createTempFile("codecheck-request", ".zip",
-   			PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-r--r--")));;
-    	Path responseZip = null;
+        Path requestZip = Files.createTempFile("codecheck-request", ".zip",
+            PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-r--r--")));;
+        Path responseZip = null;
         try {
             if (debug) System.out.println(requestZip);
-            Files.write(requestZip, Util.zip(files));        	
+            Files.write(requestZip, Util.zip(files));           
             int millis = 30000; // TODO`
             String result = Util.runProcess(scriptCommand + " " + requestZip.toString(), millis);
             if (debug) System.out.println(result); 
@@ -178,12 +178,12 @@ public class Plan {
             if (lines[n].trim().isEmpty()) n--;
             responseZip = Paths.get(lines[n]);
             if (!Files.exists(responseZip))
-            	throw new CodeCheckException("comrun failed.\n" + result);
+                throw new CodeCheckException("comrun failed.\n" + result);
             outputs = Util.unzip(Files.readAllBytes(responseZip));            
         } finally {
             if (!debug) {
-            	Files.deleteIfExists(requestZip);
-            	if (responseZip != null) Files.deleteIfExists(responseZip);
+                Files.deleteIfExists(requestZip);
+                if (responseZip != null) Files.deleteIfExists(responseZip);
             }
         }
     }
@@ -197,7 +197,7 @@ public class Plan {
                 byte[] responseZip = Util.fileUpload(remoteURL, "job", "job.zip", requestZip);
                 outputs = Util.unzip(responseZip);
                 if (debug) {
-                	Path temp = Files.createTempFile("codecheck-request", ".zip");
+                    Path temp = Files.createTempFile("codecheck-request", ".zip");
                     System.out.println("Remote request at " + temp);
                     Files.write(temp, requestZip);
                     temp = Paths.get(temp.toString().replace("request",  "response"));

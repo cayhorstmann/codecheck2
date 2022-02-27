@@ -220,11 +220,11 @@ public class JSONReport implements Report {
     public String getText() { 
         ObjectMapper mapper = new ObjectMapper();
         mapper.setSerializationInclusion(Include.NON_DEFAULT);        
-    	try {
-			return mapper.writeValueAsString(data);
-		} catch (JsonProcessingException e) {			
-			return null;
-		}
+        try {
+            return mapper.writeValueAsString(data);
+        } catch (JsonProcessingException e) {           
+            return null;
+        }
     }
 
     @Override

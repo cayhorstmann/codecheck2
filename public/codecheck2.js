@@ -4,7 +4,7 @@ window.horstmann_config = {
       return window.self !== window.top
     } catch (e) {
       return true
-    }	
+    } 
   },
 
   postData: async function(url = '', data = {}) {

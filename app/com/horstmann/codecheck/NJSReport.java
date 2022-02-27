@@ -71,19 +71,19 @@ public class NJSReport extends HTMLReport {
     public String getText() { 
         ObjectMapper mapper = new ObjectMapper();
         mapper.setSerializationInclusion(Include.NON_DEFAULT);        
-    	try {
-			return mapper.writeValueAsString(data);
-		} catch (JsonProcessingException e) {			
-			return null;
-		}
+        try {
+            return mapper.writeValueAsString(data);
+        } catch (JsonProcessingException e) {           
+            return null;
+        }
     }    
     
     @Override
     public void close() {
-	    if (sectionType != null) builder.append("</div>\n");
-	    
-	    addFootnotes();
-	    builder.append("</body></html>\n");    	
+        if (sectionType != null) builder.append("</div>\n");
+        
+        addFootnotes();
+        builder.append("</body></html>\n");     
         data.report = builder.toString();
     }
     

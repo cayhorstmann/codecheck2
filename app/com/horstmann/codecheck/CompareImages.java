@@ -57,7 +57,7 @@ public class CompareImages {
                 int rgb1 = 0xFFFFFF;
                 int rgb2 = 0xFFFFFF;
                 if (x < image1.getWidth() && y < image1.getHeight())
-                	rgb1 = image1.getRGB(x, y) & 0xFFFFFF;
+                    rgb1 = image1.getRGB(x, y) & 0xFFFFFF;
                 if (x < image2.getWidth() && y < image2.getHeight())                     
                     rgb2 = image2.getRGB(x, y) & 0xFFFFFF;
                 int dr = ((rgb1 >> 16) & 0xFF) - ((rgb2 >> 16) & 0xFF);
@@ -68,10 +68,10 @@ public class CompareImages {
                 int rgb;
                 if (cdiff == 0) rgb = 0xFFFFFF; 
                 else {
-                	int THRESHOLD = 200;
-                	int MAXCDIFF = 3 * 255 * 255;
-                	int gray = THRESHOLD - THRESHOLD * cdiff / MAXCDIFF;
-                	rgb = 0xFF0000 + (gray << 8) + gray;
+                    int THRESHOLD = 200;
+                    int MAXCDIFF = 3 * 255 * 255;
+                    int gray = THRESHOLD - THRESHOLD * cdiff / MAXCDIFF;
+                    rgb = 0xFF0000 + (gray << 8) + gray;
                 }
                 diff.setRGB(x, y, rgb);
             }

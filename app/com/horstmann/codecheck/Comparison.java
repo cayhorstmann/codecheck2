@@ -131,11 +131,11 @@ public class Comparison {
         Scanner in = new Scanner(contents);
         boolean first = true;
         while (in.hasNextLine()) {
-        	if (first) {
-        		r.add(in.nextLine().replace("\uFEFF", "")); // strip out BOM.
-        		first = false;
+            if (first) {
+                r.add(in.nextLine().replace("\uFEFF", "")); // strip out BOM.
+                first = false;
             }
-        	else r.add(in.nextLine());
+            else r.add(in.nextLine());
         }
         in.close();
         // Trim blank lines from end
@@ -145,12 +145,12 @@ public class Comparison {
     }
 
     private String[] getTokens(String line) {
-    	if (!ignoreSpace) return new String[] { line };
+        if (!ignoreSpace) return new String[] { line };
         List<String> r = new ArrayList<String>();
         Scanner in = new Scanner(line);
-    	while (in.hasNext()) r.add(in.next());
-    	in.close();
-    	return r.toArray(new String[r.size()]);
+        while (in.hasNext()) r.add(in.next());
+        in.close();
+        return r.toArray(new String[r.size()]);
     }
     
     private static String normalizeWS(String s) { 

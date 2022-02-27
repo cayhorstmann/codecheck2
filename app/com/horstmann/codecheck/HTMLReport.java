@@ -296,7 +296,7 @@ public class HTMLReport implements Report {
     @Override
     public void close() {
         addFootnotes();
-        builder.append("</body></html>\n");    	
+        builder.append("</body></html>\n");     
     }
     
     @Override

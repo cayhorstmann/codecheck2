@@ -30,16 +30,16 @@ public class CallMethod {
     }
     
     public void setTolerance(double tolerance) {
-		this.tolerance = tolerance;
-	}
+        this.tolerance = tolerance;
+    }
     
     public void setIgnoreCase(boolean ignoreCase) {
-		this.ignoreCase = ignoreCase;
-	}
+        this.ignoreCase = ignoreCase;
+    }
     
     public void setIgnoreSpace(boolean ignoreSpace) {
-		this.ignoreSpace = ignoreSpace;
-	}
+        this.ignoreSpace = ignoreSpace;
+    }
 
     public boolean getOutcome() {
         return outcome;
@@ -95,7 +95,7 @@ public class CallMethod {
         final Thread mainmethodThread = new Thread() {
             public void run() {
                 try {
-                	result[0] = method.invoke(obj, methodArgs);
+                    result[0] = method.invoke(obj, methodArgs);
                 } catch (Throwable t) {
                     result[0] = t;
                 }
@@ -112,8 +112,8 @@ public class CallMethod {
         if (!done.get()) {
             mainmethodThread.stop();        
             return "Timed out after " 
-            		+ (timeout >= 2000 ? timeout / 1000 + " seconds" 
-            				: timeout + " milliseconds");
+                    + (timeout >= 2000 ? timeout / 1000 + " seconds" 
+                            : timeout + " milliseconds");
         }
         
         if (result[0] instanceof Throwable) throw (Throwable) result[0]; // TODO: Really? Do this upstream?
@@ -159,10 +159,10 @@ public class CallMethod {
                 boolean pass = false;
                 Object expectedRet = expectedRets.get(i);
                 if (thrown == null) {
-                	pass = compare(actualRet, expectedRet);
+                    pass = compare(actualRet, expectedRet);
                 }
                 if (thrown == null)
-                	actual[i] = toString(actualRet);
+                    actual[i] = toString(actualRet);
                 else
                     actual[i] = thrown.getClass().getName();
                 expected[i] = toString(expectedRet);
@@ -181,28 +181,28 @@ public class CallMethod {
         if (a == null)
             return a == b;
         else if (a.getClass().isArray() && b.getClass().isArray()) { 
-        	int alen = Array.getLength(a);
-        	if (alen != Array.getLength(b)) return false;
-        	for (int i = 0; i < alen; i++) {
-        		if (!(compare(Array.get(a, i), Array.get(b, i)))) return false;
-        	}
+            int alen = Array.getLength(a);
+            if (alen != Array.getLength(b)) return false;
+            for (int i = 0; i < alen; i++) {
+                if (!(compare(Array.get(a, i), Array.get(b, i)))) return false;
+            }
             return true;
         }
         else if (a instanceof Number && b instanceof Number) {
-        	return Math.abs(((Number) a).doubleValue() - ((Number) b).doubleValue()) <= tolerance;
+            return Math.abs(((Number) a).doubleValue() - ((Number) b).doubleValue()) <= tolerance;
         }
         else if (a instanceof String && b instanceof String) {
-        	if (ignoreSpace) {
-        		a = ((String) a).replaceAll("\\pZ+", " ").trim();
-        		b = ((String) b).replaceAll("\\pZ+", " ").trim();
-        	}
-        	if (ignoreCase) 
-        		return ((String) a).equalsIgnoreCase((String) b);
-        	else
-        		return a.equals(b);
+            if (ignoreSpace) {
+                a = ((String) a).replaceAll("\\pZ+", " ").trim();
+                b = ((String) b).replaceAll("\\pZ+", " ").trim();
+            }
+            if (ignoreCase) 
+                return ((String) a).equalsIgnoreCase((String) b);
+            else
+                return a.equals(b);
         }
         else
-            return a.equals(b);    	
+            return a.equals(b);     
     }
 
     private Object convert(String value, Class<?> cl) {

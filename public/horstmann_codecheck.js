@@ -49,7 +49,7 @@ window.addEventListener('load', function () {
 
     function codeOf(tile) {
       let code = codeMap.get(tile)
-	  return code === undefined ? tile.textContent : code 	
+    return code === undefined ? tile.textContent : code   
     }
     
     function measureIndentWidth() {
@@ -140,39 +140,39 @@ window.addEventListener('load', function () {
 
     function makeTile(contents, isFixed) {
       let tileDiv = createTile()
-	  let text
-	  if (typeof contents === 'object') {
-		text = contents.text
-		if ('code' in contents) {
-		  codeMap.set(tileDiv, contents.code)
-		  tileDiv.classList.add('pseudo')   		     
-        }		
-	  }
-	  else {
-	    text = contents
-	  }
+    let text
+    if (typeof contents === 'object') {
+    text = contents.text
+    if ('code' in contents) {
+      codeMap.set(tileDiv, contents.code)
+      tileDiv.classList.add('pseudo')            
+        }   
+    }
+    else {
+      text = contents
+    }
       if (isFixed) {
         tileDiv.classList.add('fixed')
         tileDiv.setAttribute('draggable', false);
         tileDiv.tabIndex = -1
-	    if (typeof contents === 'object' && 'indent' in contents) {
-	        setIndent(tileDiv, contents.indent)		
-	    } else {
-	        let lines = text.split('\n')
-	        let minIndent = Number.MAX_SAFE_INTEGER
-	        for (const line of lines) {
-	          let indent = 0
-	          while (line[indent] === '\t') indent++
-	          minIndent = Math.min(minIndent, indent)
-	        }
-	        let strippedText = ''
-	        for (const line of lines) {
-	          if (strippedText !== '') strippedText += '\n'
-	          strippedText += line.substring(minIndent).replace('\t', '   ')
-	        }          
-	        tileDiv.textContent = strippedText
-	        setIndent(tileDiv, minIndent)
-		}
+      if (typeof contents === 'object' && 'indent' in contents) {
+          setIndent(tileDiv, contents.indent)   
+      } else {
+          let lines = text.split('\n')
+          let minIndent = Number.MAX_SAFE_INTEGER
+          for (const line of lines) {
+            let indent = 0
+            while (line[indent] === '\t') indent++
+            minIndent = Math.min(minIndent, indent)
+          }
+          let strippedText = ''
+          for (const line of lines) {
+            if (strippedText !== '') strippedText += '\n'
+            strippedText += line.substring(minIndent).replace('\t', '   ')
+          }          
+          tileDiv.textContent = strippedText
+          setIndent(tileDiv, minIndent)
+    }
       }
       else {
         tileDiv.textContent = text
@@ -386,9 +386,9 @@ window.addEventListener('load', function () {
           group.length = 0
         }
         else {
-		  let state = { text: tile.textContent, indent: tile.indent }
-		  let code = codeMap.get(tile)
-		  if (code !== undefined) state.code = code  
+      let state = { text: tile.textContent, indent: tile.indent }
+      let code = codeMap.get(tile)
+      if (code !== undefined) state.code = code  
           group.push(state) 
         } 
       }
@@ -398,14 +398,14 @@ window.addEventListener('load', function () {
         left: leftTiles,
         right: [...right.children].map(tile => {
             let code = codeMap.get(tile)
-		    if (code !== undefined) return { text: tile.textContent, code }  
-	        else return tile.textContent
-	      })  
+        if (code !== undefined) return { text: tile.textContent, code }  
+          else return tile.textContent
+        })  
       }    
     }
 
     function restoreState(state) {
-	  codeMap.clear()
+    codeMap.clear()
       let i = 0
       let leftTiles = [...left.children]
       for (const tile of leftTiles) {
@@ -434,14 +434,14 @@ window.addEventListener('load', function () {
     function getText() {
       let content = ''
       for (const tile of left.children) {
-	    let code = codeMap.get(tile)
+      let code = codeMap.get(tile)
         if (tile.classList.contains('fixed') && code !== undefined) 
           content += code + '\n'
         else {
-	      if (code === undefined) code = tile.textContent 
+        if (code === undefined) code = tile.textContent 
           for (const line of code.split('\n'))
             content += '\t'.repeat(tile.indent) + line + '\n'
-  		}
+      }
       }
       return content
     }
@@ -899,7 +899,7 @@ window.addEventListener('load', function () {
       horstmann_config.score_change_listener && horstmann_config.score_change_listener(element, element.state, score)
     }
 
-    function successfulSubmission(data) {      	
+    function successfulSubmission(data) {       
       let report = data['report']
       let start = report.indexOf('<body>')
       let end = report.indexOf('</body>')

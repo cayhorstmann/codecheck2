@@ -50,11 +50,11 @@ public class Util {
 
     // Generics
     
-	public static <T> Iterable<T> iterable(Iterator<T> iterator) { 
-	    return new Iterable<T>() { 
-	        public Iterator<T> iterator() { return iterator; } 
-	    }; 
-	}
+    public static <T> Iterable<T> iterable(Iterator<T> iterator) { 
+        return new Iterable<T>() { 
+            public Iterator<T> iterator() { return iterator; } 
+        }; 
+    }
     
     // String handling
 
@@ -67,58 +67,58 @@ public class Util {
     }
     
     public static boolean isEmpty(String str) { return str == null || str.isEmpty(); }
-		
+        
     public static List<String> lines(String contents) {
         return contents.lines().collect(Collectors.toList());
     }
     
     public static List<String> lines(byte[] contents) {
-    	return new String(contents, StandardCharsets.UTF_8).lines().collect(Collectors.toList());
+        return new String(contents, StandardCharsets.UTF_8).lines().collect(Collectors.toList());
     }
     
-	public static int countLines(String s) {
-		if (s == null)
-			return 0;
-		int lines = 0;
-		for (int i = 0; i < s.length(); i++)
-			if (s.charAt(i) == '\n')
-				lines++;
-		return lines;
-	}
-	
-	public static StringBuilder removeTrailingNewline(StringBuilder b) {
-		if (b.length() > 0 && b.charAt(b.length() - 1) == '\n')
-			b.deleteCharAt(b.length() - 1);
-		return b;
-	}
-	
+    public static int countLines(String s) {
+        if (s == null)
+            return 0;
+        int lines = 0;
+        for (int i = 0; i < s.length(); i++)
+            if (s.charAt(i) == '\n')
+                lines++;
+        return lines;
+    }
+    
+    public static StringBuilder removeTrailingNewline(StringBuilder b) {
+        if (b.length() > 0 && b.charAt(b.length() - 1) == '\n')
+            b.deleteCharAt(b.length() - 1);
+        return b;
+    }
+    
     public static String truncate(String str, int maxlen) {
         if (str.length() > maxlen) return str.substring(0, maxlen - 3) + "...";
         else return str;
     }
 
-	// Paths
-	
+    // Paths
+    
     public static Path tail(Path p) {
         if (p.getNameCount() < 2) return p;
         return p.subpath(1, p.getNameCount());
     }
     
-	public static String extension(Path path) {
-		String name = path.toString();
-		int n = name.lastIndexOf('.');
-		if (n == -1)
-			return "";
-		else
-			return name.substring(n + 1).toLowerCase();
-	}
+    public static String extension(Path path) {
+        String name = path.toString();
+        int n = name.lastIndexOf('.');
+        if (n == -1)
+            return "";
+        else
+            return name.substring(n + 1).toLowerCase();
+    }
 
-	public static String removeExtension(Path p) {
+    public static String removeExtension(Path p) {
         String result = p.toString();
         int n = result.lastIndexOf(".");
         if (n >= 0) result = result.substring(0, n);
         return result;
-    }    	
+    }       
 
     /**
      * Yields all paths not matching a set of name patterns 
@@ -145,17 +145,17 @@ public class Util {
     }
 
     public static boolean matches(Path path, String... namePatterns) {
-    	for (String glob : namePatterns) {
-    		PathMatcher matcher = FileSystems.getDefault().getPathMatcher(
+        for (String glob : namePatterns) {
+            PathMatcher matcher = FileSystems.getDefault().getPathMatcher(
                                   "glob:" + glob.replace("/", FileSystems.getDefault().getSeparator()));
-    		if (matcher.matches(path)) return true;
-    	}
-    	return false;
+            if (matcher.matches(path)) return true;
+        }
+        return false;
     }
 
-    // Files	
-	
-	public static boolean sameContents(Path p1, Path p2) throws IOException {
+    // Files    
+    
+    public static boolean sameContents(Path p1, Path p2) throws IOException {
         return Files.exists(p1)
                 && Files.exists(p2)
                 && Arrays.equals(Files.readAllBytes(p1), Files.readAllBytes(p2));
@@ -180,30 +180,30 @@ public class Util {
         }
     }
 
-	public static void deleteDirectory(Path start) throws IOException {
-		if (start == null) return;
-		if (!Files.exists(start)) return;
-		Files.walkFileTree(start, new SimpleFileVisitor<Path>() {
-			@Override
-			public FileVisitResult visitFile(Path file,
-					BasicFileAttributes attrs) throws IOException {
-				Files.delete(file);
-				return FileVisitResult.CONTINUE;
-			}
-	
-			@Override
-			public FileVisitResult postVisitDirectory(Path dir, IOException e)
-					throws IOException {
-				if (e == null) {
-					Files.delete(dir);
-					return FileVisitResult.CONTINUE;
-				} else {
-					// directory iteration failed
-					throw e;
-				}
-			}
-		});
-	}
+    public static void deleteDirectory(Path start) throws IOException {
+        if (start == null) return;
+        if (!Files.exists(start)) return;
+        Files.walkFileTree(start, new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(Path file,
+                    BasicFileAttributes attrs) throws IOException {
+                Files.delete(file);
+                return FileVisitResult.CONTINUE;
+            }
+    
+            @Override
+            public FileVisitResult postVisitDirectory(Path dir, IOException e)
+                    throws IOException {
+                if (e == null) {
+                    Files.delete(dir);
+                    return FileVisitResult.CONTINUE;
+                } else {
+                    // directory iteration failed
+                    throw e;
+                }
+            }
+        });
+    }
     
     // Stack traces, process, etc.
 
@@ -213,48 +213,48 @@ public class Util {
         return out.toString();
     }
     
-	public static String runProcess(String command, int millis) {
-		try {
-			Process process = Runtime.getRuntime().exec(command);
-			boolean completed = process.waitFor(millis, TimeUnit.MILLISECONDS);
+    public static String runProcess(String command, int millis) {
+        try {
+            Process process = Runtime.getRuntime().exec(command);
+            boolean completed = process.waitFor(millis, TimeUnit.MILLISECONDS);
 
-			String err = new String(process.getErrorStream().readAllBytes(), "UTF-8");
-			process.getErrorStream().close();
-			String out = new String(process.getInputStream().readAllBytes(), "UTF-8");
-			process.getInputStream().close();
-			StringBuilder result = new StringBuilder();
-			result.append(err);
+            String err = new String(process.getErrorStream().readAllBytes(), "UTF-8");
+            process.getErrorStream().close();
+            String out = new String(process.getInputStream().readAllBytes(), "UTF-8");
+            process.getInputStream().close();
+            StringBuilder result = new StringBuilder();
+            result.append(err);
             if (!completed) {
-            	process.destroyForcibly();
-            	result.append("\nTimeout after " + millis + " milliseconds\n");
+                process.destroyForcibly();
+                result.append("\nTimeout after " + millis + " milliseconds\n");
             }
-			result.append(out);
-			return result.toString();
-		} catch (Exception ex) {
-			return ex.getMessage();
-		}
-	}
-	
+            result.append(out);
+            return result.toString();
+        } catch (Exception ex) {
+            return ex.getMessage();
+        }
+    }
+    
     // Escaping
     
-	public static StringBuilder htmlEscape(CharSequence s) {
-		StringBuilder b = new StringBuilder();
-		if (s == null) return b;
-		for (int i = 0; i < s.length(); i++) {
-			char c = s.charAt(i);
-			if (c == '<')
-				b.append("&lt;");
-			else if (c == '>')
-				b.append("&gt;");
-			else if (c == '&')
-				b.append("&amp;");
-			else
-				b.append(c);
-		}
-		return b;
-	}
+    public static StringBuilder htmlEscape(CharSequence s) {
+        StringBuilder b = new StringBuilder();
+        if (s == null) return b;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '<')
+                b.append("&lt;");
+            else if (c == '>')
+                b.append("&gt;");
+            else if (c == '&')
+                b.append("&amp;");
+            else
+                b.append(c);
+        }
+        return b;
+    }
 
-	public static String unescapeJava(String s) {
+    public static String unescapeJava(String s) {
         StringBuilder out = new StringBuilder();
         StringBuilder unicode = new StringBuilder(4);
         boolean hadSlash = false;
@@ -331,14 +331,14 @@ public class Util {
     }
     
     public static String getString(Map<Path, byte[]> fileMap, Path p) {
-	   if (fileMap.containsKey(p)) 
-		   return new String(fileMap.get(p), StandardCharsets.UTF_8);		   
-	   else 
-		   return "";
+       if (fileMap.containsKey(p)) 
+           return new String(fileMap.get(p), StandardCharsets.UTF_8);          
+       else 
+           return "";
     }
-	   
+       
     public static void putString(Map<Path, byte[]> fileMap, Path p, String contents) {
-    	fileMap.put(p, contents.getBytes(StandardCharsets.UTF_8));
+        fileMap.put(p, contents.getBytes(StandardCharsets.UTF_8));
     }    
     
     public static Map<Path, byte[]> unzip(byte[] bytes) throws IOException {
@@ -347,9 +347,9 @@ public class Util {
         ZipEntry entry;
         while ((entry = zin.getNextEntry()) != null)
         {
-        	String name = entry.getName();
-        	if (!entry.isDirectory() && !name.startsWith("__MACOSX") && !name.endsWith(".DS_Store"))
-        		result.put(Paths.get(name), zin.readAllBytes());
+            String name = entry.getName();
+            if (!entry.isDirectory() && !name.startsWith("__MACOSX") && !name.endsWith(".DS_Store"))
+                result.put(Paths.get(name), zin.readAllBytes());
             zin.closeEntry();
         }
         zin.close();
@@ -438,103 +438,103 @@ public class Util {
         }        
     }
     
-	public static String httpPost(String urlString, String content, String contentType) {
-		StringBuilder result = new StringBuilder();
-		try {
-			URL url = new URL(urlString);
-			HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-			connection.setRequestProperty("Content-Type", contentType);
-			connection.setDoOutput(true);
-			try (OutputStream out = connection.getOutputStream()) {
-				out.write(content.getBytes("UTF-8"));
-			}
-			int response = connection.getResponseCode();
-			result.append(response);
-			result.append("\n");
-			try (Scanner in = new Scanner(connection.getInputStream(), "UTF-8")) {
-				while (in.hasNextLine()) {
-					result.append(in.nextLine());
-					result.append("\n");
-				}
-			}
-			catch (IOException e) {
-			    InputStream err = connection.getErrorStream();
-			    if (err == null) throw e;
-			    try (Scanner in = new Scanner(err, "UTF-8")) {
-			        result.append(in.nextLine());
-			        result.append("\n");
-			    }
-			}			
-		} catch (Throwable ex) {
-			result.append(getStackTrace(ex));
-		}
-		return result.toString();		
-	}
-	
-	public static String getParam(Map<String, String[]> params, String key) {
-		String[] values = params.get(key);
-		if (values == null || values.length == 0) return null;
-		else return values[0];
-	}
-	
-	public static String paramsToString(Map<String, String[]> params) {
-		if (params == null) return "null";
-		StringBuilder result = new StringBuilder();
-		result.append("{");
-		for (String key : params.keySet()) {
-			if (result.length() > 1) result.append(", ");
-			result.append(key); 
-			result.append("=");
-			result.append(Arrays.toString(params.get(key)));
-		}
-		result.append("}");
-		return result.toString();
-	}
-	/**
-	 * Yields a map of query parameters in a HTTP URI
-	 * @param url the HTTP URL
-	 * @return the map of query parameters or an empty map if there are none
-	 * For example, if uri is http://fred.com?name=wilma&passw%C3%B6rd=c%26d%3De
-	 * then the result is { "name" -> "wilma", "passwörd" -> "c&d=e" }
-	 */
-	public static Map<String, String> getParams(String url)
-	{		
-		// https://www.talisman.org/~erlkonig/misc/lunatech%5Ewhat-every-webdev-must-know-about-url-encoding/
-		Map<String, String> params = new HashMap<>();
-		String rawQuery;
-		try {
-			rawQuery = new URI(url).getRawQuery();
-			if (rawQuery != null) {
-				for (String kvpair : rawQuery.split("&"))
-				{
-					int n = kvpair.indexOf("=");
-					params.put(
-						URLDecoder.decode(kvpair.substring(0, n), "UTF-8"), 
-						URLDecoder.decode(kvpair.substring(n + 1), "UTF-8"));
-				}
-			}
-		} catch (UnsupportedEncodingException e) {
-			// UTF-8 is supported
-		} catch (URISyntaxException e1) {
-			// Return empty map
-		}
-		return params;
-	}
+    public static String httpPost(String urlString, String content, String contentType) {
+        StringBuilder result = new StringBuilder();
+        try {
+            URL url = new URL(urlString);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestProperty("Content-Type", contentType);
+            connection.setDoOutput(true);
+            try (OutputStream out = connection.getOutputStream()) {
+                out.write(content.getBytes("UTF-8"));
+            }
+            int response = connection.getResponseCode();
+            result.append(response);
+            result.append("\n");
+            try (Scanner in = new Scanner(connection.getInputStream(), "UTF-8")) {
+                while (in.hasNextLine()) {
+                    result.append(in.nextLine());
+                    result.append("\n");
+                }
+            }
+            catch (IOException e) {
+                InputStream err = connection.getErrorStream();
+                if (err == null) throw e;
+                try (Scanner in = new Scanner(err, "UTF-8")) {
+                    result.append(in.nextLine());
+                    result.append("\n");
+                }
+            }           
+        } catch (Throwable ex) {
+            result.append(getStackTrace(ex));
+        }
+        return result.toString();       
+    }
+    
+    public static String getParam(Map<String, String[]> params, String key) {
+        String[] values = params.get(key);
+        if (values == null || values.length == 0) return null;
+        else return values[0];
+    }
+    
+    public static String paramsToString(Map<String, String[]> params) {
+        if (params == null) return "null";
+        StringBuilder result = new StringBuilder();
+        result.append("{");
+        for (String key : params.keySet()) {
+            if (result.length() > 1) result.append(", ");
+            result.append(key); 
+            result.append("=");
+            result.append(Arrays.toString(params.get(key)));
+        }
+        result.append("}");
+        return result.toString();
+    }
+    /**
+     * Yields a map of query parameters in a HTTP URI
+     * @param url the HTTP URL
+     * @return the map of query parameters or an empty map if there are none
+     * For example, if uri is http://fred.com?name=wilma&passw%C3%B6rd=c%26d%3De
+     * then the result is { "name" -> "wilma", "passwörd" -> "c&d=e" }
+     */
+    public static Map<String, String> getParams(String url)
+    {       
+        // https://www.talisman.org/~erlkonig/misc/lunatech%5Ewhat-every-webdev-must-know-about-url-encoding/
+        Map<String, String> params = new HashMap<>();
+        String rawQuery;
+        try {
+            rawQuery = new URI(url).getRawQuery();
+            if (rawQuery != null) {
+                for (String kvpair : rawQuery.split("&"))
+                {
+                    int n = kvpair.indexOf("=");
+                    params.put(
+                        URLDecoder.decode(kvpair.substring(0, n), "UTF-8"), 
+                        URLDecoder.decode(kvpair.substring(n + 1), "UTF-8"));
+                }
+            }
+        } catch (UnsupportedEncodingException e) {
+            // UTF-8 is supported
+        } catch (URISyntaxException e1) {
+            // Return empty map
+        }
+        return params;
+    }
 
-	public static boolean exists(String url) {
-		boolean result = false;
-		try {
-			HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
-			try {
-				conn.connect();
-				result = conn.getHeaderField(null).contains("200");
-			} finally {
-				conn.disconnect();
-			}
-		} catch (Exception ex) {
-		}
-		return result;
-	}
+    public static boolean exists(String url) {
+        boolean result = false;
+        try {
+            HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+            try {
+                conn.connect();
+                result = conn.getHeaderField(null).contains("200");
+            } finally {
+                conn.disconnect();
+            }
+        } catch (Exception ex) {
+        }
+        return result;
+    }
     
     // UIDs
     
@@ -542,33 +542,33 @@ public class Util {
         return new BigInteger(128, generator).toString(36).toUpperCase();               
     }
     
-	public static String createPublicUID() {
-		return datePrefix() + new BigInteger(128, generator).toString(36);		
-	}
+    public static String createPublicUID() {
+        return datePrefix() + new BigInteger(128, generator).toString(36);      
+    }
 
-	private static String datePrefix() {
-		return DateTimeFormatter.ofPattern("yyMMddkkmm").format(LocalDateTime.now());
-	}
-	private static String vowels = "aeiouy";
-	private static String consonants = "bcdfghjklmnpqrstvwxz";
+    private static String datePrefix() {
+        return DateTimeFormatter.ofPattern("yyMMddkkmm").format(LocalDateTime.now());
+    }
+    private static String vowels = "aeiouy";
+    private static String consonants = "bcdfghjklmnpqrstvwxz";
 
-	public static String createPronouncableUID() {
-		StringBuilder result = new StringBuilder();
-		int len = 16;
-		int b = Util.generator.nextInt(2);
-		for (int i = 0; i < len; i++) {
-			String s = i % 2 == b ? Util.consonants : vowels;
-			int n = Util.generator.nextInt(s.length());
-			result.append(s.charAt(n));
-			if (i % 4 == 3 && i < len - 1) {
-				result.append('-');
-				b = Util.generator.nextInt(2);
-			}
-		}
-		return result.toString();
-	}
+    public static String createPronouncableUID() {
+        StringBuilder result = new StringBuilder();
+        int len = 16;
+        int b = Util.generator.nextInt(2);
+        for (int i = 0; i < len; i++) {
+            String s = i % 2 == b ? Util.consonants : vowels;
+            int n = Util.generator.nextInt(s.length());
+            result.append(s.charAt(n));
+            if (i % 4 == 3 && i < len - 1) {
+                result.append('-');
+                b = Util.generator.nextInt(2);
+            }
+        }
+        return result.toString();
+    }
 
-	public static boolean isPronouncableUID(String s) {
-		return s.matches("(([aeiouy][bcdfghjklmnpqrstvwxz]){2}|([bcdfghjklmnpqrstvwxz][aeiouy]){2})(-(([aeiouy][bcdfghjklmnpqrstvwxz]){2}|([bcdfghjklmnpqrstvwxz][aeiouy]){2})){3}");
-	}
+    public static boolean isPronouncableUID(String s) {
+        return s.matches("(([aeiouy][bcdfghjklmnpqrstvwxz]){2}|([bcdfghjklmnpqrstvwxz][aeiouy]){2})(-(([aeiouy][bcdfghjklmnpqrstvwxz]){2}|([bcdfghjklmnpqrstvwxz][aeiouy]){2})){3}");
+    }
 }

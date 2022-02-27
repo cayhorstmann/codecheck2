@@ -35,7 +35,7 @@ public class JavaScriptLanguage implements Language {
         if (!isSource(p))
             return false;
         for (String line : Util.lines(contents)) 
-        	// https://nodejs.org/api/modules.html
+            // https://nodejs.org/api/modules.html
             if (line.matches("^\\s*(exports\\.|module\\.exports\\s*=).*$")) return false;
         return true;
     }

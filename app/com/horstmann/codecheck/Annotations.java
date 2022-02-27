@@ -19,7 +19,7 @@ public class Annotations {
     public static final Set<String> NON_BLANK_BEFORE_OK = Set.of("SUB", "PSEUDO"); 
 
     public static class Annotation {
-    	public boolean isValid;
+        public boolean isValid;
         public Path path;
         public String key = "";
         public String args;
@@ -27,28 +27,28 @@ public class Annotations {
         public String next = "";
     }
     
-	public static Annotation parse(String line, String start, String end) {
-		Annotation ann = new Annotation();
-		int i = line.indexOf(start);
-		if (i < 0) return ann;
-		String before = line.substring(0, i); 
-		i += start.length();
-		String line1 = line.stripTrailing();
-		if (!line1.endsWith(end)) return ann;
-		int j = line1.length() - end.length(); 
-		int k = i;
-		while (k < j && Character.isAlphabetic(line.charAt(k))) k++;
-		if (k < j && !Character.isWhitespace(line.charAt(k))) return ann;
-		String key = line.substring(i, k);
-		if (!VALID_ANNOTATIONS.contains(key)) return ann;
-		// Only a few annotations can have non-blank before
-		if (!before.isBlank() && !NON_BLANK_BEFORE_OK.contains(key)) return ann;
-		ann.isValid = true;
-		ann.before = before;
-		ann.key = key;
-		ann.args = line.substring(k, j).strip();
-		return ann;
-	}    	        
+    public static Annotation parse(String line, String start, String end) {
+        Annotation ann = new Annotation();
+        int i = line.indexOf(start);
+        if (i < 0) return ann;
+        String before = line.substring(0, i); 
+        i += start.length();
+        String line1 = line.stripTrailing();
+        if (!line1.endsWith(end)) return ann;
+        int j = line1.length() - end.length(); 
+        int k = i;
+        while (k < j && Character.isAlphabetic(line.charAt(k))) k++;
+        if (k < j && !Character.isWhitespace(line.charAt(k))) return ann;
+        String key = line.substring(i, k);
+        if (!VALID_ANNOTATIONS.contains(key)) return ann;
+        // Only a few annotations can have non-blank before
+        if (!before.isBlank() && !NON_BLANK_BEFORE_OK.contains(key)) return ann;
+        ann.isValid = true;
+        ann.before = before;
+        ann.key = key;
+        ann.args = line.substring(k, j).strip();
+        return ann;
+    }               
     
 
     private Language language;
@@ -67,12 +67,12 @@ public class Annotations {
 
     public static String getArg(String line, String key, String start, String end) {
         int k = line.indexOf(start + key);
-    	return line.substring(k + start.length() + key.length(), line.length() - end.length()).strip();    	
+        return line.substring(k + start.length() + key.length(), line.length() - end.length()).strip();     
     }
     
     private void read(Path p, byte[] contents) {
-    	if (!language.isSource(p)) return; 
-    	String[] delims = language.pseudoCommentDelimiters();
+        if (!language.isSource(p)) return; 
+        String[] delims = language.pseudoCommentDelimiters();
         List<String> lines =  Util.lines(contents);
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i).trim();
@@ -87,7 +87,7 @@ public class Annotations {
                 if (Arrays.asList("SOLUTION", "SHOW", "EDIT", "TILE").contains(a.key)) 
                     solutions.add(p);
                 if (a.key.equals("HIDE")) 
-                	hidden.add(p);
+                    hidden.add(p);
                 a.path = p;
                 annotations.add(a);
             }

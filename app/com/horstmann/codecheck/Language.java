@@ -28,14 +28,14 @@ public interface Language {
        new DartLanguage()
     };
 
-	static Language languageFor(Set<Path> files) {
-		Language language = null;
-		for (int k = 0; language == null && k < languages.length; k++) {
+    static Language languageFor(Set<Path> files) {
+        Language language = null;
+        for (int k = 0; language == null && k < languages.length; k++) {
             if (languages[k].isLanguage(files)) 
                 language = languages[k];
         }
-		return language;
-	}
+        return language;
+    }
     
     /**
      * Gets the extension required for source files in this language. 
@@ -141,11 +141,11 @@ public interface Language {
         // Don't call isSource because that may have been overridden to classify 
         // header files as source
         if (!fileName.toString().endsWith("." + extension)) return false;
-    	Pattern p = mainPattern();
-    	if (p == null)
-    		return moduleOf(fileName).matches(".*(Runn|Test)er[0-9]*");
-    	else
-    		return p.matcher(contents).find();
+        Pattern p = mainPattern();
+        if (p == null)
+            return moduleOf(fileName).matches(".*(Runn|Test)er[0-9]*");
+        else
+            return p.matcher(contents).find();
     }
 
     /**
@@ -168,7 +168,7 @@ public interface Language {
      * cannot produce a CALL tester.
      */
     default Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls, ResourceLoader resourceLoader) throws IOException {
-    	return null;
+        return null;
     }
 
     default String[] pseudoCommentDelimiters() { return new String[] { "//", "" }; }
@@ -203,7 +203,7 @@ public interface Language {
               score.add(runs - failures, runs, report);
            }
            else 
-        	   report.systemError("Cannot determine unit test outcome");        
+               report.systemError("Cannot determine unit test outcome");        
        }        
     }
 
@@ -268,7 +268,7 @@ public interface Language {
     
     default Pattern errorPattern() { return null; }
     
-    default List<Error> errors(String report) {    	
+    default List<Error> errors(String report) {     
         Pattern pattern = errorPattern();
         if (pattern != null) {
             List<Error> result = new ArrayList<>();
@@ -285,6 +285,6 @@ public interface Language {
             return result;
         }
         else 
-        	return Collections.emptyList();
+            return Collections.emptyList();
     }
 }

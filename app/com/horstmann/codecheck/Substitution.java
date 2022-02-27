@@ -16,8 +16,8 @@ public class Substitution {
     private Language language;
     
     public Substitution(Language language) {
-    	this.language = language;
-	}
+        this.language = language;
+    }
 
     public void addVariable(Path file, String decl, String args) {
         if (this.file == null)

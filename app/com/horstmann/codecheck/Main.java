@@ -66,7 +66,7 @@ public class Main {
         }
         
         Report report = new Main().run(submissionFiles, problemFiles, 
-    		System.getProperty("com.horstmann.codecheck.report"), metadata, new CommandLineResourceLoader());
+            System.getProperty("com.horstmann.codecheck.report"), metadata, new CommandLineResourceLoader());
         report.save(submissionDir, "report");        
     }
 
@@ -76,7 +76,7 @@ public class Main {
         int timeout = timeoutMillis / n;
         int maxOutput = maxOutputLen / n;
         for (int i = 0; i < n; i++) {
-        	String contents = submissionFiles.get(mainFile);
+            String contents = submissionFiles.get(mainFile);
             String subtituted = sub.substitute(contents, i); 
             String fileID = "submissionsubfiles" + i;
             String compileID = "submissionsub" + i;            
@@ -151,13 +151,13 @@ public class Main {
                     outcomes[i] = lines.get(2).equals("true");                
                 } else {
                     // Error in compilation or execution
-                	// We assume that the solution correctly produces a single line
-                	// Most likely, the rest is an exception report, and the true/false never came
+                    // We assume that the solution correctly produces a single line
+                    // Most likely, the rest is an exception report, and the true/false never came
                     StringBuilder msg = new StringBuilder();
                     for (int j = 1; j < lines.size(); j++) {
-                    	String line = lines.get(j); 
-                    	if (j < lines.size() - 1 || !(line.equals("true") || line.equals("false")))
-                    	msg.append(line); msg.append('\n'); 
+                        String line = lines.get(j); 
+                        if (j < lines.size() - 1 || !(line.equals("true") || line.equals("false")))
+                        msg.append(line); msg.append('\n'); 
                     }
                     String message = msg.toString(); 
                                     
@@ -223,11 +223,11 @@ public class Main {
             plan.compile("solutionrun", "solution", mainFile, dependentSourcePaths);
 
         plan.addTask(() -> {
-        	report.header("run", problem.getInputMode() ? "Output" : "Testing " + mainFile);
-        	if (runSolution)
-        		plan.checkSolutionCompiled("solutionrun", report, score); 
-        	plan.checkCompiled("submissionrun", report, score);
-    	});
+            report.header("run", problem.getInputMode() ? "Output" : "Testing " + mainFile);
+            if (runSolution)
+                plan.checkSolutionCompiled("solutionrun", report, score); 
+            plan.checkCompiled("submissionrun", report, score);
+        });
         for (String test : inputs.keySet()) {
             String input = inputs.get(test);
             testInput(mainFile, runSolution, test, input, timeoutMillis / inputs.size(), maxOutputLen / inputs.size(), okToInterleave);
@@ -344,7 +344,7 @@ public class Main {
     }
     
     private void getMainAndDependentSourceFiles() {
-    	for (Map.Entry<Path, byte[]> entry : problem.getSolutionFiles().entrySet()) {
+        for (Map.Entry<Path, byte[]> entry : problem.getSolutionFiles().entrySet()) {
             Path p = entry.getKey();
             String contents = new String(entry.getValue(), StandardCharsets.UTF_8);
             if (problem.getLanguage().isMain(p, contents))
@@ -356,11 +356,11 @@ public class Main {
         for (Map.Entry<Path, byte[]> entry : problem.getUseFiles().entrySet()) {
             Path p = entry.getKey();
             if (problem.getLanguage().isSource(p)) {
-            	String contents = new String(entry.getValue(), StandardCharsets.UTF_8);
-            	if (problem.getLanguage().isMain(p, contents))
-            		mainSourcePaths.add(p);
-            	else if (!problem.getLanguage().isUnitTest(p))
-            		dependentSourcePaths.add(p);
+                String contents = new String(entry.getValue(), StandardCharsets.UTF_8);
+                if (problem.getLanguage().isMain(p, contents))
+                    mainSourcePaths.add(p);
+                else if (!problem.getLanguage().isUnitTest(p))
+                    dependentSourcePaths.add(p);
             }
         }
     }
@@ -370,17 +370,17 @@ public class Main {
         Path solution = Paths.get("solution");
         Path submission = Paths.get("submission");
         for (Map.Entry<Path, byte[]> entry : problem.getUseFiles().entrySet()) 
-    		plan.addFile(use.resolve(entry.getKey()), entry.getValue());
+            plan.addFile(use.resolve(entry.getKey()), entry.getValue());
         for (Map.Entry<Path, byte[]> entry : problem.getInputFiles().entrySet()) {
-        	Path p = entry.getKey();
-        	if (!submissionFiles.containsKey(p)) throw new CodeCheckException("Missing file " + p);
-        	plan.addFile(use.resolve(p), submissionFiles.get(p));
+            Path p = entry.getKey();
+            if (!submissionFiles.containsKey(p)) throw new CodeCheckException("Missing file " + p);
+            plan.addFile(use.resolve(p), submissionFiles.get(p));
         }
         
         for (Map.Entry<Path, byte[]> entry : problem.getSolutionFiles().entrySet()) {
             Path p = entry.getKey();            
             plan.addFile(solution.resolve(p), entry.getValue());
-        	if (!submissionFiles.containsKey(p)) throw new CodeCheckException("Missing file " + p);
+            if (!submissionFiles.containsKey(p)) throw new CodeCheckException("Missing file " + p);
             plan.addFile(submission.resolve(p), submissionFiles.get(p));
         }        
     }
@@ -397,11 +397,11 @@ public class Main {
          report.comment("ID", problem.getId());
 
          for (Map.Entry<Object, Object> entries : metadata.entrySet())
-        	 report.comment(entries.getKey().toString(), entries.getValue().toString());
+             report.comment(entries.getKey().toString(), entries.getValue().toString());
     }
 
     public Report run(Map<Path, String> submissionFiles, Map<Path, byte[]> problemFiles, 
-    		String reportType, Properties metadata, ResourceLoader resourceLoader) throws IOException {
+            String reportType, Properties metadata, ResourceLoader resourceLoader) throws IOException {
         long startTime = System.currentTimeMillis();
         boolean scoring = true;
         try {
@@ -464,17 +464,17 @@ public class Main {
                 for (String i : new String[] { "", "1", "2", "3", "4", "5", "6", "7", "8", "9" }) {
                     String key = "test" + i + ".in";
                     
-                	Path p = Paths.get(key);
-                	byte[] contents = null;
-                	if (problemFiles.containsKey(p))
-                		contents = problemFiles.get(p);
-                	else {
-                		p = Paths.get("student").resolve(key);
-                    	if (problemFiles.containsKey(p))
-                    		contents = problemFiles.get(p);                    				
-                	}
-                	if (contents != null) 
-                		inputs.put("test" + i, new String(contents, StandardCharsets.UTF_8));
+                    Path p = Paths.get(key);
+                    byte[] contents = null;
+                    if (problemFiles.containsKey(p))
+                        contents = problemFiles.get(p);
+                    else {
+                        p = Paths.get("student").resolve(key);
+                        if (problemFiles.containsKey(p))
+                            contents = problemFiles.get(p);                                 
+                    }
+                    if (contents != null) 
+                        inputs.put("test" + i, new String(contents, StandardCharsets.UTF_8));
                 }
                 int inIndex = inputs.size();
                 for (String s : problem.getAnnotations().findKeys("IN")) {
@@ -534,7 +534,7 @@ public class Main {
                  */
                 for (Path p : problem.getSolutionFiles().keySet())   
                     report.file(p.toString(), submissionFiles.get(p));
-    		
+            
                 if (printFiles.size() > 0) {
                     report.header("providedFiles", "Provided files");
                     for (Path p : printFiles)

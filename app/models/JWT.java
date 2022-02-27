@@ -15,30 +15,30 @@ import io.jsonwebtoken.SignatureAlgorithm;
 
 @Singleton
 public class JWT {
-	private String key;
-	@Inject public JWT(Config config) {
-		key = config.getString("play.http.secret.key");
-	}
-	public String generate(Map<String, Object> claims) {
-		String jwt = Jwts.builder()
-			.setIssuer("codecheck.io")
-			.addClaims(claims)
-			.setIssuedAt(Date.from(Instant.now()))
-			.setExpiration(Date.from(Instant.now().plusSeconds(60 * 60 * 3)))
-			.signWith(SignatureAlgorithm.HS256, key)
-			.compact();
-		return jwt;
-	}
-	
-	// TODO: Do we need to verify it's signed with the same algorithm?
-	public Map<String, Object> verify(String token) {
-		try {
-			return Jwts.parser()
-				.setSigningKey(key)
-				.parseClaimsJws(token)
-				.getBody();
-		} catch (JwtException e) {
-			return null;
-		}
-	}
+    private String key;
+    @Inject public JWT(Config config) {
+        key = config.getString("play.http.secret.key");
+    }
+    public String generate(Map<String, Object> claims) {
+        String jwt = Jwts.builder()
+            .setIssuer("codecheck.io")
+            .addClaims(claims)
+            .setIssuedAt(Date.from(Instant.now()))
+            .setExpiration(Date.from(Instant.now().plusSeconds(60 * 60 * 3)))
+            .signWith(SignatureAlgorithm.HS256, key)
+            .compact();
+        return jwt;
+    }
+    
+    // TODO: Do we need to verify it's signed with the same algorithm?
+    public Map<String, Object> verify(String token) {
+        try {
+            return Jwts.parser()
+                .setSigningKey(key)
+                .parseClaimsJws(token)
+                .getBody();
+        } catch (JwtException e) {
+            return null;
+        }
+    }
 }

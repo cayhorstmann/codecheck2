@@ -9,7 +9,7 @@ import play.libs.concurrent.CustomExecutionContext;
 
 public class CodecheckExecutionContext extends CustomExecutionContext {
 
-	@Inject
+    @Inject
     public CodecheckExecutionContext(ActorSystem actorSystem) {
     // uses a custom thread pool defined in application.conf
         super(actorSystem, "akka.actor.codecheck-dispatcher");

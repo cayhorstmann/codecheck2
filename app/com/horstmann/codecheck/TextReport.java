@@ -164,7 +164,7 @@ public class TextReport implements Report {
 
     @Override
     public TextReport image(BufferedImage image) {
-    	/*
+        /*
         try {
             imageCount++;
             Path out = dir.resolve("report" + imageCount + ".png");

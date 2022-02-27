@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function () {
-  // TODO: Legacy	
+  // TODO: Legacy 
   // For embedding CodeCheck in an iframe
   
   function getScore() { // TODO: Remove when decommissioning v1
@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', function () {
   window.addEventListener('message', receiveMessage, false);
 
   // Set up Ace editors
-	
+  
   let files = document.getElementsByClassName('file');
   for (let i = 0; i < files.length; i++) {
     let editorDivs = files[i].getElementsByClassName('editor');
@@ -89,13 +89,13 @@ document.addEventListener('DOMContentLoaded', function () {
       let divId = editorDivs[k].getAttribute('id')
       let session = editors[k].getSession()  
       if (divId.indexOf('.java-')!=-1) {
-	      session.setMode('ace/mode/java');
+        session.setMode('ace/mode/java');
       } else if(divId.indexOf('.cpp-')!=-1 || divId.indexOf('.c-')!=-1 || divId.indexOf('.h-')!=-1) {
-	      session.setMode('ace/mode/c_cpp');
+        session.setMode('ace/mode/c_cpp');
       } else if(divId.indexOf('.py-')!=-1) {
-	      session.setMode('ace/mode/python');
+        session.setMode('ace/mode/python');
       } else {
-	      session.setMode('ace/mode/text');
+        session.setMode('ace/mode/text');
       }
       editors[k].setOption('autoScrollEditorIntoView', true);
       editors[k].setOption('displayIndentGuides', false);
@@ -113,12 +113,12 @@ document.addEventListener('DOMContentLoaded', function () {
       editors[k].setOption('scrollSpeed', 0);      
       
       if(editorDivs[k].classList.contains('readonly')){
-	editors[k].setReadOnly(true);
-	// https://stackoverflow.com/questions/32806060/is-there-a-programmatic-way-to-hide-the-cursor-in-ace-editor
-	editors[k].renderer.$cursorLayer.element.style.display = 'none'
-	editors[k].setTheme('ace/theme/kuroir');
+  editors[k].setReadOnly(true);
+  // https://stackoverflow.com/questions/32806060/is-there-a-programmatic-way-to-hide-the-cursor-in-ace-editor
+  editors[k].renderer.$cursorLayer.element.style.display = 'none'
+  editors[k].setTheme('ace/theme/kuroir');
       } else {
-	editors[k].setTheme('ace/theme/chrome');
+  editors[k].setTheme('ace/theme/chrome');
       }
     }
     
@@ -127,15 +127,15 @@ document.addEventListener('DOMContentLoaded', function () {
       for (let k = 0; k < editors.length; k++) {
         let editorSession = editors[k].getSession()
         editorSession.clearAnnotations()
-	editorSession.setOption('firstLineNumber', totalLines + 1);
-	let lines = editors[k].getSession().getDocument().getLength();
+  editorSession.setOption('firstLineNumber', totalLines + 1);
+  let lines = editors[k].getSession().getDocument().getLength();
         editorDivs[k].style.height = (editors[k].renderer.lineHeight * lines) + "px";
-	editors[k].resize();
+  editors[k].resize();
         let aceScroller = editorDivs[k].getElementsByClassName('ace_scroller')[0]
         aceScroller.style.bottom = '0px'
         // this is the scrolled area, not the scroll bar
         // we are hiding the scroll bars in css, but ace doesn't seem to take that into account
-	totalLines += lines;
+  totalLines += lines;
       }
     }
     for (let k = 0; k < editors.length; k++) {
@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', function () {
       return window.self !== window.top
     } catch (e) {
       return true
-    }	
+    } 
   }
 
   function highlightLine(file, line, message) {
@@ -225,12 +225,12 @@ document.addEventListener('DOMContentLoaded', function () {
     codecheckSubmitResponse.innerHTML = data['report']
     if (!inIframe()) { // No download button in iframe (Engage)
       if(/(Version)\/(\d+)\.(\d+)(?:\.(\d+))?.*Safari\//.test(navigator.userAgent)) {
-	codecheckSubmitResponse.innerHTML += '<div>Download not supported on Safari. Use Firefox or Chrome!</div>'			
+  codecheckSubmitResponse.innerHTML += '<div>Download not supported on Safari. Use Firefox or Chrome!</div>'      
       }
       else {
-	codecheckSubmitResponse.innerHTML += 
-	  '<div class="download">'
-	  + '<button onclick="download(\'data:application/octet-stream;base64,' + data.zip + '\', \'' + data.metadata.ID + '.signed.zip\', \'application/octet-stream\')">Download Report</button></div>'
+  codecheckSubmitResponse.innerHTML += 
+    '<div class="download">'
+    + '<button onclick="download(\'data:application/octet-stream;base64,' + data.zip + '\', \'' + data.metadata.ID + '.signed.zip\', \'application/octet-stream\')">Download Report</button></div>'
       }
     }
     codecheckSubmitResponse.score = data['score']
@@ -305,6 +305,6 @@ document.addEventListener('DOMContentLoaded', function () {
     console.log('Posting to parent', data)
     window.parent.postMessage(data, '*' )
   }  
-})	
+})  
 
 
