@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -31,6 +32,7 @@ import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ObjectMetadata;
@@ -40,12 +42,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.typesafe.config.Config;
 
+import play.Logger;
+
 @Singleton
 public class S3Connection {
     private Config config;
     private String bucketSuffix = null;
     private AmazonS3 amazonS3;
     private AmazonDynamoDB amazonDynamoDB;
+    private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
     
     @Inject public S3Connection(Config config) {
         this.config = config;
@@ -92,13 +97,23 @@ public class S3Connection {
     public void putToS3(Path file, String repo, String key)
             throws IOException {
         String bucket = repo + "." + bucketSuffix;
-        getS3Connection().putObject(bucket, key, file.toFile());
+        try {
+            getS3Connection().putObject(bucket, key, file.toFile());
+        } catch (AmazonS3Exception ex) {
+            logger.error("S3Connection.putToS3: Cannot put " + file + " to " + bucket);
+            throw ex;
+        }
     }
     
     public void putToS3(String contents, String repo, String key)
             throws IOException {
         String bucket = repo + "." + bucketSuffix;
-        getS3Connection().putObject(bucket, key, contents);
+        try {
+            getS3Connection().putObject(bucket, key, contents);
+        } catch (AmazonS3Exception ex) {
+            logger.error("S3Connection.putToS3: Cannot put " + contents.replaceAll("\n", "|").substring(0, Math.min(50, contents.length())) + "... to " + bucket);
+            throw ex;
+        }
     }
 
     public void putToS3(byte[] contents, String repo, String key)
@@ -107,29 +122,43 @@ public class S3Connection {
         ObjectMetadata metadata = new ObjectMetadata();
         metadata.setContentLength(contents.length);
         metadata.setContentType("application/zip");
-        ByteArrayInputStream in = new ByteArrayInputStream(contents);
-        getS3Connection().putObject(bucket, key, in, metadata);
-        in.close();
+        try {
+            try (ByteArrayInputStream in = new ByteArrayInputStream(contents)) {
+                getS3Connection().putObject(bucket, key, in, metadata); 
+            } 
+        } catch (AmazonS3Exception ex) {
+            String bytes = Arrays.toString(contents);
+            logger.error("S3Connection.putToS3: Cannot put " + bytes.substring(0, Math.min(50, bytes.length())) + "... to " + bucket);
+            throw ex;
+        }
     }
 
     public void deleteFromS3(String repo, String key)
             throws IOException {
         String bucket = repo + "." + bucketSuffix;
-        getS3Connection().deleteObject(bucket, key);
+        try {
+           getS3Connection().deleteObject(bucket, key);
+        } catch (AmazonS3Exception ex) {
+            logger.error("S3Connection.deleteFromS3: Cannot delete " + bucket);
+            throw ex;
+        }
     }
     
     public byte[] readFromS3(String repo, String problem)
             throws IOException {
         String bucket = repo + "." + bucketSuffix;
 
-        InputStream in = getS3Connection().getObject(bucket, problem)
-                .getObjectContent();
-        // TODO -- trying to avoid warning 
-        // WARN - com.amazonaws.services.s3.internal.S3AbortableInputStream - Not all bytes were read from the S3ObjectInputStream, aborting HTTP connection. This is likely an error and may result in sub-optimal behavior. Request only the bytes you need via a ranged GET or drain the input stream after use
-        //Util.unzip(in, problemDir);
-        //in.close();
-        byte[] bytes = in.readAllBytes();
-        in.close();
+        byte[] bytes = null;
+        try {
+            // TODO -- trying to avoid warning 
+            // WARN - com.amazonaws.services.s3.internal.S3AbortableInputStream - Not all bytes were read from the S3ObjectInputStream, aborting HTTP connection. This is likely an error and may result in sub-optimal behavior. Request only the bytes you need via a ranged GET or drain the input stream after use
+            try (InputStream in = getS3Connection().getObject(bucket, problem).getObjectContent()) {
+                bytes = in.readAllBytes();
+            }
+        } catch (AmazonS3Exception ex) {
+            logger.error("S3Connection.readFromS3: Cannot read " + problem + " from " + bucket);
+            throw ex;
+        }
         return bytes;
     }
     
