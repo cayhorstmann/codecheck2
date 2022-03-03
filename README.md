@@ -413,6 +413,12 @@ Cloud Run error: Container failed to start. Failed to start and then listen on t
 com.horstmann.codecheck.storeLocation=""
 ```
 ## System Error: java.util.NoSuchElementException: submissionrun1/_run
+Update the production.conf file with /api/upload append at the end of the comrun remote url. 
+```
+com.horstmann.codecheck.comrun.remote="https://comrun-url/api/upload"
+
+```
+
 
 ## How to upload a test file to AWS S3 bucket using the CLI
 To upload a file to S3, you’ll need to provide two arguments (source and destination) to the aws s3 cp command.
