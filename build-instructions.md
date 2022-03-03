@@ -253,8 +253,7 @@ In your Google Cloud Run project, add another service `play-codecheck`.
 Add the following to `conf/production.conf`:
 
     play.http.secret.key= see above
-    com.horstmann.codecheck.comrun.remote= the URL of the comrun service
-
+    com.horstmann.codecheck.comrun.remote=comrun host URL/api/upload
     com.horstmann.codecheck.s3.accessKey= your AWS credentials
     com.horstmann.codecheck.s3.secretKey=
     com.horstmann.codecheck.s3bucketsuffix="mydomain.com"
