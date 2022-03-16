@@ -441,3 +441,10 @@ for i in range(1, n + 1):
   else:
      print(i)
 ```
+## How to upload multiple zip files to AWS S3 bucket using the CLI
+Open a terminal and go to the directory where the the zip files are located
+
+Uploads the zip files in the current directory to your AWS bucket
+```
+for f in $(ls *) ; do aws s3 cp $f s3://ext.yourbucketsuffix.edu; done
+```
