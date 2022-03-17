@@ -64,19 +64,20 @@ public class HaskellLanguage implements Language {
         out.append("    args <- getArgs\n");
         for (int k = 0; k < calls.size(); k++) {
             Calls.Call call = calls.get(k);
-            if (k == 0) out.append("    if (head args) == \"1\" then ");
+            if (k == 0 && calls.size() > 1) out.append("    if (head args) == \"1\" then ");
             else if (k < calls.size() - 1) out.append("    else if (head args) == \"" + (k + 1) + "\" then ");
-            else out.append("    else ");
-            out.append(moduleName + "." + call.name + " " + call.args + " `comp` CodeCheckSolution."
-                    + call.name + " " + call.args + "\n");
+            else if (calls.size() > 1) out.append("    else ");
+            else out.append("    ");
+            out.append("CodeCheckSolution." + call.name + " " + call.args + " `comp` " 
+                    + moduleName + "." + call.name + " " + call.args + "\n");
         }            
         out.append("  where\n");
         out.append("    exec expr = (do x <- evaluate expr ; return $ Just x)\n");
         out.append("      `catch` (\\(SomeException x) -> return Nothing)\n");
         out.append("    comp expr1 expr2 = do\n");
-        out.append("      actual <- exec expr1\n");
-        out.append("      expected <- exec expr2\n");
-        out.append("      case (actual, expected) of\n");
+        out.append("      expected <- exec expr1\n");
+        out.append("      actual <- exec expr2\n");
+        out.append("      case (expected, actual) of\n");
         out.append("        (Nothing, Nothing) -> putStrLn \"error\\nerror\\ntrue\"\n");
         out.append("        (Just a, Just b) -> putStrLn$ (show a) ++ \"\\n\" ++ (show b) ++ (if a==b then \"\\ntrue\" else \"\\nfalse\")\n");
         out.append("        (Just a, Nothing) -> putStrLn $ (show a) ++ \"\\nerror\\nfalse\"\n");
