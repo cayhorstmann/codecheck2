@@ -1,5 +1,6 @@
 package models;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Map;
@@ -24,7 +25,7 @@ public class JWT {
             .setIssuer("codecheck.io")
             .addClaims(claims)
             .setIssuedAt(Date.from(Instant.now()))
-            .setExpiration(Date.from(Instant.now().plusSeconds(60 * 60 * 3)))
+            .setExpiration(Date.from(Instant.now().plus(Duration.ofDays(7))))
             .signWith(SignatureAlgorithm.HS256, key)
             .compact();
         return jwt;
