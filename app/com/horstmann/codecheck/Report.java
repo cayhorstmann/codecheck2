@@ -28,9 +28,9 @@ public interface Report
 
    Report systemError(Throwable t);
 
-   Report image(String caption, BufferedImage image) throws IOException;
+   Report image(String caption, BufferedImage image);
 
-   Report image(BufferedImage image) throws IOException;
+   Report image(BufferedImage image);
 
    Report file(String file, String contents);
    

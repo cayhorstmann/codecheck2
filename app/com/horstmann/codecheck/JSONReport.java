@@ -165,19 +165,23 @@ public class JSONReport implements Report {
     }
     
     @Override
-    public JSONReport image(String caption, BufferedImage image) throws IOException {
+    public JSONReport image(String caption, BufferedImage image) {
         if (image == null) return this;
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        ImageIO.write(image, "PNG", out);
-        out.close();
-        byte[] pngBytes = out.toByteArray();
-        String data = Base64.getEncoder().encodeToString(pngBytes);
-        run.images.add(new Item(caption, data));
+        try {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            ImageIO.write(image, "PNG", out);
+            out.close();
+            byte[] pngBytes = out.toByteArray();
+            String data = Base64.getEncoder().encodeToString(pngBytes);
+            run.images.add(new Item(caption, data));
+        } catch (Exception ex) {
+            run.images.add(new Item(caption, null));
+        }
         return this;
     }
 
     @Override
-    public JSONReport image(BufferedImage image) throws IOException {
+    public JSONReport image(BufferedImage image) {
         image("", image);
         return this;
     }

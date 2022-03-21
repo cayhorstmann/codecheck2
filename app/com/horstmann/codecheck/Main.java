@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -273,34 +274,25 @@ public class Main {
     
             if (!interleaveio && !test.equals("Input")) report.input(input);
     
-            List<String> contents = new ArrayList<>();
-            List<CompareImages> imageComp = new ArrayList<>();
+            Map<String, String> contents = new HashMap<>();
+            Map<String, CompareImages> imageComp = new HashMap<>();
             String outerr = plan.outerr(submissionRunID);
             for (String f : outFiles) {
-                if (CompareImages.isImage(f)) {
-                    try {
-                        imageComp.add(new CompareImages(plan.getOutputBytes(submissionRunID, f)));
-                    } catch (IOException ex) {
-                        report.output(outerr);
-                        report.error(ex.getMessage());
-                    }
-                }
+                if (CompareImages.isImage(f))
+                    imageComp.put(f, new CompareImages(plan.getOutputBytes(submissionRunID, f)));
                 else
-                    contents.add(plan.getOutputString(submissionRunID, f));            
+                    contents.put(f, plan.getOutputString(submissionRunID, f));            
             }
                     
             if (!runSolution) { 
                 report.output(outerr);
                 for (String f : outFiles) {
                     if (CompareImages.isImage(f)) {
-                        try {
-                            report.image("Image", imageComp.remove(0).first());
-                        } catch (IOException ex) {
-                            report.error(ex.getMessage());    
-                        }
+                        CompareImages ci = imageComp.get(f);
+                        report.image("Image", ci.first());
                     }
                     else
-                        report.file(f, contents.remove(0));
+                        report.file(f, contents.get(f));
                 }
                 // No score
                 return;
@@ -320,7 +312,7 @@ public class Main {
         
             for (String f : outFiles) {
                 if (CompareImages.isImage(f)) {
-                    CompareImages ic = imageComp.remove(0);
+                    CompareImages ic = imageComp.get(f);
                     try {
                         ic.setOtherImage(plan.getOutputBytes(solutionRunID, f));
                         boolean outcome = ic.getOutcome();
@@ -335,7 +327,7 @@ public class Main {
                     }
                 } else {
                     String expectedContents = plan.getOutputString(solutionRunID, f);                
-                    boolean outcome = comp.execute(input, contents.remove(0),
+                    boolean outcome = comp.execute(input, contents.get(f),
                             expectedContents, report, f);
                     score.pass(outcome, report);
                 }

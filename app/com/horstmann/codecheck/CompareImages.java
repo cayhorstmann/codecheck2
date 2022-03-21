@@ -17,23 +17,28 @@ public class CompareImages {
         return Arrays.asList(ImageIO.getReaderFileSuffixes()).contains(extension);
     }
 
-    public CompareImages(byte[] firstImage) throws IOException  {
-        image1 = readImage(firstImage);
+    public CompareImages(byte[] firstImage) {
+        try {
+            image1 = readImage(firstImage);
+        } catch (IOException ex) {
+            image1 = null;
+        }
     }
 
     public void setOtherImage(byte[] p) throws IOException {
-        image2 = readImage(p);
+        try {
+            image2 = readImage(p);
+        } catch (IOException ex) {
+            image2 = null;
+        }
     }
 
     public BufferedImage first() { return image1; }
     public BufferedImage other() { return image2; }
     
     private static BufferedImage readImage(byte[] bytes) throws IOException {
-        try {
-            return ImageIO.read(new ByteArrayInputStream(bytes));
-        } catch (Exception ex) {
-            throw new IOException("Image not readable");
-        }
+        if (bytes == null) throw new IOException("null data");
+        return ImageIO.read(new ByteArrayInputStream(bytes));
     }
 
     public boolean getOutcome() {
