@@ -449,6 +449,8 @@ Uploads the zip files in the current directory to your AWS bucket
 for f in $(ls *) ; do aws s3 cp $f s3://ext.yourbucketsuffix.edu; done
 ```
 ## How to scale your comrun service
+Following the [guideline from Google Cloud](https://cloud.google.com/run/docs/about-instance-autoscaling)
+
 Go to your [google cloud Run](https://console.cloud.google.com/run)
 
 * Click on a comrun service
