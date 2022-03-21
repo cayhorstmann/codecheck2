@@ -448,3 +448,11 @@ Uploads the zip files in the current directory to your AWS bucket
 ```
 for f in $(ls *) ; do aws s3 cp $f s3://ext.yourbucketsuffix.edu; done
 ```
+## How to scale your comrun service
+Go to your [google cloud Run](https://console.cloud.google.com/run)
+
+* Click on a comrun service
+* Click on Edit and Deploy New Revision
+* Under Capacity you can change the Memory and CPU settings
+* Under Capacity you can change the Maximum requests per container (Concurrency)
+* Under Autoscaling you can change the Minimum and Maximum instances
