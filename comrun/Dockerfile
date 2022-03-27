@@ -45,11 +45,11 @@ ENV COMRUN_USER=comrunner
 RUN echo "Defaults:root !syslog, !pam_session" >> /etc/sudoers
 RUN echo "Defaults:comrunner !syslog, !pam_session" >> /etc/sudoers
 
-COPY bin /opt/codecheck
-RUN chmod +x /opt/codecheck/comrun
+COPY --chmod +x bin /opt/codecheck
+#RUN chmod +x /opt/codecheck/comrun
 
-RUN mkdir /tmp/codecheck
-RUN chmod 733 /tmp/codecheck
+RUN --chmod 733 mkdir /tmp/codecheck
+#RUN chmod 733 /tmp/codecheck
 
 # To avoid Unable to open env file: /etc/default/locale: No such file or directory
 RUN echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
