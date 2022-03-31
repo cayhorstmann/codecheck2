@@ -78,7 +78,7 @@ public class Files extends Controller {
             result.append(data.toString());
         result.append(end2);
         wakeupChecker();
-        Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();
+        Http.Cookie newCookie = models.Util.buildCookie("ccid", ccid);
         return ok(result.toString()).withCookies(newCookie).as("text/html");
     }
 
@@ -136,7 +136,7 @@ public class Files extends Controller {
         result.append(Util.getString(problemFiles, Path.of("tracer.js")));
         result.append(tracerEnd);
 
-        Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();
+        Http.Cookie newCookie = models.Util.buildCookie("ccid", ccid);
         return ok(result.toString()).withCookies(newCookie).as("text/html");
     }
         
@@ -157,7 +157,7 @@ public class Files extends Controller {
         }       
         
         Problem problem = new Problem(problemFiles);
-        Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();
+        Http.Cookie newCookie = models.Util.buildCookie("ccid", ccid);
         return ok(models.Util.toJson(problem.getProblemData())).withCookies(newCookie);
     }
 
@@ -304,7 +304,7 @@ public class Files extends Controller {
         // result.append(jsonpAjaxSubmissionScript);
         result.append(bodyEnd);
 
-        Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();
+        Http.Cookie newCookie = models.Util.buildCookie("ccid", ccid);
         return ok(result.toString()).withCookies(newCookie).as("text/html");
     }       
 }

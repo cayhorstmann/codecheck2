@@ -177,7 +177,7 @@ public class LTIProblem extends Controller {
                 "    </ol>" +
                 "  </body>" +
                 "</html>";
-            Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();         
+            Http.Cookie newCookie = models.Util.buildCookie("ccid", ccid);         
             return ok(document).withCookies(newCookie).as("text/html");
         }  catch (Exception ex) {
             logger.error("launchCodeCheck: Cannot load problem " + repo + "/" + problemName + " " + ex.getMessage());
@@ -221,7 +221,7 @@ public class LTIProblem extends Controller {
             result.append("horstmann_config.lti = " + ltiNode.toString() + "\n");
             result.append(Util.getString(problemFiles, Path.of("tracer.js")));
             result.append(tracerEnd);
-            Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();         
+            Http.Cookie newCookie = models.Util.buildCookie("ccid", ccid);         
             return ok(result.toString()).withCookies(newCookie).as("text/html");
         }  catch (Exception ex) {
             logger.error("launchTracer: Cannot load problem " + repo + "/" + problemName + " " + ex.getMessage());

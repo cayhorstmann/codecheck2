@@ -274,8 +274,8 @@ public class Assignment extends Controller {
             assignmentNode.put("returnToWorkURL", returnToWorkURL); 
             assignmentNode.put("editKeySaved", editKeySaved);
             assignmentNode.put("sentAt", Instant.now().toString());
-            Http.Cookie newCookie1 = Http.Cookie.builder("ccid", ccid).withPath("/").withMaxAge(Duration.ofDays(180)).build();
-            Http.Cookie newCookie2 = Http.Cookie.builder("cckey", editKey).withPath("/").withMaxAge(Duration.ofDays(180)).build();
+            Http.Cookie newCookie1 = Http.Cookie.builder("ccid", ccid).withPath("/").withMaxAge(Duration.ofDays(180)).withSameSite(Http.Cookie.SameSite.STRICT).build();
+            Http.Cookie newCookie2 = Http.Cookie.builder("cckey", editKey).withPath("/").withMaxAge(Duration.ofDays(180)).withSameSite(Http.Cookie.SameSite.STRICT).build();
             return ok(views.html.workAssignment.render(assignmentNode.toString(), work, ccid, lti)).withCookies(newCookie1, newCookie2);
         }
         else { // Instructor

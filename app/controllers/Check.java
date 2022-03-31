@@ -67,7 +67,7 @@ public class Check extends Controller {
                     report = String.format("Timed out after %5.0f seconds\n", elapsed);
                 }
                 
-                Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();
+                Http.Cookie newCookie = models.Util.buildCookie("ccid", ccid);
                 return ok(report).withCookies(newCookie).as("text/html");
             }
             catch (Exception ex) {
@@ -160,7 +160,7 @@ public class Check extends Controller {
                 }
                 
                 result.put("zip", reportZip);
-                Http.Cookie newCookie = Http.Cookie.builder("ccid", ccid).withMaxAge(Duration.ofDays(180)).build();
+                Http.Cookie newCookie = models.Util.buildCookie("ccid", ccid);
                 return ok(result).withCookies(newCookie).as("application/json");
             } catch (Exception ex) {
                 return internalServerError(Util.getStackTrace(ex));

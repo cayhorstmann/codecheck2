@@ -1,5 +1,7 @@
 package models;
 
+import java.time.Duration;
+
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,5 +25,13 @@ public class Util {
         ObjectMapper mapper = new ObjectMapper();
         mapper.setSerializationInclusion(Include.NON_DEFAULT);
         return (ObjectNode) mapper.convertValue(obj, JsonNode.class);
+    }
+    
+    public static Http.Cookie buildCookie(String name, String value) {
+        return Http.Cookie.builder(name, value)
+                .withPath("/")
+                .withMaxAge(Duration.ofDays(180))
+                .withSameSite(Http.Cookie.SameSite.STRICT)
+                .build();
     }
 }
