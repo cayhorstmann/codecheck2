@@ -332,9 +332,10 @@ public class LTIAssignment extends Controller {
                 }
             }
             result.put("submittedAt", now.toString());      
-
-            s3conn.writeNewerJsonObjectToDynamoDB("CodeCheckWork", workNode, "assignmentID", "submittedAt");
-            submitGradeToLMS(requestNode, (ObjectNode) requestNode.get("work"), result);
+            if (s3conn.writeNewerJsonObjectToDynamoDB("CodeCheckWork", workNode, "assignmentID", "submittedAt")) {
+                // Don't submit grade if this is an older submission
+                submitGradeToLMS(requestNode, (ObjectNode) requestNode.get("work"), result);
+            }
             return ok(result);
         } catch (Exception e) {
             logger.error("saveWork: " + requestNode + " " + e.getMessage());

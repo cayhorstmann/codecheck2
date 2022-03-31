@@ -29,7 +29,10 @@ import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.document.spec.PutItemSpec;
 import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
 import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
+import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
+import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputExceededException;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
+import com.amazonaws.services.dynamodbv2.model.TransactionConflictException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
@@ -51,6 +54,8 @@ public class S3Connection {
     private AmazonS3 amazonS3;
     private AmazonDynamoDB amazonDynamoDB;
     private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
+    
+    public static class OutOfOrderException extends RuntimeException {}
     
     @Inject public S3Connection(Config config) {
         this.config = config;
@@ -273,7 +278,7 @@ public class S3Connection {
         );
     }
 
-    public void writeNewerJsonObjectToDynamoDB(String tableName, ObjectNode obj, String primaryKeyName, String timeStampKeyName) {
+    public boolean writeNewerJsonObjectToDynamoDB(String tableName, ObjectNode obj, String primaryKeyName, String timeStampKeyName) {
         DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
         Table table = dynamoDB.getTable(tableName); 
             /*
@@ -283,11 +288,17 @@ public class S3Connection {
     Apparently, the simpler putItem(item, conditionalExpression, nameMap, valueMap) swallows the ConditionalCheckFailedException 
              */
         String conditionalExpression = "attribute_not_exists(" + primaryKeyName + ") OR " + timeStampKeyName + " < :" + timeStampKeyName;
-        table.putItem(
-            new PutItemSpec()
-                .withItem(Item.fromJSON(obj.toString()))
-                .withConditionExpression(conditionalExpression)
-                .withValueMap(Collections.singletonMap(":" + timeStampKeyName, obj.get(timeStampKeyName).asText()))
-        );          
-    }   
+        try {
+            table.putItem(
+                new PutItemSpec()
+                    .withItem(Item.fromJSON(obj.toString()))
+                    .withConditionExpression(conditionalExpression)
+                    .withValueMap(Collections.singletonMap(":" + timeStampKeyName, obj.get(timeStampKeyName).asText())));
+            return true;
+        } catch(ConditionalCheckFailedException e) {
+            // https://github.com/aws/aws-sdk-java/issues/1945
+            logger.warn("writeNewerJsonObjectToDynamoDB: " + e.getMessage() + " " + obj);
+            return false;
+        }   
+    }
 }
