@@ -338,7 +338,8 @@ public class LTIAssignment extends Controller {
             }
             return ok(result);
         } catch (Exception e) {
-            logger.error("saveWork: " + requestNode + " " + e.getMessage());
+            logger.error("saveWork: " + requestNode); 
+            logger.error(Util.getStackTrace(e));
             return badRequest("saveWork: " + requestNode);
         }
     }   
