@@ -1,38 +1,3 @@
-
-# Docker Deployment
-## Build and run the comrun service Docker container
-From the root directory of the repository, build the comrun service Docker container
-```
-sudo docker build --tag codecheck:1.0-SNAPSHOT comrun
-```
-From the root directory of the repository, run the comrun service Docker container
-```
-sudo docker run -p 8080:8080 -it codecheck:1.0-SNAPSHOT
-```
-To verify that it works
-```
-/opt/codecheck/codecheck -l samples/java/example1 &
-```
-## Build and run the play-codecheck Docker container
-From the root directory of the repository, build the Docker image
-```
-sudo sbt docker:publishLocal 
-```
-From the root directory of the repository, run the Docker container
-```
-sudo docker run -p 9090:9000 -it --add-host host.docker.internal:host-gateway play-codecheck:1.0-SNAPSHOT
-```
-To verify that it works visit the url and upload a problem.
-```
-http://localhost:9090/assets/uploadProblem.html
-```
-
-### Shutdown both containers
-Open a terminal and shutdown both containers
-```
-docker container kill $(docker ps -q)
-```
-
 # Cloud Deployment
 ## Create production configuration file 
 Generate the application secret and store it at production configuration file
@@ -198,6 +163,10 @@ To verify that the comrun service is running, visit this url
 ```
 https://service url/api/health
 ```
+
+
+
+
 
 ## Error cgroups: cgroup mountpoint does not exist: unknown
 A temporary fix
