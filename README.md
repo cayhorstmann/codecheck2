@@ -19,7 +19,30 @@ Download the codecheck source code using git to clone the repository
 ```
 git clone https://github.com/cayhorstmann/codecheck2
 ```
-##  Install Codecheck dependencies
+## (Automatically) Install Codecheck dependencies
+Go to the root directory of codecheck2
+```
+cd codecheck2
+```
+### For Debian based Linux
+```
+chmod +x codecheck_deb_install.sh
+```
+
+```
+./codecheck_deb_install.sh
+```
+
+### For Rehat based Linux
+```
+chmod +x codecheck_rpm_install.sh
+```
+
+```
+./codecheck_rpm_install.sh
+```
+
+## (Manually) Install Codecheck dependencies
 Open a terminal and install the dependencies
 ```
 sudo apt-get update
@@ -171,11 +194,11 @@ http://localhost:9000/assets/uploadProblem.html
 ## Build and run the comrun service Docker container
 From the root directory of the repository, build the comrun service Docker container
 ```
-docker build --tag codecheck:1.0-SNAPSHOT comrun
+sudo docker build --tag codecheck:1.0-SNAPSHOT comrun
 ```
 From the root directory of the repository, run the comrun service Docker container
 ```
-docker run -p 8080:8080 -it codecheck:1.0-SNAPSHOT
+sudo docker run -p 8080:8080 -it codecheck:1.0-SNAPSHOT
 ```
 To verify that it works
 ```
@@ -184,11 +207,11 @@ To verify that it works
 ## Build and run the play-codecheck Docker container
 From the root directory of the repository, build the Docker image
 ```
-sbt docker:publishLocal 
+sudo sbt docker:publishLocal 
 ```
 From the root directory of the repository, run the Docker container
 ```
-docker run -p 9090:9000 -it --add-host host.docker.internal:host-gateway play-codecheck:1.0-SNAPSHOT
+sudo docker run -p 9090:9000 -it --add-host host.docker.internal:host-gateway play-codecheck:1.0-SNAPSHOT
 ```
 To verify that it works visit the url and upload a problem.
 ```
