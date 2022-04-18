@@ -18,6 +18,7 @@ Codecheck is currently supported on Linux platforms (Ubuntu 20.04 LTS).
 
 Open a terminal and install the dependencies
 ```
+sudo apt-get update
 sudo apt install openjdk-11-jdk git ant curl unzip
 ```
 Install sbt for Linux (deb) or [follow the instruction for your environment](https://www.scala-sbt.org/download.html)
