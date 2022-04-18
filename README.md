@@ -229,7 +229,7 @@ com.horstmann.codecheck.repo.ext=""
 
 
 
-## Create AWS S3 Policy
+## Create AWS S3 bucket
 Create a [Amazon S3 Bucket](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingBucket.html)
 
 One of the option for creating a bucket is by using [AWS CLI](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/s3api/create-bucket.html)
@@ -257,34 +257,7 @@ aws s3 ls s3://<BUCKET-NAME>
 aws s3 ls
 ```
 
-Create a [AWS S3 Policy](https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-policy-language-overview.html)
-```
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Sid": "Statement1",
-            "Effect": "Allow",
-            "Principal": "*",
-            "Action": "s3:GetObject",
-            "Resource": "arn:aws:s3:::mybucket.mydomain.com/*"
-        },
-        {
-            "Effect": "Allow",
-            "Principal": "*",
-Install sbt for Linux (deb) or [follow the instruction for your environment](https://www.scala-sbt.org/download.html)
-            "Action": "s3:*",
-            "Resource": "arn:aws:s3:::mybucket.mydomain.com"
-        },
-        {
-            "Effect": "Allow",
-            "Principal": "*",
-            "Action": "s3:*",
-            "Resource": "arn:aws:s3:::mybucket.mydomain.com/*"
-        }
-    ]
-}
-```
+
 ## Authenticate with Google Cloud Container Registry
 Authenticate for Linux or [follow the instruction for your environment](https://cloud.google.com/container-registry/docs/advanced-authentication)
 
