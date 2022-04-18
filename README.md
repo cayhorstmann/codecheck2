@@ -14,8 +14,12 @@ Codecheck is currently supported on Linux platforms (Ubuntu 20.04 LTS).
 * gcloud CLI SDK https://cloud.google.com
 * AWS CLI https://aws.amazon.com/
 
-
-
+## Download Codecheck codebase
+Download the codecheck source code using git to clone the repository
+```
+git clone https://github.com/cayhorstmann/codecheck2
+```
+##  Install Codecheck dependencies
 Open a terminal and install the dependencies
 ```
 sudo apt-get update
@@ -107,16 +111,12 @@ Configure AWS CLI [instruction](https://docs.aws.amazon.com/cli/latest/userguide
 ```
 aws configure
 ```
-## Setup the environment and download the Code
+
+## Setup Codecheck environment
 Create a /opt/codecheck directory and a subdirectory ext that you own
 ```
 sudo mkdir -p /opt/codecheck/ext
 export ME=$(whoami) ; sudo -E chown $ME /opt/codecheck /opt/codecheck/ext
-```
-
-Download the codecheck source code using git to clone the repository
-```
-git clone https://github.com/cayhorstmann/codecheck2
 ```
 
 ## Build the command-line tool
