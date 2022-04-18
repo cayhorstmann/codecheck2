@@ -1,14 +1,4 @@
 
-## Run the web application locally
-From the root directory of the repository, run the play-codecheck server
-
-```
-sbt run
-```
-To verify that it works visit this url and upload a problem
-```
-http://localhost:9000/assets/uploadProblem.html
-```
 # Docker Deployment
 ## Build and run the comrun service Docker container
 From the root directory of the repository, build the comrun service Docker container
@@ -242,21 +232,7 @@ To upload a file to S3, you’ll need to provide two arguments (source and desti
 aws s3 cp test.txt s3://<BUCKET-NAME>
 ```
 
-## Sample problem to upload 
-Save the file as test1235.py
-```
-    ##SOLUTION
-n = int(input())
-for i in range(1, n + 1):
-  if (i % 5 == 0 and i % 3 == 0):
-     print("FizzBuzz")
-  elif (i % 5 == 0):
-     print("Buzz")
-  elif (i % 3 == 0):
-     print("Fizz")
-  else:
-     print(i)
-```
+
 ## How to upload multiple zip files to AWS S3 bucket using the CLI
 Open a terminal and go to the directory where the the zip files are located
 
