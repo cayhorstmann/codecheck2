@@ -1,4 +1,4 @@
-CodeCheck^®^ Build Instructions
+CodeCheck<sup>®</sup> Build Instructions
 ===============================
 
 Program Structure
@@ -44,6 +44,9 @@ is called `codecheck`. It is created by the `cli/build.xml` Ant script.
 
 
 ## Install Codecheck dependencies
+
+These instructions are for Ubuntu 20.04LTS.
+
 Open a terminal and install the dependencies
 ```
 sudo apt-get update
@@ -78,7 +81,7 @@ echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
   $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 ```
-Update the apt package index, and install the latest version of Docker Engine and containerd
+Update the apt package index, and install the latest version of Docker Engine and `containerd`
 ```
  sudo apt-get update
  sudo apt-get install docker-ce docker-ce-cli containerd.io
@@ -86,12 +89,12 @@ Update the apt package index, and install the latest version of Docker Engine an
 
 Install Google Cloud CLI for linux or [follow the instruction for your environment](https://cloud.google.com/sdk/docs/install#linux)
 
-Open a terminal and download Google Cloud SDK
+Open a terminal and download the Google Cloud SDK
 ```
 curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-373.0.0-linux-x86_64.tar.gz
 ```
 
-Extract the contents of the file to any location on your file system (preferably your Home directory). To replace an existing installation, remove the existing google-cloud-sdk directory and then extract the archive to the same location.
+Extract the contents of the file to any location on your file system (preferably your home directory). To replace an existing installation, remove the existing google-cloud-sdk directory and then extract the archive to the same location.
 ```
 tar -xf google-cloud-sdk-373.0.0-linux-x86.tar.gz
 ```
@@ -100,11 +103,11 @@ Run the script (from the root of the folder you extracted to) using the followin
 ```
 ./google-cloud-sdk/install.sh
 ```
-To initialize the gcloud CLI, run gcloud init
+To initialize the gcloud CLI, run `gcloud init`
 ```
 ./google-cloud-sdk/bin/gcloud init
 ```
-Install AWS CLI for linux or [follow the instruction for your environment](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+Install the AWS CLI for Linux or [follow the instruction for your environment](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 
 Open a terminal and download the AWS CLI installation file 
 
@@ -125,13 +128,10 @@ Confirm the installation with the following command
 ```
 aws --version
 ```
-Configure AWS CLI [instruction](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html)
+Configure the AWS CLI [instructions](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html)
 * Access key ID
-
 * Secret access key
-
 * AWS Region
-
 * Output format
 ```
 aws configure
@@ -140,8 +140,6 @@ aws configure
 
 Building the Command Line Tool
 ------------------------------
-
-These instructions are for Ubuntu 20.04LTS.
 
 Make a directory `/opt/codecheck` and a subdirectory `ext` that you own:
 
