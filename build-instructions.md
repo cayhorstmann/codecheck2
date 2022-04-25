@@ -43,6 +43,13 @@ is called `codecheck`. It is created by the `cli/build.xml` Ant script.
 * AWS CLI https://aws.amazon.com/
 
 
+
+## Download Codecheck codebase
+Download the codecheck source code using git to clone the repository
+```
+git clone https://github.com/cayhorstmann/codecheck2
+```
+
 ## Install Codecheck dependencies
 
 These instructions are for Ubuntu 20.04LTS.
@@ -137,46 +144,55 @@ Configure the AWS CLI [instructions](https://docs.aws.amazon.com/cli/latest/user
 aws configure
 ```
 
+## Setup Codecheck environment
+Create a /opt/codecheck directory and a subdirectory ext that you own
+```
+sudo mkdir -p /opt/codecheck/ext
+export ME=$(whoami) ; sudo -E chown $ME /opt/codecheck /opt/codecheck/ext
+```
 
 Building the Command Line Tool
 ------------------------------
+Install jackson-core, jackson-annotations, and jackson-databind jar files
 
-Make a directory `/opt/codecheck` and a subdirectory `ext` that you own:
+From the root directory of the repository, go to cli directory and make a lib directory
+```
+cd cli
+mkdir lib
+```
 
-    sudo mkdir -p /opt/codecheck/ext
-    export ME=$(whoami) ; sudo -E chown $ME /opt/codecheck /opt/codecheck/ext
+Install the jar files in the lib directory
+```
+cd lib
+curl -LOs https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-core/2.6.4/jackson-core-2.6.4.jar
+curl -LOs https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-annotations/2.6.4/jackson-annotations-2.6.4.jar
+curl -LOs https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-databind/2.6.4/jackson-databind-2.6.4.jar
+```
+Install checkstyle, hamcrest-core, and junit jar files
 
-Clone the repo:
-
-    git clone https://github.com/cayhorstmann/codecheck2
-
-Get a few JAR files:
-
-    cd codecheck2/cli
-    mkdir lib
-    cd lib
-    curl -LOs https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-core/2.6.4/jackson-core-2.6.4.jar
-    curl -LOs https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-annotations/2.6.4/jackson-annotations-2.6.4.jar
-    curl -LOs https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-databind/2.6.4/jackson-databind-2.6.4.jar
-    cd ../../comrun/bin
-    mkdir lib
-    cd lib
-    curl -LOs https://repo1.maven.org/maven2/com/puppycrawl/tools/checkstyle/8.42/checkstyle-8.42.jar
-    curl -LOs https://repo1.maven.org/maven2/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar
-    curl -LOs https://repo1.maven.org/maven2/junit/junit/4.13.2/junit-4.13.2.jar
-    cd ../../../..
-
-Build the command-line tool:
-
-    cd codecheck2
-    ant -f cli/build.xml
-
-Test that it works:
-
-    /opt/codecheck/codecheck -t samples/java/example1
-
+From the root directory of the repository, go to comrun directory and next go to bin directory, then make a lib directory
+```
+cd comrun/bin
+mkdir lib
+```
+Install the jar files in the lib directory
+```
+cd lib
+curl -LOs https://repo1.maven.org/maven2/com/puppycrawl/tools/checkstyle/8.42/checkstyle-8.42.jar
+curl -LOs https://repo1.maven.org/maven2/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar
+curl -LOs https://repo1.maven.org/maven2/junit/junit/4.13.2/junit-4.13.2.jar
+```
+From the root directory of the repository, build the command-line tool
+```
+ant -f cli/build.xml
+```
+To verify that it works
+```
+/opt/codecheck/codecheck -t samples/java/example1
+```
 If you omit the `-t`, you get a report with your default browser instead
 of the text report.
+
 
 Debugging the Command Line Tool
 -------------------------------
