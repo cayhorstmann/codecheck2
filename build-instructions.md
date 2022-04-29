@@ -230,7 +230,7 @@ Install, following the instructions of the providers,
 
 Run the `play-codecheck` server:
 
-    sbt run
+    COMRUN_USER=$(whoami) sbt run
 
 Point the browser to <http://localhost:9090/assets/uploadProblem.html>.
 Upload a problem and test it.
