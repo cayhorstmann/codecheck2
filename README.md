@@ -1,4 +1,4 @@
-CodeCheck^®^
+CodeCheck<sup>®</sup>
 ============
 
 * [Description](https://codecheck.io)
