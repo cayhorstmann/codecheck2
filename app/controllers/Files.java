@@ -304,7 +304,7 @@ public class Files extends Controller {
         // result.append(jsonpAjaxSubmissionScript);
         result.append(bodyEnd);
 
-        Http.Cookie newCookie = models.Util.buildCookie("ccid", ccid);
+            Http.Cookie newCookie = models.Util.buildCookie("ccid", ccid);
         return ok(result.toString()).withCookies(newCookie).as("text/html");
     }       
 }

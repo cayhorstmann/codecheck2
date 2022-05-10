@@ -242,11 +242,25 @@ Alternatively, you can test with the locally running web app. In
 
     com.horstmann.codecheck.comrun.remote= the URL of the comrun service
 
-Play Server Deployment {#server-deployment}
+Play Server Deployment
 ----------------------
 
 In Amazon S3, create a bucket whose name starts with the four characters `ext.` and an arbitrary suffix, such as `ext.mydomain.com` to hold
 the uploaded CodeCheck problems. Set the ACL so that the bucket owner has all access rights and nobody else has any.
+
+If you use CodeCheck with LTI, you need to set up an Amazon Dynamo database. Create the following tables:
+
+| Name                      | Partition key      | Sort key    |
+| ------------------------- | ------------------ | ----------- |
+| CodeCheckAssignments      | assignmentID       |             |
+| CodeCheckLTICredentials   | oauth_consumer_key |             |
+| CodeCheckLTIResources     | resourceID         |             |
+| CodeCheckSubmissions      | submissionID       | submittedAt |
+| CodeCheckWork             | assignmentID       | workID      |
+
+The first three tables have no sort key. All types are `String`.
+
+You need to populate the `CodeCheckLTICredentials` table with at least one pair `oauth_consumer_key` and `shared_secret` (both of type `String`). These can be any values. I recommend to use the admin's email for `oauth_consumer_key` and a random password for `shared_secret`. 
 
 In your Google Cloud Run project, add another service `play-codecheck`.
 

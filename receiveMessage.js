@@ -33,7 +33,7 @@ Always from child to parent
   Score between 0 and 1
   No response
 
-{ query: 'retrieve', param: { qid: ... } }
+{ query: 'retrieve', nonce: ..., param: { qid: ... } }
   Response: { request: ..., param: state }
 
 TODO: Why not param: { state: ..., score: ... }
