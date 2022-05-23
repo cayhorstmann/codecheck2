@@ -96,7 +96,7 @@ curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-
 
 Extract the contents of the file to any location on your file system (preferably your home directory). To replace an existing installation, remove the existing google-cloud-sdk directory and then extract the archive to the same location.
 ```
-tar -xf google-cloud-sdk-373.0.0-linux-x86.tar.gz
+tar -xf google-cloud-sdk-373.0.0-linux-x86_64.tar.gz
 ```
 
 Run the script (from the root of the folder you extracted to) using the following command
