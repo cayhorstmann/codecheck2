@@ -1,8 +1,6 @@
-CodeCheck<sup>®</sup> Build Instructions
-===============================
+# CodeCheck<sup>®</sup> Build Instructions
 
-Program Structure
------------------
+## Program Structure
 
 CodeCheck has two parts:
 
@@ -30,24 +28,17 @@ This tool uses only the part of `play-codecheck` that deals with
 checking a problem (in the `com.horstmann.codecheck` package). The tool
 is called `codecheck`. It is created by the `cli/build.xml` Ant script.
 
-## Dependencies
+## Install Codecheck dependencies
 
 * openjdk-11-jdk   https://openjdk.java.net/projects/jdk/11
-* git   https://git-scm.com
 * ant   https://ant.apache.org
-* curl  https://curl.se
-* unzip
 * sbt   https://www.scala-sbt.org
 * docker https://www.docker.com
-* gcloud CLI SDK https://cloud.google.com
-* AWS CLI https://aws.amazon.com/
-
-
-## Install Codecheck dependencies
 
 These instructions are for Ubuntu 20.04LTS.
 
 Open a terminal and install the dependencies
+
 ```
 sudo apt-get update
 sudo apt install openjdk-11-jdk git ant curl unzip
@@ -86,6 +77,247 @@ Update the apt package index, and install the latest version of Docker Engine an
  sudo apt-get update
  sudo apt-get install docker-ce docker-ce-cli containerd.io
 ```
+
+## Special Steps for Github Codespaces
+
+Make a new Codespace by cloning the repository `cayhorstmann/codecheck2`
+
+Open a terminal. Run 
+
+```
+sed -i -e 's/root/ALL/' /etc/sudoers.d/codespace
+cat /etc/sudoers.d/codespace
+```
+
+and verify that the contents is
+
+```
+codespace ALL=(ALL) NOPASSWD:ALL 
+```
+
+Building the Command Line Tool
+------------------------------
+
+Make a directory `/opt/codecheck` and a subdirectory `ext` that you own:
+
+    sudo mkdir -p /opt/codecheck/ext
+    export ME=$(whoami) ; sudo -E chown $ME /opt/codecheck /opt/codecheck/ext
+
+Clone the repo (unless you are in Codespaces, where it is already cloned)
+
+    git clone https://github.com/cayhorstmann/codecheck2
+
+Get a few JAR files:
+
+    cd codecheck2/cli
+    mkdir lib
+    cd lib
+    curl -LOs https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-core/2.6.4/jackson-core-2.6.4.jar
+    curl -LOs https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-annotations/2.6.4/jackson-annotations-2.6.4.jar
+    curl -LOs https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-databind/2.6.4/jackson-databind-2.6.4.jar
+    cd ../../comrun/bin
+    mkdir lib
+    cd lib
+    curl -LOs https://repo1.maven.org/maven2/com/puppycrawl/tools/checkstyle/8.42/checkstyle-8.42.jar
+    curl -LOs https://repo1.maven.org/maven2/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar
+    curl -LOs https://repo1.maven.org/maven2/junit/junit/4.13.2/junit-4.13.2.jar
+    cd ../../../..
+
+Build the command-line tool:
+
+    cd codecheck2
+    ant -f cli/build.xml
+
+Test that it works:
+
+    /opt/codecheck/codecheck -t samples/java/example1
+
+If you omit the `-t`, you get a report with your default browser instead
+of the text report.
+
+## Eclipse
+
+If you work on your own machine, I recommend Eclipse as the IDE. If you use Codespaces, skip this section and read about the Visual Studio Code configuration instead.
+
+Install [Eclipse](https://www.eclipse.org/eclipseide/), following the instructions of the provider.
+
+Run
+
+    sbt eclipse
+    sbt compile
+
+Then open Eclipse and import the created project.
+
+Make two debugger configurations. Select Run → Debug Configurations,
+right-click on Remote Java Application, and select New Configuration.
+
+For the first configuration, specify:
+
+-   Name:  Debug (Attach)
+-   Project: `play-codecheck`
+-   Connection type: Standard
+-   Host: `localhost`
+-   Port: 9999
+
+For the second debug configuration, set:
+
+-   Name:  Launch Main
+-   Main class:
+
+        com.horstmann.codecheck.Main
+
+-   Program arguments:
+
+        /tmp/submission /tmp/problem
+
+-   VM arguments:
+
+        -Duser.language=en
+        -Duser.country=US
+        -Dcom.horstmann.codecheck.comrun.local=/opt/codecheck/comrun
+        -Dcom.horstmann.codecheck.report=HTML
+        -Dcom.horstmann.codecheck.debug
+
+-   Environment variable `COMRUN_USER`: your username
+
+## Visual Studio Code
+
+If you use Codespaces, you need to use Visual Studio Code as your IDE. If not, skip this section and follow the section about configuring Eclipse instead.
+
+Run
+
+    sbt eclipse
+    sbt compile
+
+Then open the base directory in Visual Studio Code. Visual Studio Code will read the project configuration from the Eclipse configuration.
+
+In Visual Studio Code, click on the Run and Debug (triangle and bug) icon on the left. Select Run → Add Configuration from the menu. The file `.vscode/launch.json` is opened up. Set it to the following contents:
+
+```
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Debug (Attach)",
+      "request": "attach",
+      "hostName": "localhost",
+      "port": 9999,
+      "projectName": "play-codecheck"
+    },
+    {
+      "type": "java",
+      "name": "Launch Main",
+      "request": "launch",
+      "mainClass": "com.horstmann.codecheck.Main",
+      "projectName": "play-codecheck"
+      "args": "/tmp/submission /tmp/problem",
+      "vmArgs": [
+        "-Duser.language=en",
+        "-Duser.country=US",
+        "-Dcom.horstmann.codecheck.comrun.local=/opt/codecheck/comrun",
+        "-Dcom.horstmann.codecheck.report=HTML",
+        "-Dcom.horstmann.codecheck.debug"
+      ],
+      "env": { "COMRUN_USER": "codespace" }
+    }
+  ]
+}
+```
+
+Debugging the Command Line Tool
+-------------------------------
+
+If you are making changes to the part of CodeCheck that does the actual
+code checking, such as adding a new language, and you need to run a
+debugger, it is easiest to debug the command line tool.
+
+Make directories for the submission and problem files, and populate them
+with samples. For example,
+
+```
+rm -rf /tmp/submission /tmp/problem
+mkdir /tmp/submission
+cp samples/java/example1/*.java /tmp/submission
+cp -R samples/java/example1 /tmp/problem
+```
+Set a breakpoint in app/com/horstmann/codecheck/Main.java and launch the debugger with the Launch Main configuration.
+
+To debug on Windows or MacOS, you have to use the Docker container for
+compilation and execution.
+
+    docker build --tag comrun:1.0-SNAPSHOT comrun
+    docker run -p 8080:8080 -it comrun:1.0-SNAPSHOT
+
+Point your browser to <http://localhost:8080/api/health> to check that
+the container is running.
+
+Add the VM argument
+
+    -Dcom.horstmann.codecheck.comrun.remote=http://localhost:8080/api/upload
+
+Building the Web Application
+----------------------------
+
+Run the `play-codecheck` server:
+
+    COMRUN_USER=$(whoami) sbt run
+
+Point the browser to <http://localhost:9090/assets/uploadProblem.html>.
+Upload a problem and test it.
+
+Note: The problem files will be located inside the `/opt/codecheck/ext`
+directory.
+
+Debugging the Server
+--------------------
+
+Run the `play-codecheck` server in debug mode:
+
+    COMRUN_USER=$(whoami) sbt -jvm-debug 9999 run
+
+In Eclipse, select Run → Debug Configurations, select the configuration
+you created, and select Debug. Point the browser to a URL such as
+<http://localhost:9090/assets/uploadProblem.html>. Set breakpoints as
+needed.
+
+Docker Deployment
+-----------------
+
+Build and run the Docker container for the `comrun` service:
+
+    docker build --tag codecheck:1.0-SNAPSHOT comrun
+    docker run -p 8080:8080 -it codecheck:1.0-SNAPSHOT
+
+Test that it works:
+
+    /opt/codecheck/codecheck -l samples/java/example1 &
+
+Create a file `conf/production.conf` holding an [application
+secret](https://www.playframework.com/documentation/2.8.x/ApplicationSecret):
+
+    echo "play.http.secret.key=\"$(head -c 32 /dev/urandom | base64)\"" > conf/production.conf
+    echo "com.horstmann.codecheck.comrun.remote=\"http://host.docker.internal:8080/api/upload\"" >> conf/production.conf
+
+Do not check this file into version control!
+
+Build and run the Docker container for the `play-codecheck` server:
+
+    sbt docker:publishLocal 
+    docker run -p 9090:9000 -it --add-host host.docker.internal:host-gateway play-codecheck:1.0-SNAPSHOT
+
+Test that it works by pointing your browser to
+<http://localhost:9090/assets/uploadProblem.html>. Upload a problem.
+
+Kill both containers by running this command in another terminal:
+
+    docker container kill $(docker ps -q)
+
+Cloud Provider Tools
+--------------------
 
 Install Google Cloud CLI for linux or [follow the instruction for your environment](https://cloud.google.com/sdk/docs/install#linux)
 
@@ -137,166 +369,6 @@ Configure the AWS CLI [instructions](https://docs.aws.amazon.com/cli/latest/user
 aws configure
 ```
 
-
-Building the Command Line Tool
-------------------------------
-
-Make a directory `/opt/codecheck` and a subdirectory `ext` that you own:
-
-    sudo mkdir -p /opt/codecheck/ext
-    export ME=$(whoami) ; sudo -E chown $ME /opt/codecheck /opt/codecheck/ext
-
-Clone the repo:
-
-    git clone https://github.com/cayhorstmann/codecheck2
-
-Get a few JAR files:
-
-    cd codecheck2/cli
-    mkdir lib
-    cd lib
-    curl -LOs https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-core/2.6.4/jackson-core-2.6.4.jar
-    curl -LOs https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-annotations/2.6.4/jackson-annotations-2.6.4.jar
-    curl -LOs https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-databind/2.6.4/jackson-databind-2.6.4.jar
-    cd ../../comrun/bin
-    mkdir lib
-    cd lib
-    curl -LOs https://repo1.maven.org/maven2/com/puppycrawl/tools/checkstyle/8.42/checkstyle-8.42.jar
-    curl -LOs https://repo1.maven.org/maven2/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar
-    curl -LOs https://repo1.maven.org/maven2/junit/junit/4.13.2/junit-4.13.2.jar
-    cd ../../../..
-
-Build the command-line tool:
-
-    cd codecheck2
-    ant -f cli/build.xml
-
-Test that it works:
-
-    /opt/codecheck/codecheck -t samples/java/example1
-
-If you omit the `-t`, you get a report with your default browser instead
-of the text report.
-
-Debugging the Command Line Tool
--------------------------------
-
-If you are making changes to the part of CodeCheck that does the actual
-code checking, such as adding a new language, and you need to run a
-debugger, it is easiest to debug the command line tool.
-
-Make directories for the submission and problem files, and populate them
-with samples.
-
-In your debug configuration, set:
-
--   The main class to
-
-        com.horstmann.codecheck.Main
-
--   Program arguments to
-
-        /path/to/submissiondir /path/to/problemdir
-
--   VM arguments to
-
-        -Duser.language=en
-        -Duser.country=US
-        -Dcom.horstmann.codecheck.comrun.local=/opt/codecheck/comrun
-        -Dcom.horstmann.codecheck.report=HTML
-        -Dcom.horstmann.codecheck.debug
-
--   The environment variable `COMRUN_USER` to your username
-
-To debug on Windows or MacOS, you have to use the Docker container for
-compilation and execution.
-
-    docker build --tag comrun:1.0-SNAPSHOT comrun
-    docker run -p 8080:8080 -it comrun:1.0-SNAPSHOT
-
-Point your browser to <http://localhost:8080/api/health> to check that
-the container is running.
-
-When debugging, add the VM argument
-
-    -Dcom.horstmann.codecheck.comrun.remote=http://localhost:8080/api/upload
-
-Building the Web Application
-----------------------------
-
-Install, following the instructions of the providers,
-
--   [Eclipse](https://www.eclipse.org/eclipseide/)
-
-Run the `play-codecheck` server:
-
-    COMRUN_USER=$(whoami) sbt run
-
-Point the browser to <http://localhost:9090/assets/uploadProblem.html>.
-Upload a problem and test it.
-
-Note: The problem files will be located inside the `/opt/codecheck/ext`
-directory.
-
-Debugging the Server
---------------------
-
-Import the project into Eclipse. Run
-
-    sbt eclipse
-
-Then open Eclipse and import the created project.
-
-Make a debugger configuration. Select Run → Debug Configurations,
-right-click on Remote Java Application, and select New Configuration.
-Specify:
-
--   Project: `play-codecheck`
--   Connection type: Standard
--   Host: `localhost`
--   Port: 9999
-
-Run the `play-codecheck` server in debug mode:
-
-    COMRUN_USER=$(whoami) sbt -jvm-debug 9999 run
-
-In Eclipse, select Run → Debug Configurations, select the configuration
-you created, and select Debug. Point the browser to a URL such as
-<http://localhost:9090/assets/uploadProblem.html>. Set breakpoints as
-needed.
-
-Docker Deployment
------------------
-
-Build and run the Docker container for the `comrun` service:
-
-    docker build --tag codecheck:1.0-SNAPSHOT comrun
-    docker run -p 8080:8080 -it codecheck:1.0-SNAPSHOT
-
-Test that it works:
-
-    /opt/codecheck/codecheck -l samples/java/example1 &
-
-Create a file `conf/production.conf` holding an [application
-secret](https://www.playframework.com/documentation/2.8.x/ApplicationSecret):
-
-    echo "play.http.secret.key=\"$(head -c 32 /dev/urandom | base64)\"" > conf/production.conf
-    echo "com.horstmann.codecheck.comrun.remote=\"http://host.docker.internal:8080/api/upload\"" >> conf/production.conf
-
-Do not check this file into version control!
-
-Build and run the Docker container for the `play-codecheck` server:
-
-    sbt docker:publishLocal 
-    docker run -p 9090:9000 -it --add-host host.docker.internal:host-gateway play-codecheck:1.0-SNAPSHOT
-
-Test that it works by pointing your browser to
-<http://localhost:9090/assets/uploadProblem.html>. Upload a problem.
-
-Kill both containers by running this command in another terminal:
-
-    docker container kill $(docker ps -q)
-
 Comrun Service Deployment {#service-deployment}
 -------------------------
 
@@ -340,6 +412,7 @@ Alternatively, you can test with the locally running web app. In
 `conf/production.conf`, you need to add
 
     com.horstmann.codecheck.comrun.remote= the URL of the comrun service
+
 
 Play Server Deployment
 ----------------------

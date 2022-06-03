@@ -4,7 +4,7 @@ version := "1.0-SNAPSHOT"
 
 maintainer := "cay@horstmann.com"
 
-scalaVersion := "2.12.8"
+scalaVersion := "2.12.15"
 
 javacOptions ++= Seq("-source", "11", "-target", "11")
 

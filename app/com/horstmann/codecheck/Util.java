@@ -538,6 +538,7 @@ public class Util {
     
     // UIDs
     
+    // TODO Consider using https://github.com/scru128/spec
     public static String createPrivateUID() {
         return new BigInteger(128, generator).toString(36).toUpperCase();               
     }
