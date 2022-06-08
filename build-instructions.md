@@ -30,12 +30,7 @@ is called `codecheck`. It is created by the `cli/build.xml` Ant script.
 
 ## Install Codecheck dependencies
 
-* openjdk-11-jdk   https://openjdk.java.net/projects/jdk/11
-* ant   https://ant.apache.org
-* sbt   https://www.scala-sbt.org
-* docker https://www.docker.com
-
-These instructions are for Ubuntu 20.04LTS.
+These instructions are for Ubuntu 20.04LTS. If you are not running Ubuntu natively, run it in a virtual machine. If you were asked to use Github Codespaces, that should be set up for you. Otherwise, you need to set up your own virtual machine. These instructions should be helpful: https://horstmann.com/pfh/2021/vm.html
 
 Open a terminal and install the dependencies
 
@@ -52,32 +47,6 @@ curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89
 sudo apt-get update
 sudo apt-get install sbt
 ```
-Install docker for Linux (deb) or [follow the instruction for your environment](https://docs.docker.com/engine/install/)
-```
- sudo apt-get update
- 
-  sudo apt-get install \
-    ca-certificates \
-    curl \
-    gnupg \
-    lsb-release
-```
-Add Docker’s official GPG key
-```
- curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-```
-Use the following command to set up the stable repository.
-```
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-```
-Update the apt package index, and install the latest version of Docker Engine and `containerd`
-```
- sudo apt-get update
- sudo apt-get install docker-ce docker-ce-cli containerd.io
-```
-
 ## Special Steps for Github Codespaces
 
 Make a new Codespace by cloning the repository `cayhorstmann/codecheck2`
@@ -246,19 +215,6 @@ cp -R samples/java/example1 /tmp/problem
 ```
 Set a breakpoint in app/com/horstmann/codecheck/Main.java and launch the debugger with the Launch Main configuration.
 
-To debug on Windows or MacOS, you have to use the Docker container for
-compilation and execution.
-
-    docker build --tag comrun:1.0-SNAPSHOT comrun
-    docker run -p 8080:8080 -it comrun:1.0-SNAPSHOT
-
-Point your browser to <http://localhost:8080/api/health> to check that
-the container is running.
-
-Add the VM argument
-
-    -Dcom.horstmann.codecheck.comrun.remote=http://localhost:8080/api/upload
-
 Building the Web Application
 ----------------------------
 
@@ -284,8 +240,36 @@ you created, and select Debug. Point the browser to a URL such as
 <http://localhost:9090/assets/uploadProblem.html>. Set breakpoints as
 needed.
 
-Docker Deployment
------------------
+## Docker Installation
+
+Install Docker for Linux (deb) or [follow the instruction for your environment](https://docs.docker.com/engine/install/)
+```
+ sudo apt-get update
+ 
+  sudo apt-get install \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release
+```
+Add Docker’s official GPG key
+```
+ curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+```
+Use the following command to set up the stable repository.
+```
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+```
+Update the apt package index, and install the latest version of Docker Engine and `containerd`
+```
+ sudo apt-get update
+ sudo apt-get install docker-ce docker-ce-cli containerd.io
+```
+
+Docker Local Testing
+--------------------
 
 Build and run the Docker container for the `comrun` service:
 
@@ -314,7 +298,7 @@ Test that it works by pointing your browser to
 
 Kill both containers by running this command in another terminal:
 
-    docker container kill $(docker ps -q)
+    docker container kill $(docker ps -q)    
 
 Cloud Provider Tools
 --------------------
