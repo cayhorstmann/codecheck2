@@ -303,7 +303,7 @@ Kill both containers by running this command in another terminal:
 Cloud Provider Tools
 --------------------
 
-Install Google Cloud CLI for linux or [follow the instruction for your environment](https://cloud.google.com/sdk/docs/install#linux)
+Install Google Cloud CLI for Linux or [follow the instruction for your environment](https://cloud.google.com/sdk/docs/install#linux)
 
 Open a terminal and download the Google Cloud SDK
 ```
@@ -415,7 +415,7 @@ aws iam create-access-key --user-name $USERNAME
 
 # IMPORTANT: Record AccessKeyId and SecretAccessKey
 
-cat <<EOF > policy1.json
+cat <<EOF > CodeCheckS3.json
 {
     "Version": "2012-10-17",
     "Statement": [
@@ -425,7 +425,7 @@ cat <<EOF > policy1.json
                 "s3:*"
             ],
             "Resource": [
-                "arn:aws:s3:::ext.codecheck-test.org"
+                "arn:aws:s3:::ext.$SUFFIX"
             ]
         },
         {
@@ -434,14 +434,14 @@ cat <<EOF > policy1.json
                 "s3:*"
             ],
             "Resource": [
-                "arn:aws:s3:::ext.codecheck-test.org/*"
+                "arn:aws:s3:::ext.$SUFFIX/*"
             ]
         }
     ]
 }
 EOF
 
-aws iam create-policy --policy-name CodeCheckTestS3 --policy-document file://./policy1.json
+aws iam create-policy --policy-name CodeCheckS3 --policy-document file://./CodeCheckS3.json
 ```
 
 If you use CodeCheck with LTI, you need to set up an Amazon Dynamo database. Create the following tables:
@@ -491,9 +491,9 @@ aws --region $REGION dynamodb create-table \
 ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
 
 aws iam attach-user-policy --user-name $USERNAME \
-  --policy-arn arn:aws:iam::$ACCOUNT_ID:policy/CodeCheckTestS3
+  --policy-arn arn:aws:iam::$ACCOUNT_ID:policy/CodeCheckS3
 
-cat <<EOF > policy2.json
+cat <<EOF > CodeCheckDynamo.json
 {
     "Version": "2012-10-17",
     "Statement": [
@@ -519,10 +519,10 @@ cat <<EOF > policy2.json
 }
 EOF
 
-aws iam create-policy --policy-name CodeCheckTestDynamo --policy-document file://./policy2.json
+aws iam create-policy --policy-name CodeCheckDynamo --policy-document file://./CodeCheckDynamo.json
 
 aws iam attach-user-policy --user-name $USERNAME \
-  --policy-arn arn:aws:iam::$ACCOUNT_ID:policy/CodeCheckTestDynamo
+  --policy-arn arn:aws:iam::$ACCOUNT_ID:policy/CodeCheckDynamo
 
 aws iam list-attached-user-policies --user-name $USERNAME    
 ```
