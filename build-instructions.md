@@ -404,6 +404,46 @@ Play Server Deployment
 In Amazon S3, create a bucket whose name starts with the four characters `ext.` and an arbitrary suffix, such as `ext.mydomain.com` to hold
 the uploaded CodeCheck problems. Set the ACL so that the bucket owner has all access rights and nobody else has any.
 
+```
+SUFFIX=mydomain.com
+aws s3 mb s3://ext.$SUFFIX
+
+USERNAME=codecheck
+
+aws iam create-user --user-name $USERNAME
+aws iam create-access-key --user-name $USERNAME
+
+# IMPORTANT: Record AccessKeyId and SecretAccessKey
+
+cat <<EOF > policy1.json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:*"
+            ],
+            "Resource": [
+                "arn:aws:s3:::ext.codecheck-test.org"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:*"
+            ],
+            "Resource": [
+                "arn:aws:s3:::ext.codecheck-test.org/*"
+            ]
+        }
+    ]
+}
+EOF
+
+aws iam create-policy --policy-name CodeCheckTestS3 --policy-document file://./policy1.json
+```
+
 If you use CodeCheck with LTI, you need to set up an Amazon Dynamo database. Create the following tables:
 
 | Name                      | Partition key      | Sort key    |
@@ -446,6 +486,45 @@ aws --region $REGION dynamodb create-table \
     --attribute-definitions AttributeName=assignmentID,AttributeType=S AttributeName=workID,AttributeType=S \
     --key-schema AttributeName=assignmentID,KeyType=HASH AttributeName=workID,KeyType=RANGE \
     --provisioned-throughput ReadCapacityUnits=1,WriteCapacityUnits=1
+    
+    
+ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+
+aws iam attach-user-policy --user-name $USERNAME \
+  --policy-arn arn:aws:iam::$ACCOUNT_ID:policy/CodeCheckTestS3
+
+cat <<EOF > policy2.json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem",
+                "dynamodb:DeleteItem",
+                "dynamodb:BatchWriteItem",
+                "dynamodb:GetItem",
+                "dynamodb:BatchGetItem",
+                "dynamodb:Scan",
+                "dynamodb:Query",
+                "dynamodb:ConditionCheckItem"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:us-west-1:$ACCOUNT_ID:table/CodeCheck*",
+                "arn:aws:dynamodb:us-west-1:$ACCOUNT_ID:table/CodeCheck*/index/*"
+            ]
+        }
+    ]
+}
+EOF
+
+aws iam create-policy --policy-name CodeCheckTestDynamo --policy-document file://./policy2.json
+
+aws iam attach-user-policy --user-name $USERNAME \
+  --policy-arn arn:aws:iam::$ACCOUNT_ID:policy/CodeCheckTestDynamo
+
+aws iam list-attached-user-policies --user-name $USERNAME    
 ```
 
 You need to populate the `CodeCheckLTICredentials` table with at least one pair `oauth_consumer_key` and `shared_secret` (both of type `String`). These can be any values. I recommend to use the admin's email for `oauth_consumer_key` and a random password for `shared_secret`. 
