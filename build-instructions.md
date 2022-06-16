@@ -416,7 +416,45 @@ If you use CodeCheck with LTI, you need to set up an Amazon Dynamo database. Cre
 
 The first three tables have no sort key. All types are `String`.
 
+```
+aws --region $REGION dynamodb create-table \
+    --table-name CodeCheckAssignments \
+    --attribute-definitions AttributeName=assignmentID,AttributeType=S \
+    --key-schema AttributeName=assignmentID,KeyType=HASH \
+    --provisioned-throughput ReadCapacityUnits=1,WriteCapacityUnits=1
+
+aws --region $REGION dynamodb create-table \
+    --table-name CodeCheckLTICredentials \
+    --attribute-definitions AttributeName=oauth_consumer_key,AttributeType=S \
+    --key-schema AttributeName=oauth_consumer_key,KeyType=HASH \
+    --provisioned-throughput ReadCapacityUnits=1,WriteCapacityUnits=1
+
+aws --region $REGION dynamodb create-table \
+    --table-name CodeCheckLTIResources \
+    --attribute-definitions AttributeName=resourceID,AttributeType=S \
+    --key-schema AttributeName=resourceID,KeyType=HASH \
+    --provisioned-throughput ReadCapacityUnits=1,WriteCapacityUnits=1
+
+aws --region $REGION dynamodb create-table \
+    --table-name CodeCheckSubmissions \
+    --attribute-definitions AttributeName=submissionID,AttributeType=S AttributeName=submittedAt,AttributeType=S \
+    --key-schema AttributeName=submissionID,KeyType=HASH AttributeName=submittedAt,KeyType=RANGE \
+    --provisioned-throughput ReadCapacityUnits=1,WriteCapacityUnits=1
+
+aws --region $REGION dynamodb create-table \
+    --table-name CodeCheckWork \
+    --attribute-definitions AttributeName=assignmentID,AttributeType=S AttributeName=workID,AttributeType=S \
+    --key-schema AttributeName=assignmentID,KeyType=HASH AttributeName=workID,KeyType=RANGE \
+    --provisioned-throughput ReadCapacityUnits=1,WriteCapacityUnits=1
+```
+
 You need to populate the `CodeCheckLTICredentials` table with at least one pair `oauth_consumer_key` and `shared_secret` (both of type `String`). These can be any values. I recommend to use the admin's email for `oauth_consumer_key` and a random password for `shared_secret`. 
+
+```
+USERNAME=...
+PASSWORD=...
+aws dynamodb put-item --table-name CodeCheckLTICredentials --item '{"oauth_consumer_key":{"S":"'${USERNAME}'"},"shared_secret":{"S":"'${PASSWORD}'"}}'
+```
 
 In your Google Cloud Run project, add another service `play-codecheck`.
 
