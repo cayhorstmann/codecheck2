@@ -293,12 +293,33 @@ Do not check this file into version control!
 Build and run the Docker container for the `play-codecheck` server:
 
     sbt docker:publishLocal 
-    docker run -p 9090:9000 -it --add-host host.docker.internal:host-gateway play-codecheck:1.0-SNAPSHOT
+    docker run -p 9090:9000 -it --add-host host.docker.internal:host-gateway play-codecheck:1.0-SNAPSHOT &
+
+(Ignore the `[error]` labels during the Docker build. They aren't actually errors.)
 
 Test that it works by pointing your browser to
-<http://localhost:9090/assets/uploadProblem.html>. Upload a problem.
+<http://localhost:9090/assets/uploadProblem.html>. Or if you use CodeSpaces, locate the Ports tab and open the local address for port 9090. Ignore the nginx error and paste `/assets/uploadProblem.html` after the URL. 
 
-Kill both containers by running this command in another terminal:
+Upload a problem: File name `Numbers.java`, file contents:
+
+```
+public class Numbers
+{
+//CALL 3, 4
+//CALL -3, 3
+//CALL 3, 0
+   public double average(int x, int y)
+   {
+      //HIDE
+      return 0.5 * (x + y);
+      //SHOW // Compute the average of x and y
+   }
+}
+```
+
+Click the Submit Files button. You should see three passing test cases.
+
+Kill both containers by running this command in the terminal:
 
     docker container kill $(docker ps -q)    
 
