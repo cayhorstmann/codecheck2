@@ -554,6 +554,8 @@ public class Util {
     private static String consonants = "bcdfghjklmnpqrstvwxz";
 
     public static String createPronouncableUID() {
+        String UID = "";
+        do{
         StringBuilder result = new StringBuilder();
         int len = 16;
         int b = Util.generator.nextInt(2);
@@ -566,7 +568,22 @@ public class Util {
                 b = Util.generator.nextInt(2);
             }
         }
-        return result.toString();
+        UID = result.toString();
+    } while(checkUIDForBadWords(UID)); // loop will run again if the UID contains any bad words in it
+        return UID;
+    }
+    private static boolean checkUIDForBadWords(String s){
+        //This function returns true if any bad word is present in the generated UID passed in as a parameter
+        String [] filteredOutWords = {"anal", "anus", "anil", "anes", "anis", "babe", "bozo", "coky", "dick", "dike", "dyke", "homo", "lube", "nude", "oral", "rape", "sexy", "titi", "wily"};
+        String[] isolateIDWords = s.split("-");
+        for(String word : isolateIDWords){
+            //if the current word is in the array of bad words, then bad word is present in ID
+            boolean badWordPresent = Arrays.asList(filteredOutWords).contains(word);
+            if(badWordPresent){
+                return true;
+            }
+        }
+        return false;
     }
 
     public static boolean isPronouncableUID(String s) {
