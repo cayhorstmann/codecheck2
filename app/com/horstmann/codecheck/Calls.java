@@ -12,12 +12,23 @@ public class Calls {
         String name;
         String args;
         List<String> modifiers;
+        // boolean hidden = false; 
+
+        // public boolean isHidden() {
+        //     return hidden; 
+        // }
+
+        // public void setHidden(boolean value)
+        // {
+        //     hidden = value; 
+        // }
     }
     
     private Language language;
     private List<Call> calls = new ArrayList<>();
     private Path file;
     private int lastGroup = -1;
+    private boolean hidden = false; 
 
     public Calls(Language language) {
         this.language = language;
@@ -25,6 +36,15 @@ public class Calls {
 
     public Path getFile() {
         return file;
+    }
+
+    public boolean isHidden() {
+        return hidden; 
+    }
+
+    public void setHidden(boolean value)
+    {
+        hidden = value; 
     }
 
     public int getSize() {
