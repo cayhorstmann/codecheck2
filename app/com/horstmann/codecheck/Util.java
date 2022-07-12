@@ -564,7 +564,7 @@ public class Util {
         }
         return result.toString();
     }
-    private static String generateNewWord(){ // this function generates a four-letter word for the UID
+    private static StringBuilder generateNewWord(){ // this function generates a four-letter word for the UID
         StringBuilder word = new StringBuilder();
         int len = 4;
         int b = Util.generator.nextInt(2);
