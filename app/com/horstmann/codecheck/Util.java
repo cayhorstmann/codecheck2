@@ -555,52 +555,34 @@ public class Util {
 
     public static String createPronouncableUID() {
         StringBuilder result = new StringBuilder();
-        int len = 16;
-        int b = Util.generator.nextInt(2);
-        int startWordIndex = 0;
-        for (int i = 0; i < len; i++) {
-            String s = i % 2 == b ? Util.consonants : vowels;
-            int n = Util.generator.nextInt(s.length());
-            result.append(s.charAt(n));
-            if (i % 4 == 3 && i < len - 1) {
-                result.append('-');
-                String word = result.substring(startWordIndex, result.indexOf("-", startWordIndex)); // create a substring for each word in the id
-                if(checkUIDForBadWords(word)){ // if the word is a bad word then we need to generate a new word for the id
-                    while (true){ // continue to generate new word until we get a non-bad word
-                        word = generateNewWord();
-                        if(!checkUIDForBadWords(word)) { // if the new generated word isn't a bad word, then we put the new word in the id
-                            result.replace(startWordIndex, result.indexOf("-", startWordIndex), word); // replace the bad word with a new word
-                            break;
-                        }
-                    }
-                }
-                startWordIndex = result.indexOf("-",startWordIndex) + 1; // update start index for next word
-                b = Util.generator.nextInt(2);
-            }
-        }
-        String finalWord = result.substring(result.length() - 4); // we need to manually check the last word outside of the loop
-        if(checkUIDForBadWords(finalWord)){ // if the final word is a bad word then we need to generate a new word for the id
-            while (true){ // continue to generate new word until we get a non-bad word
-                finalWord = generateNewWord();
-                if(!checkUIDForBadWords(finalWord)) { // if the new generated word isn't a bad word, then we put the new word in the id
-                    result.replace(result.length() - 4, result.length(), finalWord); // replace the bad word with a new word
-                    break;
-                }
+        int len = 4;
+        for(int i = 0; i < len; i++){
+            result.append(generateNewWord());
+            if(i != 3){ // we only want three dashes in the UID
+                result.append("-");
             }
         }
         return result.toString();
     }
     private static String generateNewWord(){ // this function generates a four-letter word for the UID
-        //THIS FUNCTION SHOULD ONLY BE CALLED WHEN A BAD WORD EXISTS IN THE UID
         StringBuilder word = new StringBuilder();
         int len = 4;
         int b = Util.generator.nextInt(2);
-        for (int i = 0; i < len; i++) {
+        for(int i = 0; i < len; i++) {
             String s = i % 2 == b ? Util.consonants : vowels;
             int n = Util.generator.nextInt(s.length());
             word.append(s.charAt(n));
         }
-        return word.toString();
+        //Check to see if the generated word is a bad word
+        if(checkUIDForBadWords(word.toString())) { // if the word is a bad word then we need to generate a new word for the id
+            while(true) { // continue to generate new word until we get a non-bad word
+                word = generateNewWord();
+                if(!checkUIDForBadWords(word.toString())) { // if the new generated word isn't a bad word, then we have a valid word
+                    break;
+                }
+            }
+        }
+        return word;
     }
     private static boolean checkUIDForBadWords(String idWord){
         //This function returns true if any bad word is present in the generated UID passed in as a parameter
