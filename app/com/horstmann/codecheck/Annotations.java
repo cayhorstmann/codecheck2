@@ -90,7 +90,7 @@ public class Annotations {
                 if (a.key.equals("HIDE")) 
                     hidden.add(p);
                 if (a.key.equals("HIDDEN"))
-                    hiddenTests.add(p); 
+                    hiddenTests.add(p);  
                 a.path = p;
                 annotations.add(a);
             }

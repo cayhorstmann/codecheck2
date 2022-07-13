@@ -76,7 +76,7 @@ public class AsExpected {
                 report.output(value);
                 report.error("Missing \"Expected: ...\"\n");
             } else {
-                if (hidden == false)
+                if (hidden == false) 
                     report.output(lines, matches, mismatches);
             }
             // If the program run ends in an exception, it can happen that the number of

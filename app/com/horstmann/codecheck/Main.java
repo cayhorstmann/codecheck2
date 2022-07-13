@@ -220,7 +220,7 @@ public class Main {
             AsExpected cond = new AsExpected(comp);
             String tester = plan.getFileString("use", mainFile);
             if (problem.getAnnotations().getHiddenTests().contains(mainFile))
-                cond.setHidden(true);
+                cond.setHidden(true); 
             if (tester == null)
                 tester = plan.getFileString("solution", mainFile);  // In case the student was asked to do it
             cond.eval(outerr, report, score, tester);                 

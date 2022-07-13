@@ -26,7 +26,7 @@ public class Substitution {
 
     public void setHidden(boolean value)
     {
-        hidden = value; 
+        hidden = value;  
     }
 
     public void addVariable(Path file, String decl, String args) {
