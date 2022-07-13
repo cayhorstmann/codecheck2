@@ -17,7 +17,7 @@ public class Annotations {
             "IN", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "MAXOUTPUTLEN",
             "REQUIRED", "FORBIDDEN", "SCORING", "INTERLEAVE", "TILE", "FIXED", "OR", "PSEUDO");    
     public static final Set<String> NON_BLANK_BEFORE_OK = Set.of("SUB", "PSEUDO"); 
-
+ 
     public static class Annotation {
         public boolean isValid;
         public Path path;
