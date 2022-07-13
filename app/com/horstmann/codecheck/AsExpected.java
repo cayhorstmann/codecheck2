@@ -54,7 +54,7 @@ public class AsExpected {
                         report.error("No actual value for \"Expected: ...\" in line 1\n");
                         mismatches.add(0);
                         score.pass(false, report);                      
-                    } else {
+                    } else { 
                         String expected = lines.get(i);
                         String actual = lines.get(i - 1);                   
                         // The second comparison is needed if actual has no prefix

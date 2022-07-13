@@ -213,7 +213,7 @@ public class Main {
         String compileID = plan.nextID("tester");
         plan.compile(compileID, "submission", mainFile, dependentSourcePaths);
         plan.run(compileID, compileID, mainFile, "", null, timeout, maxOutputLen, false);
-        plan.addTask(() -> {
+        plan.addTask(() -> { 
             report.run("Running " + mainFile);
             if (!plan.checkCompiled(compileID, report, score)) return; 
             String outerr = plan.outerr(compileID);

@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
+ 
 public class Substitution {
     private Path file;
     private Map<String, ArrayList<String>> subs = new LinkedHashMap<>();

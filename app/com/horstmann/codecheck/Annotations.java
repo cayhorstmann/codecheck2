@@ -156,7 +156,7 @@ public class Annotations {
         }
         return match == null ? defaultValue : result;
     }
-
+ 
 
     public boolean checkConditions(Map<Path, String> submissionFiles, Report report) {
         for (Annotation a : annotations) {
