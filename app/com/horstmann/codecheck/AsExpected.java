@@ -10,6 +10,7 @@ import java.util.regex.Pattern;
 
 public class AsExpected {
     private Comparison comp;
+    private boolean hidden = false; 
     
     public AsExpected(Comparison comp) {
         this.comp = comp;
@@ -19,6 +20,15 @@ public class AsExpected {
         // test cases have not occurred. 
         // Need to count the number of expected cases in the file 
     
+    public boolean isHidden() {
+        return hidden; 
+    }
+
+    public void setHidden(boolean value)
+    {
+        hidden = value; 
+    }
+
     public static int expectedTests(String contents) { // TODO: Shouldn't this be in Language?
         Pattern expecteds = Pattern.compile("Expected: "); // TODO: What if this is commented out? 
         Matcher matcher = expecteds.matcher(contents);
@@ -66,7 +76,8 @@ public class AsExpected {
                 report.output(value);
                 report.error("Missing \"Expected: ...\"\n");
             } else {
-                report.output(lines, matches, mismatches);
+                if (hidden == false)
+                    report.output(lines, matches, mismatches);
             }
             // If the program run ends in an exception, it can happen that the number of
             // actual vs. expected values is less than it should be. In that case,

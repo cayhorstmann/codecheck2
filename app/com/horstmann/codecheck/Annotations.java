@@ -194,6 +194,8 @@ public class Annotations {
         for (Annotation a : annotations) {
             if (a.key.equals("SUB"))
                 sub.addVariable(a.path, a.before, a.args);
+            if (getHiddenTests().contains(a.path)) // OR (a.key.equals("HIDDEN"))
+                sub.setHidden(true); 
         }
         return sub;
     }
