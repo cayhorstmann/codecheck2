@@ -201,6 +201,38 @@ public class Problem {
         if (start != -1)
             result.replace(0, start, "");
 
+        // Check if links are relative or not, if relative links, change it to normal text
+        Pattern linkPattern = Pattern.compile("[<]\\s*[aA].*[aA]\\s*[>]");
+        Pattern hrefPattern = Pattern.compile("[hH][rR][eE][fF]\\s*[=]\\s*['\"]");
+        Pattern linkText = Pattern.compile(">.*<");
+        Matcher linkMatcher = linkPattern.matcher(result);
+        int startLink = 0;
+        int endLink = 0;
+        while(linkMatcher.find(startLink)) {
+            startLink = linkMatcher.start();
+            endLink = linkMatcher.end();
+            String theLink = result.substring(startLink, endLink);
+            // Find Href and check if HTTP or HTTPS
+            Matcher hrefMatcher = hrefPattern.matcher(theLink);
+            int endHref = 0;
+            if(hrefMatcher.find())
+                endHref = hrefMatcher.end();
+            String hrefLink = theLink.substring(endHref);      
+            if(!(hrefLink.startsWith("http://") || hrefLink.startsWith("https://"))) {
+                Matcher contentMatcher = linkText.matcher(theLink);
+                int startContent = 0;
+                int endContent = 0;
+                if(contentMatcher.find())
+                    startContent = contentMatcher.start();
+                    endContent = contentMatcher.end();
+                String contentOfLink = theLink.substring(startContent + 1, endContent - 1);
+                result.replace(startLink, endLink, contentOfLink);
+                startLink += contentOfLink.length();
+            }
+            else
+              startLink += theLink.length();
+        }
+
         Matcher matcher = IMG_PATTERN.matcher(result);
         start = 0;
         while (matcher.find(start)) {
