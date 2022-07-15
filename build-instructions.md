@@ -242,6 +242,8 @@ needed.
 
 ## Docker Installation
 
+Skip this step if you are on Codespaces. Codespaces already has Docker installed.
+
 Install Docker for Linux (deb) or [follow the instruction for your environment](https://docs.docker.com/engine/install/)
 ```
  sudo apt-get update
@@ -274,11 +276,11 @@ Docker Local Testing
 Build and run the Docker container for the `comrun` service:
 
     docker build --tag codecheck:1.0-SNAPSHOT comrun
-    docker run -p 8080:8080 -it codecheck:1.0-SNAPSHOT
+    docker run -p 8080:8080 -it codecheck:1.0-SNAPSHOT &
 
 Test that it works:
 
-    /opt/codecheck/codecheck -l samples/java/example1 &
+    /opt/codecheck/codecheck -lt samples/java/example1
 
 Create a file `conf/production.conf` holding an [application
 secret](https://www.playframework.com/documentation/2.8.x/ApplicationSecret):
@@ -291,12 +293,33 @@ Do not check this file into version control!
 Build and run the Docker container for the `play-codecheck` server:
 
     sbt docker:publishLocal 
-    docker run -p 9090:9000 -it --add-host host.docker.internal:host-gateway play-codecheck:1.0-SNAPSHOT
+    docker run -p 9090:9000 -it --add-host host.docker.internal:host-gateway play-codecheck:1.0-SNAPSHOT &
+
+(Ignore the `[error]` labels during the Docker build. They aren't actually errors.)
 
 Test that it works by pointing your browser to
-<http://localhost:9090/assets/uploadProblem.html>. Upload a problem.
+<http://localhost:9090/assets/uploadProblem.html>. Or if you use CodeSpaces, locate the Ports tab and open the local address for port 9090. Ignore the nginx error and paste `/assets/uploadProblem.html` after the URL. 
 
-Kill both containers by running this command in another terminal:
+Upload a problem: File name `Numbers.java`, file contents:
+
+```
+public class Numbers
+{
+//CALL 3, 4
+//CALL -3, 3
+//CALL 3, 0
+   public double average(int x, int y)
+   {
+      //HIDE
+      return 0.5 * (x + y);
+      //SHOW // Compute the average of x and y
+   }
+}
+```
+
+Click the Submit Files button. You should see three passing test cases.
+
+Kill both containers by running this command in the terminal:
 
     docker container kill $(docker ps -q)    
 
@@ -401,12 +424,13 @@ Alternatively, you can test with the locally running web app. In
 Play Server Deployment
 ----------------------
 
-In Amazon S3, create a bucket whose name starts with the four characters `ext.` and an arbitrary suffix, such as `ext.mydomain.com` to hold
-the uploaded CodeCheck problems. Set the ACL so that the bucket owner has all access rights and nobody else has any.
+Set environment variables and create a user in your Amazon AWS account:
 
 ```
-SUFFIX=mydomain.com
-aws s3 mb s3://ext.$SUFFIX
+ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+echo Account ID: $ACCOUNT_ID
+REGION=$(aws configure get region)
+echo Region: $REGION
 
 USERNAME=codecheck
 
@@ -414,6 +438,16 @@ aws iam create-user --user-name $USERNAME
 aws iam create-access-key --user-name $USERNAME
 
 # IMPORTANT: Record AccessKeyId and SecretAccessKey
+```
+
+In Amazon S3, create a bucket whose name starts with the four characters `ext.` and an arbitrary suffix, such as `ext.mydomain.com` to hold
+the uploaded CodeCheck problems. Set the ACL so that the bucket owner has all access rights and nobody else has any.
+
+```
+# Change the suffix below
+SUFFIX=mydomain.com
+
+aws s3 mb s3://ext.$SUFFIX
 
 cat <<EOF > CodeCheckS3.json
 {
@@ -442,6 +476,9 @@ cat <<EOF > CodeCheckS3.json
 EOF
 
 aws iam create-policy --policy-name CodeCheckS3 --policy-document file://./CodeCheckS3.json
+
+aws iam attach-user-policy --user-name $USERNAME \
+  --policy-arn arn:aws:iam::$ACCOUNT_ID:policy/CodeCheckS3
 ```
 
 If you use CodeCheck with LTI, you need to set up an Amazon Dynamo database. Create the following tables:
@@ -488,11 +525,6 @@ aws --region $REGION dynamodb create-table \
     --provisioned-throughput ReadCapacityUnits=1,WriteCapacityUnits=1
     
     
-ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
-
-aws iam attach-user-policy --user-name $USERNAME \
-  --policy-arn arn:aws:iam::$ACCOUNT_ID:policy/CodeCheckS3
-
 cat <<EOF > CodeCheckDynamo.json
 {
     "Version": "2012-10-17",
@@ -530,8 +562,9 @@ aws iam list-attached-user-policies --user-name $USERNAME
 You need to populate the `CodeCheckLTICredentials` table with at least one pair `oauth_consumer_key` and `shared_secret` (both of type `String`). These can be any values. I recommend to use the admin's email for `oauth_consumer_key` and a random password for `shared_secret`. 
 
 ```
-USERNAME=...
-PASSWORD=...
+USERNAME=codecheck
+PASSWORD=$(strings /dev/urandom | grep -E '[^ ]{8}' | head -1)
+echo Password: $PASSWORD
 aws dynamodb put-item --table-name CodeCheckLTICredentials --item '{"oauth_consumer_key":{"S":"'${USERNAME}'"},"shared_secret":{"S":"'${PASSWORD}'"}}'
 ```
 
