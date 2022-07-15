@@ -12,16 +12,6 @@ public class Calls {
         String name;
         String args;
         List<String> modifiers;
-        // boolean hidden = false; 
-
-        // public boolean isHidden() {
-        //     return hidden; 
-        // }
-
-        // public void setHidden(boolean value)
-        // {
-        //     hidden = value; 
-        // }
     }
     
     private Language language;

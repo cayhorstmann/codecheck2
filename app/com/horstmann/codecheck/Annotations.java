@@ -223,19 +223,5 @@ public class Annotations {
         return calls;
     }
     
-    // having HIDDEN work with specific CALLs
-    // public Calls findCalls() {
-    //     Calls calls = new Calls(language);
-    //     int callNum = 0; 
-    //     for (int a=0; a<annotations.size(); a++) {
-    //         if (annotations.get(a).key.equals("CALL")) {
-    //             calls.addCall(annotations.get(a).path, annotations.get(a).args, annotations.get(a).next);
-    //             if (a > 0 && annotations.get(a-1).key.equals("HIDDEN")) {
-    //                 calls.getCall(callNum).setHidden(true);
-    //             }
-    //             callNum += 1; 
-    //         }
-    //     }
-    //     return calls;
-    // }
+    
 }

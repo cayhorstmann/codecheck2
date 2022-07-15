@@ -148,13 +148,7 @@ public class Main {
                 names[i] = call.name;
                 args[i][0] = call.args;
                 if (lines.size() == 3 && Arrays.asList("true", "false").contains(lines.get(2))) {
-                    //if (call.isHidden() == true) {
-                    //    expected[i] = "hiddenTest"; 
-                    //    args[i][0] = "hiddenTest"; 
-                    //}
-                    //else {
-                        expected[i] = lines.get(0);
-                   //}
+                    expected[i] = lines.get(0);
                     actual[i] = Util.truncate(lines.get(1), expected[i].length() + MUCH_LONGER);
                     outcomes[i] = lines.get(2).equals("true");                
                 } else {
@@ -168,14 +162,7 @@ public class Main {
                         msg.append(line); msg.append('\n'); 
                     }
                     String message = msg.toString(); 
-                    //if (call.isHidden() == true) {
-                    //    expected[i] = "hiddenTest"; 
-                    //    args[i][0] = "hiddenTest"; 
-                    //}
-                    //else {
-                        expected[i] = lines.get(0);
-                    //}       
-                    //expected[i] = lines.size() > 0 ? lines.get(0) : "";  
+                    expected[i] = lines.get(0);
                     actual[i] = message;
                     outcomes[i] = false;
                 }
@@ -201,8 +188,12 @@ public class Main {
                 plan.addTask(() -> {
                     report.run(p.toString());
                     if (!plan.checkCompiled(id, report, score)) return; 
-                    String outerr = plan.outerr(id);                    
-                    problem.getLanguage().reportUnitTest(outerr, report, score);                
+                    String outerr = plan.outerr(id);
+                    if (problem.getAnnotations().getHiddenTests().contains(p))
+                        problem.getLanguage().reportUnitTest(outerr, report, score, true);   
+                    else 
+                        problem.getLanguage().reportUnitTest(outerr, report, score, false);
+
                 });
                             
             }
