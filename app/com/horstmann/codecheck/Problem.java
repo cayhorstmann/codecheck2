@@ -205,7 +205,6 @@ public class Problem {
             result.replace(0, start, "");
 
         // Check if links are relative or not, if relative links, change it to normal text
-        //Pattern linkPattern = Pattern.compile("[<]\\s*[aA].*[aA]\\s*[>]");
         Matcher linkMatcherStart = LINK_START.matcher(result);
         Matcher linkMatcherEnd = LINK_END.matcher(result);
         int startLink = 0;
@@ -213,7 +212,6 @@ public class Problem {
         while(linkMatcherStart.find(startLink) && linkMatcherEnd.find(startLink)) {
             startLink = linkMatcherStart.start();
             endLink = linkMatcherEnd.end();
-            // Find Href and check if HTTP or HTTPS
             String hrefLink = result.substring(linkMatcherStart.start(1), linkMatcherStart.end(1)).toLowerCase();     
             if(!(hrefLink.startsWith("http://") || hrefLink.startsWith("https://"))) {
                 int startContent = linkMatcherStart.end();
