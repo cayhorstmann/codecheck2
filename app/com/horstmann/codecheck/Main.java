@@ -110,7 +110,8 @@ public class Main {
                 actual[i] = Util.truncate(actual[i], expected[i].length() + MUCH_LONGER);
                 score.pass(outcomes[i], null); // Pass/fail shown in run table
             }
-            report.runTable(null, argNames, args, actual, expected, outcomes);
+            if (sub.isHidden() == false)
+                report.runTable(null, argNames, args, actual, expected, outcomes);
         });
     }
 
@@ -168,7 +169,8 @@ public class Main {
                 }
                 score.pass(outcomes[i], null /* no report--it's in the table */);
             }
-            report.runTable(names, new String[] { "Arguments" }, args, actual, expected, outcomes);
+            if (calls.isHidden() == false) 
+                report.runTable(names, new String[] { "Arguments" }, args, actual, expected, outcomes);
         });
     }     
 
@@ -188,7 +190,11 @@ public class Main {
                     report.run(p.toString());
                     if (!plan.checkCompiled(id, report, score)) return; 
                     String outerr = plan.outerr(id);                    
-                    problem.getLanguage().reportUnitTest(outerr, report, score);                
+                    if (problem.getAnnotations().getHiddenTests().contains(p))
+                        problem.getLanguage().reportUnitTest(outerr, report, score, true);   
+                    else 
+                        problem.getLanguage().reportUnitTest(outerr, report, score, false);
+
                 });
                             
             }
@@ -205,6 +211,8 @@ public class Main {
             String outerr = plan.outerr(compileID);
             AsExpected cond = new AsExpected(comp);
             String tester = plan.getFileString("use", mainFile);
+            if (problem.getAnnotations().getHiddenTests().contains(mainFile))
+                cond.setHidden(true);
             if (tester == null)
                 tester = plan.getFileString("solution", mainFile);  // In case the student was asked to do it
             cond.eval(outerr, report, score, tester);                 
@@ -436,8 +444,9 @@ public class Main {
                     "*.jar", "*.pdf");      
 
             printFiles.removeAll(problem.getAnnotations().getHidden());
+            printFiles.removeAll(problem.getAnnotations().getHiddenTests()); 
             printFiles.removeAll(problem.getSolutionFiles().keySet());
-            
+
             if (problem.getAnnotations().checkConditions(submissionFiles, report)) {
                 if (problem.getAnnotations().has("CALL")) {
                     Calls calls = problem.getAnnotations().findCalls();
