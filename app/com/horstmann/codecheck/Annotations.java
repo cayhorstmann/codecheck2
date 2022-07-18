@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 
 public class Annotations {
     public static final Set<String> VALID_ANNOTATIONS = Set.of(
-            "HIDE", "SHOW", "EDIT", "SOLUTION", "CALL", "SUB", "ID", "SAMPLE", "ARGS", 
+        "HIDDEN", "HIDE", "SHOW", "EDIT", "SOLUTION", "CALL", "SUB", "ID", "SAMPLE", "ARGS", 
             "IN", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "MAXOUTPUTLEN",
             "REQUIRED", "FORBIDDEN", "SCORING", "INTERLEAVE", "TILE", "FIXED", "OR", "PSEUDO");    
     public static final Set<String> NON_BLANK_BEFORE_OK = Set.of("SUB", "PSEUDO"); 
@@ -56,6 +56,7 @@ public class Annotations {
     private Set<String> keys = new HashSet<>();
     private Set<Path> solutions = new TreeSet<>();
     private Set<Path> hidden = new TreeSet<>();
+    private Set<Path> hiddenTests = new TreeSet<>();
     
     public Annotations(Language language) {
         this.language = language;
@@ -88,6 +89,8 @@ public class Annotations {
                     solutions.add(p);
                 if (a.key.equals("HIDE")) 
                     hidden.add(p);
+                if (a.key.equals("HIDDEN"))
+                    hiddenTests.add(p); 
                 a.path = p;
                 annotations.add(a);
             }
@@ -100,6 +103,10 @@ public class Annotations {
     
     public Set<Path> getHidden() {
         return Collections.unmodifiableSet(hidden);
+    }
+
+    public Set<Path> getHiddenTests() {
+        return Collections.unmodifiableSet(hiddenTests);
     }
 
     public String findUniqueKey(String key) {
@@ -187,6 +194,8 @@ public class Annotations {
         for (Annotation a : annotations) {
             if (a.key.equals("SUB"))
                 sub.addVariable(a.path, a.before, a.args);
+            if (getHiddenTests().contains(a.path)) // OR (a.key.equals("HIDDEN"))
+                sub.setHidden(true);
         }
         return sub;
     }
@@ -208,6 +217,8 @@ public class Annotations {
         for (Annotation a : annotations) {
             if (a.key.equals("CALL"))
                 calls.addCall(a.path, a.args, a.next);
+            if (getHiddenTests().contains(a.path)) // OR (a.key.equals("HIDDEN"))
+                calls.setHidden(true); 
         }
         return calls;
     }

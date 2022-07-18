@@ -14,11 +14,21 @@ public class Substitution {
     private Map<String, ArrayList<String>> subs = new LinkedHashMap<>();
     private int size;
     private Language language;
+    private boolean hidden = false; 
     
     public Substitution(Language language) {
         this.language = language;
     }
 
+    public boolean isHidden() {
+        return hidden; 
+    }
+
+    public void setHidden(boolean value)
+    {
+        hidden = value; 
+    }
+    
     public void addVariable(Path file, String decl, String args) {
         if (this.file == null)
             this.file = file;
