@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 
 public class Annotations {
     public static final Set<String> VALID_ANNOTATIONS = Set.of(
-        "HIDDEN", "HIDE", "SHOW", "EDIT", "SOLUTION", "CALL", "SUB", "ID", "SAMPLE", "ARGS", 
+            "HIDDEN", "HIDE", "SHOW", "EDIT", "SOLUTION", "CALL", "HIDDENCALL", "SUB", "ID", "SAMPLE", "ARGS", 
             "IN", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "MAXOUTPUTLEN",
             "REQUIRED", "FORBIDDEN", "SCORING", "INTERLEAVE", "TILE", "FIXED", "OR", "PSEUDO");    
     public static final Set<String> NON_BLANK_BEFORE_OK = Set.of("SUB", "PSEUDO"); 
@@ -89,7 +89,7 @@ public class Annotations {
                     solutions.add(p);
                 if (a.key.equals("HIDE")) 
                     hidden.add(p);
-                if (a.key.equals("HIDDEN"))
+                if (a.key.equals("HIDDEN") || a.key.equals("HIDDENCALL"))
                     hiddenTests.add(p); 
                 a.path = p;
                 annotations.add(a);
@@ -212,11 +212,17 @@ public class Annotations {
 
     public Calls findCalls() {
         Calls calls = new Calls(language);
-        for (Annotation a : annotations) {
-            if (a.key.equals("CALL"))
-                calls.addCall(a.path, a.args, a.next);
-            if (getHiddenTests().contains(a.path)) // OR (a.key.equals("HIDDEN"))
-                calls.setHidden(true); 
+        int callNum = 0; 
+        for (int a=0; a<annotations.size(); a++) {
+            if (annotations.get(a).key.equals("CALL")) {
+                 calls.addCall(annotations.get(a).path, annotations.get(a).args, annotations.get(a).next);
+                 callNum += 1; 
+            }
+            else if (annotations.get(a).key.equals("HIDDENCALL")) {
+                calls.addCall(annotations.get(a).path, annotations.get(a).args, annotations.get(a).next);
+                calls.getCall(callNum).setHidden(true);
+                callNum += 1; 
+            }
         }
         return calls;
     }

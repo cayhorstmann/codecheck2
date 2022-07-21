@@ -147,7 +147,13 @@ public class Main {
                 names[i] = call.name;
                 args[i][0] = call.args;
                 if (lines.size() == 3 && Arrays.asList("true", "false").contains(lines.get(2))) {
-                    expected[i] = lines.get(0);
+                    if (call.isHidden() == true) {
+                       expected[i] = "hidden"; 
+                       args[i][0] = "hidden"; 
+                    }
+                    else {
+                        expected[i] = lines.get(0);
+                   }
                     actual[i] = Util.truncate(lines.get(1), expected[i].length() + MUCH_LONGER);
                     outcomes[i] = lines.get(2).equals("true");                
                 } else {
@@ -161,15 +167,20 @@ public class Main {
                         msg.append(line); msg.append('\n'); 
                     }
                     String message = msg.toString(); 
-                                    
-                    expected[i] = lines.size() > 0 ? lines.get(0) : "";  
+                    if (call.isHidden() == true) {
+                        expected[i] = "hidden"; 
+                        args[i][0] = "hidden"; 
+                    }
+                    else {
+                        expected[i] = lines.get(0);
+                    }                
                     actual[i] = message;
                     outcomes[i] = false;
                 }
                 score.pass(outcomes[i], null /* no report--it's in the table */);
             }
-            if (calls.isHidden() == false) 
-                report.runTable(names, new String[] { "Arguments" }, args, actual, expected, outcomes);
+            //if (calls.isHidden() == false) 
+            report.runTable(names, new String[] { "Arguments" }, args, actual, expected, outcomes);
         });
     }     
 
@@ -447,7 +458,7 @@ public class Main {
             printFiles.removeAll(problem.getSolutionFiles().keySet());
 
             if (problem.getAnnotations().checkConditions(submissionFiles, report)) {
-                if (problem.getAnnotations().has("CALL")) {
+                if (problem.getAnnotations().has("CALL") || problem.getAnnotations().has("HIDDENCALL")) {
                     Calls calls = problem.getAnnotations().findCalls();
                     mainSourcePaths.remove(calls.getFile());
                     dependentSourcePaths.add(calls.getFile());
