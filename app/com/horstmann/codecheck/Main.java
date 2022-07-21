@@ -110,8 +110,7 @@ public class Main {
                 actual[i] = Util.truncate(actual[i], expected[i].length() + MUCH_LONGER);
                 score.pass(outcomes[i], null); // Pass/fail shown in run table
             }
-            if (sub.isHidden() == false)
-                report.runTable(null, argNames, args, actual, expected, outcomes);
+            report.runTable(null, argNames, args, actual, expected, outcomes);
         });
     }
 
