@@ -147,7 +147,7 @@ public class Main {
                 names[i] = call.name;
                 args[i][0] = call.args;
                 if (lines.size() == 3 && Arrays.asList("true", "false").contains(lines.get(2))) {
-                    if (call.isHidden() == true) {
+                    if (call.isHidden()) {
                        expected[i] = "hidden"; 
                        args[i][0] = "hidden"; 
                     }
