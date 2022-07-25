@@ -57,6 +57,7 @@ public class Annotations {
     private Set<Path> solutions = new TreeSet<>();
     private Set<Path> hidden = new TreeSet<>();
     private Set<Path> hiddenTests = new TreeSet<>();
+    private Set<Path> hiddenTestFiles = new TreeSet<>();
     
     public Annotations(Language language) {
         this.language = language;
@@ -91,6 +92,8 @@ public class Annotations {
                     hidden.add(p);
                 if (a.key.equals("HIDDEN") || a.key.equals("HIDDENCALL"))
                     hiddenTests.add(p); 
+                if (a.key.equals("HIDDEN"))
+                    hiddenTestFiles.add(p); 
                 a.path = p;
                 annotations.add(a);
             }
@@ -107,6 +110,10 @@ public class Annotations {
 
     public Set<Path> getHiddenTests() {
         return Collections.unmodifiableSet(hiddenTests);
+    }
+
+    public Set<Path> getHiddenTestFiles() {
+        return Collections.unmodifiableSet(hiddenTestFiles);
     }
 
     public String findUniqueKey(String key) {
