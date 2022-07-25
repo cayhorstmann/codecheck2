@@ -41,7 +41,7 @@ package controllers;
    state: as string, not JSON
    score
   
-   with global secondary index
+   with global secondary index (TODO: Not currently)
      problemID 
      submitterID
    
