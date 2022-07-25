@@ -110,8 +110,7 @@ public class Main {
                 actual[i] = Util.truncate(actual[i], expected[i].length() + MUCH_LONGER);
                 score.pass(outcomes[i], null); // Pass/fail shown in run table
             }
-            if (sub.isHidden() == false)
-                report.runTable(null, argNames, args, actual, expected, outcomes);
+            report.runTable(null, argNames, args, actual, expected, outcomes);
         });
     }
 
@@ -148,7 +147,13 @@ public class Main {
                 names[i] = call.name;
                 args[i][0] = call.args;
                 if (lines.size() == 3 && Arrays.asList("true", "false").contains(lines.get(2))) {
-                    expected[i] = lines.get(0);
+                    if (call.isHidden()) {
+                       expected[i] = "hidden"; 
+                       args[i][0] = "hidden"; 
+                    }
+                    else {
+                        expected[i] = lines.get(0);
+                   }
                     actual[i] = Util.truncate(lines.get(1), expected[i].length() + MUCH_LONGER);
                     outcomes[i] = lines.get(2).equals("true");                
                 } else {
@@ -162,15 +167,19 @@ public class Main {
                         msg.append(line); msg.append('\n'); 
                     }
                     String message = msg.toString(); 
-                                    
-                    expected[i] = lines.size() > 0 ? lines.get(0) : "";  
+                    if (call.isHidden() == true) {
+                        expected[i] = "hidden"; 
+                        args[i][0] = "hidden"; 
+                    }
+                    else {
+                        expected[i] = lines.get(0);
+                    }                
                     actual[i] = message;
                     outcomes[i] = false;
                 }
                 score.pass(outcomes[i], null /* no report--it's in the table */);
             }
-            if (calls.isHidden() == false) 
-                report.runTable(names, new String[] { "Arguments" }, args, actual, expected, outcomes);
+            report.runTable(names, new String[] { "Arguments" }, args, actual, expected, outcomes);
         });
     }     
 
@@ -190,7 +199,7 @@ public class Main {
                     report.run(p.toString());
                     if (!plan.checkCompiled(id, report, score)) return; 
                     String outerr = plan.outerr(id);                    
-                    if (problem.getAnnotations().getHiddenTests().contains(p))
+                    if (problem.getAnnotations().getHiddenTestFiles().contains(p))
                         problem.getLanguage().reportUnitTest(outerr, report, score, true);   
                     else 
                         problem.getLanguage().reportUnitTest(outerr, report, score, false);
@@ -211,7 +220,7 @@ public class Main {
             String outerr = plan.outerr(compileID);
             AsExpected cond = new AsExpected(comp);
             String tester = plan.getFileString("use", mainFile);
-            if (problem.getAnnotations().getHiddenTests().contains(mainFile))
+            if (problem.getAnnotations().getHiddenTestFiles().contains(mainFile))
                 cond.setHidden(true);
             if (tester == null)
                 tester = plan.getFileString("solution", mainFile);  // In case the student was asked to do it
@@ -420,6 +429,17 @@ public class Main {
 
             plan = new Plan(problem.getLanguage(), resourceLoader.getProperty("com.horstmann.codecheck.debug") != null);
             
+            // TODO: This would be nice to have in Problem, except that one might later need to remove checkstyle.xml
+            // the use files that the students are entitled to see
+            Set<Path> printFiles = Util.filterNot(problem.getUseFiles().keySet(),  
+            "*.png", "*.PNG", "*.gif", "*.GIF", "*.jpg", "*.jpeg", "*.JPG", "*.bmp", "*.BMP",
+            "*.jar", "*.pdf");      
+
+            printFiles.removeAll(problem.getAnnotations().getHidden());
+            printFiles.removeAll(problem.getAnnotations().getHiddenTests()); 
+            printFiles.removeAll(problem.getAnnotations().getHiddenTestFiles());
+            printFiles.removeAll(problem.getSolutionFiles().keySet());
+            
             timeoutMillis = (int) problem.getAnnotations().findUniqueDoubleKey("TIMEOUT", DEFAULT_TIMEOUT_MILLIS);
             maxOutputLen = (int) problem.getAnnotations().findUniqueDoubleKey("MAXOUTPUTLEN", DEFAULT_MAX_OUTPUT_LEN);        
             double tolerance = problem.getAnnotations().findUniqueDoubleKey("TOLERANCE", DEFAULT_TOLERANCE);
@@ -436,19 +456,9 @@ public class Main {
             reportComments(metadata);
             
             copyFilesToPlan(submissionFiles);
-            
-            // TODO: This would be nice to have in Problem, except that one might later need to remove checkstyle.xml
-            // the use files that the students are entitled to see
-            Set<Path> printFiles = Util.filterNot(problem.getUseFiles().keySet(),  
-                    "*.png", "*.PNG", "*.gif", "*.GIF", "*.jpg", "*.jpeg", "*.JPG", "*.bmp", "*.BMP",
-                    "*.jar", "*.pdf");      
-
-            printFiles.removeAll(problem.getAnnotations().getHidden());
-            printFiles.removeAll(problem.getAnnotations().getHiddenTests()); 
-            printFiles.removeAll(problem.getSolutionFiles().keySet());
 
             if (problem.getAnnotations().checkConditions(submissionFiles, report)) {
-                if (problem.getAnnotations().has("CALL")) {
+                if (problem.getAnnotations().has("CALL") || problem.getAnnotations().has("HIDDENCALL")) {
                     Calls calls = problem.getAnnotations().findCalls();
                     mainSourcePaths.remove(calls.getFile());
                     dependentSourcePaths.add(calls.getFile());
