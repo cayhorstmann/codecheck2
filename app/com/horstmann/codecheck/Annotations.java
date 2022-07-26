@@ -14,7 +14,7 @@ import java.util.regex.Pattern;
 public class Annotations {
     public static final Set<String> VALID_ANNOTATIONS = Set.of(
             "HIDDEN", "HIDE", "SHOW", "EDIT", "SOLUTION", "CALL", "HIDDENCALL", "SUB", "ID", "SAMPLE", "ARGS", 
-            "IN", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "MAXOUTPUTLEN",
+            "IN", "INH", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "MAXOUTPUTLEN",
             "REQUIRED", "FORBIDDEN", "SCORING", "INTERLEAVE", "TILE", "FIXED", "OR", "PSEUDO");    
     public static final Set<String> NON_BLANK_BEFORE_OK = Set.of("SUB", "PSEUDO"); 
 

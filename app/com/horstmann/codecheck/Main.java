@@ -228,12 +228,12 @@ public class Main {
         });
     }
 
-    private void testInputs(Map<String, String> inputs, Path mainFile, boolean okToInterleave) throws Exception {
+    private void testInputs(List<Input> inputs, Path mainFile, boolean okToInterleave) throws Exception {
         /*
          * If there are no inputs, we feed in one empty input to execute the program.
          */
         if (inputs.size() == 0)
-            inputs.put("", ""); 
+            inputs.add(new Input("","",false));
         
         plan.compile("submissionrun", "submission", mainFile, dependentSourcePaths);
         boolean runSolution = !problem.getInputMode() && !problem.getAnnotations().isSample(mainFile);
@@ -246,14 +246,16 @@ public class Main {
                 plan.checkSolutionCompiled("solutionrun", report, score); 
             plan.checkCompiled("submissionrun", report, score);
         });
-        for (String test : inputs.keySet()) {
-            String input = inputs.get(test);
-            testInput(mainFile, runSolution, test, input, timeoutMillis / inputs.size(), maxOutputLen / inputs.size(), okToInterleave);
+        for (int i=0; i<inputs.size(); i++) {   
+            String test = inputs.get(i).getKey(); 
+            String input = inputs.get(i).getValue(); 
+            boolean hidden = inputs.get(i).getHidden(); 
+            testInput(mainFile, runSolution, test, input, timeoutMillis / inputs.size(), maxOutputLen / inputs.size(), okToInterleave, hidden);
         }
     }
 
     private void testInput(Path mainFile, 
-            boolean runSolution, String test, String input, int timeout, int maxOutput, boolean okToInterleave)
+            boolean runSolution, String test, String input, int timeout, int maxOutput, boolean okToInterleave, boolean hidden)
             throws Exception {
         List<String> runargs = problem.getAnnotations().findKeys("ARGS");
         if (runargs.size() == 0) runargs.add("");
@@ -272,12 +274,12 @@ public class Main {
         
         // TODO: Language settings
         for (String args : runargs) {
-            testInput(mainFile, runSolution, test, input, args, outFiles, timeout / runargs.size(), maxOutput / runargs.size(), interleaveio);
+            testInput(mainFile, runSolution, test, input, args, outFiles, timeout / runargs.size(), maxOutput / runargs.size(), interleaveio, hidden) ;
         }
     }
     
     private void testInput(Path mainFile,
-            boolean runSolution, String test, String input, String runargs, List<String> outFiles, int timeout, int maxOutput, boolean interleaveio)
+            boolean runSolution, String test, String input, String runargs, List<String> outFiles, int timeout, int maxOutput, boolean interleaveio, boolean hidden)
             throws Exception {
         String submissionRunID = plan.nextID("submissionrun");
         plan.run("submissionrun", submissionRunID, mainFile, runargs, input, outFiles, timeout, maxOutput, interleaveio);
@@ -322,7 +324,7 @@ public class Main {
                     // Report output but don't grade it
                     report.output(outerr);
                 } else {
-                    boolean outcome = comp.execute(input, outerr, expectedOuterr, report, null);
+                    boolean outcome = comp.execute(input, outerr, expectedOuterr, report, null, hidden);
                     score.pass(outcome, report);
                 }
             }        
@@ -345,7 +347,7 @@ public class Main {
                 } else {
                     String expectedContents = plan.getOutputString(solutionRunID, f);                
                     boolean outcome = comp.execute(input, contents.get(f),
-                            expectedContents, report, f);
+                            expectedContents, report, f, hidden);
                     score.pass(outcome, report);
                 }
             }
@@ -471,10 +473,10 @@ public class Main {
                     doSubstitutions(submissionFiles, sub);
                 }
                 
-                Map<String, String> inputs = new TreeMap<>(); 
+                List<Input> inputs = new ArrayList<Input>();
                 for (String i : new String[] { "", "1", "2", "3", "4", "5", "6", "7", "8", "9" }) {
                     String key = "test" + i + ".in";
-                    
+
                     Path p = Paths.get(key);
                     byte[] contents = null;
                     if (problemFiles.containsKey(p))
@@ -485,15 +487,18 @@ public class Main {
                             contents = problemFiles.get(p);                                 
                     }
                     if (contents != null) 
-                        inputs.put("test" + i, new String(contents, StandardCharsets.UTF_8));
+                        inputs.add(new Input("test" + i, new String(contents, StandardCharsets.UTF_8), false));
                 }
                 int inIndex = inputs.size();
                 for (String s : problem.getAnnotations().findKeys("IN")) {
-                    inputs.put("test" + ++inIndex, Util.unescapeJava(s));
+                    inputs.add(new Input("test" + ++inIndex, Util.unescapeJava(s), false)); 
+                }
+                for (String s : problem.getAnnotations().findKeys("INH")) {
+                    inputs.add(new Input("test" + ++inIndex, Util.unescapeJava(s), true)); 
                 }
                 if (problem.getInputMode()) { 
                     Path p = Paths.get("Input");
-                    inputs.put("Input", submissionFiles.get(p));
+                    inputs.add(new Input("Input", submissionFiles.get(p), false));
                 }
 
                 runUnitTests(); 
