@@ -235,9 +235,15 @@ public class Upload extends Controller {
         }
         if (r == null) return problemFiles;
         Map<Path, byte[]> fixedProblemFiles = new TreeMap<>();
-        for (Map.Entry<Path, byte[]> entry : problemFiles.entrySet()) {
-            fixedProblemFiles.put(r.relativize(entry.getKey()), entry.getValue());
+        if(problemFiles.keySet().size() == 1) {
+            fixedProblemFiles.put(r.getFileName(), problemFiles.get(r));
         }
+        else {
+            for (Map.Entry<Path, byte[]> entry : problemFiles.entrySet()) {
+                fixedProblemFiles.put(r.relativize(entry.getKey()), entry.getValue());
+            }
+        }
+
         return fixedProblemFiles;
     }
 
