@@ -156,7 +156,15 @@ public class Upload extends Controller {
         response.append(
                 "<html><head><title></title><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"/>");
         response.append("<body style=\"font-family: sans\">");
-        String prefix = (request.secure() ? "https://" : "http://") + request.host() + "/";
+
+        String prefix;
+        if(request.host().equals("localhost")) {
+            prefix = "../";
+        }
+        else {
+            prefix = (request.secure() ? "https://" : "http://") + request.host() + "/";
+        }
+
         String problemUrl = prefix + type + "/" + problem;
         response.append("Public URL (for your students): ");
         response.append("<a href=\"" + problemUrl + "\" target=\"_blank\">" + problemUrl + "</a>");
@@ -227,9 +235,15 @@ public class Upload extends Controller {
         }
         if (r == null) return problemFiles;
         Map<Path, byte[]> fixedProblemFiles = new TreeMap<>();
-        for (Map.Entry<Path, byte[]> entry : problemFiles.entrySet()) {
-            fixedProblemFiles.put(r.relativize(entry.getKey()), entry.getValue());
+        if(problemFiles.keySet().size() == 1) {
+            fixedProblemFiles.put(r.getFileName(), problemFiles.get(r));
         }
+        else {
+            for (Map.Entry<Path, byte[]> entry : problemFiles.entrySet()) {
+                fixedProblemFiles.put(r.relativize(entry.getKey()), entry.getValue());
+            }
+        }
+
         return fixedProblemFiles;
     }
 
