@@ -250,6 +250,10 @@ public class Main {
             String test = inputs.get(i).getKey(); 
             String input = inputs.get(i).getValue(); 
             boolean hidden = inputs.get(i).getHidden(); 
+            if (input.contains("//INH"))  {
+                input = input.replaceAll("//INH", "").stripLeading();
+                hidden = true; 
+            }
             testInput(mainFile, runSolution, test, input, timeoutMillis / inputs.size(), maxOutputLen / inputs.size(), okToInterleave, hidden);
         }
     }
