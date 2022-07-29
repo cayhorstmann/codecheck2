@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.nio.file.Path;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -199,11 +200,25 @@ public interface ProblemConnection {
         public boolean isOnS3(String repo) {return false;}
         public boolean isOnS3(String repo, String key) {return false;}
         // May not need
+        private Config config;
+        private String bucketSuffix = null;
+        public ProblemLocalConnection(Config config) {
+            this.config = config;
+        }
         public void write(Path file, String repo, String key) throws IOException {}
         public void write(String contents, String repo, String key) throws IOException {}
-        public void write(byte[] contents, String repo, String key) throws IOException {}
+        public void write(byte[] contents, String repo, String key) throws IOException {
+            Path repoPath = Path.of(config.getString("com.horstmann.codecheck.repo." + repo));
+            Path problemDir = repoPath.resolve(key);
+            com.horstmann.codecheck.Util.deleteDirectory(problemDir); // Delete any prior contents so that it is replaced by new zip file
+            Files.createDirectories(problemDir);
+            problemDir = problemDir.resolve("problem.zip");
+            org.apache.commons.io.FileUtils.writeByteArrayToFile(new File(problemDir.toString()), contents);
+        }
         public void delete(String repo, String key) throws IOException {}
-        public byte[] read(String repo, String problem) throws IOException {return null;}
+        public byte[] read(String repo, String problem) throws IOException {
+            return null;
+        }
     }
 
     @Singleton class ProblemConnector implements ProblemConnection {
@@ -211,7 +226,7 @@ public interface ProblemConnection {
 
         @Inject public ProblemConnector(Config config) {
             if (!config.hasPath("com.horstmann.codecheck.s3.accessKey")) {
-                delegate = new ProblemLocalConnection();
+                delegate = new ProblemLocalConnection(config);
             }
             else
                 delegate = new ProblemS3Connection(config);
