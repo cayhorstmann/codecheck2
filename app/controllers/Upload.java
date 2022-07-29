@@ -1,6 +1,7 @@
 package controllers;
 
 import java.io.IOException;
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,6 +19,7 @@ import com.typesafe.config.Config;
 
 import models.CodeCheck;
 import models.S3Connection;
+import models.ProblemConnection.ProblemConnector;
 import play.libs.Files.TemporaryFile;
 import play.mvc.Controller;
 import play.mvc.Http;
@@ -26,6 +28,7 @@ import play.mvc.Result;
 public class Upload extends Controller {
     final String repo = "ext";
     @Inject private S3Connection s3conn;
+    @Inject private ProblemConnector probConn;
     @Inject private Config config;
     @Inject private CodeCheck codeCheck;
 
@@ -71,21 +74,26 @@ public class Upload extends Controller {
     }
     
     private void saveProblem(String problem, Map<Path, byte[]> problemFiles) throws IOException {
-        boolean isOnS3 = s3conn.isOnS3("ext");
-        if (isOnS3) {
-            byte[] problemZip = Util.zip(problemFiles);
-            s3conn.putToS3(problemZip, repo, problem);
-        } else {
-            Path extDir = java.nio.file.Path.of(config.getString("com.horstmann.codecheck.repo.ext"));
-            Path problemDir = extDir.resolve(problem);
-            com.horstmann.codecheck.Util.deleteDirectory(problemDir); // Delete any prior contents so that it is replaced by new zip file
-            Files.createDirectories(problemDir);
+        // boolean isOnS3 = s3conn.isOnS3("ext");
+        // if (isOnS3) {
+        //     byte[] problemZip = Util.zip(problemFiles);
+        //     s3conn.putToS3(problemZip, repo, problem);
+        // } else {
+        //     Path extDir = java.nio.file.Path.of(config.getString("com.horstmann.codecheck.repo.ext"));
+        //     Path problemDir = extDir.resolve(problem);
+        //     com.horstmann.codecheck.Util.deleteDirectory(problemDir); // Delete any prior contents so that it is replaced by new zip file
+        //     Files.createDirectories(problemDir);
+        //     problemDir = problemDir.resolve("problem.zip");
             
-            for (Map.Entry<Path, byte[]> entry : problemFiles.entrySet()) {
-                Path p = problemDir.resolve(entry.getKey());
-                Files.write(p, entry.getValue());
-            }
-        }       
+        //     // for (Map.Entry<Path, byte[]> entry : problemFiles.entrySet()) {
+        //     //     Path p = problemDir.resolve(entry.getKey());
+        //     //     Files.write(p, entry.getValue());
+        //     // }
+        //     byte[] problemZip = Util.zip(problemFiles);
+        //     org.apache.commons.io.FileUtils.writeByteArrayToFile(new File(problemDir.toString()), problemZip);
+        // }     
+        byte[] problemZip = Util.zip(problemFiles);
+        probConn.write(problemZip, repo, problem);  
     }
 
     public Result uploadProblem(Http.Request request) {
