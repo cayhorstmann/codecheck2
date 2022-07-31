@@ -64,7 +64,7 @@ public interface ProblemConnection {
     public void write(String contents, String repo, String key) throws IOException;
     public void write(byte[] contents, String repo, String key) throws IOException;
     public void delete(String repo, String key) throws IOException;
-    public byte[] read(String repo, String problem) throws IOException;
+    public byte[] read(String repo, String key) throws IOException;
 
 
     public class ProblemS3Connection implements ProblemConnection {
@@ -159,18 +159,18 @@ public interface ProblemConnection {
             }            
         }
 
-        public byte[] read(String repo, String problem) throws IOException {
+        public byte[] read(String repo, String key) throws IOException {
             String bucket = repo + "." + bucketSuffix;
 
             byte[] bytes = null;
             try {
                 // TODO -- trying to avoid warning 
                 // WARN - com.amazonaws.services.s3.internal.S3AbortableInputStream - Not all bytes were read from the S3ObjectInputStream, aborting HTTP connection. This is likely an error and may result in sub-optimal behavior. Request only the bytes you need via a ranged GET or drain the input stream after use
-                try (InputStream in = getS3Connection().getObject(bucket, problem).getObjectContent()) {
+                try (InputStream in = getS3Connection().getObject(bucket, key).getObjectContent()) {
                     bytes = in.readAllBytes();
                 }
             } catch (AmazonS3Exception ex) {
-                logger.error("S3Connection.readFromS3: Cannot read " + problem + " from " + bucket);
+                logger.error("S3Connection.readFromS3: Cannot read " + key + " from " + bucket);
                 throw ex;
             }
             return bytes;            
@@ -206,32 +206,88 @@ public interface ProblemConnection {
         // May not need
         private Config config;
         private String bucketSuffix = null;
+        private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
         public ProblemLocalConnection(Config config) {
             this.config = config;
         }
-        public void write(Path file, String repo, String key) throws IOException {}
-        public void write(String contents, String repo, String key) throws IOException {}
-        public void write(byte[] contents, String repo, String key) throws IOException {
-            Path repoPath = Path.of(config.getString("com.horstmann.codecheck.repo." + repo));
-            Path problemDir = repoPath.resolve(key);
-            Util.deleteDirectory(problemDir); // Delete any prior contents so that it is replaced by new zip file
-            Files.createDirectories(problemDir);
-            problemDir = problemDir.resolve("problem.zip");
-            org.apache.commons.io.FileUtils.writeByteArrayToFile(new File(problemDir.toString()), contents);
+        public void write(Path file, String repo, String key) throws IOException {
+            try {             
+                Path repoPath = Path.of(config.getString("com.horstmann.codecheck.repo." + repo));
+                Path newFileDirectory = repoPath.resolve(key);
+                String fileName = file.getFileName().toString();   
+                Path newFilePath = repoPath.resolve(key).resolve(fileName);
+
+                Util.deleteDirectory(newFileDirectory); // Delete any prior contents so that it is replaced by new content
+                Files.createDirectories(newFileDirectory);
+
+                // Read the file to write
+                InputStream in = new FileInputStream(file.toString());
+                byte [] content = in.readAllBytes(); 
+                // Write the file
+                org.apache.commons.io.FileUtils.writeByteArrayToFile(new File(newFilePath.toString()), content);
+            } catch (IOException ex) {
+                logger.error("ProblemLocalConnection.write : Cannot put " + file + " to " + repo);
+                throw ex;
+            }
         }
-        public void delete(String repo, String key) throws IOException {
+
+        public void write(String contents, String repo, String key) throws IOException {
+            try {
+                Path repoPath = Path.of(config.getString("com.horstmann.codecheck.repo." + repo));
+                Path newFileDirectory = repoPath.resolve(key);
+                Path newFilePath = repoPath.resolve(key).resolve(key);
+
+                Util.deleteDirectory(newFileDirectory); // Delete any prior contents so that it is replaced by new content
+                Files.createDirectories(newFileDirectory);
+
+                File newFile = new File(newFilePath.toString());
+                FileWriter fileWriter = new FileWriter(newFilePath.toString());
+                fileWriter.write(contents);
+                fileWriter.close();
+            } catch (IOException ex) {
+                logger.error("ProblemLocalConnection.write: Cannot put " + contents.replaceAll("\n", "|").substring(0, Math.min(50, contents.length())) + "... to " + repo);
+                throw ex;                
+            }
+        }
+
+        public void write(byte[] contents, String repo, String key) throws IOException {
+            try {
+                Path repoPath = Path.of(config.getString("com.horstmann.codecheck.repo." + repo));
+                Path problemDir = repoPath.resolve(key);
+                Util.deleteDirectory(problemDir); // Delete any prior contents so that it is replaced by new zip file
+                Files.createDirectories(problemDir);                
+                Path newFilePath = problemDir.resolve(key+".zip");
+                org.apache.commons.io.FileUtils.writeByteArrayToFile(new File(newFilePath.toString()), contents);
+            } catch (IOException ex) {
+                String bytes = Arrays.toString(contents);
+                logger.error("ProblemLocalConnection.write : Cannot put " + bytes.substring(0, Math.min(50, bytes.length())) + "... to " + repo);
+                throw ex;                   
+            }
 
         }
-        public byte[] read(String repo, String problem) throws IOException {
-            Path repoPath = Path.of(config.getString("com.horstmann.codecheck.repo." + repo));
-            if (problem.startsWith("/"))
-                problem = problem.substring(1);
-            
+        public void delete(String repo, String key) throws IOException {
+            String repoPath = config.getString("com.horstmann.codecheck.repo." + repo);
+            Path directoryPath = Path.of(repoPath).resolve(key);
+            try {
+                Util.deleteDirectory(directoryPath);
+            } catch (IOException ex) {
+                logger.error("ProblemLocalConnection.delete : Cannot delete " + repo);
+                throw ex;
+            }
+        }
+        public byte[] read(String repo, String key) throws IOException {
             byte[] result = null;
             try {
-                InputStream in = new FileInputStream(repoPath.resolve(problem).resolve("problem.zip").toString());
-                result = in.readAllBytes();
-            } catch (IOException ex) {}   
+                Path repoPath = Path.of(config.getString("com.horstmann.codecheck.repo." + repo));
+                if (key.startsWith("/"))
+                    key = key.substring(1);
+                                
+                Path filePath = repoPath.resolve(key).resolve(key+".zip");
+                result = Files.readAllBytes(filePath); 
+            } catch (IOException ex) {
+                logger.error("ProblemLocalConnection.read : Cannot read " + key + " from " + repo);
+                throw ex;                
+            }
             
             return result;  
         }
@@ -267,8 +323,8 @@ public interface ProblemConnection {
         public void delete(String repo, String key) throws IOException {
             delegate.delete(repo, key);
         }
-        public byte[] read(String repo, String problem) throws IOException {
-            return delegate.read(repo, problem);
+        public byte[] read(String repo, String key) throws IOException {
+            return delegate.read(repo, key);
         }
     }
 
