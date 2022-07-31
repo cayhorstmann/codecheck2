@@ -73,25 +73,7 @@ public class Upload extends Controller {
         }
     }
     
-    private void saveProblem(String problem, Map<Path, byte[]> problemFiles) throws IOException {
-        // boolean isOnS3 = s3conn.isOnS3("ext");
-        // if (isOnS3) {
-        //     byte[] problemZip = Util.zip(problemFiles);
-        //     s3conn.putToS3(problemZip, repo, problem);
-        // } else {
-        //     Path extDir = java.nio.file.Path.of(config.getString("com.horstmann.codecheck.repo.ext"));
-        //     Path problemDir = extDir.resolve(problem);
-        //     com.horstmann.codecheck.Util.deleteDirectory(problemDir); // Delete any prior contents so that it is replaced by new zip file
-        //     Files.createDirectories(problemDir);
-        //     problemDir = problemDir.resolve("problem.zip");
-            
-        //     // for (Map.Entry<Path, byte[]> entry : problemFiles.entrySet()) {
-        //     //     Path p = problemDir.resolve(entry.getKey());
-        //     //     Files.write(p, entry.getValue());
-        //     // }
-        //     byte[] problemZip = Util.zip(problemFiles);
-        //     org.apache.commons.io.FileUtils.writeByteArrayToFile(new File(problemDir.toString()), problemZip);
-        // }     
+    private void saveProblem(String problem, Map<Path, byte[]> problemFiles) throws IOException {   
         byte[] problemZip = Util.zip(problemFiles);
         probConn.write(problemZip, repo, problem);  
     }

@@ -3,6 +3,7 @@ package models;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.FileInputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.nio.file.Path;
@@ -14,6 +15,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import com.horstmann.codecheck.Util;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -47,6 +50,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.typesafe.config.Config;
+import com.typesafe.config.ConfigException;
 
 import play.Logger;
 
@@ -210,14 +214,26 @@ public interface ProblemConnection {
         public void write(byte[] contents, String repo, String key) throws IOException {
             Path repoPath = Path.of(config.getString("com.horstmann.codecheck.repo." + repo));
             Path problemDir = repoPath.resolve(key);
-            com.horstmann.codecheck.Util.deleteDirectory(problemDir); // Delete any prior contents so that it is replaced by new zip file
+            Util.deleteDirectory(problemDir); // Delete any prior contents so that it is replaced by new zip file
             Files.createDirectories(problemDir);
             problemDir = problemDir.resolve("problem.zip");
             org.apache.commons.io.FileUtils.writeByteArrayToFile(new File(problemDir.toString()), contents);
         }
-        public void delete(String repo, String key) throws IOException {}
+        public void delete(String repo, String key) throws IOException {
+
+        }
         public byte[] read(String repo, String problem) throws IOException {
-            return null;
+            Path repoPath = Path.of(config.getString("com.horstmann.codecheck.repo." + repo));
+            if (problem.startsWith("/"))
+                problem = problem.substring(1);
+            
+            byte[] result = null;
+            try {
+                InputStream in = new FileInputStream(repoPath.resolve(problem).resolve("problem.zip").toString());
+                result = in.readAllBytes();
+            } catch (IOException ex) {}   
+            
+            return result;  
         }
     }
 
