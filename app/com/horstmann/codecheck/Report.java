@@ -49,6 +49,8 @@ public interface Report
    Report runTable(String[] functionNames, String[] argNames, String[][] args, String[] actual, String[] expected, boolean[] outcomes);
    
    Report comment(String key, String value);
+
+   Report hiddenOutputMessage(); 
    
    Report footnote(String text);
    

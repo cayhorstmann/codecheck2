@@ -148,8 +148,8 @@ public class Main {
                 args[i][0] = call.args;
                 if (lines.size() == 3 && Arrays.asList("true", "false").contains(lines.get(2))) {
                     if (call.isHidden()) {
-                       expected[i] = "hidden"; 
-                       args[i][0] = "hidden"; 
+                       expected[i] = "[hidden]"; 
+                       args[i][0] = "[hidden]"; 
                     }
                     else {
                         expected[i] = lines.get(0);
@@ -168,8 +168,8 @@ public class Main {
                     }
                     String message = msg.toString(); 
                     if (call.isHidden() == true) {
-                        expected[i] = "hidden"; 
-                        args[i][0] = "hidden"; 
+                        expected[i] = "[hidden]"; 
+                        args[i][0] = "[hidden]"; 
                     }
                     else {
                         expected[i] = lines.get(0);

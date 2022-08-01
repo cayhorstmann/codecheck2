@@ -32,6 +32,10 @@ public class Comparison {
             else {
                 if (!hidden)
                     report.output(actual);
+                else 
+                    //report.comment("hidden", "Given the instructions, the output is hidden!");
+                    report.hiddenOutputMessage();
+
             }
         }
         else {

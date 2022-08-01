@@ -191,6 +191,8 @@ public interface Language {
     default void reportUnitTest(String result, Report report, Score score, boolean hidden) {
         if (hidden == false)
             report.output(result);
+        else 
+            report.hiddenOutputMessage(); 
         Matcher matcher = unitTestSuccessPattern().matcher(result);
         if (matcher.find()) {
            int runs = Integer.parseInt(matcher.group("runs"));
