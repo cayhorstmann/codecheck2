@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.security.KeyStore;
 import java.util.Map;
 import java.util.Properties;
+import java.util.TreeMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
@@ -24,9 +25,11 @@ import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
 import com.horstmann.codecheck.Main;
+import com.horstmann.codecheck.Plan;
 import com.horstmann.codecheck.Report;
 import com.horstmann.codecheck.ResourceLoader;
 import com.horstmann.codecheck.Util;
+import controllers.Upload;
 import com.typesafe.config.Config;
 
 import jdk.security.jarsigner.JarSigner;
@@ -140,15 +143,26 @@ public class CodeCheck {
         }
     }
     
-    public Report run(String reportType, String repo,
-            String problem, String ccid, Map<Path, String> submissionFiles)
+    public Plan run(String reportType, String repo,
+            String problem, String ccid, Map<Path, String> submissionFiles, boolean save)
             throws IOException, InterruptedException, NoSuchMethodException, ScriptException {
+    	// TODO: Factor our code to turn the String map to a bytearray map    	
+    	
         Map<Path, byte[]> problemFiles = loadProblem(repo, problem, ccid);
         Properties metaData = new Properties();
         metaData.put("User", ccid);
         metaData.put("Problem", (repo + "/" + problem).replaceAll("[^\\pL\\pN_/-]", ""));
         
-        return new Main().run(submissionFiles, problemFiles, reportType, metaData, resourceLoader);
+        Plan ret = new Main().run(submissionFiles, problemFiles, reportType, metaData, resourceLoader);
+        if (save) {
+    		problemFiles = new TreeMap<>();
+    		for (Map.Entry<Path, String> entry : submissionFiles.entrySet()) {
+    			problemFiles.put(entry.getKey(), entry.getValue().getBytes(StandardCharsets.UTF_8));
+    		}
+    		new Upload().saveProblem(problem, problemFiles, ret);
+    	}
+        
+        return ret;
     }
     
     

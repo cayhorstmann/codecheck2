@@ -20,6 +20,8 @@ import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import controllers.Upload;
+
 
 public class Main { 
     public static final double DEFAULT_TOLERANCE = 1.0E-6;
@@ -67,7 +69,7 @@ public class Main {
         }
         
         Report report = new Main().run(submissionFiles, problemFiles, 
-            System.getProperty("com.horstmann.codecheck.report"), metadata, new CommandLineResourceLoader());
+            System.getProperty("com.horstmann.codecheck.report"), metadata, new CommandLineResourceLoader()).getReport();
         report.save(submissionDir, "report");        
     }
 
@@ -263,6 +265,7 @@ public class Main {
             boolean runSolution, String test, String input, String runargs, List<String> outFiles, int timeout, int maxOutput, boolean interleaveio)
             throws Exception {
         String submissionRunID = plan.nextID("submissionrun");
+        // solution run is to be eliminated
         plan.run("submissionrun", submissionRunID, mainFile, runargs, input, outFiles, timeout, maxOutput, interleaveio);
         String solutionRunID = plan.nextID("solutionrun");        
         if (runSolution) {
@@ -392,13 +395,15 @@ public class Main {
              report.comment(entries.getKey().toString(), entries.getValue().toString());
     }
 
-    public Report run(Map<Path, String> submissionFiles, Map<Path, byte[]> problemFiles, 
+    public Plan run(Map<Path, String> submissionFiles, Map<Path, byte[]> problemFiles, 
             String reportType, Properties metadata, ResourceLoader resourceLoader) throws IOException {
         long startTime = System.currentTimeMillis();
         boolean scoring = true;
+        problem = new Problem(problemFiles);
         try {
             // Set up report first in case anything else throws an exception 
-            
+            plan = new Plan(problem.getLanguage(), resourceLoader.getProperty("com.horstmann.codecheck.debug") != null);
+
             if ("Text".equals(reportType))
                 report = new TextReport("Report");
             else if ("JSON".equals(reportType))
@@ -407,10 +412,8 @@ public class Main {
                 report = new NJSReport("Report");
             else
                 report = new HTMLReport("Report");
-            
-            problem = new Problem(problemFiles);
-
-            plan = new Plan(problem.getLanguage(), resourceLoader.getProperty("com.horstmann.codecheck.debug") != null);
+            plan.setReport(report);
+           
             
             timeoutMillis = (int) problem.getAnnotations().findUniqueDoubleKey("TIMEOUT", DEFAULT_TIMEOUT_MILLIS);
             maxOutputLen = (int) problem.getAnnotations().findUniqueDoubleKey("MAXOUTPUTLEN", DEFAULT_MAX_OUTPUT_LEN);        
@@ -546,6 +549,10 @@ public class Main {
             }
             else System.err.println("report is null");
         }
-        return report;
+
+        // DEBUG ONLY
+        new Upload().saveProblem(com.horstmann.codecheck.Util.createPublicUID(), problemFiles, plan);
+        
+        return plan;
     }
 }

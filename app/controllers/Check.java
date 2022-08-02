@@ -61,7 +61,7 @@ public class Check extends Controller {
                     ccid = ccidCookie.map(Http.Cookie::value).orElse(com.horstmann.codecheck.Util.createPronouncableUID());
                 }
                 long startTime = System.nanoTime();         
-                String report = codeCheck.run("html", repo, problem, ccid, submissionFiles).getText();
+                String report = codeCheck.run("html", repo, problem, ccid, submissionFiles, false).getReport().getText();
                 double elapsed = (System.nanoTime() - startTime) / 1000000000.0;
                 if (report == null || report.length() == 0) {
                     report = String.format("Timed out after %5.0f seconds\n", elapsed);
@@ -134,7 +134,7 @@ public class Check extends Controller {
                 };              
                 //Logger.of("com.horstmann.codecheck.check").info("checkNJS: " + requestParams);
                 //TODO last param should be submissionDir
-                String report = codeCheck.run(reportType, repo, problem, ccid, submissionFiles).getText();
+                String report = codeCheck.run(reportType, repo, problem, ccid, submissionFiles, false).getReport().getText();
                 ObjectNode result = (ObjectNode) Json.parse(report);
                 String reportHTML = result.get("report").asText();
                 reportZipFiles.put(Paths.get("report.html"), reportHTML.getBytes(StandardCharsets.UTF_8));

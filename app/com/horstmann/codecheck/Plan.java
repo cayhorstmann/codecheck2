@@ -17,12 +17,14 @@ import java.util.NoSuchElementException;
 public class Plan {
     private Language language;
     private List<Runnable> tasks = new ArrayList<>();
+    // prepopulate some of what we can find in s3
     private Map<Path, byte[]> files = new Util.FileMap();
     private Map<Path, byte[]> outputs = new Util.FileMap();
     private StringBuilder scriptBuilder = new StringBuilder();
     private int nextID = 0;
     private static int MIN_TIMEOUT = 3; // TODO: Maybe better to switch interleaveio and timeout? 
     private boolean debug;
+    private Report report;
     
     public Plan(Language language, boolean debug) throws IOException {
         this.language = language;
@@ -46,6 +48,12 @@ public class Plan {
     private void addScript(CharSequence command) {
         scriptBuilder.append(command);
         scriptBuilder.append("\n");
+    }
+    public void setReport(Report report) {
+    	this.report = report;
+    }
+    public Report getReport() {
+    	return this.report;
     }
 
     public boolean checkCompiled(String compileDir, Report report, Score score) {
@@ -116,6 +124,9 @@ public class Plan {
      * @return true if compilation succeeds
      */
     public void compile(String compileDir, String sourceDirs, List<Path> sourceFiles, Collection<Path> dependentSourceFiles) {
+      	for (Map.Entry<Path, byte[]> entry : outputs.entrySet()) {
+      		if (entry.getKey().toString().equals(compileDir)) return;
+      	}
         List<Path> allSourceFiles = new ArrayList<>();
         allSourceFiles.addAll(sourceFiles);
         allSourceFiles.addAll(dependentSourceFiles);
@@ -125,11 +136,17 @@ public class Plan {
 
     // TODO maxOutputLen
     public void run(String compileDir, String runDir, Path mainFile, String input, String args, int timeout, int maxOutputLen, boolean interleaveIO) {
+    	for (Map.Entry<Path, byte[]> entry : outputs.entrySet()) {
+      		if (entry.getKey().toString().equals(compileDir)) return;
+      	}
         run(compileDir, runDir, runDir, mainFile, input, args, timeout, maxOutputLen, interleaveIO);        
     }
     
     // for multiple runs in the same directory
     public void run(String compileDir, String runDir, String runID, Path mainFile, String input, String args, int timeout, int maxOutputLen, boolean interleaveIO) {
+    	for (Map.Entry<Path, byte[]> entry : outputs.entrySet()) {
+      		if (entry.getKey().toString().equals(compileDir)) return;
+      	}
         if (!compileDir.equals(runDir)) 
             addScript("prepare " + runDir + " " + compileDir);
         addFile(Paths.get("in").resolve(runID), input == null ? "" : input);
@@ -137,6 +154,9 @@ public class Plan {
     }
 
     public void run(String compileDir, String runDir, Path mainFile, String args, String input, Collection<String> outfiles, int timeout, int maxOutputLen, boolean interleaveIO) {
+    	for (Map.Entry<Path, byte[]> entry : outputs.entrySet()) {
+      		if (entry.getKey().toString().equals(compileDir)) return;
+      	}
         run(compileDir, runDir, mainFile, input, args, timeout, maxOutputLen, interleaveIO);
         if (outfiles.size() > 0)
             addScript("collect " + runDir + " " + Util.join(outfiles, " "));
