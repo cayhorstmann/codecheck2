@@ -250,8 +250,8 @@ public class Main {
             String test = inputs.get(i).getKey(); 
             String input = inputs.get(i).getValue(); 
             boolean hidden = inputs.get(i).getHidden(); 
-            if (input.contains("//INH"))  {
-                input = input.replaceAll("//INH", "").stripLeading();
+            if (input.contains("//IN HIDDEN"))  {
+                input = input.replaceAll("//IN HIDDEN", "").stripLeading();
                 hidden = true; 
             }
             testInput(mainFile, runSolution, test, input, timeoutMillis / inputs.size(), maxOutputLen / inputs.size(), okToInterleave, hidden);
@@ -464,7 +464,7 @@ public class Main {
             copyFilesToPlan(submissionFiles);
 
             if (problem.getAnnotations().checkConditions(submissionFiles, report)) {
-                if (problem.getAnnotations().has("CALL") || problem.getAnnotations().has("HIDDENCALL")) {
+                if (problem.getAnnotations().has("CALL") || problem.getAnnotations().has("CALL HIDDEN")) {
                     Calls calls = problem.getAnnotations().findCalls();
                     mainSourcePaths.remove(calls.getFile());
                     dependentSourcePaths.add(calls.getFile());
@@ -497,7 +497,7 @@ public class Main {
                 for (String s : problem.getAnnotations().findKeys("IN")) {
                     inputs.add(new Input("test" + ++inIndex, Util.unescapeJava(s), false)); 
                 }
-                for (String s : problem.getAnnotations().findKeys("INH")) {
+                for (String s : problem.getAnnotations().findKeys("IN HIDDEN")) {
                     inputs.add(new Input("test" + ++inIndex, Util.unescapeJava(s), true)); 
                 }
                 if (problem.getInputMode()) { 

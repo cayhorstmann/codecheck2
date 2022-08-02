@@ -1,6 +1,6 @@
 //SOLUTION
 //IN 3\n-3\n0
-//INH 10\n100\n-1\n\u0030
+//IN HIDDEN 10\n100\n-1\n\u0030
 import java.util.Scanner;
 public class Numbers
 {

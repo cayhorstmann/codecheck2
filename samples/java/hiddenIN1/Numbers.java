@@ -1,4 +1,4 @@
-//INH 3\n-3\n5\n0
+//IN HIDDEN 3\n-3\n5\n0
 import java.util.Scanner;
 public class Numbers
 {

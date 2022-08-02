@@ -1,7 +1,7 @@
 //SOLUTION
 public class Numbers
 {
-//HIDDENCALL -3, 3 
+//CALL HIDDEN -3, 3 
 public double average(int x, int y)
    {
       //HIDE
