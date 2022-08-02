@@ -79,6 +79,9 @@ public class Problem {
 
     private static final Pattern IMG_PATTERN = Pattern
             .compile("[<]\\s*[iI][mM][gG]\\s*[sS][rR][cC]\\s*[=]\\s*['\"]([^'\"]*)['\"][^>]*[>]");
+    private static final Pattern LINK_START = Pattern
+            .compile("<\\s*[aA]\\s+[^>]*[hH][rR][eE][fF]\\s*=\\s*['\"]([^'\"]+)['\"][^>]*>");
+    private static final Pattern LINK_END = Pattern.compile("<\\s*/\\s*[aA]\\s*>");
 
     public Problem(Map<Path, byte[]> problemFiles) throws IOException {
         this.problemFiles = problemFiles;
@@ -200,6 +203,26 @@ public class Problem {
             result.replace(end, result.length(), "");
         if (start != -1)
             result.replace(0, start, "");
+
+        // Check if links are relative or not, if relative links, change it to normal text
+        Matcher linkMatcherStart = LINK_START.matcher(result);
+        Matcher linkMatcherEnd = LINK_END.matcher(result);
+        int startLink = 0;
+        int endLink = 0;
+        while(linkMatcherStart.find(startLink) && linkMatcherEnd.find(startLink)) {
+            startLink = linkMatcherStart.start();
+            endLink = linkMatcherEnd.end();
+            String hrefLink = result.substring(linkMatcherStart.start(1), linkMatcherStart.end(1)).toLowerCase();     
+            if(!(hrefLink.startsWith("http://") || hrefLink.startsWith("https://"))) {
+                int startContent = linkMatcherStart.end();
+                int endContent = linkMatcherEnd.start();
+                String contentOfLink = result.substring(startContent, endContent);
+                result.replace(startLink, endLink, contentOfLink);
+                startLink += contentOfLink.length();
+            }
+            else
+              startLink += endLink - startLink;
+        }
 
         Matcher matcher = IMG_PATTERN.matcher(result);
         start = 0;
