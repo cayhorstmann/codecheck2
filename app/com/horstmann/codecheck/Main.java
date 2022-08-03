@@ -442,7 +442,6 @@ public class Main {
             "*.jar", "*.pdf");      
 
             printFiles.removeAll(problem.getAnnotations().getHidden());
-            printFiles.removeAll(problem.getAnnotations().getHiddenTests()); 
             printFiles.removeAll(problem.getAnnotations().getHiddenTestFiles());
             printFiles.removeAll(problem.getSolutionFiles().keySet());
             

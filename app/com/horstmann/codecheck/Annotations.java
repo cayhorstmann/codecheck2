@@ -99,7 +99,7 @@ public class Annotations {
                     solutions.add(p);
                 if (a.key.equals("HIDE")) 
                     hidden.add(p);
-                if (a.key.equals("HIDDEN") || a.key.equals("CALL HIDDEN"))
+                if (a.key.equals("CALL HIDDEN"))
                     hiddenTests.add(p); 
                 if (a.key.equals("HIDDEN"))
                     hiddenTestFiles.add(p); 
