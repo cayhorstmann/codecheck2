@@ -56,22 +56,14 @@ import play.Logger;
 
 public interface ProblemConnection {
 
-    // May not need
-    public boolean isOnS3(String repo);
-    public boolean isOnS3(String repo, String key);
-    // May not need
-    public void write(Path file, String repo, String key) throws IOException;
-    public void write(String contents, String repo, String key) throws IOException;
     public void write(byte[] contents, String repo, String key) throws IOException;
     public void delete(String repo, String key) throws IOException;
     public byte[] read(String repo, String key) throws IOException;
-
 
     public class ProblemS3Connection implements ProblemConnection {
         private Config config;
         private String bucketSuffix = null;
         private AmazonS3 amazonS3;
-        // private AmazonDynamoDB amazonDynamoDB; - Part of AssignmentConnection
         private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
 
         public ProblemS3Connection(Config config) {
@@ -85,12 +77,6 @@ public interface ProblemConnection {
                     .withRegion(s3Region)
                     .withForceGlobalBucketAccessEnabled(true)
                     .build();
-            
-            // amazonDynamoDB = AmazonDynamoDBClientBuilder   
-            //         .standard()
-            //         .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(s3AccessKey, s3SecretKey)))
-            //         .withRegion("us-west-1")
-            //         .build();
 
             bucketSuffix = config.getString("com.horstmann.codecheck.s3bucketsuffix");
         }
@@ -108,10 +94,6 @@ public interface ProblemConnection {
         private AmazonS3 getS3Connection() { 
             return amazonS3; 
         }
-
-        // public AmazonDynamoDB getAmazonDynamoDB() {
-        //     return amazonDynamoDB;
-        // }
         
         public void write(Path file, String repo, String key) throws IOException {
             String bucket = repo + "." + bucketSuffix;
@@ -176,78 +158,15 @@ public interface ProblemConnection {
             return bytes;            
         }
 
-        // public List<String> readS3keys(String repo, String keyPrefix) throws AmazonServiceException {
-        //     // https://docs.aws.amazon.com/AmazonS3/latest/dev/ListingObjectKeysUsingJava.html      
-        //     String bucket = repo + "." + bucketSuffix;
-        //     ListObjectsV2Request req = new ListObjectsV2Request()
-        //             .withBucketName(bucket).withMaxKeys(100).withPrefix(keyPrefix);
-        //     ListObjectsV2Result result;
-        //     List<String> allKeys = new ArrayList<String>();
-            
-        //     do {
-        //         result = getS3Connection().listObjectsV2(req);
-
-        //         for (S3ObjectSummary objectSummary : result.getObjectSummaries()) {
-        //             allKeys.add(objectSummary.getKey());
-        //         }
-
-        //         String token = result.getNextContinuationToken();
-        //         req.setContinuationToken(token);
-        //     } while (result.isTruncated());
-        //     return allKeys;            
-        // }
-
     }
 
     public class ProblemLocalConnection implements ProblemConnection {
-        // May not need
-        public boolean isOnS3(String repo) {return false;}
-        public boolean isOnS3(String repo, String key) {return false;}
-        // May not need
+
         private Config config;
-        private String bucketSuffix = null;
         private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
+
         public ProblemLocalConnection(Config config) {
             this.config = config;
-        }
-        public void write(Path file, String repo, String key) throws IOException {
-            try {             
-                Path repoPath = Path.of(config.getString("com.horstmann.codecheck.repo." + repo));
-                Path newFileDirectory = repoPath.resolve(key);
-                String fileName = file.getFileName().toString();   
-                Path newFilePath = repoPath.resolve(key).resolve(fileName);
-
-                Util.deleteDirectory(newFileDirectory); // Delete any prior contents so that it is replaced by new content
-                Files.createDirectories(newFileDirectory);
-
-                // Read the file to write
-                InputStream in = new FileInputStream(file.toString());
-                byte [] content = in.readAllBytes(); 
-                // Write the file
-                org.apache.commons.io.FileUtils.writeByteArrayToFile(new File(newFilePath.toString()), content);
-            } catch (IOException ex) {
-                logger.error("ProblemLocalConnection.write : Cannot put " + file + " to " + repo);
-                throw ex;
-            }
-        }
-
-        public void write(String contents, String repo, String key) throws IOException {
-            try {
-                Path repoPath = Path.of(config.getString("com.horstmann.codecheck.repo." + repo));
-                Path newFileDirectory = repoPath.resolve(key);
-                Path newFilePath = repoPath.resolve(key).resolve(key);
-
-                Util.deleteDirectory(newFileDirectory); // Delete any prior contents so that it is replaced by new content
-                Files.createDirectories(newFileDirectory);
-
-                File newFile = new File(newFilePath.toString());
-                FileWriter fileWriter = new FileWriter(newFilePath.toString());
-                fileWriter.write(contents);
-                fileWriter.close();
-            } catch (IOException ex) {
-                logger.error("ProblemLocalConnection.write: Cannot put " + contents.replaceAll("\n", "|").substring(0, Math.min(50, contents.length())) + "... to " + repo);
-                throw ex;                
-            }
         }
 
         public void write(byte[] contents, String repo, String key) throws IOException {
@@ -265,6 +184,7 @@ public interface ProblemConnection {
             }
 
         }
+
         public void delete(String repo, String key) throws IOException {
             String repoPath = config.getString("com.horstmann.codecheck.repo." + repo);
             Path directoryPath = Path.of(repoPath).resolve(key);
@@ -275,6 +195,7 @@ public interface ProblemConnection {
                 throw ex;
             }
         }
+        
         public byte[] read(String repo, String key) throws IOException {
             byte[] result = null;
             try {
@@ -304,25 +225,14 @@ public interface ProblemConnection {
                 delegate = new ProblemS3Connection(config);
         }
 
-        public boolean isOnS3(String repo) {
-            return delegate.isOnS3(repo);
-        }
-
-        public boolean isOnS3(String repo, String key) {
-            return delegate.isOnS3(repo, key);
-        }
-        public void write(Path file, String repo, String key) throws IOException {
-            delegate.write(file, repo, key);
-        }
-        public void write(String contents, String repo, String key) throws IOException {
-            delegate.write(contents, repo, key);
-        }
         public void write(byte[] contents, String repo, String key) throws IOException {
             delegate.write(contents, repo, key);
         }
+
         public void delete(String repo, String key) throws IOException {
             delegate.delete(repo, key);
         }
+
         public byte[] read(String repo, String key) throws IOException {
             return delegate.read(repo, key);
         }
