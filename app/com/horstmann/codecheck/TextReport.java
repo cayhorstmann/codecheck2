@@ -336,4 +336,12 @@ public class TextReport implements Report {
         builder.append('\n');
         return this;
     }
+
+    public TextReport hiddenOutputMessage() {
+        if (builder.charAt(builder.length() - 1) != '\n')
+            builder.append('\n');
+        builder.append("[hidden]"); 
+        builder.append('\n');
+        return this; 
+    }
 }

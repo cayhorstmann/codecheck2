@@ -78,6 +78,8 @@ public class AsExpected {
             } else {
                 if (hidden == false)
                     report.output(lines, matches, mismatches);
+                else 
+                    report.hiddenOutputMessage(); 
             }
             // If the program run ends in an exception, it can happen that the number of
             // actual vs. expected values is less than it should be. In that case,
