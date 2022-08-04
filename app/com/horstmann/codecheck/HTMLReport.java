@@ -464,4 +464,9 @@ public class HTMLReport implements Report {
         metaOffset += meta.length();
         return this;
     }
+
+    public HTMLReport hiddenOutputMessage() {
+        caption("[hidden]");
+        return this; 
+    }
 }

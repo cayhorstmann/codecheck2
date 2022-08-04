@@ -371,6 +371,15 @@ public class JSONReport implements Report {
     }
 
     @Override
+    public JSONReport hiddenOutputMessage() {
+        //data.metaData.put("Given the instructions from your instructor, the output is hidden!");
+        StringBuilder builder = new StringBuilder();
+        builder.append("[hidden]"); 
+        run.html = builder.toString();
+        return this;
+    }
+
+    @Override
     public JSONReport footnote(String text) {        
         return this;
     }

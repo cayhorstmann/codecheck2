@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 
 public class Annotations {
     public static final Set<String> VALID_ANNOTATIONS = Set.of(
-            "HIDDEN", "HIDE", "SHOW", "EDIT", "SOLUTION", "CALL", "HIDDENCALL", "SUB", "ID", "SAMPLE", "ARGS", 
+            "HIDDEN", "CALL HIDDEN", "IN HIDDEN","HIDE", "SHOW", "EDIT", "SOLUTION", "CALL", "SUB", "ID", "SAMPLE", "ARGS", 
             "IN", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "MAXOUTPUTLEN",
             "REQUIRED", "FORBIDDEN", "SCORING", "INTERLEAVE", "TILE", "FIXED", "OR", "PSEUDO");    
     public static final Set<String> NON_BLANK_BEFORE_OK = Set.of("SUB", "PSEUDO"); 
@@ -41,6 +41,15 @@ public class Annotations {
         if (k < j && !Character.isWhitespace(line.charAt(k))) return ann;
         String key = line.substring(i, k);
         if (!VALID_ANNOTATIONS.contains(key)) return ann;
+        if (k+8 <= j) {
+            String keyWSpace = line.substring(i, k+7); 
+            if (VALID_ANNOTATIONS.contains(keyWSpace)) {
+                k += 7; 
+                key = keyWSpace; 
+            }
+            else 
+                return ann; 
+        }
         // Only a few annotations can have non-blank before
         if (!before.isBlank() && !NON_BLANK_BEFORE_OK.contains(key)) return ann;
         ann.isValid = true;
@@ -90,7 +99,7 @@ public class Annotations {
                     solutions.add(p);
                 if (a.key.equals("HIDE")) 
                     hidden.add(p);
-                if (a.key.equals("HIDDEN") || a.key.equals("HIDDENCALL"))
+                if (a.key.equals("CALL HIDDEN"))
                     hiddenTests.add(p); 
                 if (a.key.equals("HIDDEN"))
                     hiddenTestFiles.add(p); 
@@ -225,7 +234,7 @@ public class Annotations {
                  calls.addCall(annotations.get(a).path, annotations.get(a).args, annotations.get(a).next);
                  callNum += 1; 
             }
-            else if (annotations.get(a).key.equals("HIDDENCALL")) {
+            else if (annotations.get(a).key.equals("CALL HIDDEN")) {
                 calls.addCall(annotations.get(a).path, annotations.get(a).args, annotations.get(a).next);
                 calls.getCall(callNum).setHidden(true);
                 callNum += 1; 

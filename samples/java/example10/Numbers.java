@@ -2,9 +2,8 @@
 public class Numbers
 {
 //CALL 3, 4
-//HIDDENCALL -3, 3
-//C
-ALL 3, 0  
+//CALL HIDDEN -3, 3
+//CALL 3, 0  
 public double average(int x, int y)
    {
       //HIDE
