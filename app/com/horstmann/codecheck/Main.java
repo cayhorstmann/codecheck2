@@ -20,8 +20,6 @@ import java.util.TimeZone;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import controllers.Upload;
-
 
 public class Main { 
     public static final double DEFAULT_TOLERANCE = 1.0E-6;
@@ -551,7 +549,10 @@ public class Main {
         }
 
         // DEBUG ONLY
-        new Upload().saveProblem(com.horstmann.codecheck.Util.createPublicUID(), problemFiles, plan);
+        // NOTE: don't use this, it will crash ant
+        // try copying the actual code in the method
+        // and don't drag in s3, that will also crash
+        // new Upload().saveProblem(com.horstmann.codecheck.Util.createPublicUID(), problemFiles, plan);
         
         return plan;
     }
