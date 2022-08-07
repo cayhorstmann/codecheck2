@@ -45,7 +45,9 @@ ENV COMRUN_USER=comrunner
 RUN echo "Defaults:root !syslog, !pam_session" >> /etc/sudoers
 RUN echo "Defaults:comrunner !syslog, !pam_session" >> /etc/sudoers
 
-COPY --chmod 755 bin /opt/codecheck
+COPY bin /opt/codecheck
+RUN chmod 755 /opt/codecheck
+#COPY --chmod 755 bin /opt/codecheck
 #RUN chmod +x /opt/codecheck/comrun
 
 RUN --chmod 733 mkdir /tmp/codecheck
