@@ -50,8 +50,9 @@ RUN chmod 755 /opt/codecheck
 #COPY --chmod 755 bin /opt/codecheck
 #RUN chmod +x /opt/codecheck/comrun
 
-RUN --chmod 733 mkdir /tmp/codecheck
-#RUN chmod 733 /tmp/codecheck
+#RUN --chmod 733 mkdir /tmp/codecheck
+RUN mkdir /tmp/codecheck
+RUN chmod 733 /tmp/codecheck
 
 # To avoid Unable to open env file: /etc/default/locale: No such file or directory
 RUN echo 'LANG="en_US.UTF-8"' >> /etc/default/locale
