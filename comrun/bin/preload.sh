@@ -2,7 +2,7 @@
 
 # TODO get env dynamically
 JAVA_HOME=/opt/jdk1.8.0
-CODECHECK_HOME=/opt/codecheck
+export CODECHECK_HOME=/opt/codecheck
 PATH=$PATH:$JAVA_HOME/bin
 MAXOUTPUTLEN=10000
 
