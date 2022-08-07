@@ -130,7 +130,7 @@ function run {
       ;;
     _Python)
       ulimit -d 100000 -f 1000 -n 100 -v 100000
-      export CODECHECK=
+      export CODECHECK=true
       if [[ -n $BASE/out/$DIR/_errors ]] ; then
         if [[ $INTERLEAVEIO == "true" ]] ; then
            timeout -v -s 9 ${TIMEOUT}s ${CODECHECK_HOME}/interleaveio.py python3 $MAIN $@ < $BASE/in/$ID 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$ID/_run
