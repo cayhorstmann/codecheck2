@@ -1,6 +1,6 @@
 package models;
 
-import models.ProblemConnection.ProblemConnector;
+import models.ProblemConnector;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;

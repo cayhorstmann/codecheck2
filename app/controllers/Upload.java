@@ -19,7 +19,7 @@ import com.typesafe.config.Config;
 
 import models.CodeCheck;
 import models.S3Connection;
-import models.ProblemConnection.ProblemConnector;
+import models.ProblemConnector;
 import play.libs.Files.TemporaryFile;
 import play.mvc.Controller;
 import play.mvc.Http;
