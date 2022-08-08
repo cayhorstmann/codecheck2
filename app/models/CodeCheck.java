@@ -1,5 +1,7 @@
 package models;
 
+import models.ProblemConnector;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -38,12 +40,13 @@ public class CodeCheck {
     private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");    
     private Config config;
     private S3Connection s3conn;
+    private ProblemConnector probConn;
     private JarSigner signer;
     private ResourceLoader resourceLoader;
     
-    @Inject public CodeCheck(Config config, S3Connection s3conn, Environment playEnv) {
+    @Inject public CodeCheck(Config config, ProblemConnector probConn, Environment playEnv) {
         this.config = config;
-        this.s3conn = s3conn;
+        this.probConn = probConn;
         resourceLoader = new ResourceLoader() {
             @Override
             public InputStream loadResource(String path) throws IOException {
@@ -128,16 +131,10 @@ public class CodeCheck {
     }
     
     public Map<Path, byte[]> loadProblem(String repo, String problemName) throws IOException {
-        if (s3conn.isOnS3(repo)) {
-            return Util.unzip(s3conn.readFromS3(repo, problemName));
-        } else {
-            Path repoPath = Path.of(config.getString("com.horstmann.codecheck.repo."
-                            + repo));
-            // TODO: That comes from Problems.java--fix it there
-            if (problemName.startsWith("/"))
-                problemName = problemName.substring(1);
-            return Util.descendantFiles(repoPath.resolve(problemName));         
-        }
+        Map<Path, byte[]> result;
+        byte[] zipFile = probConn.read(repo, problemName);
+        result = Util.unzip(zipFile);
+        return result;
     }
     
     public Report run(String reportType, String repo,
