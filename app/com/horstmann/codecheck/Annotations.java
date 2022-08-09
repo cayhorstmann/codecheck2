@@ -48,7 +48,8 @@ public class Annotations {
                 key = keyWSpace; 
             }
             else 
-                return ann; 
+                if (!VALID_ANNOTATIONS.contains(key))
+                    return ann; 
         }
         // Only a few annotations can have non-blank before
         if (!before.isBlank() && !NON_BLANK_BEFORE_OK.contains(key)) return ann;
