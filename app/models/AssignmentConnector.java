@@ -57,7 +57,7 @@ import play.Logger;
             delegate = new AssignmentS3Connection(config);      
         }
         else {
-            delegate = new AssignmentLocalConnection();    
+            delegate = new AssignmentLocalConnection(config);    
         }    
     }
 
@@ -235,6 +235,12 @@ class AssignmentS3Connection implements AssignmentConnection {
 }
 
 class AssignmentLocalConnection implements AssignmentConnection {
+    private Config config;
+    private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
+    
+    public AssignmentLocalConnection(Config config) {
+        this.config = config;
+    }
 
     public String readJsonStringFromDB(String tableName, String primaryKeyName, String primaryKeyValue) throws IOException {return null;}
 
