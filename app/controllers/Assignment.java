@@ -112,7 +112,13 @@ public class Assignment extends Controller {
                 String qid = null;
                 boolean checked = false;
                 if (problemDescriptor.startsWith("https")) problemURL = problemDescriptor;
-                else if (problemDescriptor.startsWith("http")) problemURL = "https" + problemDescriptor.substring(4);
+                else if (problemDescriptor.startsWith("http")) {
+                    problemURL = "https" + problemDescriptor.substring(4);
+                    // Check if the problem is local hosted or outside hosted, local hosted problem cannot use https
+                    if (!com.horstmann.codecheck.Util.exists(problemURL)) {
+                        problemURL = problemDescriptor;
+                    }                       
+                } 
                 else if (problemDescriptor.matches("[a-zA-Z0-9_]+(-[a-zA-Z0-9_]+)*")) { 
                     qid = problemDescriptor;
                     problemURL = "https://www.interactivities.ws/" + problemDescriptor + ".xhtml";

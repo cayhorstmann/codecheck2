@@ -17,8 +17,15 @@ public class Util {
            and X-Forwarded-Proto has one ([https]). From 
            https://github.com/playframework/playframework/blob/814f0c73f86eb0e85bcae7f2167c73a08fed9fd7/transport/server/play-server/src/main/scala/play/core/server/common/ForwardedHeaderHandler.scala
            line 204, Play doesn't conclude that the connection was secure. 
-         */     
-        return (secure ? "https://" : "http://") + request.host();
+         */   
+        String prefix;
+        if(request.host().equals("localhost")) {
+            prefix = "";
+        }
+        else {
+            prefix = (secure ? "https://" : "http://") + request.host();
+        }  
+        return prefix;
     }
     
     public static ObjectNode toJson(Object obj) { 
