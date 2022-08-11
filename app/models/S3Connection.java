@@ -194,16 +194,20 @@ public class S3Connection {
     }
     
     public String readJsonStringFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue) throws IOException {
-        DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
-        Table table = dynamoDB.getTable(tableName); 
-        ItemCollection<QueryOutcome> items = table.query(primaryKeyName, primaryKeyValue);
-        try {
-            Iterator<Item> iterator = items.iterator();
-            if (iterator.hasNext())
-                return iterator.next().toJSON();
-            else
+        try{
+            DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
+            Table table = dynamoDB.getTable(tableName); 
+            ItemCollection<QueryOutcome> items = table.query(primaryKeyName, primaryKeyValue);
+            try {
+                Iterator<Item> iterator = items.iterator();
+                if (iterator.hasNext())
+                    return iterator.next().toJSON();
+                else
+                    return null;
+            } catch (ResourceNotFoundException ex) {
                 return null;
-        } catch (ResourceNotFoundException ex) {
+            }
+        }catch(IllegalArgumentException ex){
             return null;
         }
     }   
@@ -270,12 +274,16 @@ public class S3Connection {
     }
     
     public void writeJsonObjectToDynamoDB(String tableName, ObjectNode obj) {
-        DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
-        Table table = dynamoDB.getTable(tableName); 
-        table.putItem(
-            new PutItemSpec()
-                .withItem(Item.fromJSON(obj.toString()))
-        );
+        try{
+            DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
+            Table table = dynamoDB.getTable(tableName); 
+            table.putItem(
+                new PutItemSpec()
+                    .withItem(Item.fromJSON(obj.toString()))
+            );
+        }catch(IllegalArgumentException ex){
+            logger.warn("writeJsonObjectToDynamoDB caused the error message: " + ex.getMessage());
+        }
     }
 
     public boolean writeNewerJsonObjectToDynamoDB(String tableName, ObjectNode obj, String primaryKeyName, String timeStampKeyName) {
