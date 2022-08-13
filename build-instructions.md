@@ -182,7 +182,7 @@ In Visual Studio Code, click on the Run and Debug (triangle and bug) icon on the
       "name": "Launch Main",
       "request": "launch",
       "mainClass": "com.horstmann.codecheck.Main",
-      "projectName": "play-codecheck"
+      "projectName": "play-codecheck",
       "args": "/tmp/submission /tmp/problem",
       "vmArgs": [
         "-Duser.language=en",

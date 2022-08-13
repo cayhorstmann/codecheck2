@@ -112,7 +112,13 @@ public class Assignment extends Controller {
                 String qid = null;
                 boolean checked = false;
                 if (problemDescriptor.startsWith("https")) problemURL = problemDescriptor;
-                else if (problemDescriptor.startsWith("http")) problemURL = "https" + problemDescriptor.substring(4);
+                else if (problemDescriptor.startsWith("http")) {
+                    if (!problemDescriptor.startsWith("http://localhost") && !problemDescriptor.startsWith("http://127.0.0.1")) {
+                        problemURL = "https" + problemDescriptor.substring(4);
+                    }
+                    else
+                        problemURL = problemDescriptor;                    
+                }   
                 else if (problemDescriptor.matches("[a-zA-Z0-9_]+(-[a-zA-Z0-9_]+)*")) { 
                     qid = problemDescriptor;
                     problemURL = "https://www.interactivities.ws/" + problemDescriptor + ".xhtml";
