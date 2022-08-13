@@ -20,7 +20,12 @@ public class Util {
          */   
         String prefix;
         if(request.host().equals("localhost")) {
-            prefix = "";
+            prefix = "../";
+            long countSlash = request.uri().chars().filter(ch -> ch == '/').count() - 1;
+            for (long i = 0; i < countSlash; ++i) {
+                prefix += "../";
+            }
+            prefix = prefix.substring(0, prefix.length() - 1);
         }
         else {
             prefix = (secure ? "https://" : "http://") + request.host();
