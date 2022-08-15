@@ -65,11 +65,19 @@ public class PythonLanguage implements Language {
                      + call.name + "(" + call.args
                     + ")");
             lines.add(i++,
+                    "        expected = \"\u3008\"+" + "expected");
+            lines.add(i++, 
+                    "        expected = expected" + "+\"\u3009\"");
+            lines.add(i++,
                     "        print(expected)");
             lines.add(i++, 
                     "        actual = "
                     + moduleName + "." + call.name + "("
                     + call.args + ")");
+            lines.add(i++, 
+                    "        actual = \"\u3008\"+" + "actual");
+            lines.add(i++, 
+                    "        actual = actual" + "+\"\u3009\"");
             lines.add(i++, 
                     "        print(actual)");
             lines.add(

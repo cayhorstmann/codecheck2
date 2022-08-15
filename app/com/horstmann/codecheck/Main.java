@@ -155,8 +155,53 @@ public class Main {
                         expected[i] = lines.get(0);
                    }
                     actual[i] = Util.truncate(lines.get(1), expected[i].length() + MUCH_LONGER);
-                    outcomes[i] = lines.get(2).equals("true");                
-                } else {
+                    outcomes[i] = lines.get(2).equals("true");     
+                }  
+                else if (lines.size() > 3 && (lines.contains("true") || lines.contains("false"))) {
+                    int idx = 0; 
+                    int boolIdx = 0; 
+                    if (lines.contains("true")){
+                        boolIdx = lines.indexOf("true"); 
+                    }
+                    else {
+                        boolIdx = lines.indexOf("false"); 
+                    }
+                    boolean expectedUnicode = true; 
+                    expected[i] = ""; 
+                    actual[i] = ""; 
+    
+                    while(idx != boolIdx)
+                    {
+                        if (expectedUnicode) {
+                            if (lines.get(idx).equals("")) 
+                                expected[i] += lines.get(idx)+ "\\n";
+                            else if ((lines.get(idx)).charAt(0) == '\u3008')
+                                expected[i] += lines.get(idx).substring(1, lines.get(idx).length()) + "\\n"; 
+                            else if ((lines.get(idx)).charAt(lines.get(idx).length()-1) == '\u3009') {
+                                expected[i] += lines.get(idx).substring(0, lines.get(idx).length()-1);
+                                expectedUnicode = false; }
+                            else 
+                                expected[i] += lines.get(idx)+ "\\n"; 
+                        }
+                        else {
+                            if (lines.get(idx).equals(""))
+                                actual[i] += lines.get(idx)+ "\\n";
+                            else if ((lines.get(idx)).charAt(0) == '\u3008')
+                                actual[i] += lines.get(idx).substring(1, lines.get(idx).length()) + "\\n";
+                            else if (lines.get(idx).charAt(lines.get(idx).length()-1) == '\u3009')
+                                actual[i] += lines.get(idx).substring(0, lines.get(idx).length()-1); 
+                            else 
+                                actual[i] += lines.get(idx)+ "\\n"; 
+                        }
+                        idx ++; 
+                    }
+                    if (call.isHidden()) {
+                        expected[i] = "[hidden]"; 
+                        args[i][0] = "[hidden]"; 
+                     }
+                    outcomes[i] = lines.get(boolIdx).equals("true");  
+                }         
+                else {
                     // Error in compilation or execution
                     // We assume that the solution correctly produces a single line
                     // Most likely, the rest is an exception report, and the true/false never came

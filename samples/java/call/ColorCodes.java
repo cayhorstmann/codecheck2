@@ -9,7 +9,7 @@ public class ColorCodes
 //CALL "RGB\nBGR\nGGG\n" 
 //CALL "RRR\nRGR\nRRR\n" 
 //CALL "R\n" 
-//CALL "BB\n" 
+//CALL "RB\nBR\n" 
 public String doubleImage(String img) 
 { 
     //SHOW 
