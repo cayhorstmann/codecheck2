@@ -391,6 +391,23 @@ class AssignmentLocalConnection implements AssignmentConnection {
                     } catch (IOException ex) {
                         logger.warn(ex.getMessage());
                     }
+                case "CodeCheckComments": // primary key == assignmentID, sortkey == workID
+                    try {
+                        String assignmentID = obj.get("assignmentID").asText().replaceAll("[^a-zA-Z0-9_-]", "");
+                        String workID = obj.get("workID").toString().replaceAll("[^a-zA-Z0-9_-]", "");
+                        Path comment = child.resolve(assignmentID);
+                        if(!Files.exists(comment)) {
+                            Files.createDirectory(comment);
+                        }
+                        Path work = comment.resolve(workID);
+                        String commentContent = obj.get("comment").asText();
+                        ObjectNode commentNode = JsonNodeFactory.instance.objectNode();;
+                        commentNode.put("comment", commentContent);
+                        Files.writeString(work, commentNode.toString());
+                        break;
+                    } catch (IOException ex) {
+                        logger.warn("AssignmentID not found.");
+                    }
                 default:
                     logger.warn("Invalid Table Name.");
                     break;
