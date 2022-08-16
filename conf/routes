@@ -72,6 +72,8 @@ GET  /private/viewSubmissions/:assignmentID/:key    controllers.Assignment.viewS
 
 # Instructor saves assignment
 POST /saveAssignment          controllers.Assignment.saveAssignment(request: Request)
+# Instructor saves feedback
+POST /saveComment          controllers.Assignment.saveComment(request: Request)
 # Student saves work
 POST /saveWork                controllers.Assignment.saveWork(request: Request)
 
