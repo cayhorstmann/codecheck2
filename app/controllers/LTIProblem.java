@@ -23,14 +23,14 @@ import com.horstmann.codecheck.Util;
 
 import models.CodeCheck;
 import models.LTI;
-import models.S3Connection;
+import models.AssignmentConnector;
 import play.Logger;
 import play.mvc.Controller;
 import play.mvc.Http;
 import play.mvc.Result;
 
 public class LTIProblem extends Controller {
-    @Inject private S3Connection s3conn;
+    @Inject private AssignmentConnector assignmentConn;
     @Inject private LTI lti;
     @Inject private CodeCheck codeCheck;
     
@@ -240,7 +240,7 @@ public class LTIProblem extends Controller {
             submissionNode.put("state", requestNode.get("state").toString());
             double score = requestNode.get("score").asDouble();         
             submissionNode.put("score", score);
-            s3conn.writeJsonObjectToDynamoDB("CodeCheckSubmissions", submissionNode);
+            assignmentConn.writeJsonObjectToDB("CodeCheckSubmissions", submissionNode);
             
             String outcomeServiceUrl = requestNode.get("lis_outcome_service_url").asText();
             String sourcedID = requestNode.get("lis_result_sourcedid").asText();
@@ -261,7 +261,7 @@ public class LTIProblem extends Controller {
         ObjectNode requestNode = (ObjectNode) request.body().asJson();
         String submissionID = requestNode.get("submissionID").asText();
         try {
-            ObjectNode result = s3conn.readNewestJsonObjectFromDynamoDB("CodeCheckSubmissions", "submissionID", submissionID);          
+            ObjectNode result = assignmentConn.readNewestJsonObjectFromDB("CodeCheckSubmissions", "submissionID", submissionID);          
             ObjectMapper mapper = new ObjectMapper();
             result.set("state", mapper.readTree(result.get("state").asText()));
             return ok(result);

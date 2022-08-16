@@ -81,7 +81,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import models.S3Connection;
+import models.AssignmentConnector;
 import com.horstmann.codecheck.Util;
 import play.Logger;
 import play.mvc.Controller;
@@ -89,7 +89,7 @@ import play.mvc.Http;
 import play.mvc.Result;
 
 public class Assignment extends Controller {
-    @Inject private S3Connection s3conn;
+    @Inject private AssignmentConnector assignmentConn;
     private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
     
     public static ArrayNode parseAssignment(String assignment) {
@@ -196,7 +196,7 @@ public class Assignment extends Controller {
         if (assignmentID == null) {
             assignmentNode = JsonNodeFactory.instance.objectNode();
         } else {
-            assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+            assignmentNode = assignmentConn.readJsonObjectFromDB("CodeCheckAssignments", "assignmentID", assignmentID);
             if (assignmentNode == null) return badRequest("Assignment not found");
             
             if (editKey == null) { // Clone
@@ -228,7 +228,7 @@ public class Assignment extends Controller {
         String workID = "";
         boolean editKeySaved = true;
 
-        ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);        
+        ObjectNode assignmentNode = assignmentConn.readJsonObjectFromDB("CodeCheckAssignments", "assignmentID", assignmentID);        
         if (assignmentNode == null) return badRequest("Assignment not found");
         
         assignmentNode.put("isStudent", isStudent);
@@ -269,7 +269,7 @@ public class Assignment extends Controller {
         
         String work = null;
         if (!workID.equals("")) 
-            work = s3conn.readJsonStringFromDynamoDB("CodeCheckWork", "assignmentID", assignmentID, "workID", workID);
+            work = assignmentConn.readJsonStringFromDB("CodeCheckWork", "assignmentID", assignmentID, "workID", workID);
         if (work == null) 
             work = "{ assignmentID: \"" + assignmentID + "\", workID: \"" 
                 + workID + "\", problems: {} }";
@@ -307,7 +307,7 @@ public class Assignment extends Controller {
     
     public Result viewSubmissions(Http.Request request, String assignmentID, String editKey)
         throws IOException {
-        ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+        ObjectNode assignmentNode = assignmentConn.readJsonObjectFromDB("CodeCheckAssignments", "assignmentID", assignmentID);
         if (assignmentNode == null) return badRequest("Assignment not found");
         
         if (!editKeyValid(editKey, assignmentNode))
@@ -315,7 +315,7 @@ public class Assignment extends Controller {
 
         ArrayNode submissions = JsonNodeFactory.instance.arrayNode();
 
-        Map<String, ObjectNode> itemMap = s3conn.readJsonObjectsFromDynamoDB("CodeCheckWork", "assignmentID", assignmentID, "workID");
+        Map<String, ObjectNode> itemMap = assignmentConn.readJsonObjectsFromDB("CodeCheckWork", "assignmentID", assignmentID, "workID");
 
         for (String submissionKey : itemMap.keySet()) {
             String[] parts = submissionKey.split("/");
@@ -351,7 +351,7 @@ public class Assignment extends Controller {
         ObjectNode assignmentNode;
         if (params.has("assignmentID")) {
             assignmentID = params.get("assignmentID").asText();
-            assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+            assignmentNode = assignmentConn.readJsonObjectFromDB("CodeCheckAssignments", "assignmentID", assignmentID);
             if (assignmentNode == null) return badRequest("Assignment not found");
             
             if (!params.has("editKey")) return badRequest("Missing edit key");
@@ -370,7 +370,7 @@ public class Assignment extends Controller {
             }
             assignmentNode = null;
         }
-        s3conn.writeJsonObjectToDynamoDB("CodeCheckAssignments", params);
+        assignmentConn.writeJsonObjectToDB("CodeCheckAssignments", params);
 
         String prefix = models.Util.prefix(request);
         String assignmentURL = prefix + "/private/assignment/" + assignmentID + "/" + editKey;
@@ -386,7 +386,7 @@ public class Assignment extends Controller {
             
             Instant now = Instant.now();
             String assignmentID = requestNode.get("assignmentID").asText();
-            ObjectNode assignmentNode = s3conn.readJsonObjectFromDynamoDB("CodeCheckAssignments", "assignmentID", assignmentID);
+            ObjectNode assignmentNode = assignmentConn.readJsonObjectFromDB("CodeCheckAssignments", "assignmentID", assignmentID);
             if (assignmentNode == null) return badRequest("Assignment not found");
             String workID = requestNode.get("workID").asText();
             String problemID = requestNode.get("tab").asText();
@@ -399,7 +399,7 @@ public class Assignment extends Controller {
             // TODO: NPE in logs for the line below
             submissionNode.put("state", problemsNode.get(problemID).get("state").toString());
             submissionNode.put("score", problemsNode.get(problemID).get("score").asDouble());
-            s3conn.writeJsonObjectToDynamoDB("CodeCheckSubmissions", submissionNode);
+            assignmentConn.writeJsonObjectToDB("CodeCheckSubmissions", submissionNode);
             
             if (assignmentNode.has("deadline")) {
                 try {
@@ -412,7 +412,7 @@ public class Assignment extends Controller {
             }
             result.put("submittedAt", now.toString());      
     
-            s3conn.writeNewerJsonObjectToDynamoDB("CodeCheckWork", requestNode, "assignmentID", "submittedAt");
+            assignmentConn.writeNewerJsonObjectToDB("CodeCheckWork", requestNode, "assignmentID", "submittedAt");
             return ok(result);
         } catch (Exception e) {
             logger.error(Util.getStackTrace(e));

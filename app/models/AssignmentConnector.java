@@ -75,49 +75,49 @@ import com.horstmann.codecheck.Util;
         }    
     }
 
-    public ObjectNode readJsonObjectFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue) throws IOException {
-        return delegate.readJsonObjectFromDynamoDB(tableName, primaryKeyName, primaryKeyValue);
+    public ObjectNode readJsonObjectFromDB(String tableName, String primaryKeyName, String primaryKeyValue) throws IOException {
+        return delegate.readJsonObjectFromDB(tableName, primaryKeyName, primaryKeyValue);
     }
-    public String readJsonStringFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue) throws IOException {
-        return delegate.readJsonStringFromDynamoDB(tableName, primaryKeyName, primaryKeyValue);
+    public String readJsonStringFromDB(String tableName, String primaryKeyName, String primaryKeyValue) throws IOException {
+        return delegate.readJsonStringFromDB(tableName, primaryKeyName, primaryKeyValue);
     }
-    public ObjectNode readJsonObjectFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName, String sortKeyValue) throws IOException {
-        return delegate.readJsonObjectFromDynamoDB(tableName, primaryKeyName, primaryKeyValue, sortKeyName, sortKeyValue);
+    public ObjectNode readJsonObjectFromDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName, String sortKeyValue) throws IOException {
+        return delegate.readJsonObjectFromDB(tableName, primaryKeyName, primaryKeyValue, sortKeyName, sortKeyValue);
     }
-    public ObjectNode readNewestJsonObjectFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue) {
-        return delegate.readNewestJsonObjectFromDynamoDB(tableName, primaryKeyName, primaryKeyValue);
+    public ObjectNode readNewestJsonObjectFromDB(String tableName, String primaryKeyName, String primaryKeyValue) {
+        return delegate.readNewestJsonObjectFromDB(tableName, primaryKeyName, primaryKeyValue);
     }
-    public String readJsonStringFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName, String sortKeyValue) throws IOException {
-        return delegate.readJsonStringFromDynamoDB(tableName, primaryKeyName, primaryKeyValue, sortKeyName, sortKeyValue);
+    public String readJsonStringFromDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName, String sortKeyValue) throws IOException {
+        return delegate.readJsonStringFromDB(tableName, primaryKeyName, primaryKeyValue, sortKeyName, sortKeyValue);
     }
-    public Map<String, ObjectNode> readJsonObjectsFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName) throws IOException, ParseException, NoSuchFieldError {
-        return delegate.readJsonObjectsFromDynamoDB(tableName, primaryKeyName, primaryKeyValue, sortKeyName);
+    public Map<String, ObjectNode> readJsonObjectsFromDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName) throws IOException {
+        return delegate.readJsonObjectsFromDB(tableName, primaryKeyName, primaryKeyValue, sortKeyName);
     }
-    public void writeJsonObjectToDynamoDB(String tableName, ObjectNode obj) {
-        delegate.writeJsonObjectToDynamoDB(tableName, obj);
+    public void writeJsonObjectToDB(String tableName, ObjectNode obj) {
+        delegate.writeJsonObjectToDB(tableName, obj);
     }
-    public boolean writeNewerJsonObjectToDynamoDB(String tableName, ObjectNode obj, String primaryKeyName, String timeStampKeyName) throws IOException, ParseException {
-        return delegate.writeNewerJsonObjectToDynamoDB(tableName, obj, primaryKeyName, timeStampKeyName);
+    public boolean writeNewerJsonObjectToDB(String tableName, ObjectNode obj, String primaryKeyName, String timeStampKeyName) throws IOException {
+        return delegate.writeNewerJsonObjectToDB(tableName, obj, primaryKeyName, timeStampKeyName);
     }        
 }
 
 interface AssignmentConnection {
-    default ObjectNode readJsonObjectFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue) throws IOException {
-        String result = readJsonStringFromDynamoDB(tableName, primaryKeyName, primaryKeyValue);
+    default ObjectNode readJsonObjectFromDB(String tableName, String primaryKeyName, String primaryKeyValue) throws IOException {
+        String result = readJsonStringFromDB(tableName, primaryKeyName, primaryKeyValue);
         return result == null ? null : (ObjectNode)(new ObjectMapper().readTree(result)); 
     }
     
-    default ObjectNode readJsonObjectFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName, String sortKeyValue) throws IOException {
-        String result = readJsonStringFromDynamoDB(tableName, primaryKeyName, primaryKeyValue, sortKeyName, sortKeyValue);
+    default ObjectNode readJsonObjectFromDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName, String sortKeyValue) throws IOException {
+        String result = readJsonStringFromDB(tableName, primaryKeyName, primaryKeyValue, sortKeyName, sortKeyValue);
         return result == null ? null : (ObjectNode)(new ObjectMapper().readTree(result)); 
     }
     
-    public String readJsonStringFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue) throws IOException;
-    public ObjectNode readNewestJsonObjectFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue);
-    public String readJsonStringFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName, String sortKeyValue) throws IOException;
-    public Map<String, ObjectNode> readJsonObjectsFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName) throws IOException, ParseException;
-    public void writeJsonObjectToDynamoDB(String tableName, ObjectNode obj);
-    public boolean writeNewerJsonObjectToDynamoDB(String tableName, ObjectNode obj, String primaryKeyName, String timeStampKeyName) throws IOException, ParseException;
+    public String readJsonStringFromDB(String tableName, String primaryKeyName, String primaryKeyValue) throws IOException;
+    public ObjectNode readNewestJsonObjectFromDB(String tableName, String primaryKeyName, String primaryKeyValue);
+    public String readJsonStringFromDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName, String sortKeyValue) throws IOException;
+    public Map<String, ObjectNode> readJsonObjectsFromDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName) throws IOException;
+    public void writeJsonObjectToDB(String tableName, ObjectNode obj);
+    public boolean writeNewerJsonObjectToDB(String tableName, ObjectNode obj, String primaryKeyName, String timeStampKeyName) throws IOException;
 
 }
 
@@ -143,7 +143,7 @@ class AssignmentS3Connection implements AssignmentConnection {
         bucketSuffix = config.getString("com.horstmann.codecheck.s3bucketsuffix");            
     }    
     
-    public String readJsonStringFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue) throws IOException {
+    public String readJsonStringFromDB(String tableName, String primaryKeyName, String primaryKeyValue) throws IOException {
         DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
         Table table = dynamoDB.getTable(tableName); 
         ItemCollection<QueryOutcome> items = table.query(primaryKeyName, primaryKeyValue);
@@ -158,7 +158,7 @@ class AssignmentS3Connection implements AssignmentConnection {
         }
     }   
     
-    public ObjectNode readNewestJsonObjectFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue) {
+    public ObjectNode readNewestJsonObjectFromDB(String tableName, String primaryKeyName, String primaryKeyValue) {
         DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
         Table table = dynamoDB.getTable(tableName); 
         QuerySpec spec = new QuerySpec()
@@ -184,7 +184,7 @@ class AssignmentS3Connection implements AssignmentConnection {
         }
     }        
 
-    public String readJsonStringFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName, String sortKeyValue) throws IOException {
+    public String readJsonStringFromDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName, String sortKeyValue) throws IOException {
         DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
         Table table = dynamoDB.getTable(tableName); 
         ItemCollection<QueryOutcome> items = table.query(primaryKeyName, primaryKeyValue, 
@@ -200,7 +200,7 @@ class AssignmentS3Connection implements AssignmentConnection {
         }
     }
 
-    public Map<String, ObjectNode> readJsonObjectsFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName) throws IOException {
+    public Map<String, ObjectNode> readJsonObjectsFromDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName) throws IOException {
         DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
         Table table = dynamoDB.getTable(tableName); 
         ItemCollection<QueryOutcome> items = table.query(primaryKeyName, primaryKeyValue);
@@ -214,7 +214,7 @@ class AssignmentS3Connection implements AssignmentConnection {
         return itemMap;
     }
 
-    public void writeJsonObjectToDynamoDB(String tableName, ObjectNode obj) {
+    public void writeJsonObjectToDB(String tableName, ObjectNode obj) {
         DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
         Table table = dynamoDB.getTable(tableName); 
         table.putItem(
@@ -223,7 +223,7 @@ class AssignmentS3Connection implements AssignmentConnection {
         );
     }
 
-    public boolean writeNewerJsonObjectToDynamoDB(String tableName, ObjectNode obj, String primaryKeyName, String timeStampKeyName) {
+    public boolean writeNewerJsonObjectToDB(String tableName, ObjectNode obj, String primaryKeyName, String timeStampKeyName) {
         DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
         Table table = dynamoDB.getTable(tableName);
             /*
@@ -242,7 +242,7 @@ class AssignmentS3Connection implements AssignmentConnection {
             return true;
         } catch(ConditionalCheckFailedException e) {
             // https://github.com/aws/aws-sdk-java/issues/1945
-            logger.warn("writeNewerJsonObjectToDynamoDB: " + e.getMessage() + " " + obj);
+            logger.warn("writeNewerJsonObjectToDB: " + e.getMessage() + " " + obj);
             return false;
         }   
     }
@@ -256,7 +256,7 @@ class AssignmentLocalConnection implements AssignmentConnection {
         this.config = config;
     }
 
-    public String readJsonStringFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue) throws IOException {
+    public String readJsonStringFromDB(String tableName, String primaryKeyName, String primaryKeyValue) throws IOException {
         Path repoPath = Path.of(config.getString("com.horstmann.codecheck.db")).resolve(tableName);
         Path jsonFile = repoPath.resolve(primaryKeyValue.replaceAll("[^a-zA-Z0-9_-]", ""));
 
@@ -264,13 +264,13 @@ class AssignmentLocalConnection implements AssignmentConnection {
             String result = Files.readString(jsonFile);
             return result;
         } catch (IOException ex) {
-            logger.warn("AssignmentLocalConnection.readJsonStringFromDynamoDB - 3 para: Cannot read " + jsonFile.toString());
+            logger.warn("AssignmentLocalConnection.readJsonStringFromDB - 3 para: Cannot read " + jsonFile.toString());
             return null;
         }
     }
 
-    public ObjectNode readNewestJsonObjectFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue) {
-        Path repoPath = Path.of(config.getString("com.horstmann.codecheck.db")).resolve(primaryKeyName).resolve(primaryKeyValue.replaceAll("[^a-zA-Z0-9_-]", ""));
+    public ObjectNode readNewestJsonObjectFromDB(String tableName, String primaryKeyName, String primaryKeyValue) {
+        Path repoPath = Path.of(config.getString("com.horstmann.codecheck.db")).resolve(tableName).resolve(primaryKeyValue.replaceAll("[^a-zA-Z0-9_-]", ""));
 
         try (Stream<Path> entries = Files.list(repoPath)) {
             Path latest = entries.filter(Files::isRegularFile).max(Path::compareTo).orElse(null);
@@ -279,7 +279,7 @@ class AssignmentLocalConnection implements AssignmentConnection {
                 ObjectNode result = (ObjectNode)(new ObjectMapper().readTree(content));
                 return result;
             } catch (JsonProcessingException ex) {
-                logger.warn("AssignmentConnector.readNewestJsonObjectFromDynamoDB: cannot read " + latest.toString() + "***File content: " + content);
+                logger.warn("AssignmentConnector.readNewestJsonObjectFromDB: cannot read " + latest.toString() + "***File content: " + content);
                 return null;
             } 
         } catch (IOException ex) {
@@ -287,7 +287,7 @@ class AssignmentLocalConnection implements AssignmentConnection {
         }
     }
     
-    public String readJsonStringFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName, String sortKeyValue) throws IOException {
+    public String readJsonStringFromDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName, String sortKeyValue) throws IOException {
         Path repoPath = Path.of(config.getString("com.horstmann.codecheck.db")).resolve(tableName);
         Path jsonFile = repoPath.resolve(primaryKeyValue.replaceAll("[^a-zA-Z0-9_-]", "")).resolve(sortKeyValue.replaceAll("[^a-zA-Z0-9_-]", ""));
 
@@ -295,13 +295,13 @@ class AssignmentLocalConnection implements AssignmentConnection {
             String result = Files.readString(jsonFile);
             return result;
         } catch (IOException ex) {
-            logger.warn("AssignmentLocalConnection.readJsonStringFromDynamoDB - 5 para: Cannot read " + jsonFile.toString());
+            logger.warn("AssignmentLocalConnection.readJsonStringFromDB - 5 para: Cannot read " + jsonFile.toString());
             return null;
         }
     }
-    public Map<String, ObjectNode> readJsonObjectsFromDynamoDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName) throws IOException, ParseException, NoSuchFieldError {
+    public Map<String, ObjectNode> readJsonObjectsFromDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName) throws IOException {
         Map<String, ObjectNode> itemMap = new HashMap<>();
-        Path pathToDirectory = Path.of(config.getString("com.horstmann.codecheck.db") + "/" + tableName + "/" + primaryKeyValue);
+        Path pathToDirectory = Path.of(config.getString("com.horstmann.codecheck.db") + "/" + tableName + "/" + primaryKeyValue.replaceAll("[^a-zA-Z0-9_-]", ""));
         try{
             try (Stream<Path> entries = Files.list(pathToDirectory)) {
                 List<Path> files = entries.filter(Files::isRegularFile).collect(Collectors.toList());
@@ -313,13 +313,14 @@ class AssignmentLocalConnection implements AssignmentConnection {
                     itemMap.put(key, (ObjectNode) (new ObjectMapper().readTree(json.toJSONString())));
                 }
             }
-        } catch(Exception ex){
+        } catch(IOException | org.json.simple.parser.ParseException ex){
             //TODO: Do we really want to log this?
             logger.warn(Util.getStackTrace(ex));
         }    
         return itemMap;
     }
-    public void writeJsonObjectToDynamoDB(String tableName, ObjectNode obj) {
+
+    public void writeJsonObjectToDB(String tableName, ObjectNode obj) {
                 // Create a directory for the given table
         // E.g. if the key "com.horstmann.codecheck.db" has the value
         // "/opt/codecheck/db", then the directory created should be
@@ -328,8 +329,7 @@ class AssignmentLocalConnection implements AssignmentConnection {
         Path base = Path.of(configVal);
         Path child = base.resolve(tableName);
         try {
-            Files.createDirectories(child); // Should create a directory with the path
-            // /opt/codecheck/db/CodeCheckAssignments
+            Files.createDirectories(child); // Should create a directory with the path /opt/codecheck/db/CodeCheckAssignments
         } catch (IOException ex) {
             logger.warn(tableName + " directory could not be generated");
         }
@@ -338,11 +338,8 @@ class AssignmentLocalConnection implements AssignmentConnection {
                 case "CodeCheckAssignments": // primary key == assignmentID
                     try {
                         String assignmentID = obj.get("assignmentID").asText().replaceAll("[^a-zA-Z0-9_-]", "");
-                        Path assignment = child.resolve(assignmentID); // should be in the format
-                                                                    // /opt/codecheck/db/CodeCheckAssignments/123456,
-                                                                    // where assignmentID = 123456
+                        Path assignment = child.resolve(assignmentID); // should be in the format /opt/codecheck/db/CodeCheckAssignments/123456, where assignmentID = 123456
                         Files.writeString(assignment, obj.toString());
-
                         break;
                     } catch (IOException ex) {
                         logger.warn(ex.getMessage());
@@ -402,7 +399,7 @@ class AssignmentLocalConnection implements AssignmentConnection {
             logger.error(Util.getStackTrace(ex));
         }
     }
-    public boolean writeNewerJsonObjectToDynamoDB(String tableName, ObjectNode obj, String primaryKeyName, String timeStampKeyName) throws IOException, ParseException {
+    public boolean writeNewerJsonObjectToDB(String tableName, ObjectNode obj, String primaryKeyName, String timeStampKeyName) throws IOException {
         //Get the values for assigmentID, workID, and submittedAt keys from incoming obj
         String assigmentID = obj.get("assignmentID").asText().replaceAll("[^a-zA-Z0-9_-]", "");
         String workID = obj.get("workID").asText();
@@ -413,7 +410,7 @@ class AssignmentLocalConnection implements AssignmentConnection {
         String prevTimeStampVal = "";
     
         if(!Files.exists(codeCheckWork)){ // if the file isn't already created, then create it
-            writeJsonObjectToDynamoDB(tableName, obj);
+            writeJsonObjectToDB(tableName, obj);
             return true;
         }
         //else
@@ -429,12 +426,14 @@ class AssignmentLocalConnection implements AssignmentConnection {
         
         return true;
     }
+
     private String getTimeStamp(Path path, String timeStampKeyName) throws IOException, ParseException{
         String fileData = Files.readString(path);
         JSONParser parser = new JSONParser();
         JSONObject json = (JSONObject) parser.parse(fileData);
         return (String) json.get(timeStampKeyName);
     }
+
     private void writeFileToNewestTimeStamp(Path path, ObjectNode obj, String timeStampKeyName) throws ParseException{
         String newTimeStampVal = obj.get(timeStampKeyName).asText();
         String prevTimeStampVal = "";
