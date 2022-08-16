@@ -38,7 +38,7 @@ import play.mvc.Http;
 
 @Singleton
 public class LTI {
-    @Inject private S3Connection s3conn;
+    @Inject private AssignmentConnector assignmentConn;
     private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
     
     public boolean validate(Http.Request request) {
@@ -75,7 +75,7 @@ public class LTI {
     public String getSharedSecret(String oauthConsumerKey) {
         String sharedSecret = "";
         try {
-            ObjectNode result = s3conn.readJsonObjectFromDynamoDB("CodeCheckLTICredentials", "oauth_consumer_key", oauthConsumerKey);
+            ObjectNode result = assignmentConn.readJsonObjectFromDB("CodeCheckLTICredentials", "oauth_consumer_key", oauthConsumerKey);
             if (result != null) sharedSecret = result.get("shared_secret").asText();
             else logger.warn("No shared secret for consumer key " + oauthConsumerKey);
         } catch (IOException e) {

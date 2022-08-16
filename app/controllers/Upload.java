@@ -18,7 +18,6 @@ import com.horstmann.codecheck.Util;
 import com.typesafe.config.Config;
 
 import models.CodeCheck;
-import models.S3Connection;
 import models.ProblemConnector;
 import play.libs.Files.TemporaryFile;
 import play.mvc.Controller;
@@ -27,7 +26,6 @@ import play.mvc.Result;
 
 public class Upload extends Controller {
     final String repo = "ext";
-    @Inject private S3Connection s3conn;
     @Inject private ProblemConnector probConn;
     @Inject private Config config;
     @Inject private CodeCheck codeCheck;

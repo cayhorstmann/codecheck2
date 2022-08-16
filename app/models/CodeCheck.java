@@ -39,7 +39,6 @@ import play.api.Environment;
 public class CodeCheck {
     private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");    
     private Config config;
-    private S3Connection s3conn;
     private ProblemConnector probConn;
     private JarSigner signer;
     private ResourceLoader resourceLoader;
