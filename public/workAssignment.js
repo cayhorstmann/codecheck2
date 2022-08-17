@@ -299,5 +299,50 @@ window.addEventListener('DOMContentLoaded', () => {
     activateProblemSelection()
     document.getElementById('studentInstructions').style.display = 'none'
     document.getElementById('studentLTIInstructions').style.display = 'none'
-  }  
+  }
+  
+  // Load instructor's comment
+  if (assignment.comment !== "") {
+    document.getElementById('comment').textContent = assignment.comment
+    document.getElementById('student_comment').textContent = assignment.comment
+    document.getElementById('student_lti_comment').textContent = assignment.comment
+  }
+  else {
+    document.getElementById('comment').textContent = "Enter Feedback for student's submission here"
+    document.getElementById('student_comment').textContent = "No Instructor's Feedback Yet"
+    document.getElementById('student_lti_comment').textContent = "No Instructor's Feedback Yet"
+  }
+  
+  // Create button to save instructor's comment
+  if(!assignment.isStudent) {
+    const submitButton = createButton('hc-command', 'Save Comment', async () => {
+      let request = {
+          assignmentID: assignment.assignmentID,
+          workID: assignment.workID, // undefined when isStudent
+          comment: document.getElementById('comment').value,
+      }
+        
+      submitButton.disabled = true
+      responseDiv.style.display = 'none'
+      try {
+        let response = await postData(assignment.saveCommentURL, request)
+        if ('launchPresentationReturnURL' in assignment) {
+          const params = new URLSearchParams()
+          params.append('return_type', 'lti_launch_url')
+          params.append('url', response.launchURL)
+          const url =  assignment.launchPresentationReturnURL
+            + (assignment.launchPresentationReturnURL.includes("?") ? "&" : "?")
+            + params.toString()
+          window.location.href = url
+        } else {
+          window.location.href = response.refreshURL
+        }
+      } catch (e) {
+        responseDiv.textContent = e.message           
+        responseDiv.style.display = 'block'
+      }
+      submitButton.disabled = false    
+    })
+    document.getElementById('saveButtonDiv').appendChild(submitButton) 
+  }
 })

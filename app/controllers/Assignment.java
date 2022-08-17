@@ -260,19 +260,32 @@ public class Assignment extends Controller {
         } else { // Instructor
             if (ccid == null && editKey != null && !editKeyValid(editKey, assignmentNode))
                 throw new IllegalArgumentException("Edit key does not match");
-            if (ccid != null && editKey != null) // Instructor viewing student submission
+            if (ccid != null && editKey != null) {  // Instructor viewing student submission
                 workID = ccid + "/" + editKey;
+                // Only put workID into assignmentNode when viewing submission as Instructor, for security reason
+                assignmentNode.put("saveCommentURL", "/saveComment");
+                assignmentNode.put("workID", workID);
+            }
         }
         assignmentNode.remove("editKey");
         ArrayNode groups = (ArrayNode) assignmentNode.get("problems");
         assignmentNode.set("problems", groups.get(Math.abs(workID.hashCode()) % groups.size()));
         
+        // Start reading work and comments
         String work = null;
+        ObjectNode commentObject = null;
+        String comment = null;
         if (!workID.equals("")) 
             work = assignmentConn.readJsonStringFromDB("CodeCheckWork", "assignmentID", assignmentID, "workID", workID);
+            commentObject = assignmentConn.readJsonObjectFromDB("CodeCheckComments", "assignmentID", assignmentID, "workID", workID);
         if (work == null) 
             work = "{ assignmentID: \"" + assignmentID + "\", workID: \"" 
                 + workID + "\", problems: {} }";
+        if (commentObject == null)
+            comment = "";
+        else
+            comment = commentObject.get("comment").asText();
+        assignmentNode.put("comment", comment);
 
         String lti = "undefined";
         if (isStudent) {                        
@@ -418,5 +431,27 @@ public class Assignment extends Controller {
             logger.error(Util.getStackTrace(e));
             return badRequest(e.getMessage());
         }           
-    }       
+    }
+    
+    public Result saveComment(Http.Request request) throws IOException {
+        try {
+            ObjectNode result = JsonNodeFactory.instance.objectNode();
+            ObjectNode requestNode = (ObjectNode) request.body().asJson();
+            String assignmentID = requestNode.get("assignmentID").asText();
+            String workID = requestNode.get("workID").asText();
+            String comment = requestNode.get("comment").asText();
+            
+            ObjectNode commentNode = JsonNodeFactory.instance.objectNode();
+            commentNode.put("assignmentID", assignmentID);
+            commentNode.put("workID", workID);
+            commentNode.put("comment", comment);
+            assignmentConn.writeJsonObjectToDB("CodeCheckComments", commentNode);
+            result.put("comment", comment);
+            result.put("refreshURL", "/private/submission/" + assignmentID + "/" + workID);
+            return ok(result);
+        } catch (Exception e) {
+            logger.error(Util.getStackTrace(e));
+            return badRequest(e.getMessage());
+        }           
+    } 
 }
