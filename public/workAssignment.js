@@ -335,7 +335,7 @@ window.addEventListener('DOMContentLoaded', () => {
             + params.toString()
           window.location.href = url
         } else {
-          window.location.href = response.viewAssignmentURL
+          window.location.href = response.refreshURL
         }
       } catch (e) {
         responseDiv.textContent = e.message           

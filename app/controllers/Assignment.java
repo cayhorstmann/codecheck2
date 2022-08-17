@@ -446,6 +446,8 @@ public class Assignment extends Controller {
             commentNode.put("workID", workID);
             commentNode.put("comment", comment);
             assignmentConn.writeJsonObjectToDB("CodeCheckComments", commentNode);
+            result.put("comment", comment);
+            result.put("refreshURL", "/private/submission/" + assignmentID + "/" + workID);
             return ok(result);
         } catch (Exception e) {
             logger.error(Util.getStackTrace(e));
