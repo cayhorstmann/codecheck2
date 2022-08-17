@@ -376,7 +376,7 @@ Configure the AWS CLI [instructions](https://docs.aws.amazon.com/cli/latest/user
 aws configure
 ```
 
-Comrun Service Deployment {#service-deployment}
+Comrun Service Deployment
 -------------------------
 
 There are two parts to the CodeCheck server. We\'ll take them up one at
