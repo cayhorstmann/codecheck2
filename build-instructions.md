@@ -490,6 +490,7 @@ If you use CodeCheck with LTI, you need to set up an Amazon Dynamo database. Cre
 | CodeCheckLTIResources     | resourceID         |             |
 | CodeCheckSubmissions      | submissionID       | submittedAt |
 | CodeCheckWork             | assignmentID       | workID      |
+| CodeCheckComments         | assignmentID       | workID      |
 
 The first three tables have no sort key. All types are `String`.
 
@@ -524,6 +525,11 @@ aws --region $REGION dynamodb create-table \
     --key-schema AttributeName=assignmentID,KeyType=HASH AttributeName=workID,KeyType=RANGE \
     --provisioned-throughput ReadCapacityUnits=1,WriteCapacityUnits=1
     
+aws --region $REGION dynamodb create-table \
+    --table-name CodeCheckComments \
+    --attribute-definitions AttributeName=assignmentID,AttributeType=S AttributeName=workID,AttributeType=S \
+    --key-schema AttributeName=assignmentID,KeyType=HASH AttributeName=workID,KeyType=RANGE \
+    --provisioned-throughput ReadCapacityUnits=1,WriteCapacityUnits=1
     
 cat <<EOF > CodeCheckDynamo.json
 {

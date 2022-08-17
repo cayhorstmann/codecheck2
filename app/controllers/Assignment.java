@@ -275,9 +275,10 @@ public class Assignment extends Controller {
         String work = null;
         ObjectNode commentObject = null;
         String comment = null;
-        if (!workID.equals("")) 
+        if (!workID.equals(""))  {
             work = assignmentConn.readJsonStringFromDB("CodeCheckWork", "assignmentID", assignmentID, "workID", workID);
             commentObject = assignmentConn.readJsonObjectFromDB("CodeCheckComments", "assignmentID", assignmentID, "workID", workID);
+        }
         if (work == null) 
             work = "{ assignmentID: \"" + assignmentID + "\", workID: \"" 
                 + workID + "\", problems: {} }";

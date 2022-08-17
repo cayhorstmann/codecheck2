@@ -258,6 +258,9 @@ class AssignmentLocalConnection implements AssignmentConnection {
     }
 
     public String readJsonStringFromDB(String tableName, String primaryKeyName, String primaryKeyValue) throws IOException {
+        if(primaryKeyValue == "") {
+            throw new IllegalArgumentException("AssignmentLocalConnection.readJsonStringFromDB called with empty key");
+        }
         Path repoPath = Path.of(config.getString("com.horstmann.codecheck.db")).resolve(tableName);
         Path jsonFile = repoPath.resolve(primaryKeyValue.replaceAll("[^a-zA-Z0-9_-]", ""));
 
@@ -271,6 +274,9 @@ class AssignmentLocalConnection implements AssignmentConnection {
     }
 
     public ObjectNode readNewestJsonObjectFromDB(String tableName, String primaryKeyName, String primaryKeyValue) {
+        if(primaryKeyValue == "") {
+            throw new IllegalArgumentException("AssignmentLocalConnection.readNewestJsonObjectFromDB called with empty key");
+        }
         Path repoPath = Path.of(config.getString("com.horstmann.codecheck.db")).resolve(tableName).resolve(primaryKeyValue.replaceAll("[^a-zA-Z0-9_-]", ""));
 
         try (Stream<Path> entries = Files.list(repoPath)) {
@@ -289,6 +295,9 @@ class AssignmentLocalConnection implements AssignmentConnection {
     }
     
     public String readJsonStringFromDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName, String sortKeyValue) throws IOException {
+        if(primaryKeyValue == "" || sortKeyValue == "") {
+            throw new IllegalArgumentException("AssignmentLocalConnection.readJsonStringFromDB called with empty keys");
+        }
         Path repoPath = Path.of(config.getString("com.horstmann.codecheck.db")).resolve(tableName);
         Path jsonFile = repoPath.resolve(primaryKeyValue.replaceAll("[^a-zA-Z0-9_-]", "")).resolve(sortKeyValue.replaceAll("[^a-zA-Z0-9_-]", ""));
 
@@ -301,6 +310,9 @@ class AssignmentLocalConnection implements AssignmentConnection {
         }
     }
     public Map<String, ObjectNode> readJsonObjectsFromDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName) throws IOException {
+        if(primaryKeyValue == "") {
+            throw new IllegalArgumentException("AssignmentLocalConnection.readJsonObjectsFromDB called with empty key");
+        }
         Map<String, ObjectNode> itemMap = new HashMap<>();
         Path pathToDirectory = Path.of(config.getString("com.horstmann.codecheck.db") + "/" + tableName + "/" + primaryKeyValue.replaceAll("[^a-zA-Z0-9_-]", ""));
         try{
