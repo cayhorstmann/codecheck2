@@ -313,15 +313,16 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('student_lti_comment').textContent = "No Instructor's Feedback Yet"
   }
   
-  // Create button to save instructor's comment
-  if(!assignment.isStudent) {
+  // Create button to save instructor's comment when viewing student's submission
+  if(!assignment.isStudent && assignment.saveCommentURL) {
+    document.getElementById('label_feedback_instruction').textContent = 'Feedback'
     const submitButton = createButton('hc-command', 'Save Comment', async () => {
       let request = {
           assignmentID: assignment.assignmentID,
           workID: assignment.workID, // undefined when isStudent
           comment: document.getElementById('comment').value,
       }
-        
+      
       submitButton.disabled = true
       responseDiv.style.display = 'none'
       try {
@@ -344,5 +345,9 @@ window.addEventListener('DOMContentLoaded', () => {
       submitButton.disabled = false    
     })
     document.getElementById('saveButtonDiv').appendChild(submitButton) 
+  } 
+  else {
+    document.getElementById('comment').style.display = 'none'
   }
+
 })
