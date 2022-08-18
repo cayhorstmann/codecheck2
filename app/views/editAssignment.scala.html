@@ -19,9 +19,11 @@
  <p>Enter problem URLs or IDs, one per line:</p>
  <textarea style="display: block; width: 90%;" id="problems" rows="10"></textarea>
  <div id="deadlineDiv">
- <p>Deadline (<b>In UTC</b>):</p>
- <input type="date" id="deadlineDate" />  <input type="time" id="deadlineTime" value="23:59"/>
- <p>Leave date blank for no deadline.</p>
+    <p>Deadline : (<b>Local Time</b>)</p>
+    <input type="datetime-local" id="deadlineDate" name="date"/>
+    <p id="deadlineLocal" style="font-weight: bold;"></p>
+    <p id="deadlineUTC" style="font-weight: bold;"></p>
+    <p>Leave date blank for no deadline.</p>
  </div>
  <div id='saveButtonDiv'></div>
  <div id="response" class="message" style='display: none'></div>
