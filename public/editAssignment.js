@@ -17,9 +17,7 @@ window.addEventListener('DOMContentLoaded', () => {
 let field = document.querySelector('#deadlineDate')
 deadlineDate.addEventListener('input', function(){
   let date = field.value
-  console.log(date)
   document.getElementById('deadlineDate').value = date
-  console.log(new Date(document.getElementById('deadlineDate').value).toISOString())
   if(date == ''){
     document.getElementById('deadlineLocal').style.display = "none"
     document.getElementById('deadlineUTC').style.display = "none"

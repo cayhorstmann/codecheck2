@@ -233,11 +233,9 @@ window.addEventListener('DOMContentLoaded', () => {
   
   if (assignment.isStudent) {
     if('deadline' in assignment){
-      console.log(assignment.deadline)
       document.getElementById('deadline').textContent = "Deadline:"
       let deadline = assignment.deadline
       let deadlineUTC = new Date(deadline).toUTCString()
-      console.log(new Date(deadline).toString())
       let deadlineLocal = new Date(Date.parse(deadline))
       document.getElementById('deadlineLocal').textContent = deadlineLocal
       document.getElementById('deadlineUTC').textContent = deadlineUTC + " (UTC)"
