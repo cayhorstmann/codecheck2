@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.ArrayList;
+
 
 public class DartLanguage implements Language {
 
@@ -30,27 +32,27 @@ public class DartLanguage implements Language {
         String classname = moduleOf(file);
         //List<String> lines = Util.readLines(sourceDir.resolve(file));
 
-        List<String> lines = Util.lines(contents);
+        List<String> lines = new ArrayList<>(); // = Util.lines(contents);
         int i = 0;
         lines.add(i++, "import '" + moduleName + ".dart';");
         lines.add(i++, "main() {");
         for (int k = 0; k < calls.size(); k++) {
 
             Calls.Call call = calls.get(k);
-            lines.add(i++, "     var  expected = "
-                    + call.name + "(" + call.args
-                    + ");");
-            lines.add(i++, "      print(expected);");
+            // lines.add(i++, "     var  expected = "
+            //         + call.name + "(" + call.args
+            //         + ");");
+            // lines.add(i++, "      print(expected);");
             lines.add(i++, "   var   actual = "
                     + moduleName + "()." + call.name + "("
 // + call.name + "("
 
-                    + call.args + ");");
-            lines.add(i++, "      print(actual);");
-            lines.add(i++, "      if (expected == actual) ");
-            lines.add(i++, "        print(\"true\"); ");
-            lines.add(i++, "      else ");
-            lines.add(i++, "        print(\"false\"); ");
+                     + call.args + ");");
+             lines.add(i++, "      print(actual);");
+            // lines.add(i++, "      if (expected == actual) ");
+            // lines.add(i++, "        print(\"true\"); ");
+            // lines.add(i++, "      else ");
+            // lines.add(i++, "        print(\"false\"); ");
         }
         lines.add(i++, "}");
         //lines.add("main();");

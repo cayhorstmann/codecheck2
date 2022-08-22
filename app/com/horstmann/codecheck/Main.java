@@ -130,8 +130,8 @@ public class Main {
         int maxOutput = maxOutputLen  / calls.getSize();
         List<Path> sources = new ArrayList<Path>(testerFiles.keySet()); 
         //plan.compile("call", "submission callfiles", sources, dependentSourcePaths); // TODO: This is the only place with a list of sources. Why???
-        plan.compile("submissioncall", "submission ", sources, dependentSourcePaths); 
-        plan.compile("solutioncall", "solution ", sources, dependentSourcePaths); 
+        plan.compile("submissioncall", "submission callfiles", sources, dependentSourcePaths); 
+        plan.compile("solutioncall", "solution callfiles", sources, dependentSourcePaths); 
         for (int i = 0; i < calls.getSize(); i++) {
             Path mainFile = sources.get(0);
             // TODO: Solution code not isolated from student. It would be more secure to
