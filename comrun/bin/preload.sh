@@ -27,7 +27,7 @@ function compile {
   mkdir -p $BASE/out/$DIR  
   case _"$LANG" in 
     _C)
-      gcc -std=c99 -g -o prog -lm $@ > $BASE/out/$DIR/_compile 2>&1
+      gcc -std=c99 -g -o prog $@ -lm > $BASE/out/$DIR/_compile 2>&1
       ;;
     _Cpp)
       g++ -std=c++17 -Wall -Wno-sign-compare -g -o prog $@ 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_compile
