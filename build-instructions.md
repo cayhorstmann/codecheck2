@@ -222,7 +222,7 @@ Run the `play-codecheck` server:
 
     COMRUN_USER=$(whoami) sbt run
 
-Point the browser to <http://localhost:9090/assets/uploadProblem.html>.
+Point the browser to <http://localhost:9000/assets/uploadProblem.html>.
 Upload a problem and test it.
 
 Note: The problem files will be located inside the `/opt/codecheck/ext`
@@ -237,7 +237,7 @@ Run the `play-codecheck` server in debug mode:
 
 In Eclipse, select Run → Debug Configurations, select the configuration
 you created, and select Debug. Point the browser to a URL such as
-<http://localhost:9090/assets/uploadProblem.html>. Set breakpoints as
+<http://localhost:9000/assets/uploadProblem.html>. Set breakpoints as
 needed.
 
 ## Docker Installation
