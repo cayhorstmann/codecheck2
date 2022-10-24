@@ -556,26 +556,27 @@ public class Util {
     public static String createPronouncableUID() {
         StringBuilder result = new StringBuilder();
         int len = 4;
-        for(int i = 0; i < len; i++){
-            result.append(generateNewWord());
-            if(i != 3){ // we only want three dashes in the UID
-                result.append("-");
-            }
+        for (int i = 0; i < len; i++) {
+            if (i > 0) result.append("-");
+            result.append(generatePronounceableWord());
         }
         return result.toString();
     }
-    private static StringBuilder generateNewWord(){ // this function generates a four-letter word for the UID
+    
+    // generates a non-bad four-letter pronounceable word
+    // of the form vcvc or cvcv (c = consonant, v = vowel)
+    private static StringBuilder generatePronounceableWord() { 
         StringBuilder word;
         int len = 4;
         int b = Util.generator.nextInt(2);
-        do{
+        do {
             word = new StringBuilder();
-            for(int i = 0; i < len; i++) { // this loop generates a four-letter word for the id
+            for (int i = 0; i < len; i++) { 
                 String s = i % 2 == b ? Util.consonants : vowels;
                 int n = Util.generator.nextInt(s.length());
                 word.append(s.charAt(n));
             }
-        } while(isBadWord(word.toString())); // generate a word until we get a non bad word
+        } while (isBadWord(word.toString())); // generate a word until we get a non bad word
         
         return word;
     }

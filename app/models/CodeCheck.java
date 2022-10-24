@@ -1,7 +1,5 @@
 package models;
 
-import models.ProblemConnector;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -38,13 +36,11 @@ import play.api.Environment;
 @Singleton
 public class CodeCheck {
     private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");    
-    private Config config;
     private ProblemConnector probConn;
     private JarSigner signer;
     private ResourceLoader resourceLoader;
     
     @Inject public CodeCheck(Config config, ProblemConnector probConn, Environment playEnv) {
-        this.config = config;
         this.probConn = probConn;
         resourceLoader = new ResourceLoader() {
             @Override

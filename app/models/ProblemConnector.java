@@ -1,56 +1,24 @@
 package models;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.FileInputStream;
-import java.io.File;
-import java.io.FileWriter;
-import java.nio.file.Path;
 import java.nio.file.Files;
-import java.util.ArrayList;
+import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
-import com.horstmann.codecheck.Util;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.document.DynamoDB;
-import com.amazonaws.services.dynamodbv2.document.Item;
-import com.amazonaws.services.dynamodbv2.document.ItemCollection;
-import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
-import com.amazonaws.services.dynamodbv2.document.RangeKeyCondition;
-import com.amazonaws.services.dynamodbv2.document.Table;
-import com.amazonaws.services.dynamodbv2.document.spec.PutItemSpec;
-import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
-import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
-import com.amazonaws.services.dynamodbv2.model.ConditionalCheckFailedException;
-import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputExceededException;
-import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
-import com.amazonaws.services.dynamodbv2.model.TransactionConflictException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.horstmann.codecheck.Util;
 import com.typesafe.config.Config;
-import com.typesafe.config.ConfigException;
 
 import play.Logger;
 
@@ -59,12 +27,10 @@ public class ProblemConnector {
     private ProblemConnection delegate;
 
     @Inject public ProblemConnector(Config config) {
-        if (config.hasPath("com.horstmann.codecheck.s3.accessKey")) {
+        if (config.hasPath("com.horstmann.codecheck.s3.region"))
             delegate = new ProblemS3Connection(config);   
-        }
-        else {
+        else 
             delegate = new ProblemLocalConnection(config);
-        }
     }
 
     public void write(byte[] contents, String repo, String key) throws IOException {
@@ -87,36 +53,24 @@ interface ProblemConnection {
 }
 
 class ProblemS3Connection implements ProblemConnection {
-    private Config config;
     private String bucketSuffix = null;
     private AmazonS3 amazonS3;
     private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
 
     public ProblemS3Connection(Config config) {
-        this.config = config;
-        String s3AccessKey = config.getString("com.horstmann.codecheck.s3.accessKey");
-        String s3SecretKey = config.getString("com.horstmann.codecheck.s3.secretKey");
-        String s3Region = config.getString("com.horstmann.codecheck.s3.region"); 
+        String awsAccessKey = config.getString("com.horstmann.codecheck.aws.accessKey");
+        String awsSecretKey = config.getString("com.horstmann.codecheck.aws.secretKey");
+        String region = config.getString("com.horstmann.codecheck.s3.region"); 
         amazonS3 = AmazonS3ClientBuilder
                 .standard()
-                .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(s3AccessKey, s3SecretKey)))
-                .withRegion(s3Region)
+                .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(awsAccessKey, awsSecretKey)))
+                .withRegion(region)
                 .withForceGlobalBucketAccessEnabled(true)
                 .build();
 
-        bucketSuffix = config.getString("com.horstmann.codecheck.s3bucketsuffix");
+        bucketSuffix = config.getString("com.horstmann.codecheck.s3.bucketsuffix");
     }
 
-    public boolean isOnS3(String repo) {
-        String key = "com.horstmann.codecheck.repo." + repo;
-        return !config.hasPath(key) || config.getString(key).isEmpty();
-    }
-
-    public boolean isOnS3(String repo, String key) {
-        String bucket = repo + "." + bucketSuffix;
-        return amazonS3.doesObjectExist(bucket, key);            
-    }
-    
     public void write(Path file, String repo, String key) throws IOException {
         String bucket = repo + "." + bucketSuffix;
         try {
@@ -182,20 +136,25 @@ class ProblemS3Connection implements ProblemConnection {
 }
 
 class ProblemLocalConnection implements ProblemConnection {
-    private Config config;
+    private Path root;
     private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
 
     public ProblemLocalConnection(Config config) {
-        this.config = config;
+        this.root = Path.of(config.getString("com.horstmann.codecheck.s3.local"));
+        try {
+           Files.createDirectories(root);            
+        } catch (IOException ex) {
+            logger.error("Cannot create " + root);
+        } 
     }
 
     public void write(byte[] contents, String repo, String key) throws IOException {
         try {
-            Path repoPath = Path.of(config.getString("com.horstmann.codecheck.repo." + repo));
+            Path repoPath = root.resolve(repo);
             Path problemDir = repoPath.resolve(key);
             Util.deleteDirectory(problemDir); // Delete any prior contents so that it is replaced by new zip file
             Files.createDirectories(problemDir);                
-            Path newFilePath = problemDir.resolve(key+".zip");
+            Path newFilePath = problemDir.resolve(key + ".zip");
             org.apache.commons.io.FileUtils.writeByteArrayToFile(new File(newFilePath.toString()), contents);
         } catch (IOException ex) {
             String bytes = Arrays.toString(contents);
@@ -206,8 +165,8 @@ class ProblemLocalConnection implements ProblemConnection {
     }
 
     public void delete(String repo, String key) throws IOException {
-        String repoPath = config.getString("com.horstmann.codecheck.repo." + repo);
-        Path directoryPath = Path.of(repoPath).resolve(key);
+        Path repoPath = root.resolve(repo);
+        Path directoryPath = repoPath.resolve(key);
         try {
             Util.deleteDirectory(directoryPath);
         } catch (IOException ex) {
@@ -219,11 +178,11 @@ class ProblemLocalConnection implements ProblemConnection {
     public byte[] read(String repo, String key) throws IOException {
         byte[] result = null;
         try {
-            Path repoPath = Path.of(config.getString("com.horstmann.codecheck.repo." + repo));
+            Path repoPath = root.resolve(repo);
             if (key.startsWith("/"))
                 key = key.substring(1);
                             
-            Path filePath = repoPath.resolve(key).resolve(key+".zip");
+            Path filePath = repoPath.resolve(key).resolve(key + ".zip");
             result = Files.readAllBytes(filePath); 
         } catch (IOException ex) {
             logger.error("ProblemLocalConnection.read : Cannot read " + key + " from " + repo);

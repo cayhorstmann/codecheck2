@@ -66,7 +66,6 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.Map;
@@ -80,9 +79,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.horstmann.codecheck.Util;
 
 import models.AssignmentConnector;
-import com.horstmann.codecheck.Util;
 import play.Logger;
 import play.mvc.Controller;
 import play.mvc.Http;
@@ -420,7 +419,7 @@ public class Assignment extends Controller {
                     Instant deadline = Instant.parse(assignmentNode.get("deadline").asText());
                     if (now.isAfter(deadline)) 
                         return badRequest("After deadline of " + deadline);
-                } catch(DateTimeParseException e) { // TODO: This should never happen, but it did
+                } catch (DateTimeParseException e) { // TODO: This should never happen, but it did
                     logger.error(Util.getStackTrace(e));
                 }
             }

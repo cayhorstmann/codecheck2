@@ -14,25 +14,26 @@ window.addEventListener('DOMContentLoaded', () => {
     return result
   }
 
-let field = document.querySelector('#deadlineDate')
-deadlineDate.addEventListener('input', function(){
-  let date = field.value
-  document.getElementById('deadlineDate').value = date
-  if(date == ''){
-    document.getElementById('deadlineLocal').style.display = "none"
-    document.getElementById('deadlineUTC').style.display = "none"
-  } else{
-    let date = document.getElementById('deadlineDate').value
-    let deadlineLocal = new Date(date)
-    let deadlineUTC = new Date(deadlineLocal).toUTCString() 
-    document.getElementById('deadlineLocal').textContent = deadlineLocal
-    document.getElementById('deadlineUTC').textContent = deadlineUTC + " (UTC)"
-    document.getElementById('deadlineLocal').style.display = "block"
-    document.getElementById('deadlineUTC').style.display = "block"
-  }
-});
+  let field = document.querySelector('#deadlineDate')
+  deadlineDate.addEventListener('input', function() {
+    let date = field.value
+    document.getElementById('deadlineDate').value = date
+    const local = document.getElementById('deadlineLocal')
+    const utc = document.getElementById('deadlineUTC')
+    if (date === '') {
+      local.style.display = "none"
+      utc.style.display = "none"
+    } else {
+      let date = document.getElementById('deadlineDate').value
+      let deadlineLocal = new Date(date)
+      let deadlineUTC = new Date(deadlineLocal).toUTCString() 
+      local.textContent = deadlineLocal
+      utc.textContent = deadlineUTC + " (UTC)"
+      local.style.display = "block"
+      utc.style.display = "block"
+    }
+  })
 
-  
   const responseDiv = document.getElementById('response')
   if ('problems' in assignment)  
     document.getElementById('problems').value = format(assignment.problems)

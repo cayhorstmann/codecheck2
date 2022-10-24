@@ -1,7 +1,6 @@
 package controllers;
 
 import java.io.IOException;
-import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,7 +14,6 @@ import javax.script.ScriptException;
 import com.horstmann.codecheck.Problem;
 import com.horstmann.codecheck.Report;
 import com.horstmann.codecheck.Util;
-import com.typesafe.config.Config;
 
 import models.CodeCheck;
 import models.ProblemConnector;
@@ -27,7 +25,6 @@ import play.mvc.Result;
 public class Upload extends Controller {
     final String repo = "ext";
     @Inject private ProblemConnector probConn;
-    @Inject private Config config;
     @Inject private CodeCheck codeCheck;
 
     public Result uploadFiles(Http.Request request) {

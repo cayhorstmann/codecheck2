@@ -209,11 +209,11 @@ public class Problem {
         Matcher linkMatcherEnd = LINK_END.matcher(result);
         int startLink = 0;
         int endLink = 0;
-        while(linkMatcherStart.find(startLink) && linkMatcherEnd.find(startLink)) {
+        while (linkMatcherStart.find(startLink) && linkMatcherEnd.find(startLink)) {
             startLink = linkMatcherStart.start();
             endLink = linkMatcherEnd.end();
             String hrefLink = result.substring(linkMatcherStart.start(1), linkMatcherStart.end(1)).toLowerCase();     
-            if(!(hrefLink.startsWith("http://") || hrefLink.startsWith("https://"))) {
+            if (!(hrefLink.startsWith("http://") || hrefLink.startsWith("https://"))) {
                 int startContent = linkMatcherStart.end();
                 int endContent = linkMatcherEnd.start();
                 String contentOfLink = result.substring(startContent, endContent);
@@ -221,7 +221,7 @@ public class Problem {
                 startLink += contentOfLink.length();
             }
             else
-              startLink += endLink - startLink;
+              startLink = endLink;
         }
 
         Matcher matcher = IMG_PATTERN.matcher(result);

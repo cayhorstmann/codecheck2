@@ -6,7 +6,6 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.security.NoSuchAlgorithmException;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
@@ -21,9 +20,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.horstmann.codecheck.Problem;
 import com.horstmann.codecheck.Util;
 
+import models.AssignmentConnector;
 import models.CodeCheck;
 import models.LTI;
-import models.AssignmentConnector;
 import play.Logger;
 import play.mvc.Controller;
 import play.mvc.Http;

@@ -67,10 +67,10 @@ codespace ALL=(ALL) NOPASSWD:ALL
 Building the Command Line Tool
 ------------------------------
 
-Make a directory `/opt/codecheck` and a subdirectory `ext` that you own:
+Make a directory `/opt/codecheck` that you own:
 
-    sudo mkdir -p /opt/codecheck/ext
-    export ME=$(whoami) ; sudo -E chown $ME /opt/codecheck /opt/codecheck/ext
+    sudo mkdir -p /opt/codecheck
+    export ME=$(whoami) ; sudo -E chown $ME /opt/codecheck
 
 Clone the repo (unless you are in Codespaces, where it is already cloned)
 
@@ -580,11 +580,11 @@ Add the following to `conf/production.conf`:
 
     play.http.secret.key= see above
     com.horstmann.codecheck.comrun.remote=comrun host URL/api/upload
-    com.horstmann.codecheck.s3.accessKey= your AWS credentials
-    com.horstmann.codecheck.s3.secretKey=
-    com.horstmann.codecheck.s3bucketsuffix="mydomain.com"
+    com.horstmann.codecheck.aws.accessKey= your AWS credentials
+    com.horstmann.codecheck.aws.secretKey=
+    com.horstmann.codecheck.s3.bucketsuffix="mydomain.com"
     com.horstmann.codecheck.s3.region=your AWS region such as "us-west-1"
-    com.horstmann.codecheck.repo.ext=""
+    com.horstmann.codecheck.dynamodb.region=your AWS region such as "us-west-1"
     com.horstmann.codecheck.storeLocation=""
 
 Deploy the `play-codecheck` service:
