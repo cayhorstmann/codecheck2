@@ -35,8 +35,8 @@ These instructions are for Ubuntu 20.04LTS. If you are not running Ubuntu native
 Open a terminal and install the dependencies
 
 ```
-sudo apt-get update
-sudo apt install openjdk-11-jdk git ant curl unzip
+sudo apt update
+sudo apt -y install openjdk-11-jdk git ant curl unzip
 ```
 
 Install sbt for Linux (deb) or [follow the instruction for your environment](https://www.scala-sbt.org/download.html)
@@ -44,8 +44,8 @@ Install sbt for Linux (deb) or [follow the instruction for your environment](htt
 echo "deb https://repo.scala-sbt.org/scalasbt/debian all main" | sudo tee /etc/apt/sources.list.d/sbt.list
 echo "deb https://repo.scala-sbt.org/scalasbt/debian /" | sudo tee /etc/apt/sources.list.d/sbt_old.list
 curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89B84B2DF73499E82A75642AC823" | sudo apt-key add
-sudo apt-get update
-sudo apt-get install sbt
+sudo apt update
+sudo apt install sbt
 ```
 ## Special Steps for Github Codespaces
 
