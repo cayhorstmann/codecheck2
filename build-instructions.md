@@ -78,7 +78,8 @@ Clone the repo (unless you are in Codespaces, where it is already cloned)
 
 Get a few JAR files:
 
-    cd codecheck2/cli
+    cd codecheck2 # if not already there
+    cd cli
     mkdir lib
     cd lib
     curl -LOs https://repo1.maven.org/maven2/com/fasterxml/jackson/core/jackson-core/2.6.4/jackson-core-2.6.4.jar
@@ -90,11 +91,10 @@ Get a few JAR files:
     curl -LOs https://repo1.maven.org/maven2/com/puppycrawl/tools/checkstyle/8.42/checkstyle-8.42.jar
     curl -LOs https://repo1.maven.org/maven2/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar
     curl -LOs https://repo1.maven.org/maven2/junit/junit/4.13.2/junit-4.13.2.jar
-    cd ../../../..
+    cd ../../..
 
 Build the command-line tool:
 
-    cd codecheck2
     ant -f cli/build.xml
 
 Test that it works:
@@ -149,7 +149,7 @@ For the second debug configuration, set:
 
 -   Environment variable `COMRUN_USER`: your username
 
-## Visual Studio Code
+## Codespaces and Visual Studio Code
 
 If you use Codespaces, you need to use Visual Studio Code as your IDE. If not, skip this section and follow the section about configuring Eclipse instead.
 
@@ -159,6 +159,8 @@ Run
     sbt compile
 
 Then open the base directory in Visual Studio Code. Visual Studio Code will read the project configuration from the Eclipse configuration.
+
+Install the Language Support for Java and Debugger for Java extensions into Visual Studio Code.
 
 In Visual Studio Code, click on the Run and Debug (triangle and bug) icon on the left. Select Run → Add Configuration from the menu. The file `.vscode/launch.json` is opened up. Set it to the following contents:
 
@@ -196,6 +198,16 @@ In Visual Studio Code, click on the Run and Debug (triangle and bug) icon on the
   ]
 }
 ```
+
+Sad Codespaces/Visual Studio Code issue: When you install the Java language pack, the terminal is configured to use the version of Java installed with the language pack. That is *not* what we want. *Every time* you open the terminal, do this:
+
+```
+export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+export PATH=$JAVA_HOME/bin:$PATH
+java -version
+```
+
+Be sure that you get Java 11, and not Java 17.
 
 Debugging the Command Line Tool
 -------------------------------
