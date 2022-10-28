@@ -128,17 +128,14 @@ public class Main {
         int timeout = timeoutMillis / calls.getSize();
         int maxOutput = maxOutputLen  / calls.getSize();
         List<Path> sources = new ArrayList<Path>(testerFiles.keySet()); 
-        //plan.compile("call", "submission callfiles", sources, dependentSourcePaths); // TODO: This is the only place with a list of sources. Why???
+        // TODO: This is the only place with a list of sources. 
+        // If the multiple sources in the C++ tester are removed, do we still need them?
         plan.compile("submissioncall", "submission callfiles", sources, dependentSourcePaths); 
         plan.compile("solutioncall", "solution callfiles", sources, dependentSourcePaths); 
         for (int i = 0; i < calls.getSize(); i++) {
             Path mainFile = sources.get(0);
-            // TODO: Solution code not isolated from student. It would be more secure to
-            // change call strategy to generate output. 
-            //plan.run("call", "call", "call" + i, mainFile, "", "" + (i + 1), timeout, maxOutput, false);
             plan.run("submissioncall", "submissioncall", "submissioncall" + i, mainFile, "", "" + (i + 1), timeout, maxOutput, false);
             plan.run("solutioncall", "solutioncall", "solutioncall" + i, mainFile, "", "" + (i + 1), timeout, maxOutput, false);
-           
         }
         plan.addTask(() -> {
             report.header("call", "Calling with Arguments");
@@ -156,27 +153,6 @@ public class Main {
                     expected[i] = "[hidden]"; 
                     args[i][0] = "[hidden]"; 
                 }
-                // else {
-                    // Error in compilation or execution
-                    // We assume that the solution correctly produces a single line
-                    // Most likely, the rest is an exception report, and the true/false never came
-                //     StringBuilder msg = new StringBuilder();
-                //     for (int j = 1; j < lines.size(); j++) {
-                //         String line = lines.get(j); 
-                //         if (j < lines.size() - 1 || !(line.equals("true") || line.equals("false")))
-                //         msg.append(line); msg.append('\n'); 
-                //     }
-                //     String message = msg.toString(); 
-                //     if (call.isHidden() == true) {
-                //         expected[i] = "[hidden]"; 
-                //         args[i][0] = "[hidden]"; 
-                //     }
-                //     else {
-                //         expected[i] = lines.get(0);
-                //     }                
-                //     actual[i] = message;
-                //     outcomes[i] = false;
-                // }
                 score.pass(outcomes[i], null /* no report--it's in the table */);
             }
             report.runTable(names, new String[] { "Arguments" }, args, actual, expected, outcomes);

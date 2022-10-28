@@ -55,10 +55,10 @@ public class JavaLanguage implements Language {
                 lines.add(i++, "            " + className + " obj1 = new " + className
                         + "();");
             } 
-            lines.add(i++, "            Object actual = "
+            lines.add(i++, "            Object result = "
                     + (isStatic ? className : "obj1") + "." + call.name + "("
                     + call.args + ");");
-            lines.add(i++, "            System.out.println(_toString(actual));");
+            lines.add(i++, "            System.out.println(_toString(result));");
             lines.add(i++, "        }");
         }
         lines.add(i++, "    }");

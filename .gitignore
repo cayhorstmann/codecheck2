@@ -2,6 +2,7 @@
 **/*.class
 **/*.zip
 **/*.jar
+**/*.bloop
 development.conf
 conf/production.conf
 production.env
@@ -17,6 +18,7 @@ target
 .cache-main
 .bsp
 .metals
+.vscode
 application-log*
 gcloud
 deploy
@@ -24,4 +26,5 @@ checkall
 testdiff
 /bin
 checker/docker/build
+comrun/build
 todo.txt
