@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.ArrayList;
 
 public class JavaLanguage implements Language {
     public String getExtension() { return "java"; };
@@ -39,55 +40,31 @@ public class JavaLanguage implements Language {
     @Override
     public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls, ResourceLoader resourceLoader) {
         String className = moduleOf(file);
-        List<String> lines = Util.lines(contents);
+        List<String> lines = new ArrayList<>(); // = Util.lines(contents);
         int i = 0;
         // TODO: Could be enum or record
-        while (i < lines.size() && !lines.get(i).contains("class " + className))
-            i++;
-        if (i == lines.size())
-            throw new CodeCheckException("Can't find class " + className
-                    + " for inserting CALL in " + file);
-        lines.set(i, lines.get(i).replace("class " + className,
-            "class " + className + "CodeCheck { static class Solution { static class " + className));
-        i = lines.size() - 1;
-        while (i >= 0 && !lines.get(i).trim().equals("}"))
-            i--;
-        if (i == -1)
-            throw new CodeCheckException("Can't find } for inserting CALL in "
-                    + file);
-        lines.add(i++, "        }");
-        lines.add(i++, "    }");
+        lines.add(i++, "public class " + className + "CodeCheck {"); 
         lines.add(i++, "    public static void main(String[] args) throws Exception");
         lines.add(i++, "    {");
-        for (int k = 0; k < calls.size(); k++) {
-            Calls.Call call = calls.get(k);
-            boolean isStatic = call.modifiers.contains("static");
+         for (int k = 0; k < calls.size(); k++) {
+             Calls.Call call = calls.get(k);
+             boolean isStatic = call.modifiers.contains("static");
             lines.add(i++, "        if (args[0].equals(\"" + (k + 1) + "\"))");
             lines.add(i++, "        {");
-            if (!isStatic) {
+             if (!isStatic) {
                 lines.add(i++, "            " + className + " obj1 = new " + className
                         + "();");
-                lines.add(i++, "            Solution." + className + " obj2 = new Solution." + className + "();");
-            }
-            lines.add(i++, "            Object expected = "
-                    + (isStatic ? "Solution."  + className : "obj2") + "." + call.name + "(" + call.args
-                    + ");");
-            lines.add(i++,
-                    "            System.out.println(_toString(expected));");   
+            } 
             lines.add(i++, "            Object actual = "
                     + (isStatic ? className : "obj1") + "." + call.name + "("
                     + call.args + ");");
             lines.add(i++, "            System.out.println(_toString(actual));");
-            lines.add(
-                    i++,
-                    "            System.out.println(java.util.Objects.deepEquals(actual, expected));");
             lines.add(i++, "        }");
         }
         lines.add(i++, "    }");
         lines.add(i++, "    private static String _toString(Object obj)");
         lines.add(i++, "    {");
         lines.add(i++, "      if (obj == null) return \"null\";");  
-        lines.add(i++, "      if (obj instanceof String) return \"\\\"\" + ((String) obj).replace(\"\\\\\", \"\\\\\\\\\").replace(\"\\\"\", \"\\\\\\\"\").replace(\"\\n\", \"\\\\n\") + \"\\\"\";");
         lines.add(i++, "      if (obj instanceof Object[])");
         lines.add(i++,
                 "         return java.util.Arrays.deepToString((Object[]) obj);");
@@ -98,11 +75,7 @@ public class JavaLanguage implements Language {
         lines.add(i++, "         catch (Exception ex) {}");
         lines.add(i++, "      return obj.toString();");
         lines.add(i++, "    }");
-
-        // expected == null ? null : expected instanceof Object[] ?
-        // java.util.Arrays.deepToString((Object[]) expected) :
-        // expected.getClass().isArray() ? java.util.Arrays.toString(expected) :
-        // expected
+        lines.add(i++, "}");
         Path p = pathOf(className + "CodeCheck");
         Map<Path, String> testFiles = new HashMap<>();
         testFiles.put(p, Util.join(lines, "\n"));

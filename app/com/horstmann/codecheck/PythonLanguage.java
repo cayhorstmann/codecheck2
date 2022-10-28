@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.ArrayList; 
 
 public class PythonLanguage implements Language {
 
@@ -51,7 +52,7 @@ public class PythonLanguage implements Language {
     @Override
     public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls, ResourceLoader resourceLoader) {
         String moduleName = moduleOf(file);
-        List<String> lines = Util.lines(contents);
+        List<String> lines = new ArrayList<>();
         int i = 0;
         lines.add(i++, "from sys import argv");
         lines.add(i++, "import " + moduleName);        
@@ -61,27 +62,11 @@ public class PythonLanguage implements Language {
             lines.add(i++, 
                     "    if argv[1] == \"" + (k + 1) + "\" :");
             lines.add(i++, 
-                    "        expected = "
-                     + call.name + "(" + call.args
-                    + ")");
-            lines.add(i++,
-                    "        print(expected)");
-            lines.add(i++, 
                     "        actual = "
                     + moduleName + "." + call.name + "("
                     + call.args + ")");
             lines.add(i++, 
                     "        print(actual)");
-            lines.add(
-                    i++,
-                    "        if expected == actual :");
-            lines.add(i++, 
-                    "            print(\"true\")");
-            lines.add(
-                    i++,
-                    "        else :");
-            lines.add(i++, 
-                    "            print(\"false\")");
         }
         lines.add("main()");
         Path p = pathOf(moduleName + "CodeCheck");        

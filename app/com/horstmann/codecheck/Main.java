@@ -128,54 +128,55 @@ public class Main {
         int timeout = timeoutMillis / calls.getSize();
         int maxOutput = maxOutputLen  / calls.getSize();
         List<Path> sources = new ArrayList<Path>(testerFiles.keySet()); 
-        plan.compile("call", "submission callfiles", sources, dependentSourcePaths); // TODO: This is the only place with a list of sources. Why???
+        //plan.compile("call", "submission callfiles", sources, dependentSourcePaths); // TODO: This is the only place with a list of sources. Why???
+        plan.compile("submissioncall", "submission callfiles", sources, dependentSourcePaths); 
+        plan.compile("solutioncall", "solution callfiles", sources, dependentSourcePaths); 
         for (int i = 0; i < calls.getSize(); i++) {
             Path mainFile = sources.get(0);
             // TODO: Solution code not isolated from student. It would be more secure to
             // change call strategy to generate output. 
-            plan.run("call", "call", "call" + i, mainFile, "", "" + (i + 1), timeout, maxOutput, false);
+            //plan.run("call", "call", "call" + i, mainFile, "", "" + (i + 1), timeout, maxOutput, false);
+            plan.run("submissioncall", "submissioncall", "submissioncall" + i, mainFile, "", "" + (i + 1), timeout, maxOutput, false);
+            plan.run("solutioncall", "solutioncall", "solutioncall" + i, mainFile, "", "" + (i + 1), timeout, maxOutput, false);
+           
         }
         plan.addTask(() -> {
             report.header("call", "Calling with Arguments");
-            if (!plan.checkCompiled("call", report, score)) return;    
+            if (!plan.checkCompiled("submissioncall", report, score)) return;  
+            if (!plan.checkCompiled("solutioncall", report, score)) return;   
             
             for (int i = 0; i < calls.getSize(); i++) {
-                String output = plan.outerr("call" + i);                
-                List<String> lines = Util.lines(output);
+                actual[i] = plan.outerr("submissioncall" + i);     
+                expected[i] = plan.outerr("solutioncall" + i);     
+                outcomes[i] = actual[i].equals(expected[i]);     
                 Calls.Call call = calls.getCall(i);
                 names[i] = call.name;
                 args[i][0] = call.args;
-                if (lines.size() == 3 && Arrays.asList("true", "false").contains(lines.get(2))) {
-                    if (call.isHidden()) {
-                       expected[i] = "[hidden]"; 
-                       args[i][0] = "[hidden]"; 
-                    }
-                    else {
-                        expected[i] = lines.get(0);
-                   }
-                    actual[i] = Util.truncate(lines.get(1), expected[i].length() + MUCH_LONGER);
-                    outcomes[i] = lines.get(2).equals("true");                
-                } else {
+                if (call.isHidden()) {
+                    expected[i] = "[hidden]"; 
+                    args[i][0] = "[hidden]"; 
+                }
+                // else {
                     // Error in compilation or execution
                     // We assume that the solution correctly produces a single line
                     // Most likely, the rest is an exception report, and the true/false never came
-                    StringBuilder msg = new StringBuilder();
-                    for (int j = 1; j < lines.size(); j++) {
-                        String line = lines.get(j); 
-                        if (j < lines.size() - 1 || !(line.equals("true") || line.equals("false")))
-                        msg.append(line); msg.append('\n'); 
-                    }
-                    String message = msg.toString(); 
-                    if (call.isHidden() == true) {
-                        expected[i] = "[hidden]"; 
-                        args[i][0] = "[hidden]"; 
-                    }
-                    else {
-                        expected[i] = lines.get(0);
-                    }                
-                    actual[i] = message;
-                    outcomes[i] = false;
-                }
+                //     StringBuilder msg = new StringBuilder();
+                //     for (int j = 1; j < lines.size(); j++) {
+                //         String line = lines.get(j); 
+                //         if (j < lines.size() - 1 || !(line.equals("true") || line.equals("false")))
+                //         msg.append(line); msg.append('\n'); 
+                //     }
+                //     String message = msg.toString(); 
+                //     if (call.isHidden() == true) {
+                //         expected[i] = "[hidden]"; 
+                //         args[i][0] = "[hidden]"; 
+                //     }
+                //     else {
+                //         expected[i] = lines.get(0);
+                //     }                
+                //     actual[i] = message;
+                //     outcomes[i] = false;
+                // }
                 score.pass(outcomes[i], null /* no report--it's in the table */);
             }
             report.runTable(names, new String[] { "Arguments" }, args, actual, expected, outcomes);
