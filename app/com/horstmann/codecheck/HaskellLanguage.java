@@ -36,27 +36,11 @@ public class HaskellLanguage implements Language {
 
     @Override public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls, ResourceLoader resourceLoader) {
         Map<Path, String> result = new HashMap<>();
-        
-        // Rewrite solution in module CodeCheckSolution
         String moduleName = moduleOf(file);
-        Path solutionModuleFile = Paths.get("CodeCheckSolution.hs");
-        StringBuilder out = new StringBuilder();
-        List<String> in = Util.lines(contents);
-        out.append("module CodeCheckSolution where\n");
-        for (int i = 0; i < in.size(); i++) {
-            String line = in.get(i);
-            if (!line.trim().startsWith("module ")) {
-                out.append(line);     
-                out.append("\n");
-            }
-        }
-        result.put(solutionModuleFile, out.toString());
-        
         // Generate testCodeCheck.hs
         Path testFile = Paths.get("testCodeCheck.hs");
-        out = new StringBuilder();
+        StringBuilder out = new StringBuilder();
         out.append("import " + moduleName + "\n");
-        out.append("import CodeCheckSolution\n");
         out.append("import Control.Exception\n");
         out.append("import System.Environment\n");
         out.append("main :: IO ()\n");
@@ -68,34 +52,20 @@ public class HaskellLanguage implements Language {
             else if (k < calls.size() - 1) out.append("    else if (head args) == \"" + (k + 1) + "\" then ");
             else if (calls.size() > 1) out.append("    else ");
             else out.append("    ");
-            out.append("CodeCheckSolution." + call.name + " " + call.args + " `comp` " 
-                    + moduleName + "." + call.name + " " + call.args + "\n");
+            out.append("pr $ " + call.name + " " + call.args + "\n");
         }            
         out.append("  where\n");
         out.append("    exec expr = (do x <- evaluate expr ; return $ Just x)\n");
         out.append("      `catch` (\\(SomeException x) -> return Nothing)\n");
-        out.append("    comp expr1 expr2 = do\n");
-        out.append("      expected <- exec expr1\n");
-        out.append("      actual <- exec expr2\n");
-        out.append("      case (expected, actual) of\n");
-        out.append("        (Nothing, Nothing) -> putStrLn \"error\\nerror\\ntrue\"\n");
-        out.append("        (Just a, Just b) -> putStrLn$ (show a) ++ \"\\n\" ++ (show b) ++ (if a==b then \"\\ntrue\" else \"\\nfalse\")\n");
-        out.append("        (Just a, Nothing) -> putStrLn $ (show a) ++ \"\\nerror\\nfalse\"\n");
-        out.append("        (Nothing, Just b) -> putStrLn $ \"error\\n\" ++ (show b) ++ \"\\nfalse\"\n");
+        out.append("    pr expr = do\n");
+        out.append("      res <- exec expr\n");
+        out.append("      case res of\n");
+        out.append("        Nothing -> putStrLn \"error\"\n");
+        out.append("        Just a -> putStrLn $ show a\n");
         
         result.put(testFile, out.toString());
         return result;
     }
-        /*
- 
-
-
-    Student.maxNum [] `comp` CodeCheckSolution.maxNum []  -- function name and args
-    Student.maxNum [1] `comp` CodeCheckSolution.maxNum [1]
-    Student.maxNum [1,2,3] `comp` CodeCheckSolution.maxNum [1,2,3]
-*/             
- 
-        
     
     private static String variablePatternString = "\\s*let\\s+(?<name>\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*(?<rhs>.+)";
     private static Pattern variablePattern = Pattern.compile(variablePatternString);

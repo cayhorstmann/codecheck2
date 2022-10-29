@@ -44,20 +44,14 @@ public class ScalaLanguage implements Language {
         if (j + 1 >= tokens.length) throw new CodeCheckException("Can't find object name in " + file);
         String objectName = tokens[j + 1];
         lines.add(0, "object " + objectName + "CodeCheck extends App {");
-        lines.add(1, "object Solution {");
-        lines.add("}}");
         i = 0;
         for (int k = 0; k < calls.size(); k++) {
             Calls.Call call = calls.get(k);
             String submissionFun = objectName + "." + call.name;
-            String solutionFun = "Solution." + submissionFun;
             lines.add(++i, "if (args(0) == \"" + (k + 1) + "\") {");
-            lines.add(++i, "val actual = " + submissionFun + "(" + call.args + ")");
-            lines.add(++i, "val expected = " + solutionFun + "(" + call.args + ")");
-            lines.add(++i, "println(runtime.ScalaRunTime.stringOf(expected))");
-            lines.add(++i, "println(runtime.ScalaRunTime.stringOf(actual))");
-            lines.add(++i, "println(actual == expected) }");
-         }
+            lines.add(++i, "val result = " + submissionFun + "(" + call.args + ")");
+            lines.add(++i, "println(runtime.ScalaRunTime.stringOf(result))");
+        }
         Path p = Paths.get(objectName + "CodeCheck.scala");
         Map<Path, String> testModules = new HashMap<>();
         testModules.put(p, Util.join(lines, "\n"));

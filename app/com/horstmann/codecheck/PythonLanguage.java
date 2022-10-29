@@ -62,11 +62,9 @@ public class PythonLanguage implements Language {
             lines.add(i++, 
                     "    if argv[1] == \"" + (k + 1) + "\" :");
             lines.add(i++, 
-                    "        actual = "
-                    + moduleName + "." + call.name + "("
-                    + call.args + ")");
+                    "        result = " + moduleName + "." + call.name + "("  + call.args + ")");
             lines.add(i++, 
-                    "        print(actual)");
+                    "        print(result)");
         }
         lines.add("main()");
         Path p = pathOf(moduleName + "CodeCheck");        

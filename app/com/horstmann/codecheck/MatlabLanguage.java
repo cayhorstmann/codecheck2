@@ -47,27 +47,9 @@ public class MatlabLanguage implements Language {
             lines.add(i++, 
                     "    if argv[1] == \"" + (k + 1) + "\" :");
             lines.add(i++, 
-                    "        expected = "
-                     + call.name + "(" + call.args
-                    + ")");
+                    "        result = " + call.name + "(" + call.args + ")");
             lines.add(i++,
-                    "        print(expected)");
-            lines.add(i++, 
-                    "        actual = "
-                    + moduleName + "." + call.name + "("
-                    + call.args + ")");
-            lines.add(i++, 
-                    "        print(actual)");
-            lines.add(
-                    i++,
-                    "        if expected == actual :");
-            lines.add(i++, 
-                    "            print(\"true\")");
-            lines.add(
-                    i++,
-                    "        else :");
-            lines.add(i++, 
-                    "            print(\"false\")");
+                    "        print(result)");
         }
         lines.add("main()");
         Path p = pathOf(moduleName + "CodeCheck");

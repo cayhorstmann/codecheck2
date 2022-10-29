@@ -22,45 +22,24 @@ public class DartLanguage implements Language {
     private static Pattern ERROR_PATTERN = Pattern.compile(".+/(?<file>[^/]+\\.cpp):(?<line>[0-9]+):(?<col>[0-9]+): error: (?<msg>.+)");
     @Override public Pattern errorPattern() { return ERROR_PATTERN; }    
 
-    // TODO: Implement this
+    // TODO Add test case to samples
     @Override
     public Map<Path, String> writeTester(Path file, String contents,
                                          List<Calls.Call> calls,
                                          ResourceLoader resourceLoader) {
-
         String moduleName = moduleOf(file);
-        String classname = moduleOf(file);
-        //List<String> lines = Util.readLines(sourceDir.resolve(file));
-
-        List<String> lines = new ArrayList<>(); // = Util.lines(contents);
-        int i = 0;
-        lines.add(i++, "import '" + moduleName + ".dart';");
-        lines.add(i++, "main() {");
+        List<String> lines = new ArrayList<>(); 
+        lines.add("import '" + moduleName + ".dart';");
+        lines.add("main() {");
         for (int k = 0; k < calls.size(); k++) {
-
             Calls.Call call = calls.get(k);
-            // lines.add(i++, "     var  expected = "
-            //         + call.name + "(" + call.args
-            //         + ");");
-            // lines.add(i++, "      print(expected);");
-            lines.add(i++, "   var   actual = "
-                    + moduleName + "()." + call.name + "("
-// + call.name + "("
-
+            lines.add("   var result = " + moduleName + "()." + call.name + "("
                      + call.args + ");");
-             lines.add(i++, "      print(actual);");
-            // lines.add(i++, "      if (expected == actual) ");
-            // lines.add(i++, "        print(\"true\"); ");
-            // lines.add(i++, "      else ");
-            // lines.add(i++, "        print(\"false\"); ");
+             lines.add("      print(result);");
         }
-        lines.add(i++, "}");
-        //lines.add("main();");
+        lines.add("}");
 
-        Map<Path, String> paths = new HashMap<>();
-        paths.put(pathOf(moduleName + "CodeCheck"), "");
-
-        Path p = pathOf(classname + "CodeCheck");
+        Path p = pathOf(moduleName + "CodeCheck");
         Map<Path, String> testFiles = new HashMap<>();
         testFiles.put(p, Util.join(lines, "\n"));
         return testFiles;

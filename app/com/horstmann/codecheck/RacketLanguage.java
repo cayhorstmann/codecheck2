@@ -46,12 +46,10 @@ public class RacketLanguage implements Language {
     @Override
     public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls, ResourceLoader resourceLoader) {
        String moduleName = moduleOf(file);       
-        // Copy source/module.rkt to target/module-solution.rkt
        StringBuilder out = new StringBuilder();
         
        out.append("#lang racket\n");
-       out.append("(require (prefix-in solution:: \"" + moduleName + "-solution.rkt\"))\n");
-       out.append("(require (prefix-in student:: \"" + moduleName + ".rkt\"))\n");
+       out.append("(require (prefix-in submission:: \"" + moduleName + ".rkt\"))\n");
        out.append("(provide main)\n");
        out.append("(define (main . args)\n");
        out.append("(let ((arg (car args))) (cond\n");
@@ -61,18 +59,14 @@ public class RacketLanguage implements Language {
           out.append("((equal? \"" + (k + 1) + "\" arg)\n");
         
 
-          out.append("(let ((actual (student::" + call.name + " " + call.args + "))\n");
-          out.append("(expected (solution::" + call.name + " " + call.args + ")))\n");
-          out.append("(writeln expected)\n");
-          out.append("(writeln actual)\n");
-          out.append("(display (if (equal? actual expected) \"true\\n\" \"false\\n\"))))\n");
+          out.append("(let ((result (submission::" + call.name + " " + call.args + ")))\n");
+          out.append("(writeln result)))\n");
        }
        
        out.append(")))\n");        
         
        Map<Path, String> testerFiles = new HashMap<>();
        testerFiles.put(Paths.get(moduleName + "CodeCheck.rkt"), out.toString());
-       testerFiles.put(Paths.get(moduleName+ "-solution.rkt"), contents);
        return testerFiles;
     }
     
