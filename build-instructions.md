@@ -237,7 +237,7 @@ Run the `play-codecheck` server:
 Point the browser to <http://localhost:9000/assets/uploadProblem.html>.
 Upload a problem and test it.
 
-Note: The problem files will be located inside the `/opt/codecheck/ext`
+Note: The problem files will be located inside the `/opt/codecheck/repo/ext`
 directory.
 
 Debugging the Server
