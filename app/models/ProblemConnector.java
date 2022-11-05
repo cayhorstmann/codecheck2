@@ -151,11 +151,9 @@ class ProblemLocalConnection implements ProblemConnection {
     public void write(byte[] contents, String repo, String key) throws IOException {
         try {
             Path repoPath = root.resolve(repo);
-            Path problemDir = repoPath.resolve(key);
-            Util.deleteDirectory(problemDir); // Delete any prior contents so that it is replaced by new zip file
-            Files.createDirectories(problemDir);                
-            Path newFilePath = problemDir.resolve(key + ".zip");
-            org.apache.commons.io.FileUtils.writeByteArrayToFile(new File(newFilePath.toString()), contents);
+            Files.createDirectories(repoPath);                
+            Path newFilePath = repoPath.resolve(key + ".zip");
+            Files.write(newFilePath, contents);
         } catch (IOException ex) {
             String bytes = Arrays.toString(contents);
             logger.error("ProblemLocalConnection.write : Cannot put " + bytes.substring(0, Math.min(50, bytes.length())) + "... to " + repo);
@@ -179,10 +177,7 @@ class ProblemLocalConnection implements ProblemConnection {
         byte[] result = null;
         try {
             Path repoPath = root.resolve(repo);
-            if (key.startsWith("/"))
-                key = key.substring(1);
-                            
-            Path filePath = repoPath.resolve(key).resolve(key + ".zip");
+            Path filePath = repoPath.resolve(key + ".zip");
             result = Files.readAllBytes(filePath); 
         } catch (IOException ex) {
             logger.error("ProblemLocalConnection.read : Cannot read " + key + " from " + repo);

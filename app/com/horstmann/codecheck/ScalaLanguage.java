@@ -3,6 +3,7 @@ package com.horstmann.codecheck;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -43,15 +44,17 @@ public class ScalaLanguage implements Language {
         if (tokens[0].length() == 0) j++;
         if (j + 1 >= tokens.length) throw new CodeCheckException("Can't find object name in " + file);
         String objectName = tokens[j + 1];
-        lines.add(0, "object " + objectName + "CodeCheck extends App {");
-        i = 0;
+        lines = new ArrayList<>(); 
+        lines.add("object " + objectName + "CodeCheck extends App {");
         for (int k = 0; k < calls.size(); k++) {
             Calls.Call call = calls.get(k);
             String submissionFun = objectName + "." + call.name;
-            lines.add(++i, "if (args(0) == \"" + (k + 1) + "\") {");
-            lines.add(++i, "val result = " + submissionFun + "(" + call.args + ")");
-            lines.add(++i, "println(runtime.ScalaRunTime.stringOf(result))");
+            lines.add("if (args(0) == \"" + (k + 1) + "\") {");
+            lines.add("  val result = " + submissionFun + "(" + call.args + ")");
+            lines.add("  println(runtime.ScalaRunTime.stringOf(result))");
+            lines.add("}");
         }
+        lines.add("}");
         Path p = Paths.get(objectName + "CodeCheck.scala");
         Map<Path, String> testModules = new HashMap<>();
         testModules.put(p, Util.join(lines, "\n"));

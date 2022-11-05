@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -13,7 +14,7 @@ import java.util.regex.Pattern;
 
 public class Annotations {
     public static final Set<String> VALID_ANNOTATIONS = Set.of(
-            "HIDDEN", "CALL HIDDEN", "IN HIDDEN","HIDE", "SHOW", "EDIT", "SOLUTION", "CALL", "SUB", "ID", "SAMPLE", "ARGS", 
+            "CALL HIDDEN", "IN HIDDEN", "HIDDEN", "HIDE", "SHOW", "EDIT", "SOLUTION", "CALL", "SUB", "ID", "SAMPLE", "ARGS", 
             "IN", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "MAXOUTPUTLEN",
             "REQUIRED", "FORBIDDEN", "SCORING", "INTERLEAVE", "TILE", "FIXED", "OR", "PSEUDO");    
     public static final Set<String> NON_BLANK_BEFORE_OK = Set.of("SUB", "PSEUDO"); 
@@ -27,39 +28,40 @@ public class Annotations {
         public String next = "";
     }
     
+    /**
+        @param line the line of code to parse
+        @param start the starting comment delimiter
+        @param end the ending comment delimiter
+        @return the parsed annotation, or an empty annotation if none found
+     */
     public static Annotation parse(String line, String start, String end) {
         Annotation ann = new Annotation();
         int i = line.indexOf(start);
         if (i < 0) return ann;
         String before = line.substring(0, i); 
         i += start.length();
-        String line1 = line.stripTrailing();
-        if (!line1.endsWith(end)) return ann;
-        int j = line1.length() - end.length(); 
-        int k = i;
-        while (k < j && Character.isAlphabetic(line.charAt(k))) k++;
-        if (k < j && !Character.isWhitespace(line.charAt(k))) return ann;
-        String key = line.substring(i, k);
-        if (!VALID_ANNOTATIONS.contains(key)) return ann;
-        if (k+8 <= j) {
-            String keyWSpace = line.substring(i, k+7); 
-            if (VALID_ANNOTATIONS.contains(keyWSpace)) {
-                k += 7; 
-                key = keyWSpace; 
-            }
-            else 
-                if (!VALID_ANNOTATIONS.contains(key))
-                    return ann; 
+        String line1 = line.substring(i).stripTrailing();
+        if (end.length() > 0) {
+            if (!line1.endsWith(end)) return ann;
+            line1 = line1.substring(0, line1.length() - end.length()).stripTrailing();
         }
+        boolean found = false;
+        Iterator<String> iter = VALID_ANNOTATIONS.iterator();
+        String key = "";
+        while (!found && iter.hasNext()) {
+            key = iter.next();
+            if (line1.startsWith(key)) found = true;
+        }
+        if (!found) return ann;
+        if (key.length() < line1.length() && !Character.isWhitespace(line1.charAt(key.length()))) return ann;
         // Only a few annotations can have non-blank before
         if (!before.isBlank() && !NON_BLANK_BEFORE_OK.contains(key)) return ann;
         ann.isValid = true;
         ann.before = before;
         ann.key = key;
-        ann.args = line.substring(k, j).strip();
+        ann.args = line1.substring(key.length()).strip();
         return ann;
     }               
-    
 
     private Language language;
     private List<Annotation> annotations = new ArrayList<>();
@@ -126,7 +128,7 @@ public class Annotations {
         return Collections.unmodifiableSet(hiddenTestFiles);
     }
 
-    public String findUniqueKey(String key) {
+    public String findUnique(String key) {
         Annotation match = null;
         for (Annotation a : annotations) {
             if (a.key.equals(key)) {
@@ -147,7 +149,7 @@ public class Annotations {
         return match == null ? null : match.args;
     }
     
-    public List<String> findKeys(String key) {
+    public List<String> findAll(String key) {
         List<String> result = new ArrayList<>();
         for (Annotation a : annotations) 
             if (a.key.equals(key)) 

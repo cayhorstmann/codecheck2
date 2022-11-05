@@ -11,12 +11,12 @@ import java.util.TreeMap;
 import javax.inject.Inject;
 import javax.script.ScriptException;
 
+import com.horstmann.codecheck.Plan;
 import com.horstmann.codecheck.Problem;
 import com.horstmann.codecheck.Report;
 import com.horstmann.codecheck.Util;
 
 import models.CodeCheck;
-import models.ProblemConnector;
 import play.libs.Files.TemporaryFile;
 import play.mvc.Controller;
 import play.mvc.Http;
@@ -24,7 +24,6 @@ import play.mvc.Result;
 
 public class Upload extends Controller {
     final String repo = "ext";
-    @Inject private ProblemConnector probConn;
     @Inject private CodeCheck codeCheck;
 
     public Result uploadFiles(Http.Request request) {
@@ -60,19 +59,13 @@ public class Upload extends Controller {
                 n++;
             }
             problemFiles.put(Path.of("edit.key"), editKey.getBytes(StandardCharsets.UTF_8));
-            saveProblem(problem, problemFiles);
-            String response = checkProblem(request, problem, problemFiles);
+            String response = checkAndSaveProblem(request, problem, problemFiles);
             return ok(response).as("text/html").addingToSession(request, "pid", problem);
         } catch (Exception ex) {
             return internalServerError(Util.getStackTrace(ex));
         }
     }
     
-    private void saveProblem(String problem, Map<Path, byte[]> problemFiles) throws IOException {   
-        byte[] problemZip = Util.zip(problemFiles);
-        probConn.write(problemZip, repo, problem);  
-    }
-
     public Result uploadProblem(Http.Request request) {
         return uploadProblem(request, com.horstmann.codecheck.Util.createPublicUID(), Util.createPrivateUID());
     }
@@ -116,27 +109,24 @@ public class Upload extends Controller {
             Path editKeyPath = Path.of("edit.key");
             if (!problemFiles.containsKey(editKeyPath)) 
                 problemFiles.put(editKeyPath, editKey.getBytes(StandardCharsets.UTF_8));
-            saveProblem(problem, problemFiles);
-            String response = checkProblem(request, problem, problemFiles);
+            String response = checkAndSaveProblem(request, problem, problemFiles);
             return ok(response).as("text/html").addingToSession(request, "pid", problem);           
         } catch (Exception ex) {
             return internalServerError(Util.getStackTrace(ex));
         }
     }
 
-    private String checkProblem(Http.Request request, String problem, Map<Path, byte[]> problemFiles)
+    private String checkAndSaveProblem(Http.Request request, String problem, Map<Path, byte[]> problemFiles)
             throws IOException, InterruptedException, NoSuchMethodException, ScriptException {
-        Map<Path, byte[]> newProblemFiles = new TreeMap<>(problemFiles);
         StringBuilder response = new StringBuilder();
         String type;
         String report = null;
         if (problemFiles.containsKey(Path.of("tracer.js"))) {
             type = "tracer";
+            codeCheck.saveProblem(problem, problemFiles);
         } else {
             type = "files";
-            String studentId = com.horstmann.codecheck.Util.createPronouncableUID();
-            codeCheck.replaceParametersInDirectory(studentId, newProblemFiles);
-            report = check(problem, newProblemFiles, studentId);
+            report = codeCheck.checkAndSave(problem, problemFiles);
         }
         response.append(
                 "<html><head><title></title><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"/>");
@@ -224,17 +214,5 @@ public class Upload extends Controller {
         }
 
         return fixedProblemFiles;
-    }
-
-    private String check(String problem, Map<Path, byte[]> problemFiles, String studentId)
-            throws IOException, InterruptedException, NoSuchMethodException, ScriptException {
-        Problem p = new Problem(problemFiles);
-        Map<Path, String> submissionFiles = new TreeMap<>();
-        for (Map.Entry<Path, byte[]> entry : p.getSolutionFiles().entrySet()) 
-            submissionFiles.put(entry.getKey(), new String(entry.getValue(), StandardCharsets.UTF_8));          
-        for (Map.Entry<Path, byte[]> entry : p.getInputFiles().entrySet()) 
-            submissionFiles.put(entry.getKey(), new String(entry.getValue(), StandardCharsets.UTF_8));          
-        Report report = codeCheck.run("html", repo, problem, studentId, submissionFiles);
-        return report.getText(); 
     }
 }

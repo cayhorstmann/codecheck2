@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyStore;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -24,6 +25,8 @@ import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 
 import com.horstmann.codecheck.Main;
+import com.horstmann.codecheck.Plan;
+import com.horstmann.codecheck.Problem;
 import com.horstmann.codecheck.Report;
 import com.horstmann.codecheck.ResourceLoader;
 import com.horstmann.codecheck.Util;
@@ -131,8 +134,13 @@ public class CodeCheck {
         result = Util.unzip(zipFile);
         return result;
     }
-    
-    public Report run(String reportType, String repo,
+
+    public void saveProblem(String problem, Map<Path, byte[]> problemFiles) throws IOException {   
+        byte[] problemZip = Util.zip(problemFiles);
+        probConn.write(problemZip, "ext", problem);  
+    }
+
+    public String run(String reportType, String repo,
             String problem, String ccid, Map<Path, String> submissionFiles)
             throws IOException, InterruptedException, NoSuchMethodException, ScriptException {
         Map<Path, byte[]> problemFiles = loadProblem(repo, problem, ccid);
@@ -140,9 +148,34 @@ public class CodeCheck {
         metaData.put("User", ccid);
         metaData.put("Problem", (repo + "/" + problem).replaceAll("[^\\pL\\pN_/-]", ""));
         
-        return new Main().run(submissionFiles, problemFiles, reportType, metaData, resourceLoader);
+        return new Main().run(submissionFiles, problemFiles, reportType, metaData, resourceLoader)
+            .getReport().getText();
     }
     
+    /**
+        Runs CodeCheck for checking a problem submission. 
+        Saves the problem and the precomputed solution runs.
+     */
+    public String checkAndSave(String problem, Map<Path, byte[]> originalProblemFiles)
+            throws IOException, InterruptedException, NoSuchMethodException, ScriptException {
+        Map<Path, byte[]> problemFiles = new TreeMap<>(originalProblemFiles);
+        String studentId = com.horstmann.codecheck.Util.createPronouncableUID();
+        replaceParametersInDirectory(studentId, problemFiles);
+
+        Problem p = new Problem(problemFiles);
+        Map<Path, String> submissionFiles = new TreeMap<>();
+        for (Map.Entry<Path, byte[]> entry : p.getSolutionFiles().entrySet()) 
+            submissionFiles.put(entry.getKey(), new String(entry.getValue(), StandardCharsets.UTF_8));          
+        for (Map.Entry<Path, byte[]> entry : p.getInputFiles().entrySet()) 
+            submissionFiles.put(entry.getKey(), new String(entry.getValue(), StandardCharsets.UTF_8));          
+
+        Properties metaData = new Properties();
+        Plan plan = new Main().run(submissionFiles, problemFiles, "html", metaData, resourceLoader);
+        plan.writeSolutionOutputs(problemFiles);
+        saveProblem(problem, problemFiles);
+        Report report = plan.getReport();
+        return report.getText(); 
+    }
     
     public byte[] signZip(Map<Path, byte[]> contents) throws IOException {  
         if (signer == null) return Util.zip(contents);

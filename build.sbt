@@ -45,7 +45,7 @@ enablePlugins(DockerPlugin)
 
 import com.typesafe.sbt.packager.docker._
 
-dockerBaseImage := "openjdk:11"
+dockerBaseImage := "eclipse-temurin:11"
 dockerEntrypoint := Seq("bin/play-codecheck", "-Dplay.server.pidfile.path=/dev/null", "-Dnashorn.args=--no-deprecation-warning")
 dockerExposedPorts ++= Seq(9000, 9001)
 

@@ -65,8 +65,11 @@ public class Main {
             }
         }
         
-        Report report = new Main().run(submissionFiles, problemFiles, 
-            System.getProperty("com.horstmann.codecheck.report"), metadata, new CommandLineResourceLoader());
+        Report report = new Main().run(submissionFiles, 
+            problemFiles, 
+            System.getProperty("com.horstmann.codecheck.report"), 
+            metadata, 
+            new CommandLineResourceLoader()).getReport();
         report.save(submissionDir, "report");        
     }
 
@@ -209,12 +212,13 @@ public class Main {
          * If there are no inputs, we feed in one empty input to execute the program.
          */
         if (inputs.size() == 0)
-            inputs.add(new Input("","",false));
+            inputs.add(new Input("", "", false));
         
         plan.compile("submissionrun", "submission", mainFile, dependentSourcePaths);
         boolean runSolution = !problem.getInputMode() && !problem.getAnnotations().isSample(mainFile);
-        if (runSolution) 
+        if (runSolution) {
             plan.compile("solutionrun", "solution", mainFile, dependentSourcePaths);
+        }
 
         plan.addTask(() -> {
             report.header("run", problem.getInputMode() ? "Output" : "Testing " + mainFile);
@@ -222,14 +226,10 @@ public class Main {
                 plan.checkSolutionCompiled("solutionrun", report, score); 
             plan.checkCompiled("submissionrun", report, score);
         });
-        for (int i=0; i<inputs.size(); i++) {   
+        for (int i = 0; i < inputs.size(); i++) {   
             String test = inputs.get(i).getKey(); 
             String input = inputs.get(i).getValue(); 
             boolean hidden = inputs.get(i).getHidden(); 
-            if (input.contains("//IN HIDDEN"))  {
-                input = input.replaceAll("//IN HIDDEN", "").stripLeading();
-                hidden = true; 
-            }
             testInput(mainFile, runSolution, test, input, timeoutMillis / inputs.size(), maxOutputLen / inputs.size(), okToInterleave, hidden);
         }
     }
@@ -237,9 +237,9 @@ public class Main {
     private void testInput(Path mainFile, 
             boolean runSolution, String test, String input, int timeout, int maxOutput, boolean okToInterleave, boolean hidden)
             throws Exception {
-        List<String> runargs = problem.getAnnotations().findKeys("ARGS");
+        List<String> runargs = problem.getAnnotations().findAll("ARGS");
         if (runargs.size() == 0) runargs.add("");
-        String out = problem.getAnnotations().findUniqueKey("OUT");
+        String out = problem.getAnnotations().findUnique("OUT");
         List<String> outFiles = out == null ? Collections.emptyList() : Arrays.asList(out.trim().split("\\s+"));
         
         String runNumber = test.replace("test", "").trim();
@@ -391,7 +391,7 @@ public class Main {
              report.comment(entries.getKey().toString(), entries.getValue().toString());
     }
 
-    public Report run(Map<Path, String> submissionFiles, Map<Path, byte[]> problemFiles, 
+    public Plan run(Map<Path, String> submissionFiles, Map<Path, byte[]> problemFiles, 
             String reportType, Properties metadata, ResourceLoader resourceLoader) throws IOException {
         long startTime = System.currentTimeMillis();
         boolean scoring = true;
@@ -407,10 +407,13 @@ public class Main {
             else
                 report = new HTMLReport("Report");
             
-            problem = new Problem(problemFiles);
+            plan = new Plan(resourceLoader.getProperty("com.horstmann.codecheck.debug") != null);
+            plan.setReport(report);
+            plan.readSolutionOutputs(problemFiles);
 
-            plan = new Plan(problem.getLanguage(), resourceLoader.getProperty("com.horstmann.codecheck.debug") != null);
-            
+            problem = new Problem(problemFiles);
+            plan.setLanguage(problem.getLanguage());
+
             // TODO: This would be nice to have in Problem, except that one might later need to remove checkstyle.xml
             // the use files that the students are entitled to see
             Set<Path> printFiles = Util.filterNot(problem.getUseFiles().keySet(),  
@@ -424,10 +427,10 @@ public class Main {
             timeoutMillis = (int) problem.getAnnotations().findUniqueDoubleKey("TIMEOUT", DEFAULT_TIMEOUT_MILLIS);
             maxOutputLen = (int) problem.getAnnotations().findUniqueDoubleKey("MAXOUTPUTLEN", DEFAULT_MAX_OUTPUT_LEN);        
             double tolerance = problem.getAnnotations().findUniqueDoubleKey("TOLERANCE", DEFAULT_TOLERANCE);
-            boolean ignoreCase = !"false".equalsIgnoreCase(problem.getAnnotations().findUniqueKey("IGNORECASE"));
-            boolean ignoreSpace = !"false".equalsIgnoreCase(problem.getAnnotations().findUniqueKey("IGNORESPACE"));
-            boolean okToInterleave = !"false".equalsIgnoreCase(problem.getAnnotations().findUniqueKey("INTERLEAVE"));
-            scoring = !"false".equalsIgnoreCase(problem.getAnnotations().findUniqueKey("SCORING"));
+            boolean ignoreCase = !"false".equalsIgnoreCase(problem.getAnnotations().findUnique("IGNORECASE"));
+            boolean ignoreSpace = !"false".equalsIgnoreCase(problem.getAnnotations().findUnique("IGNORESPACE"));
+            boolean okToInterleave = !"false".equalsIgnoreCase(problem.getAnnotations().findUnique("INTERLEAVE"));
+            scoring = !"false".equalsIgnoreCase(problem.getAnnotations().findUnique("SCORING"));
             comp.setTolerance(tolerance);
             comp.setIgnoreCase(ignoreCase);
             comp.setIgnoreSpace(ignoreSpace);            
@@ -469,10 +472,10 @@ public class Main {
                         inputs.add(new Input("test" + i, new String(contents, StandardCharsets.UTF_8), false));
                 }
                 int inIndex = inputs.size();
-                for (String s : problem.getAnnotations().findKeys("IN")) {
+                for (String s : problem.getAnnotations().findAll("IN")) {
                     inputs.add(new Input("test" + ++inIndex, Util.unescapeJava(s), false)); 
                 }
-                for (String s : problem.getAnnotations().findKeys("IN HIDDEN")) {
+                for (String s : problem.getAnnotations().findAll("IN HIDDEN")) {
                     inputs.add(new Input("test" + ++inIndex, Util.unescapeJava(s), true)); 
                 }
                 if (problem.getInputMode()) { 
@@ -549,6 +552,6 @@ public class Main {
             }
             else System.err.println("report is null");
         }
-        return report;
+        return plan;
     }
 }

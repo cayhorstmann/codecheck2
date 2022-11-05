@@ -84,9 +84,11 @@ public class Problem {
     private static final Pattern LINK_END = Pattern.compile("<\\s*/\\s*[aA]\\s*>");
 
     public Problem(Map<Path, byte[]> problemFiles) throws IOException {
-        this.problemFiles = problemFiles;
         language = Language.languageFor(problemFiles.keySet());        
         if (language == null) throw new CodeCheckException("Cannot find language from " + problemFiles.keySet());
+            
+        this.problemFiles = problemFiles;
+        this.language = language;
         annotations = new Annotations(language);
         String[] delims = language.pseudoCommentDelimiters();
         start = delims[0];
@@ -138,7 +140,7 @@ public class Problem {
                 }
             }
             inputFiles.put(inputPath, problemFiles.get(inputPath));
-            for (String runargs : annotations.findKeys("ARGS"))
+            for (String runargs : annotations.findAll("ARGS"))
                 for (String arg : runargs.split("\\s+"))
                     if (isTextFile(arg)) {
                         Path argPath = Paths.get(arg);
@@ -744,7 +746,7 @@ whitespace2 pseudocode2
     }
     
     public String getId() {
-        String problemId = annotations.findUniqueKey("ID");
+        String problemId = annotations.findUnique("ID");
         if (problemId == null) { // TODO: Move to Problem
             problemId = Util.removeExtension(solutionFiles.keySet().iterator().next().getFileName());                
         }

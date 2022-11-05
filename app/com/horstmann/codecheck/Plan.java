@@ -10,9 +10,11 @@ import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 public class Plan {
     private Language language;
@@ -23,13 +25,45 @@ public class Plan {
     private int nextID = 0;
     private static int MIN_TIMEOUT = 3; // TODO: Maybe better to switch interleaveio and timeout? 
     private boolean debug;
+    private Report report;
     
-    public Plan(Language language, boolean debug) throws IOException {
-        this.language = language;
+    public Plan(boolean debug) throws IOException {
         this.debug = debug;
         if (debug) addScript("debug");        
     }
+
+    public void setLanguage(Language language) {
+        this.language = language;
+    }
     
+    public void setReport(Report report) {
+    	this.report = report;
+    }
+
+    public Report getReport() {
+    	return this.report;
+    }
+
+    public void writeSolutionOutputs(Map<Path, byte[]> filesToSave) {
+        for (Map.Entry<Path, byte[]> entry : outputs.entrySet()) {
+            Path p = entry.getKey();            
+            if (p.getName(0).toString().startsWith("solution"))
+                filesToSave.put(Path.of("_outputs").resolve(p), entry.getValue());
+        }
+    }
+
+    public void readSolutionOutputs(Map<Path, byte[]> savedFiles) {
+        Set<Path> toRemove = new HashSet<>();
+        for (Map.Entry<Path, byte[]> entry : savedFiles.entrySet()) {
+            Path p = entry.getKey();
+            if (p.getName(0).toString().equals("_outputs")) {
+                outputs.put(p.subpath(1, p.getNameCount()), entry.getValue());
+                toRemove.add(p);
+            }
+        }           
+        savedFiles.keySet().removeAll(toRemove);
+    }
+
     public String nextID(String prefix) {
         nextID++;
         return prefix + nextID;
@@ -65,7 +99,7 @@ public class Plan {
         String errorReport = getOutputString(compileDir, "_errors");
         if (errorReport == null) return true;         
         if (errorReport.trim().equals(""))
-            report.systemError("Compilation of solution ailed");
+            report.systemError("Compilation of solution failed");
         else 
             report.systemError(errorReport);        
         score.setInvalid();
@@ -120,7 +154,8 @@ public class Plan {
         allSourceFiles.addAll(sourceFiles);
         allSourceFiles.addAll(dependentSourceFiles);
         addScript("prepare " + compileDir + " use " + sourceDirs);
-        addScript("compile " + compileDir + " " + language.getLanguage() + " " + Util.join(allSourceFiles, " "));
+        if (!outputs.containsKey(Paths.get(compileDir).resolve("_compile")))
+            addScript("compile " + compileDir + " " + language.getLanguage() + " " + Util.join(allSourceFiles, " "));
     }
 
     // TODO maxOutputLen
@@ -133,10 +168,12 @@ public class Plan {
         if (!compileDir.equals(runDir)) 
             addScript("prepare " + runDir + " " + compileDir);
         addFile(Paths.get("in").resolve(runID), input == null ? "" : input);
-        addScript("run " + runDir + " " + runID + " " + Math.max(MIN_TIMEOUT, (timeout + 500) / 1000) + " " + maxOutputLen + " " + interleaveIO + " " + language.getLanguage() + " " + mainFile + (args == null ? "" : " " + args));
+        if (!outputs.containsKey(Paths.get(runDir).resolve("_run")))
+            addScript("run " + runDir + " " + runID + " " + Math.max(MIN_TIMEOUT, (timeout + 500) / 1000) + " " + maxOutputLen + " " + interleaveIO + " " + language.getLanguage() + " " + mainFile + (args == null ? "" : " " + args));
     }
 
     public void run(String compileDir, String runDir, Path mainFile, String args, String input, Collection<String> outfiles, int timeout, int maxOutputLen, boolean interleaveIO) {
+        if (outputs.containsKey(Paths.get(runDir).resolve("_run"))) return;
         run(compileDir, runDir, mainFile, input, args, timeout, maxOutputLen, interleaveIO);
         if (outfiles.size() > 0)
             addScript("collect " + runDir + " " + Util.join(outfiles, " "));
