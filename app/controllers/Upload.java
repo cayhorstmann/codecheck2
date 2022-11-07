@@ -130,7 +130,7 @@ public class Upload extends Controller {
         }
         response.append(
                 "<html><head><title></title><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"/>");
-        response.append("<body style=\"font-family: sans\">");
+        response.append("<body style=\"font-family: sans-serif\">");
 
         String prefix = models.Util.prefix(request) + "/";
 

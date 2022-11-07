@@ -54,6 +54,9 @@ body {
 
 code, pre {
   font-family: DejaVuSansMonoSemiCondensed;
+}
+
+pre {
   font-size: 110%;
 }
 
