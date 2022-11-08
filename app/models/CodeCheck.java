@@ -63,7 +63,7 @@ public class CodeCheck {
             KeyStore.PrivateKeyEntry pkEntry = (KeyStore.PrivateKeyEntry) ks.getEntry("codecheck", protParam);
             signer = new JarSigner.Builder(pkEntry).build();            
         } catch (Exception e) {
-            logger.warn("Cannot load keystore", e);
+            logger.warn("Cannot load keystore");
         }
     }
     

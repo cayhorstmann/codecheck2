@@ -170,10 +170,12 @@ public class Upload extends Controller {
             Map<String, String> filesAndContents = new TreeMap<>();
             for (Map.Entry<Path, byte[]> entries : problemFiles.entrySet()) {
                 Path p = entries.getKey();
-                if (p.getNameCount() == 1)
-                    filesAndContents.put(p.toString(), new String(entries.getValue(), StandardCharsets.UTF_8));
-                else
-                    return badRequest("Cannot edit problem with directories");
+                if (!p.getName(0).toString().equals("_outputs")) {
+                    //if (p.getNameCount() == 1)
+                        filesAndContents.put(p.toString(), new String(entries.getValue(), StandardCharsets.UTF_8));
+                    //else
+                    //    return badRequest("Cannot edit problem with directories");
+                }
             }
             filesAndContents.remove("edit.key");
             return ok(views.html.edit.render(problem, filesAndContents, correctEditKey));
