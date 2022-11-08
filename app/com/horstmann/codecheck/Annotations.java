@@ -13,10 +13,10 @@ import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 public class Annotations {
-    public static final Set<String> VALID_ANNOTATIONS = Set.of(
+    public static final Set<String> VALID_ANNOTATIONS = new LinkedHashSet<>(List.of(
             "CALL HIDDEN", "IN HIDDEN", "HIDDEN", "HIDE", "SHOW", "EDIT", "SOLUTION", "CALL", "SUB", "ID", "SAMPLE", "ARGS", 
             "IN", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "MAXOUTPUTLEN",
-            "REQUIRED", "FORBIDDEN", "SCORING", "INTERLEAVE", "TILE", "FIXED", "OR", "PSEUDO");    
+            "REQUIRED", "FORBIDDEN", "SCORING", "INTERLEAVE", "TILE", "FIXED", "OR", "PSEUDO"));    
     public static final Set<String> NON_BLANK_BEFORE_OK = Set.of("SUB", "PSEUDO"); 
 
     public static class Annotation {
