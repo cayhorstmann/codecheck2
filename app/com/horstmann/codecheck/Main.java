@@ -152,7 +152,9 @@ public class Main {
                 Calls.Call call = calls.getCall(i);
                 names[i] = call.name;
                 args[i][0] = call.args;
+                // TODO Could have more fine-grained hidden 
                 if (call.isHidden()) {
+                    actual[i] = "[hidden]";
                     expected[i] = "[hidden]"; 
                     args[i][0] = "[hidden]"; 
                 }
@@ -178,11 +180,8 @@ public class Main {
                     report.run(p.toString());
                     if (!plan.checkCompiled(id, report, score)) return; 
                     String outerr = plan.outerr(id);                    
-                    if (problem.getAnnotations().getHiddenTestFiles().contains(p))
-                        problem.getLanguage().reportUnitTest(outerr, report, score, true);   
-                    else 
-                        problem.getLanguage().reportUnitTest(outerr, report, score, false);
-
+                    boolean hidden = problem.getAnnotations().getHiddenTestFiles().contains(p); 
+                    problem.getLanguage().reportUnitTest(outerr, report, score, hidden);   
                 });
                             
             }
@@ -259,7 +258,8 @@ public class Main {
     }
     
     private void testInput(Path mainFile,
-            boolean runSolution, String test, String input, String runargs, List<String> outFiles, int timeout, int maxOutput, boolean interleaveio, boolean hidden)
+            boolean runSolution, String test, String input, String runargs, List<String> outFiles, 
+            int timeout, int maxOutput, boolean interleaveio, boolean hidden)
             throws Exception {
         String submissionRunID = plan.nextID("submissionrun");
         plan.run("submissionrun", submissionRunID, mainFile, runargs, input, outFiles, timeout, maxOutput, interleaveio);
@@ -271,7 +271,7 @@ public class Main {
             if (!plan.compiled("submissionrun")) return;
             report.args(runargs);
     
-            if (!interleaveio && !test.equals("Input")) report.input(input);
+            if (!interleaveio && !test.equals("Input")) report.input(hidden ? "[hidden]" : input);
     
             Map<String, String> contents = new HashMap<>();
             Map<String, CompareImages> imageComp = new HashMap<>();

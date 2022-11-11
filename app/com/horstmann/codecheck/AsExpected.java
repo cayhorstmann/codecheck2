@@ -76,10 +76,10 @@ public class AsExpected {
                 report.output(value);
                 report.error("Missing \"Expected: ...\"\n");
             } else {
-                if (hidden == false)
-                    report.output(lines, matches, mismatches);
-                else 
+                if (hidden)
                     report.hiddenOutputMessage(); 
+                else 
+                    report.output(lines, matches, mismatches);
             }
             // If the program run ends in an exception, it can happen that the number of
             // actual vs. expected values is less than it should be. In that case,

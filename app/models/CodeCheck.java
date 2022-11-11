@@ -129,10 +129,8 @@ public class CodeCheck {
     }
     
     public Map<Path, byte[]> loadProblem(String repo, String problemName) throws IOException {
-        Map<Path, byte[]> result;
         byte[] zipFile = probConn.read(repo, problemName);
-        result = Util.unzip(zipFile);
-        return result;
+        return Util.unzip(zipFile);
     }
 
     public void saveProblem(String problem, Map<Path, byte[]> problemFiles) throws IOException {   
