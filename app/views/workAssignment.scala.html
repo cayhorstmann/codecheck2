@@ -24,9 +24,11 @@
         <dt>Private URL for you only:</dt><dd><span id="privateURL" class="ccurl"></span></dd>  
       </dl>     
       <p>ID: <span class="ccid"></span></p>
-      <label id="label_feedback_instruction">You can leave feedback for students when viewing their submissions</label><br>
-      <textarea style="display: block; width: 80%; font-size: 14px; font-weight: 500;" id="comment" rows="10"></textarea>
-      <div id='saveButtonDiv'></div>
+      <div id="instructor_comment_div">
+        <label id="label_feedback_instruction">Your comments:</label><br>
+        <textarea style="display: block; width: 80%; font-size: 14px; font-weight: 500;" id="instructor_comment" rows="10"></textarea>
+        <div id='saveButtonDiv'></div>
+      </div>
    </div>
    <div id="studentInstructions">
 	   <p>Your CodeCheck ID: <span class="ccid"></span></p>
@@ -42,15 +44,15 @@
      <p id="deadlineLocal" style="font-weight: bold;"></p>
      <p id="deadlineUTC" style="font-weight: bold;"></p>
 	   <p id="savedcopy"><input type="checkbox"/>  I saved a copy of the private URL</p>
-     <label>Instructor's Feedback:</label><br>
-     <textarea readonly style="display: block; width: 80%; font-size: 14px; font-weight: 500;" id="student_comment" rows="10"></textarea>
+     <div id="student_comment_div">
+       <label>Feedback from your instructor:</label><br>
+       <textarea readonly style="display: block; width: 80%; font-size: 14px; font-weight: 500;" id="student_comment" rows="10"></textarea>
+     </div>
    </div>
    <div id="studentLTIInstructions">
      <p>You are viewing this assignment from a Learning Management System (LMS)</p>
      <p>Your LMS ID: <span class="ccid"></span></p>
      <p>Wrong score in LMS? <span id="submitLTIButton"></span></p>
-     <label>Instructor's Feedback:</label><br>
-     <textarea readonly style="display: block; width: 80%; font-size: 14px; font-weight: 500;" id="student_lti_comment" rows="10"></textarea>     
    </div>
 <p class="message" id="response"></p>
 <p id="abovebuttons">Click on the buttons below to view all parts of the assignment.</p>

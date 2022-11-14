@@ -49,6 +49,12 @@ package controllers;
    oauth_consumer_key [primary key]
    shared_secret
 
+CodeCheckComments
+   assignmentID [partition key] // non-LTI: courseID? + assignmentID, LTI: toolConsumerID/courseID + assignment ID, Legacy tool consumer ID/course ID/resource ID  
+   workID [sort key] // non-LTI: ccid/editKey, LTI: userID
+   comment
+
+   (This is a separate table from CodeCheckWork because we can't guarantee atomic updates if a student happens to update their work while the instructor updates a comment)
 
  Assignment parsing format:
  
@@ -262,7 +268,7 @@ public class Assignment extends Controller {
             if (ccid != null && editKey != null) {  // Instructor viewing student submission
                 workID = ccid + "/" + editKey;
                 // Only put workID into assignmentNode when viewing submission as Instructor, for security reason
-                assignmentNode.put("saveCommentURL", "/saveComment");
+                assignmentNode.put("saveCommentURL", "/saveComment"); 
                 assignmentNode.put("workID", workID);
             }
         }
