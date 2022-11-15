@@ -266,9 +266,9 @@ public class Assignment extends Controller {
             if (ccid == null && editKey != null && !editKeyValid(editKey, assignmentNode))
                 throw new IllegalArgumentException("Edit key does not match");
             if (ccid != null && editKey != null) {  // Instructor viewing student submission
+                assignmentNode.put("saveCommentURL", "/saveComment"); 
                 workID = ccid + "/" + editKey;
                 // Only put workID into assignmentNode when viewing submission as Instructor, for security reason
-                assignmentNode.put("saveCommentURL", "/saveComment"); 
                 assignmentNode.put("workID", workID);
             }
         }
