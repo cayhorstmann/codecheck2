@@ -111,9 +111,8 @@ public class Plan {
     }
     
     public String outerr(String runID) {
-        Path key = Paths.get(runID).resolve("_run");
-        byte[] output = outputs.get(key);
-        if (output == null) throw new NoSuchElementException(key.toString());
+        byte[] output = outputs.get(Paths.get(runID).resolve("_run"));
+        if (output == null) throw new NoSuchElementException(runID + "/_run");
         else return new String(output, StandardCharsets.UTF_8);
     }
     
@@ -217,7 +216,7 @@ public class Plan {
             responseZip = Paths.get(lines[n]);
             if (!Files.exists(responseZip))
                 throw new CodeCheckException("comrun failed.\n" + result);
-            outputs.putAll(Util.unzip(Files.readAllBytes(responseZip)));            
+            outputs = Util.unzip(Files.readAllBytes(responseZip));            
         } finally {
             if (!debug) {
                 Files.deleteIfExists(requestZip);
@@ -233,7 +232,7 @@ public class Plan {
         while (retries > 0) {
             try {
                 byte[] responseZip = Util.fileUpload(remoteURL, "job", "job.zip", requestZip);
-                outputs.putAll(Util.unzip(responseZip)); 
+                outputs = Util.unzip(responseZip);
                 if (debug) {
                     Path temp = Files.createTempFile("codecheck-request", ".zip");
                     System.out.println("Remote request at " + temp);

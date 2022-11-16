@@ -25,10 +25,18 @@ public class Comparison {
            outcome &= m.matches;
            matches.add(m);
         }
-        if (hidden) report.hiddenOutputMessage();
-        else if (outcome) {
-            if (filename != null) report.file(filename, actual);            
-            else report.output(actual);
+        if (outcome) {
+            if (filename != null) {
+                report.file(filename, actual);
+            }
+            else {
+                if (!hidden)
+                    report.output(actual);
+                else 
+                    //report.comment("hidden", "Given the instructions, the output is hidden!");
+                    report.hiddenOutputMessage();
+
+            }
         }
         else {
             // Print inputs which are getting replaced
