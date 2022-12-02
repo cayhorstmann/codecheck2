@@ -153,6 +153,7 @@ public class Main {
                 names[i] = call.name;
                 args[i][0] = call.args;
                 if (call.isHidden()) {
+                    actual[i] = "[hidden]";
                     expected[i] = "[hidden]"; 
                     args[i][0] = "[hidden]"; 
                 }
