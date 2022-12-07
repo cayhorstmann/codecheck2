@@ -152,12 +152,20 @@ public class CodeCheck {
             String problem, String ccid, Map<Path, String> submissionFiles)
             throws IOException, InterruptedException, NoSuchMethodException, ScriptException {
         Map<Path, byte[]> problemFiles = loadProblem(repo, problem, ccid);
+        // TODO save if doesn't have output and not parametric
+        boolean save = !problemFiles.containsKey(Path.of("param.js")) && 
+            !problemFiles.keySet().stream().anyMatch(p -> p.startsWith("_outputs"));
         Properties metaData = new Properties();
         metaData.put("User", ccid);
         metaData.put("Problem", (repo + "/" + problem).replaceAll("[^\\pL\\pN_/-]", ""));
         
-        return new Main().run(submissionFiles, problemFiles, reportType, metaData, resourceLoader)
-            .getReport().getText();
+        Plan plan = new Main().run(submissionFiles, problemFiles, reportType, metaData, resourceLoader);
+        if (save) {
+            plan.writeSolutionOutputs(problemFiles);
+            saveProblem(problem, problemFiles);
+        }
+
+        return plan.getReport().getText();
     }
     
     /**
@@ -179,11 +187,10 @@ public class CodeCheck {
 
         Properties metaData = new Properties();
         Plan plan = new Main().run(submissionFiles, problemFiles, "html", metaData, resourceLoader);
-        // TODO if not parametric
-        plan.writeSolutionOutputs(problemFiles);
+        if (!isParametric)
+            plan.writeSolutionOutputs(problemFiles);
         saveProblem(problem, problemFiles);
-        Report report = plan.getReport();
-        return report.getText(); 
+        return plan.getReport().getText(); 
     }
     
     public byte[] signZip(Map<Path, byte[]> contents) throws IOException {  
