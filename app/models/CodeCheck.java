@@ -74,7 +74,13 @@ public class CodeCheck {
         return problemFiles;
     }
 
-    public void replaceParametersInDirectory(String studentId, Map<Path, byte[]> problemFiles)
+    /**
+     * 
+     * @param studentId the seed for the random number generator
+     * @param problemFiles the problem files to rewrite
+     * @return true if this is a parametric problem
+     */
+    public boolean replaceParametersInDirectory(String studentId, Map<Path, byte[]> problemFiles)
             throws ScriptException, NoSuchMethodException, IOException {
         Path paramPath = Path.of("param.js"); 
         if (problemFiles.containsKey(paramPath)) {
@@ -91,7 +97,9 @@ public class CodeCheck {
                 if (result != null)
                     problemFiles.put(p, result.getBytes(StandardCharsets.UTF_8));               
             }
+            return true;
         }
+        else return false;
     }
     
     private String replaceParametersInFile(String contents, ScriptEngine engine) throws ScriptException, IOException {
@@ -160,7 +168,7 @@ public class CodeCheck {
             throws IOException, InterruptedException, NoSuchMethodException, ScriptException {
         Map<Path, byte[]> problemFiles = new TreeMap<>(originalProblemFiles);
         String studentId = com.horstmann.codecheck.Util.createPronouncableUID();
-        replaceParametersInDirectory(studentId, problemFiles);
+        boolean isParametric = replaceParametersInDirectory(studentId, problemFiles);
 
         Problem p = new Problem(problemFiles);
         Map<Path, String> submissionFiles = new TreeMap<>();
@@ -171,6 +179,7 @@ public class CodeCheck {
 
         Properties metaData = new Properties();
         Plan plan = new Main().run(submissionFiles, problemFiles, "html", metaData, resourceLoader);
+        // TODO if not parametric
         plan.writeSolutionOutputs(problemFiles);
         saveProblem(problem, problemFiles);
         Report report = plan.getReport();
