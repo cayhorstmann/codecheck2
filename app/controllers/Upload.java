@@ -123,7 +123,7 @@ public class Upload extends Controller {
         String report = null;
         if (problemFiles.containsKey(Path.of("tracer.js"))) {
             type = "tracer";
-            codeCheck.saveProblem(problem, problemFiles);
+            codeCheck.saveProblem("ext", problem, problemFiles);
         } else {
             type = "files";
             report = codeCheck.checkAndSave(problem, problemFiles);
