@@ -143,16 +143,16 @@ public class CodeCheck {
         return result;
     }
 
-    public void saveProblem(String problem, Map<Path, byte[]> problemFiles) throws IOException {   
+    public void saveProblem(String repo, String problem, Map<Path, byte[]> problemFiles) throws IOException {   
         byte[] problemZip = Util.zip(problemFiles);
-        probConn.write(problemZip, "ext", problem);  
+        probConn.write(problemZip, repo, problem);  
     }
 
     public String run(String reportType, String repo,
             String problem, String ccid, Map<Path, String> submissionFiles)
             throws IOException, InterruptedException, NoSuchMethodException, ScriptException {
         Map<Path, byte[]> problemFiles = loadProblem(repo, problem, ccid);
-        // TODO save if doesn't have output and not parametric
+        // Save solution outputs if not parametric and doesn't have already have solution output
         boolean save = !problemFiles.containsKey(Path.of("param.js")) && 
             !problemFiles.keySet().stream().anyMatch(p -> p.startsWith("_outputs"));
         Properties metaData = new Properties();
@@ -162,7 +162,7 @@ public class CodeCheck {
         Plan plan = new Main().run(submissionFiles, problemFiles, reportType, metaData, resourceLoader);
         if (save) {
             plan.writeSolutionOutputs(problemFiles);
-            saveProblem(problem, problemFiles);
+            saveProblem(repo, problem, problemFiles);
         }
 
         return plan.getReport().getText();
@@ -189,7 +189,7 @@ public class CodeCheck {
         Plan plan = new Main().run(submissionFiles, problemFiles, "html", metaData, resourceLoader);
         if (!isParametric)
             plan.writeSolutionOutputs(problemFiles);
-        saveProblem(problem, problemFiles);
+        saveProblem("ext", problem, problemFiles);
         return plan.getReport().getText(); 
     }
     
