@@ -222,7 +222,7 @@ public class Main {
         }
 
         plan.addTask(() -> {
-            report.header("run", problem.getInputMode() ? "Output" : "Testing " + mainFile);
+            report.header("run", problem.getInputMode() ? "Output" : "Running " + mainFile);
             if (runSolution)
                 plan.checkSolutionCompiled("solutionrun", report, score); 
             plan.checkCompiled("submissionrun", report, score);
