@@ -46,18 +46,30 @@ public class Plan {
 
     public void writeSolutionOutputs(Map<Path, byte[]> filesToSave) {
         for (Map.Entry<Path, byte[]> entry : outputs.entrySet()) {
+            Path p = entry.getKey();
+            if (p.getName(p.getNameCount() - 1).toString().equals("_errors"))
+               return;
+        }
+        for (Map.Entry<Path, byte[]> entry : outputs.entrySet()) {
             Path p = entry.getKey();            
-            if (p.getName(0).toString().startsWith("solution"))
+            if (p.getName(0).toString().startsWith("solution")) {
                 filesToSave.put(Path.of("_outputs").resolve(p), entry.getValue());
+            }
         }
     }
 
     public void readSolutionOutputs(Map<Path, byte[]> savedFiles) {
+        boolean removeOnly = false;
+        for (Map.Entry<Path, byte[]> entry : savedFiles.entrySet()) {
+            Path p = entry.getKey();
+            if (p.getName(p.getNameCount() - 1).toString().equals("_errors"))
+               removeOnly = true;
+        }
         Set<Path> toRemove = new HashSet<>();
         for (Map.Entry<Path, byte[]> entry : savedFiles.entrySet()) {
             Path p = entry.getKey();
             if (p.getName(0).toString().equals("_outputs")) {
-                outputs.put(p.subpath(1, p.getNameCount()), entry.getValue());
+                if (!removeOnly) outputs.put(p.subpath(1, p.getNameCount()), entry.getValue());
                 toRemove.add(p);
             }
         }           
