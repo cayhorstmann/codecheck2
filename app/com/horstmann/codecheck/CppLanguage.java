@@ -34,8 +34,6 @@ public class CppLanguage implements Language {
     @Override
     public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls, ResourceLoader resourceLoader) throws IOException {
         
-        // function in solution needs to be in separate namespace
-        // function of student needs be externed;
         // imports on top
         // Look at line in solution file following //CALL
         // Remove any trailing {, add ;
@@ -43,10 +41,13 @@ public class CppLanguage implements Language {
         
         String moduleName = moduleOf(file);
         List<String> lines = new ArrayList<>();
+        contents
+           .lines()
+           .filter(l -> l.startsWith("#include "))
+           .forEach(l -> lines.add(l));
         
         lines.add("#include \"codecheck.h\"");
         lines.add("#include <cstdlib>");
-        
         Set<String> externs = new LinkedHashSet<>();
         for (Calls.Call c : calls) 
            externs.add(c.modifiers.get(0) + " " + c.modifiers.get(1) + ";"); 
@@ -59,7 +60,6 @@ public class CppLanguage implements Language {
             Calls.Call call = calls.get(k);
             lines.add("    if (arg == " + (k + 1) + ") {");
             lines.add("        codecheck::print(" + call.name + "(" + call.args + "));");
-                // compare expected and actual
             lines.add("}");
         }
         lines.add("   return 0;");
