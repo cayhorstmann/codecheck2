@@ -252,34 +252,14 @@ you created, and select Debug. Point the browser to a URL such as
 <http://localhost:9000/assets/uploadProblem.html>. Set breakpoints as
 needed.
 
-## Docker Installation
+## Podman/Docker Installation
 
 Skip this step if you are on Codespaces. Codespaces already has Docker installed.
 
-Install Docker for Linux (deb) or [follow the instruction for your environment](https://docs.docker.com/engine/install/)
+Install Podman and Podman-Docker:
 ```
- sudo apt-get update
- 
-  sudo apt-get install \
-    ca-certificates \
-    curl \
-    gnupg \
-    lsb-release
-```
-Add Docker’s official GPG key
-```
- curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-```
-Use the following command to set up the stable repository.
-```
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-```
-Update the apt package index, and install the latest version of Docker Engine and `containerd`
-```
- sudo apt-get update
- sudo apt-get install docker-ce docker-ce-cli containerd.io
+sudo apt-get podman podman-docker
+sudo touch /etc/containers/nodocker 
 ```
 
 Docker Local Testing
@@ -302,17 +282,26 @@ secret](https://www.playframework.com/documentation/2.8.x/ApplicationSecret):
 
 Do not check this file into version control!
 
-Build and run the Docker container for the `play-codecheck` server:
+Build the Docker container for the `play-codecheck` server. 
 
     sbt docker:publishLocal 
+    
+Ignore the `[error]` labels during the Docker build. They aren't actually errors.
+
+Run the container. If you do this on your own computer:
+
+    docker run -p 9090:9000 -it play-codecheck:1.0-SNAPSHOT
+    
+Test that it works by pointing your browser to
+<http://localhost:9090/assets/uploadProblem.html>.     
+
+On Codespaces:
+
     docker run -p 9090:9000 -it --add-host host.docker.internal:host-gateway play-codecheck:1.0-SNAPSHOT &
 
-(Ignore the `[error]` labels during the Docker build. They aren't actually errors.)
+Then locate the Ports tab and open the local address for port 9090. Ignore the nginx error and paste `/assets/uploadProblem.html` after the URL. 
 
-Test that it works by pointing your browser to
-<http://localhost:9090/assets/uploadProblem.html>. Or if you use CodeSpaces, locate the Ports tab and open the local address for port 9090. Ignore the nginx error and paste `/assets/uploadProblem.html` after the URL. 
-
-Upload a problem: File name `Numbers.java`, file contents:
+To complete the test locally or on Codespaces, upload a problem: File name `Numbers.java`, file contents:
 
 ```
 public class Numbers
@@ -390,6 +379,10 @@ aws configure
 
 Comrun Service Deployment 
 -------------------------
+
+If you develop locally (i.e. not on Codespaces), run this command:
+
+    gcloud auth print-access-token | podman login -u oauth2accesstoken --password-stdin gcr.io
 
 There are two parts to the CodeCheck server. We\'ll take them up one at
 a time. The `comrun` service compiles and runs student programs,
