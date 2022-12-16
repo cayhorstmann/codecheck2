@@ -367,11 +367,12 @@ window.addEventListener('load', function () {
         drag = undefined
         insertDroppedTileRight(tileDiv)
       })
-
-      for (const fixed of setup.fixed)
-        left.appendChild(makeTile(fixed, true)) 
-      for (const tile of setup.tiles)
-        right.appendChild(makeTile(tile, false)) 
+      if ('fixed' in setup)
+        for (const fixed of setup.fixed)
+          left.appendChild(makeTile(fixed, true)) 
+      if ('tiles' in setup)
+        for (const tile of setup.tiles)
+          right.appendChild(makeTile(tile, false)) 
       both.classList.add('horstmann_rearrange')
 
       return both
@@ -414,7 +415,7 @@ window.addEventListener('load', function () {
           i++
           for (let j = group.length - 1; j >= 0; j--) {
             const newTile = makeTile(group[j], false)
-            left.insertBefore(newTile)
+            left.insertBefore(newTile, tile)
           }
         }
         else

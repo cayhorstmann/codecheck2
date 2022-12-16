@@ -88,7 +88,6 @@ public class Problem {
         if (language == null) throw new CodeCheckException("Cannot find language from " + problemFiles.keySet());
             
         this.problemFiles = problemFiles;
-        this.language = language;
         annotations = new Annotations(language);
         String[] delims = language.pseudoCommentDelimiters();
         start = delims[0];
