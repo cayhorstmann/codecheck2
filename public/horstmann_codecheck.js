@@ -380,16 +380,16 @@ window.addEventListener('load', function () {
 
     function getState() {
       const leftTiles = []
-      const group = []
+      let group = []
       for (const tile of left.children) {
         if (tile.classList.contains('fixed')) {
           leftTiles.push(group)
-          group.length = 0
+          group = []
         }
         else {
-      let state = { text: tile.textContent, indent: tile.indent }
-      let code = codeMap.get(tile)
-      if (code !== undefined) state.code = code  
+          let state = { text: tile.textContent, indent: tile.indent }
+          let code = codeMap.get(tile)
+          if (code !== undefined) state.code = code  
           group.push(state) 
         } 
       }
@@ -399,14 +399,14 @@ window.addEventListener('load', function () {
         left: leftTiles,
         right: [...right.children].map(tile => {
             let code = codeMap.get(tile)
-        if (code !== undefined) return { text: tile.textContent, code }  
-          else return tile.textContent
+            if (code !== undefined) return { text: tile.textContent, code }  
+            else return tile.textContent
         })  
       }    
     }
 
     function restoreState(state) {
-    codeMap.clear()
+      codeMap.clear()
       let i = 0
       let leftTiles = [...left.children]
       for (const tile of leftTiles) {
