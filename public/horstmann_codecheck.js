@@ -140,17 +140,17 @@ window.addEventListener('load', function () {
 
     function makeTile(contents, isFixed) {
       let tileDiv = createTile()
-    let text
-    if (typeof contents === 'object') {
-    text = contents.text
-    if ('code' in contents) {
-      codeMap.set(tileDiv, contents.code)
-      tileDiv.classList.add('pseudo')            
+      let text
+      if (typeof contents === 'object') {
+        text = contents.text
+        if ('code' in contents) {
+          codeMap.set(tileDiv, contents.code)
+          tileDiv.classList.add('pseudo')            
         }   
-    }
-    else {
-      text = contents
-    }
+      }
+      else {
+        text = contents
+      }
       if (isFixed) {
         tileDiv.classList.add('fixed')
         tileDiv.setAttribute('draggable', false);
@@ -172,7 +172,7 @@ window.addEventListener('load', function () {
           }          
           tileDiv.textContent = strippedText
           setIndent(tileDiv, minIndent)
-    }
+        }
       }
       else {
         tileDiv.textContent = text
@@ -416,6 +416,7 @@ window.addEventListener('load', function () {
           for (let j = group.length - 1; j >= 0; j--) {
             const newTile = makeTile(group[j], false)
             left.insertBefore(newTile, tile)
+            setIndent(newTile, tile.group[i].indent)
           }
         }
         else
