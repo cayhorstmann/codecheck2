@@ -425,6 +425,7 @@ window.addEventListener('load', function () {
       for (const t of state.left[i]) {
         const newTile = makeTile(t, false) 
         left.appendChild(newTile)      
+        setIndent(newTile, t.indent)
       }
       right.innerHTML = ''
       for (const t of state.right) {
