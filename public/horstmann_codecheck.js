@@ -975,8 +975,7 @@ window.addEventListener('load', function () {
     else {
 	  fetch(`https://codecheck.io/fileData?repo=${setup.repo}&problem=${setup.problem}`)
         .then((response) => response.json())
-        .then((data) => initElement(elements[index], { url: 'https://codecheck.io/checkNJS', ...data, ...setup }));
-      }
-	}                
+        .then((data) => initElement(elements[index], { url: 'https://codecheck.io/checkNJS', ...data, ...setup }))
+    }	                
   }
 });
