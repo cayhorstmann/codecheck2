@@ -695,7 +695,7 @@ window.addEventListener('load', function () {
     let editors = new Map()
 
     function restoreState(dummy, state) { // TODO: Eliminate dummy
-      if (state === null) return;
+      if (state === null || state === undefined) return; // TODO Can it be null???
       let work = state.work
       if ('studentWork' in state) { // TODO: Legacy state
         work = {}
@@ -970,9 +970,23 @@ window.addEventListener('load', function () {
   let elements = document.getElementsByClassName('horstmann_codecheck')
   for (let index = 0; index < elements.length; index++) {
 	const setup = window.horstmann_codecheck.setup[index]
+	/*
+	  Required properties: 
+        repo
+	    problem
+	  Optional:
+	    url
+	    requiredFiles (if not present, obtained with fileData)
+	    useFiles
+	    order
+	    prefix
+	*/
 	if ('requiredFiles' in setup)   
       initElement(elements[index], setup)
     else {
+	  // TODO Use document.currentScript (but not in this callback) instead of hardwiring URL
+	  // https://developer.mozilla.org/en-US/docs/Web/API/Document/currentScript
+	  // https://developer.mozilla.org/en-US/docs/Web/API/URL	
 	  fetch(`https://codecheck.io/fileData?repo=${setup.repo}&problem=${setup.problem}`)
         .then((response) => response.json())
         .then((data) => initElement(elements[index], { url: 'https://codecheck.io/checkNJS', ...data, ...setup }))
