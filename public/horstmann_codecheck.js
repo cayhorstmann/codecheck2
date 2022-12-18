@@ -968,7 +968,15 @@ window.addEventListener('load', function () {
  
   // Start of event listener
   let elements = document.getElementsByClassName('horstmann_codecheck')
-  for (let index = 0; index < elements.length; index++) 
-    initElement(elements[index],
-                window.horstmann_codecheck.setup[index]) 
+  for (let index = 0; index < elements.length; index++) {
+	const setup = window.horstmann_codecheck.setup[index]
+	if ('requiredFiles' in setup)   
+      initElement(elements[index], setup)
+    else {
+	  fetch(`https://codecheck.io/fileData?repo=${setup.repo}&problem=${setup.problem}`)
+        .then((response) => response.json())
+        .then((data) => initElement(elements[index], { url: 'https://codecheck.io/checkNJS', ...data, ...setup }));
+      }
+	}                
+  }
 });
