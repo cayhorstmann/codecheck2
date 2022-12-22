@@ -57,8 +57,8 @@ public class Files extends Controller {
         try {
             problemFiles = codeCheck.loadProblem(repo, problemName, ccid);
         } catch (Exception e) {
-            logger.error("filesHTML2: Cannot load problem " + repo + "/" + " " + problemName + e.getMessage());
-            return badRequest("Cannot load problem");
+            logger.error("filesHTML2: Cannot load problem " + repo + "/" + " " + problemName, e);
+            return badRequest("Cannot load problem " + repo + "/" + problemName);
         }
         Problem problem = new Problem(problemFiles);
         ObjectNode data = models.Util.toJson(problem.getProblemData());
@@ -122,7 +122,7 @@ public class Files extends Controller {
         try {
             problemFiles = codeCheck.loadProblem(repo, problemName, ccid);
         } catch (Exception e) {
-            logger.error("filesHTML: Cannot load problem " + repo + "/" + problemName + " " + e.getMessage());
+            logger.error("filesHTML: Cannot load problem " + repo + "/" + problemName, e);
             return badRequest("Cannot load problem " + repo + "/" + problemName);
         }
         Problem problem = new Problem(problemFiles);
@@ -151,8 +151,8 @@ public class Files extends Controller {
         try {
             problemFiles = codeCheck.loadProblem(repo, problemName, ccid);
         } catch (Exception e) {
-            logger.error("fileData: Cannot load problem " + repo + "/" + problemName + " " + e.getMessage());
-            return badRequest("Cannot load problem");
+            logger.error("fileData: Cannot load problem " + repo + "/" + problemName, e);
+            return badRequest("Cannot load problem " + repo + "/" + problemName);
         }       
         
         Problem problem = new Problem(problemFiles);
@@ -196,7 +196,7 @@ public class Files extends Controller {
         try {
             problemFiles = codeCheck.loadProblem(repo, problemName, ccid);
         } catch (Exception e) {
-            logger.error("filesHTML: Cannot load problem " + repo + "/" + problemName + " " + e.getMessage());
+            logger.error("filesHTML: Cannot load problem " + repo + "/" + problemName, e);
             return badRequest("Cannot load problem " + repo + "/" + problemName);
         }
         Problem problem = new Problem(problemFiles);

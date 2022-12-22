@@ -110,8 +110,8 @@ public class LTIProblem extends Controller {
             document = document.replace("<head>", "<head><script>const lti = " + ltiNode.toString() + "</script>");
             return ok(document).as("text/html");
         } catch (Exception ex) {
-            logger.error("launch: Cannot load problem " + request + " " + ex.getMessage());
-            return badRequest(ex.getMessage());
+            logger.error("launch: Cannot load problem " + request, ex);
+            return badRequest("Cannot load problem: " + ex.getMessage());
         }
     }       
     
@@ -179,8 +179,8 @@ public class LTIProblem extends Controller {
             Http.Cookie newCookie = models.Util.buildCookie("ccid", ccid);         
             return ok(document).withCookies(newCookie).as("text/html");
         }  catch (Exception ex) {
-            logger.error("launchCodeCheck: Cannot load problem " + repo + "/" + problemName + " " + ex.getMessage());
-            return badRequest(ex.getMessage());
+            logger.error("launchCodeCheck: Cannot load problem " + repo + "/" + problemName, ex);
+            return badRequest("Cannot load problem " + repo + "/" + problemName);
         }
     }
     
@@ -223,8 +223,8 @@ public class LTIProblem extends Controller {
             Http.Cookie newCookie = models.Util.buildCookie("ccid", ccid);         
             return ok(result.toString()).withCookies(newCookie).as("text/html");
         }  catch (Exception ex) {
-            logger.error("launchTracer: Cannot load problem " + repo + "/" + problemName + " " + ex.getMessage());
-            return badRequest(ex.getMessage());
+            logger.error("launchTracer: Cannot load problem " + repo + "/" + problemName, ex);
+            return badRequest("Cannot load problem " + repo + "/" + problemName);
         }    
     }
     
