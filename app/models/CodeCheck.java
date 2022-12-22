@@ -90,7 +90,7 @@ public class CodeCheck {
             //seeding unique student id
             ((Invocable) engine).invokeMethod(engine.get("Math"), "seedrandom", studentId);
             engine.eval(Util.getString(problemFiles, paramPath));
-            for (Path p : Util.filterNot(problemFiles.keySet(), "*.jar", "*.gif", "*.png", "*.jpg", "*.wav")) {
+            for (Path p : Util.filterNot(problemFiles.keySet(), "param.js", "*.jar", "*.gif", "*.png", "*.jpg", "*.wav")) {
                 String contents = new String(problemFiles.get(p), StandardCharsets.UTF_8);
                 String result = replaceParametersInFile(contents, engine);
                 if (result != null)
