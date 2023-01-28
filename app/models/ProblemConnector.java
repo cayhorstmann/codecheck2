@@ -21,6 +21,8 @@ import com.typesafe.config.Config;
 
 import play.Logger;
 
+// TODO Use DI configuration to avoid this delegation
+
 @Singleton
 public class ProblemConnector {
     private ProblemConnection delegate;
