@@ -43,7 +43,7 @@ public class JavaLanguage implements Language {
         List<String> lines = new ArrayList<>(); 
         contents
            .lines()
-           .filter(l -> l.startsWith("import "))
+           .filter(l -> l.trim().startsWith("import "))
            .forEach(l -> lines.add(l));
         lines.add("public class " + className + "CodeCheck {"); 
         lines.add("    public static void main(String[] args) throws Exception");

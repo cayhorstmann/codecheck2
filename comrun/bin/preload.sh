@@ -1,9 +1,7 @@
 #!/bin/bash
 
 # TODO get env dynamically
-JAVA_HOME=/opt/jdk1.8.0
 CODECHECK_HOME=/opt/codecheck
-PATH=$PATH:$JAVA_HOME/bin
 MAXOUTPUTLEN=10000
 
 BASE=$(pwd)
@@ -54,7 +52,7 @@ function compile {
       python3 -m py_compile $@ 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_compile
       ;;
     _Scala)
-      PATH=$PATH:$JAVA_HOME/bin $SCALA_HOME/bin/scalac $@ 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_compile   
+      scalac $@ 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_compile   
       ;;
     _SML)
       polyc -o prog $1 > $BASE/out/$DIR/_compile 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_compile
@@ -149,7 +147,7 @@ function run {
       ;;
     _Scala)
       ulimit -d 1000000 -f 1000 -n 100 -v 10000000
-      timeout -v -s 9 ${TIMEOUT}s $SCALA_HOME/bin/scala ${MAIN/.scala/} $@ < $BASE/in/$ID 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$ID/_run
+      timeout -v -s 9 ${TIMEOUT}s scala ${MAIN/.scala/} $@ < $BASE/in/$ID 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$ID/_run
       ;;
     *)  
       echo Unknown language $LANG > $BASE/out/$ID/_run 

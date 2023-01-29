@@ -115,36 +115,48 @@ public class Main {
             report.runTable(null, argNames, args, actual, expected, outcomes);
         });
     }
+       
+    private void doCalls(Map<Path, String> submissionFiles, Calls calls, ResourceLoader resourceLoader) throws Exception {
+    	Path file = calls.getFile();
+    	
+        String submissionContents = submissionFiles.get(file);
+        if (submissionContents.isEmpty()) submissionContents = Util.getString(problem.getUseFiles(), file);
+        Map<Path, String> submissionTesterFiles = problem.getLanguage().writeTester(file, submissionContents, calls.getCalls(), resourceLoader);
+        Path submissionBase = Paths.get("submissioncallfiles");
+        for (Map.Entry<Path, String> entry : submissionTesterFiles.entrySet()) 
+            plan.addFile(submissionBase.resolve(entry.getKey()), entry.getValue());
+        List<Path> submissionSources = new ArrayList<Path>(submissionTesterFiles.keySet()); 
 
-    private void doCalls(Calls calls, ResourceLoader resourceLoader) throws Exception {        
-        Map<Path, String> testerFiles = calls.writeTester(problem, resourceLoader);
-        Path base = Paths.get("callfiles");
-        for (Map.Entry<Path, String> entry : testerFiles.entrySet()) 
-            plan.addFile(base.resolve(entry.getKey()), entry.getValue());
+        String solutionContents = Util.getString(problem.getSolutionFiles(), file);
+        if (solutionContents.isEmpty()) solutionContents = Util.getString(problem.getUseFiles(), file);
+        Map<Path, String> solutionTesterFiles = problem.getLanguage().writeTester(file, solutionContents, calls.getCalls(), resourceLoader);    	
+        Path solutionBase = Paths.get("solutioncallfiles");
+        for (Map.Entry<Path, String> entry : solutionTesterFiles.entrySet()) 
+            plan.addFile(solutionBase.resolve(entry.getKey()), entry.getValue());
+        List<Path> solutionSources = new ArrayList<Path>(solutionTesterFiles.keySet());
         
-        String[] names = new String[calls.getSize()];
-        String[][] args = new String[calls.getSize()][1];
-        String[] actual = new String[calls.getSize()];
-        String[] expected = new String[calls.getSize()];
-        boolean[] outcomes = new boolean[calls.getSize()];
-
-        int timeout = timeoutMillis / calls.getSize();
-        int maxOutput = maxOutputLen  / calls.getSize();
-        List<Path> sources = new ArrayList<Path>(testerFiles.keySet()); 
         // TODO: This is the only place with a list of sources. 
         // If the multiple sources in the C++ tester are removed, do we still need them?
-        plan.compile("submissioncall", "submission callfiles", sources, dependentSourcePaths); 
-        plan.compile("solutioncall", "solution callfiles", sources, dependentSourcePaths); 
+        plan.compile("submissioncall", "submission submissioncallfiles", submissionSources, dependentSourcePaths); 
+        plan.compile("solutioncall", "solution solutioncallfiles", solutionSources, dependentSourcePaths);
+        
+        int timeout = timeoutMillis / calls.getSize();
+        int maxOutput = maxOutputLen  / calls.getSize();
         for (int i = 0; i < calls.getSize(); i++) {
-            Path mainFile = sources.get(0);
-            plan.run("submissioncall", "submissioncall", "submissioncall" + i, mainFile, "", "" + (i + 1), timeout, maxOutput, false);
-            plan.run("solutioncall", "solutioncall", "solutioncall" + i, mainFile, "", "" + (i + 1), timeout, maxOutput, false);
+            plan.run("submissioncall", "submissioncall", "submissioncall" + i, submissionSources.get(0), "", "" + (i + 1), timeout, maxOutput, false);
+            plan.run("solutioncall", "solutioncall", "solutioncall" + i, solutionSources.get(0), "", "" + (i + 1), timeout, maxOutput, false);
         }
         plan.addTask(() -> {
             report.header("call", "Calling with Arguments");
             if (!plan.checkCompiled("submissioncall", report, score)) return;  
             if (!plan.checkCompiled("solutioncall", report, score)) return;   
             
+            String[] names = new String[calls.getSize()];
+            String[][] args = new String[calls.getSize()][1];
+            String[] actual = new String[calls.getSize()];
+            String[] expected = new String[calls.getSize()];
+            boolean[] outcomes = new boolean[calls.getSize()];
+
             for (int i = 0; i < calls.getSize(); i++) {
                 actual[i] = plan.outerr("submissioncall" + i);     
                 expected[i] = plan.outerr("solutioncall" + i);     
@@ -447,7 +459,7 @@ public class Main {
                     Calls calls = problem.getAnnotations().findCalls();
                     mainSourcePaths.remove(calls.getFile());
                     dependentSourcePaths.add(calls.getFile());
-                    doCalls(calls, resourceLoader);
+                    doCalls(submissionFiles, calls, resourceLoader);
                 }
                 if (problem.getAnnotations().has("SUB")) {
                     Substitution sub = problem.getAnnotations().findSubstitution();

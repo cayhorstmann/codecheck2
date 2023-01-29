@@ -43,7 +43,7 @@ public class CppLanguage implements Language {
         List<String> lines = new ArrayList<>();
         contents
            .lines()
-           .filter(l -> l.startsWith("#include "))
+           .filter(l -> l.trim().startsWith("#include "))
            .forEach(l -> lines.add(l));
         
         lines.add("#include \"codecheck.h\"");

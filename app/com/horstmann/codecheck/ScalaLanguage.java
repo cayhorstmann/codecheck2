@@ -29,22 +29,9 @@ public class ScalaLanguage implements Language {
 
     @Override
     public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls, ResourceLoader resourceLoader) {
-        List<String> lines = Util.lines(contents);
-        
-        // Find class name
-        int i = 0;
-        while (i < lines.size() && !lines.get(i).contains("//CALL")) i++;
-        if (i == lines.size())
-            throw new CodeCheckException("Can't find object in " + file);
-        while (i >= 0 && !lines.get(i).trim().startsWith("object")) i--;
-        if (i < 0)
-            throw new CodeCheckException("Can't find object in " + file);
-        String[] tokens = lines.get(i).split("\\P{javaJavaIdentifierPart}+");
-        int j = 0;
-        if (tokens[0].length() == 0) j++;
-        if (j + 1 >= tokens.length) throw new CodeCheckException("Can't find object name in " + file);
-        String objectName = tokens[j + 1];
-        lines = new ArrayList<>(); 
+        // Requirement: File name must equal to object containing called method
+        String objectName = moduleOf(file);
+        List<String> lines = new ArrayList<>(); 
         lines.add("object " + objectName + "CodeCheck extends App {");
         for (int k = 0; k < calls.size(); k++) {
             Calls.Call call = calls.get(k);

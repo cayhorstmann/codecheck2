@@ -44,6 +44,12 @@ public class Calls {
     public Call getCall(int i) {
         return calls.get(i);
     }
+    
+    public List<Call> getCalls() {
+        if (lastGroup < calls.size() - 1)
+            throw new CodeCheckException("No function below CALL in " + file + "\n");
+        return calls;
+    }
 
     public void addCall(Path file, String args, String next) {
         if (this.file == null)
@@ -66,13 +72,5 @@ public class Calls {
             }
             lastGroup = calls.size() - 1;            
         } 
-    }
-
-    public Map<Path, String> writeTester(Problem problem, ResourceLoader resourceLoader) throws IOException {
-        if (lastGroup < calls.size() - 1)
-            throw new CodeCheckException("No function below CALL in " + file + "\n");
-        String contents = Util.getString(problem.getSolutionFiles(), file);
-        if (contents.isEmpty()) contents = Util.getString(problem.getUseFiles(), file);
-        return language.writeTester(file, contents, calls, resourceLoader);
     }
 }
