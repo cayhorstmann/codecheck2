@@ -63,16 +63,7 @@ public class MatlabLanguage implements Language {
         return new String[] { "%%", "" };
     }
 
-    private static String patternString = "\\s*(?<name>[A-Za-z][A-Za-z0-9]*)\\s*=\\s*(?<rhs>.+)";
-    private static Pattern pattern = Pattern.compile(patternString);
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.horstmann.codecheck.Language#variablePattern()
-     */
-    @Override
-    public Pattern variableDeclPattern() {
-        return pattern;
-    }
+    private static Pattern VARIABLE_DECL_PATTERN = Pattern.compile(
+        	"(?<name>[A-Za-z][A-Za-z0-9]*)\\s*=\\s*(?<rhs>.+)");
+    @Override public Pattern variableDeclPattern() { return VARIABLE_DECL_PATTERN; }
 }

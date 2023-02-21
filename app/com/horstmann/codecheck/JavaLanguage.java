@@ -81,13 +81,9 @@ public class JavaLanguage implements Language {
         return testFiles;
     }
     
-    private static String patternString = "\\s*((public|static|final|private|protected)\\s+)*[A-Za-z0-9_<>\\[\\]]+\\s+(?<name>\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*(?<rhs>[^;]+);.*";
-    private static Pattern pattern = Pattern.compile(patternString);
-
-    @Override
-    public Pattern variableDeclPattern() {
-        return pattern;
-    }
+    private static Pattern VARIABLE_DECL_PATTERN = Pattern.compile(
+        	"((public|static|final|private|protected)\\s+)*[A-Za-z0-9_<>\\[\\]]+\\s+(?<name>\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*(?<rhs>[^;]+);");
+    @Override public Pattern variableDeclPattern() { return VARIABLE_DECL_PATTERN; }
 
     @Override
     public String process(Path file, Map<Path, String> submissionFiles) {

@@ -69,12 +69,14 @@ public class RacketLanguage implements Language {
        testerFiles.put(Paths.get(moduleName + "CodeCheck.rkt"), out.toString());
        return testerFiles;
     }
+
+    // CAUTION: Because the rhs is likely to contain (), there must be a space
+    // before the final ), e.g. (define l '(1 2 3) )
+    private static Pattern VARIABLE_DECL_PATTERN = Pattern.compile(
+        	"\\(\\s*define\\s+(?<name>[A-Za-z][A-Za-z0-9]*)\\s+(?<rhs>.+)\\s+\\)");
+    @Override public Pattern variableDeclPattern() { return VARIABLE_DECL_PATTERN; }
+
     
-    private static String patternString = ".*\\S\\s+(?<name>\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*(?<rhs>[^;]+);.*";
-    private static Pattern pattern = Pattern.compile(patternString);
-
-    @Override public Pattern variableDeclPattern() { return pattern; }
-
     @Override
     public boolean isUnitTest(Path fileName) {
         return fileName.toString().matches(".*Test[0-9]*.rkt");

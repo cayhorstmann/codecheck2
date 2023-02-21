@@ -55,18 +55,9 @@ public class SMLLanguage implements Language {
         return result;
     }
     
-    private static String variablePatternString = "\\s*val\\s+(?<name>\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*(?<rhs>.+)";
-    private static Pattern variablePattern = Pattern.compile(variablePatternString);
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.horstmann.codecheck.Language#variablePattern()
-     */
-    @Override
-    public Pattern variableDeclPattern() {
-        return variablePattern;
-    }
+    private static Pattern VARIABLE_DECL_PATTERN = Pattern.compile(
+    		"val\\s+(?<name>\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*(?<rhs>[^;]+);?");
+    @Override public Pattern variableDeclPattern() { return VARIABLE_DECL_PATTERN; }
    
    private static Pattern ERROR_PATTERN = Pattern.compile("(?<file>[^/]+\\.sml):(?<line>[0-9]+):(?<col>[0-9]+): (?<msg>.+)");
    @Override public Pattern errorPattern() { return ERROR_PATTERN; }     

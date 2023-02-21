@@ -7,12 +7,8 @@ public class CSharpLanguage implements Language {
     public String getExtension() {
         return "cs";
     }
-    
-    private static String patternString = ".*\\S\\s+(\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*(?<rhs>[^;]+);.*";
-    private static Pattern pattern = Pattern.compile(patternString);
-    
-    @Override
-    public Pattern variableDeclPattern() {
-        return pattern;
-    }
+
+    private static Pattern VARIABLE_DECL_PATTERN = Pattern.compile(
+        	".*\\S\\s+(\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)\\s*=\\s*(?<rhs>[^;]+);");
+    @Override public Pattern variableDeclPattern() { return VARIABLE_DECL_PATTERN; }
 }

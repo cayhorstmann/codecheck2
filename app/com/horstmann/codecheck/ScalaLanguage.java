@@ -57,9 +57,7 @@ public class ScalaLanguage implements Language {
         else return null;
     }
         
-    private static Pattern variablePattern = Pattern.compile(
-            "(val|var)\\s+(?<name>\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)(\\s*:[^=]+\\s*)?\\s*=\\s*(?<rhs>[^;]+);.*");
-
-    @Override
-    public Pattern variableDeclPattern() { return variablePattern; }
+    private static Pattern VARIABLE_DECL_PATTERN = Pattern.compile(
+    		"(val|var)\\s+(?<name>\\p{javaJavaIdentifierStart}\\p{javaJavaIdentifierPart}*)(\\s*:[^=]+\\s*)?\\s*=\\s*(?<rhs>[^;]+);");
+    @Override public Pattern variableDeclPattern() { return VARIABLE_DECL_PATTERN; }
 }

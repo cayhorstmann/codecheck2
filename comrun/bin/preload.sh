@@ -86,8 +86,18 @@ function run {
   cd $BASE/$DIR
   mkdir -p $BASE/out/$ID
   case _"$LANG" in 
-    _C|_Cpp|_Dart|_Haskell|_SML)
+    _C|_Cpp|_Dart|_Haskell)
       ulimit -d 100000 -f 1000 -n 100 -v 100000
+      if [[ -e prog ]] ; then
+        if [[ $INTERLEAVEIO == "true" ]] ; then
+           timeout -v -s 9 ${TIMEOUT}s ${CODECHECK_HOME}/interleaveio.py ./prog $@ < $BASE/in/$ID 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$ID/_run
+        else 
+           timeout -v -s 9 ${TIMEOUT}s ./prog $@ < $BASE/in/$ID > $BASE/out/$ID/_run 2>&1
+        fi
+      fi
+      ;;
+    _SML)
+      ulimit -d 1000000 -f 1000 -n 100 -v 1000000
       if [[ -e prog ]] ; then
         if [[ $INTERLEAVEIO == "true" ]] ; then
            timeout -v -s 9 ${TIMEOUT}s ${CODECHECK_HOME}/interleaveio.py ./prog $@ < $BASE/in/$ID 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$ID/_run
