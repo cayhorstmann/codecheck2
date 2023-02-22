@@ -69,7 +69,7 @@ public class Annotations {
     private Set<String> keys = new HashSet<>();
     private Set<Path> solutions = new TreeSet<>();
     private Set<Path> hidden = new TreeSet<>();
-    private Set<Path> hiddenTests = new TreeSet<>();
+    private Set<Path> hiddenCallFiles = new TreeSet<>();
     private Set<Path> hiddenTestFiles = new TreeSet<>();
     
     public Annotations(Language language) {
@@ -104,9 +104,11 @@ public class Annotations {
                 if (a.key.equals("HIDE")) 
                     hidden.add(p);
                 if (a.key.equals("CALL HIDDEN"))
-                    hiddenTests.add(p); 
-                if (a.key.equals("HIDDEN"))
+                    hiddenCallFiles.add(p); 
+                if (a.key.equals("HIDDEN")) {
                     hiddenTestFiles.add(p); 
+                    hidden.add(p);
+                }
                 a.path = p;
                 annotations.add(a);
             }
@@ -121,8 +123,8 @@ public class Annotations {
         return Collections.unmodifiableSet(hidden);
     }
 
-    public Set<Path> getHiddenTests() {
-        return Collections.unmodifiableSet(hiddenTests);
+    public Set<Path> getHiddenCallFiles() {
+        return Collections.unmodifiableSet(hiddenCallFiles);
     }
 
     public Set<Path> getHiddenTestFiles() {

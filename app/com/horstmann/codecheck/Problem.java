@@ -308,13 +308,15 @@ public class Problem {
         boolean hasEdit = false;
         boolean hasShow = false;
         boolean hasTile = false;
+        boolean firstHide = false;
         for (int i = 0; i < lines.length && !hasTile && !hasEdit; i++) {
-            Annotations.Annotation ann = Annotations.parse(lines[i], start, end); 
-            if (ann.key.equals("EDIT")) hasEdit = true;
+            Annotations.Annotation ann = Annotations.parse(lines[i], start, end);
+            if (i == 0 && (ann.key.equals("HIDE") || ann.key.equals("HIDDEN"))) firstHide = true;
+            else if (ann.key.equals("EDIT")) hasEdit = true;
             else if (ann.key.equals("SHOW")) hasShow = true;
             else if (ann.key.equals("TILE")) hasTile = true;            
         }
-        if (lines.length == 0 || List.of("HIDE", "HIDDEN").contains(Annotations.parse(lines[0], start, end).key) && !hasShow && !hasEdit) {
+        if (lines.length == 0 || firstHide && !hasShow && !hasEdit) {
             EditorState state = new EditorState();          
             state.editors = new ArrayList<String>(); // Empty list means file is hidden
             return state;                   

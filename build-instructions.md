@@ -122,7 +122,8 @@ right-click on Remote Java Application, and select New Configuration.
 
 For the first configuration, specify:
 
--   Name:  Debug (Attach)
+-   Type: Remote Java Application
+-   Name:  Play Server
 -   Project: `play-codecheck`
 -   Connection type: Standard
 -   Host: `localhost`
@@ -130,7 +131,8 @@ For the first configuration, specify:
 
 For the second debug configuration, set:
 
--   Name:  Launch Main
+-   Type: Java Application
+-   Name: Command Line Tool
 -   Main class:
 
         com.horstmann.codecheck.Main
@@ -225,10 +227,10 @@ mkdir /tmp/submission
 cp samples/java/example1/*.java /tmp/submission
 cp -R samples/java/example1 /tmp/problem
 ```
-Set a breakpoint in app/com/horstmann/codecheck/Main.java and launch the debugger with the Launch Main configuration.
+Set a breakpoint in app/com/horstmann/codecheck/Main.java and launch the debugger with the Command Line Tool configuration.
 
-Building the Web Application
-----------------------------
+Building the Server
+-------------------
 
 Run the `play-codecheck` server:
 

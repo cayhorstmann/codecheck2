@@ -28,6 +28,8 @@ GET  /tracer/:repo/:problem		controllers.Files.tracer(request: Request, repo: St
 
 # Used by textbook-problems, cs046 Split, checknjs 
 GET  /fileData                controllers.Files.fileData(request: Request, repo: String ?= "ext", problem: String, ccid: String ?= null)
+GET  /fileData/:problem       controllers.Files.fileData(request: Request, repo: String ?= "ext", problem: String, ccid: String ?= null)
+GET  /fileData/:repo/:problem controllers.Files.fileData(request: Request, repo: String, problem: String, ccid: String ?= null)
 
 POST /uploadProblem                     controllers.Upload.uploadProblem(request: Request)
 POST /uploadFiles                       controllers.Upload.uploadFiles(request: Request)
