@@ -314,7 +314,7 @@ public class Problem {
             else if (ann.key.equals("SHOW")) hasShow = true;
             else if (ann.key.equals("TILE")) hasTile = true;            
         }
-        if (lines.length == 0 || Annotations.parse(lines[0], start, end).key.equals("HIDE") && !hasShow && !hasEdit) {
+        if (lines.length == 0 || List.of("HIDE", "HIDDEN").contains(Annotations.parse(lines[0], start, end).key) && !hasShow && !hasEdit) {
             EditorState state = new EditorState();          
             state.editors = new ArrayList<String>(); // Empty list means file is hidden
             return state;                   
