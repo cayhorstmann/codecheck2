@@ -466,7 +466,7 @@ public class HTMLReport implements Report {
     }
 
     public HTMLReport hiddenOutputMessage() {
-        caption("[hidden]");
+        output("[hidden]");
         return this; 
     }
 }

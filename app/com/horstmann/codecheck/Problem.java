@@ -446,17 +446,6 @@ public class Problem {
                     hiding = true;
                 if (hiding)
                     lines[i] = null;
-                if (ann.key.equals("SHOW")) {
-                    hiding = false;
-                    String showString = start + "SHOW";
-                    int n1 = lines[i].indexOf(showString);
-                    int n2 = showString.length();
-                    int n3 = lines[i].lastIndexOf(end);
-                    if (n1 + n2 < n3)
-                        lines[i] = lines[i].substring(0, n1) + lines[i].substring(n1 + n2 + 1, n3);
-                    else
-                        lines[i] = null;
-                }
             }
         }
         // Emit final section

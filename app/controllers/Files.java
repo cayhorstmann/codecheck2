@@ -60,6 +60,9 @@ public class Files extends Controller {
             logger.error("filesHTML2: Cannot load problem " + repo + "/" + " " + problemName, e);
             return badRequest("Cannot load problem " + repo + "/" + problemName);
         }
+        if (problemFiles.containsKey(Path.of("tracer.js")))
+        	return tracer2(ccid, problemFiles);
+        
         Problem problem = new Problem(problemFiles);
         ObjectNode data = models.Util.toJson(problem.getProblemData());
         data.put("url",  models.Util.prefix(request) + "/checkNJS");
@@ -125,7 +128,11 @@ public class Files extends Controller {
             logger.error("filesHTML: Cannot load problem " + repo + "/" + problemName, e);
             return badRequest("Cannot load problem " + repo + "/" + problemName);
         }
-        Problem problem = new Problem(problemFiles);
+        return tracer2(ccid, problemFiles);
+    }
+
+	private Result tracer2(String ccid, Map<Path, byte[]> problemFiles) throws IOException {
+		Problem problem = new Problem(problemFiles);
         Problem.DisplayData data = problem.getProblemData();
         StringBuilder result = new StringBuilder();
         result.append(tracerStart);
@@ -137,7 +144,7 @@ public class Files extends Controller {
 
         Http.Cookie newCookie = models.Util.buildCookie("ccid", ccid);
         return ok(result.toString()).withCookies(newCookie).as("text/html");
-    }
+	}
         
     // TODO: Caution--this won't do the right thing with param.js randomness when
     // used to prebuild UI like in ebook, Udacity
