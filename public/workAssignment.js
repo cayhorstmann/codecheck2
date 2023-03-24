@@ -141,8 +141,8 @@ window.addEventListener('DOMContentLoaded', () => {
 	    for (const b of buttonDiv.children)
 	      b.classList.remove('hc-disabled')
 	  }
-	  const tab = 'tab' in work ? work.tab : 0
 	} 
+    const tab = 'tab' in work ? work.tab : 0
     setTimeout(() => selectProblem(tab), 1000)
   }
   

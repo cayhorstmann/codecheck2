@@ -223,9 +223,9 @@ public class LTIAssignment extends Controller {
         ObjectNode resourceNode = assignmentConn.readJsonObjectFromDB("CodeCheckLTIResources", "resourceID", legacyResourceID); 
         if (resourceNode != null) resourceID = legacyResourceID;
         
-        //TODO: Query string legacy
+        //TODO: Query string id legacy
         if (assignmentID == null)
-            assignmentID = request.queryString("id").orElse(null);
+            assignmentID = request.queryString(bridge ? "url" : "id").orElse(null);
 
         if (assignmentID == null) {
             return badRequest("No assignment ID");
