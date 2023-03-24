@@ -133,7 +133,6 @@ window.addEventListener('DOMContentLoaded', () => {
     
   function activateProblemSelection() {
 	if (assignment.problems.length > 1) {  
-	  savedCopyCheckbox.checked = true 
 	  if (useTitles) {
 	    select.disabled = false      
 	    buttonDiv.children[1].classList.remove('hc-disabled')
@@ -142,6 +141,7 @@ window.addEventListener('DOMContentLoaded', () => {
 	      b.classList.remove('hc-disabled')
 	  }
 	} 
+    savedCopyCheckbox.checked = true 
     const tab = 'tab' in work ? work.tab : 0
     setTimeout(() => selectProblem(tab), 1000)
   }
