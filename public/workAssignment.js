@@ -102,7 +102,10 @@ window.addEventListener('DOMContentLoaded', () => {
   let select = undefined
   
   function initializeProblemSelectorUI() {
-	if (assignment.problems.length === 1) return 
+	if (assignment.problems.length === 1) {
+	  document.getElementById('abovebuttons').style.display = 'none'
+	  return
+    } 
 		
     buttonDiv = document.createElement('div')
     buttonDiv.id = 'buttons'
@@ -132,14 +135,12 @@ window.addEventListener('DOMContentLoaded', () => {
   }
     
   function activateProblemSelection() {
-	if (assignment.problems.length > 1) {  
-	  if (useTitles) {
-	    select.disabled = false      
-	    buttonDiv.children[1].classList.remove('hc-disabled')
-	  } else {
-	    for (const b of buttonDiv.children)
-	      b.classList.remove('hc-disabled')
-	  }
+	if (useTitles) {
+	  select.disabled = false      
+	  buttonDiv.children[1].classList.remove('hc-disabled')
+	} else if (assignment.problems.length > 1) {
+	  for (const b of buttonDiv.children)
+	    b.classList.remove('hc-disabled')
 	} 
     savedCopyCheckbox.checked = true 
     const tab = 'tab' in work ? work.tab : 0
