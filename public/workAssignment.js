@@ -102,6 +102,8 @@ window.addEventListener('DOMContentLoaded', () => {
   let select = undefined
   
   function initializeProblemSelectorUI() {
+	if (assignment.problems.length === 1) return 
+		
     buttonDiv = document.createElement('div')
     buttonDiv.id = 'buttons'
     document.body.appendChild(buttonDiv)      
@@ -118,6 +120,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   
   function addProblemSelector(index, title) {
+	if (assignment.problems.length === 1) return  
     const number = '' + (index + 1)
     if (useTitles) {
       const option = document.createElement('option')
@@ -129,15 +132,17 @@ window.addEventListener('DOMContentLoaded', () => {
   }
     
   function activateProblemSelection() {
-    savedCopyCheckbox.checked = true 
-    if (useTitles) {
-      select.disabled = false      
-      buttonDiv.children[1].classList.remove('hc-disabled')
-    } else {
-      for (const b of buttonDiv.children)
-        b.classList.remove('hc-disabled')
-    }
-    const tab = 'tab' in work ? work.tab : 0 
+	if (assignment.problems.length > 1) {  
+	  savedCopyCheckbox.checked = true 
+	  if (useTitles) {
+	    select.disabled = false      
+	    buttonDiv.children[1].classList.remove('hc-disabled')
+	  } else {
+	    for (const b of buttonDiv.children)
+	      b.classList.remove('hc-disabled')
+	  }
+	  const tab = 'tab' in work ? work.tab : 0
+	} 
     setTimeout(() => selectProblem(tab), 1000)
   }
   
@@ -155,7 +160,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (index < 0 || index >= assignment.problems.length) return
     if (useTitles) {
       select.selectedIndex = index      
-    } else {
+    } else if (assignment.problems.length > 1) {
       for (let i = 0; i < buttonDiv.children.length; i++)
         if (i === index)
           buttonDiv.children[i].classList.add('active')
@@ -177,7 +182,7 @@ window.addEventListener('DOMContentLoaded', () => {
   function updateScoreInProblemSelector(index, score) {
     if (useTitles) {
       updateScoreInElementText(select.children[index], score)            
-    } else {
+    } else if (assignment.problems.length > 1) {
       updateScoreInElementText(buttonDiv.children[index], score)
     }
   }

@@ -186,8 +186,22 @@ public class LTIAssignment extends Controller {
         assignmentNode.put("saveURL", "/lti/saveAssignment");       
         return ok(views.html.editAssignment.render(assignmentNode.toString(), false));      
     }
+
+    private static ObjectNode bridgeAssignment(String url) {
+    	ObjectNode assignment = JsonNodeFactory.instance.objectNode();
+    	assignment.put("id", url);
+    	assignment.put("editKey", "");
+    	ArrayNode groups = JsonNodeFactory.instance.arrayNode();
+    	ArrayNode problems = JsonNodeFactory.instance.arrayNode();
+    	ObjectNode problem = JsonNodeFactory.instance.objectNode();
+    	problem.put("url", url);
+    	problems.add(problem);
+    	groups.add(problems);
+    	assignment.set("problems", groups);
+    	return assignment;
+    }
     
-    public Result launch(Http.Request request, String assignmentID) throws IOException {    
+    public Result launch(Http.Request request, String assignmentID, boolean bridge) throws IOException {    
         Map<String, String[]> postParams = request.body().asFormUrlEncoded();
         if (!lti.validate(request)) {
             return badRequest("Failed OAuth validation");
@@ -216,8 +230,8 @@ public class LTIAssignment extends Controller {
         if (assignmentID == null) {
             return badRequest("No assignment ID");
         } 
+        ObjectNode assignmentNode = bridge ? bridgeAssignment(assignmentID) : assignmentConn.readJsonObjectFromDB("CodeCheckAssignments", "assignmentID", assignmentID);
         if (isInstructor(postParams)) {     
-            ObjectNode assignmentNode = assignmentConn.readJsonObjectFromDB("CodeCheckAssignments", "assignmentID", assignmentID);
             if (assignmentNode == null) return badRequest("Assignment not found");
             ArrayNode groups = (ArrayNode) assignmentNode.get("problems");
             assignmentNode.set("problems", groups.get(0));
@@ -236,7 +250,6 @@ public class LTIAssignment extends Controller {
                 .withNewSession()
                 .addingToSession(request, "user", userLMSID);
         } else { // Student
-            ObjectNode assignmentNode = assignmentConn.readJsonObjectFromDB("CodeCheckAssignments", "assignmentID", assignmentID);
             if (assignmentNode == null) return badRequest("Assignment not found");
             ArrayNode groups = (ArrayNode) assignmentNode.get("problems");
             assignmentNode.set("problems", groups.get(Math.abs(userID.hashCode()) % groups.size()));

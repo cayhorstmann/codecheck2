@@ -80,11 +80,13 @@ POST /saveComment          controllers.Assignment.saveComment(request: Request)
 POST /saveWork                controllers.Assignment.saveWork(request: Request)
 
 # LTI Launch (legacy with query param for ID)
-POST /lti/assignment          controllers.LTIAssignment.launch(request: Request, assignmentID: String = null)
+POST /lti/assignment          controllers.LTIAssignment.launch(request: Request, assignmentID: String = null, bridge: Boolean = false)
 # LTI Launch 
-POST /assignment/:assignmentID controllers.LTIAssignment.launch(request: Request, assignmentID: String)
+POST /assignment/:assignmentID controllers.LTIAssignment.launch(request: Request, assignmentID: String, bridge: Boolean = false)
 # LTI Launch, in case someone posts a viewAssignment URL instead of cloning it 
-POST /viewAssignment/:assignmentID controllers.LTIAssignment.launch(request: Request, assignmentID: String)
+POST /viewAssignment/:assignmentID controllers.LTIAssignment.launch(request: Request, assignmentID: String, bridge: Boolean = false)
+# Bridge
+POST /lti/bridge         controllers.LTIAssignment.launch(request: Request, assignmentID: String = null, bridge: Boolean = true)
 
 # Student saves work 
 POST /lti/saveWork            controllers.LTIAssignment.saveWork(request: Request)
