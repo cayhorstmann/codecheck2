@@ -58,28 +58,24 @@ window.addEventListener('DOMContentLoaded', () => {
     updateScoreInElementText(document.getElementById('heading'), result, explanation)    
   }
   
-  function adjustDocHeight(iframe, request) {
-    console.log({frame: iframeKey.get(iframe), oldHeight: iframe.scrollHeight, newHeight: request.param.docHeight })
-    const newHeight = request.param.docHeight;
+  function adjustDocHeight(iframe, newHeight) {
+    // console.log({frame: iframeKey.get(iframe), oldHeight: iframe.scrollHeight, newHeight })
     if (iframe.scrollHeight < newHeight)
       iframe.style.height = newHeight + 'px'
   }
 
-  function restoreStateOfProblem(iframe, request) {
+  function getStateOfProblem(iframe) {
     let key = iframeKey.get(iframe) 
-    if (key in work.problems) {
-      iframe.contentWindow.postMessage({ request, param: work.problems[key].state }, '*');
-    } else {
-      iframe.contentWindow.postMessage({ request, param: null }, '*')
-    }
-    updateScoreDisplay();     
+    updateScoreDisplay(); // TODO: Why?         
+    if (key in work.problems) return work.problems[key].state
+    else return null // TODO: Why not undefined
   }
 
-  async function sendScoreAndState(iframe, request) {    
+  async function sendScoreAndState(iframe, score, state) {    
     if (!assignment.isStudent) return // Viewing as instructor
     let key = iframeKey.get(iframe)  
     // Don't want qid which is also in request.param
-    work.problems[key] = { score: request.param.score, state: request.param.state }
+    work.problems[key] = { score, state }
     updateScoreDisplay();     
     try {
       responseDiv.textContent = ''
@@ -204,11 +200,21 @@ window.addEventListener('DOMContentLoaded', () => {
   window.addEventListener("message", event => {
     let iframe = sendingIframe(event)
     if (event.data.query === 'docHeight') 
-      adjustDocHeight(iframe, event.data)
-    else if (event.data.query === 'retrieve') 
-      restoreStateOfProblem(iframe, event.data)      
+      adjustDocHeight(iframe, event.data.param.docHeight)
+    else if (event.data.query === 'retrieve') {
+      const state = getStateOfProblem(iframe)      
+      iframe.contentWindow.postMessage({ request: event.data, param: state }, '*')
+    }
     else if (event.data.query === 'send') 
-      sendScoreAndState(iframe, event.data)
+      sendScoreAndState(iframe, event.data.param.score, event.data.param.state)
+    else if (event.data.subject === 'SPLICE.frameResize')
+      adjustDocHeight(iframe, event.data.height)
+    else if (event.data.subject === 'SPLICE.reportScoreAndState')
+      sendScoreAndState(iframe, event.data.score, event.data.state)
+    else if (event.data.subject === 'SPLICE.getState') {
+      const state = getStateOfProblem(iframe)
+      iframe.contentWindow.postMessage({ subject: 'SPLICE.getState.response', message_id: event.data.message_id, state }, '*')      
+    }    
   }, false);
   
   /*
