@@ -194,7 +194,7 @@ public class LTIAssignment extends Controller {
     	ArrayNode groups = JsonNodeFactory.instance.arrayNode();
     	ArrayNode problems = JsonNodeFactory.instance.arrayNode();
     	ObjectNode problem = JsonNodeFactory.instance.objectNode();
-    	problem.put("url", url);
+    	problem.put("URL", url);
     	problems.add(problem);
     	groups.add(problems);
     	assignment.set("problems", groups);
