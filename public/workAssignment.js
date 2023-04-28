@@ -243,6 +243,10 @@ window.addEventListener('DOMContentLoaded', () => {
     addProblemSelector(i, assignment.problems[i].title)
   }
   
+  if (assignment.noHeader) {
+	  document.getElementsByTagName('details')[0].style.display = 'none'
+  }
+
   if (assignment.isStudent) {
     if('deadline' in assignment){
       document.getElementById('deadline').textContent = "Deadline:"

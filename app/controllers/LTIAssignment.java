@@ -191,7 +191,8 @@ public class LTIAssignment extends Controller {
     	ObjectNode assignment = JsonNodeFactory.instance.objectNode();
     	assignment.put("id", url);
     	assignment.put("editKey", "");
-    	ArrayNode groups = JsonNodeFactory.instance.arrayNode();
+    	assignment.put("noHeader", true); // TODO for now
+        ArrayNode groups = JsonNodeFactory.instance.arrayNode();
     	ArrayNode problems = JsonNodeFactory.instance.arrayNode();
     	ObjectNode problem = JsonNodeFactory.instance.objectNode();
     	problem.put("URL", url);
@@ -230,7 +231,8 @@ public class LTIAssignment extends Controller {
         if (assignmentID == null) {
             return badRequest("No assignment ID");
         } 
-        ObjectNode assignmentNode = bridge ? bridgeAssignment(assignmentID) : assignmentConn.readJsonObjectFromDB("CodeCheckAssignments", "assignmentID", assignmentID);
+        ObjectNode assignmentNode = bridge ? bridgeAssignment(assignmentID) 
+        		: assignmentConn.readJsonObjectFromDB("CodeCheckAssignments", "assignmentID", assignmentID);
         if (isInstructor(postParams)) {     
             if (assignmentNode == null) return badRequest("Assignment not found");
             ArrayNode groups = (ArrayNode) assignmentNode.get("problems");
