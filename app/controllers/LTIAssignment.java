@@ -217,6 +217,10 @@ public class LTIAssignment extends Controller {
 
         String userLMSID = toolConsumerID + "/" + userID;
 
+        //TODO: Query string id legacy
+        if (assignmentID == null)
+            assignmentID = request.queryString(bridge ? "url" : "id").orElse(null);
+
         ObjectNode ltiNode = JsonNodeFactory.instance.objectNode();
         // TODO: In order to facilitate search by assignmentID, it would be better if this was the other way around
         String resourceID = toolConsumerID + "/" + contextID + " " + assignmentID; 
@@ -224,10 +228,6 @@ public class LTIAssignment extends Controller {
         ObjectNode resourceNode = assignmentConn.readJsonObjectFromDB("CodeCheckLTIResources", "resourceID", legacyResourceID); 
         if (resourceNode != null) resourceID = legacyResourceID;
         
-        //TODO: Query string id legacy
-        if (assignmentID == null)
-            assignmentID = request.queryString(bridge ? "url" : "id").orElse(null);
-
         if (assignmentID == null) {
             return badRequest("No assignment ID");
         } 
