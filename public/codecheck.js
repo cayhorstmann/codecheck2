@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function () {
       // editors[k].setOption('enableLiveAutocompletion', false);
       // editors[k].setOption('enableSnippets', true);
       editors[k].setOption('tabSize', 3);
-      editors[k].setUseSoftTabs(true);
+      editors[k].setUseSoftTabs(false);
       editors[k].setOption('useWorker', true);
       editors[k].setOption('highlightActiveLine', false);
       editors[k].setOption('highlightGutterLine', false);
