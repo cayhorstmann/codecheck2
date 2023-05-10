@@ -113,7 +113,7 @@ if (window.self !== window.top) {
           })
       element = interactiveElements[0]
       sendDocHeight()
-      document.body.style.overflow = 'hidden'
+      // document.body.style.overflow = 'hidden'
       // ResizeObserver did not work         
       const mutationObserver = new MutationObserver(sendDocHeight);
     mutationObserver.observe(element === undefined ? document.body : element, { childList: true, subtree: true })    

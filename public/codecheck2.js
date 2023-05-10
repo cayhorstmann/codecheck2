@@ -143,8 +143,8 @@ document.addEventListener('DOMContentLoaded', function () {
       }, SEND_DOCHEIGHT_DELAY)
     }  
 
-    document.body.style.height = '100%'
-    document.body.style.overflow = 'hidden'
+    // document.body.style.height = '100%'
+    // document.body.style.overflow = 'hidden'
     // ResizeObserver did not work          
     const mutationObserver = new MutationObserver(sendDocHeight);
     mutationObserver.observe(document.documentElement, { childList: true, subtree: true })    
