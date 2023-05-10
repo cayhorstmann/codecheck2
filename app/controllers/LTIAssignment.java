@@ -202,7 +202,14 @@ public class LTIAssignment extends Controller {
     	return assignment;
     }
     
-    public Result launch(Http.Request request, String assignmentID, boolean bridge) throws IOException {    
+    private static Pattern isBridgeAssignment = Pattern.compile("^https?://.*$");
+    
+    private ObjectNode getAssignmentNode(String assignmentID) throws IOException {
+    	if (isBridgeAssignment.matcher(assignmentID).matches()) return bridgeAssignment(assignmentID);
+    	else return assignmentConn.readJsonObjectFromDB("CodeCheckAssignments", "assignmentID", assignmentID); 
+    }
+    
+    public Result launch(Http.Request request, String assignmentID) throws IOException {    
         Map<String, String[]> postParams = request.body().asFormUrlEncoded();
         if (!lti.validate(request)) {
             return badRequest("Failed OAuth validation");
@@ -217,9 +224,10 @@ public class LTIAssignment extends Controller {
 
         String userLMSID = toolConsumerID + "/" + userID;
 
-        //TODO: Query string id legacy
-        if (assignmentID == null)
-            assignmentID = request.queryString(bridge ? "url" : "id").orElse(null);
+        if (assignmentID == null) //TODO: Query string id legacy
+            assignmentID = request.queryString("id").orElse(null);
+        if (assignmentID == null) // Bridge
+            assignmentID = request.queryString("url").orElse(null);
 
         ObjectNode ltiNode = JsonNodeFactory.instance.objectNode();
         // TODO: In order to facilitate search by assignmentID, it would be better if this was the other way around
@@ -231,8 +239,7 @@ public class LTIAssignment extends Controller {
         if (assignmentID == null) {
             return badRequest("No assignment ID");
         } 
-        ObjectNode assignmentNode = bridge ? bridgeAssignment(assignmentID) 
-        		: assignmentConn.readJsonObjectFromDB("CodeCheckAssignments", "assignmentID", assignmentID);
+        ObjectNode assignmentNode = getAssignmentNode(assignmentID);
         if (isInstructor(postParams)) {     
             if (assignmentNode == null) return badRequest("Assignment not found");
             ArrayNode groups = (ArrayNode) assignmentNode.get("problems");
@@ -336,7 +343,7 @@ public class LTIAssignment extends Controller {
             submissionNode.put("score", problemsNode.get(problemID).get("score").asDouble());
             assignmentConn.writeJsonObjectToDB("CodeCheckSubmissions", submissionNode);
             
-            ObjectNode assignmentNode = assignmentConn.readJsonObjectFromDB("CodeCheckAssignments", "assignmentID", assignmentID);
+            ObjectNode assignmentNode = getAssignmentNode(assignmentID);
             if (assignmentNode.has("deadline")) {
                 try {
                     Instant deadline = Instant.parse(assignmentNode.get("deadline").asText());
@@ -396,7 +403,7 @@ public class LTIAssignment extends Controller {
         String resourceID = work.get("assignmentID").asText();
         String assignmentID = assignmentOfResource(resourceID); 
         
-        ObjectNode assignmentNode = assignmentConn.readJsonObjectFromDB("CodeCheckAssignments", "assignmentID", assignmentID);
+        ObjectNode assignmentNode = getAssignmentNode(assignmentID);
         double score = Assignment.score(assignmentNode, work);
         result.put("score", score);     
         
