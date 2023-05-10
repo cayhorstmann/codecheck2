@@ -265,7 +265,7 @@ public class LTIProblem extends Controller {
             result.set("state", mapper.readTree(result.get("state").asText()));
             return ok(result);
         } catch (Exception e) {
-            logger.error("retrieve: Cannot retrieve submission " + submissionID + " " + e.getMessage());
+            logger.error("retrieve: Cannot retrieve submission " + submissionID + " " + e.getClass() + " " + e.getMessage());
             return badRequest("retrieve: Cannot retrieve submission " + submissionID);
         }
     }   
