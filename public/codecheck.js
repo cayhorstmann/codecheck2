@@ -104,7 +104,8 @@ document.addEventListener('DOMContentLoaded', function () {
       // editors[k].setOption('enableLiveAutocompletion', false);
       // editors[k].setOption('enableSnippets', true);
       editors[k].setOption('tabSize', 3);
-      editors[k].setUseSoftTabs(false);
+      // TODO: Compute tab size from source
+      // editors[k].setUseSoftTabs(false); // TODO
       editors[k].setOption('useWorker', true);
       editors[k].setOption('highlightActiveLine', false);
       editors[k].setOption('highlightGutterLine', false);
@@ -296,8 +297,8 @@ document.addEventListener('DOMContentLoaded', function () {
   })
   
   if (inIframe()) {
-    document.body.style.height = '100%'
-    document.body.style.overflow = 'hidden'
+    // document.body.style.height = '100%'
+    // document.body.style.overflow = 'hidden'
     // ResizeObserver did not work          
     const mutationObserver = new MutationObserver(sendDocHeight);
     mutationObserver.observe(document.documentElement, { childList: true, subtree: true })    
