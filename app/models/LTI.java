@@ -120,8 +120,8 @@ public class LTI {
         consumer.setAdditionalParameters(params);        
         consumer.sign(request);         
 
-        logger.info("Request after signing: {}", consumer.getRequestParameters());
-        logger.info("XML: {}", xml);
+        logger.info("Request after signing: {}", new java.util.TreeMap<>(consumer.getRequestParameters()));
+        logger.info("URL: {}, XML: {}", url, xml);
 
         // POST the xml to the grade passback url
         request.setDoOutput(true);
