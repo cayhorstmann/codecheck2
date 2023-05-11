@@ -60,6 +60,10 @@ window.addEventListener('DOMContentLoaded', () => {
   
   function adjustDocHeight(iframe, newHeight) {
     // console.log({frame: iframeKey.get(iframe), oldHeight: iframe.scrollHeight, newHeight })
+    if ('chrome' in window) { // https://stackoverflow.com/questions/4565112/javascript-how-to-find-out-if-the-user-browser-is-chrome
+      const CHROME_FUDGE = 16 // to prevent scroll bars in Chrome
+      newHeight += CHROME_FUDGE
+	}
     if (iframe.scrollHeight < newHeight)
       iframe.style.height = newHeight + 'px'
   }
