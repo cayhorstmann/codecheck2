@@ -188,7 +188,7 @@ public class CodeCheck {
         Plan plan = new Main().run(submissionFiles, problemFiles, "html", metaData, resourceLoader);
         if (!isParametric)
             plan.writeSolutionOutputs(problemFiles);
-        saveProblem("ext", problem, problemFiles);
+        saveProblem("ext", problem, originalProblemFiles);
         return plan.getReport().getText(); 
     }
     
