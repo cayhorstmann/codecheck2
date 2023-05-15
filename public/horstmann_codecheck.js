@@ -1,3 +1,5 @@
+// Uses postData, createButton from util.js
+
 window.horstmann_codecheck = {
   setup: [],
 };
@@ -823,31 +825,48 @@ window.addEventListener('load', async function () {
         form.appendChild(fileObj)
       }  
       
-      submitButton = document.createElement('span')
-      submitButton.textContent = submitButtonLabel
-      submitButton.classList.add('hc-button')
-      submitButton.classList.add('hc-start')
-      submitButton.tabIndex = 0 
+	  submitButton = createButton('hc-start', submitButtonLabel, async function() {
+        response.textContent = 'Submitting...'
+        let params = {}
+        // Hidden inputs
+        for (const input of form.getElementsByTagName('input')) {
+          let name = input.getAttribute('name')
+          if (name !== null) 
+            params[name] = input.getAttribute('value')
+        }
+
+        for (const [filename, editor] of editors) {
+          editor.clearErrorAnnotations()
+          params[filename] = editor.getText()
+        }
+        
+        submitButton.classList.add('hc-disabled')
+        if (downloadButton !== undefined) downloadButton.style.display = 'none'
+        try {
+          const result = await postData(setup.url, params)
+          successfulSubmission(result)
+        } catch (e) {
+          response.innerHTML = `<div>Error: ${e.message}</div>` 
+		}
+		submitButton.classList.remove('hc-disabled');
+      })
+
       submitDiv.appendChild(submitButton);
 
       
-      let resetButton = document.createElement('span')
-      resetButton.textContent = _('Reset')
-      resetButton.classList.add('hc-button')
-      resetButton.classList.add('hc-start')
-      resetButton.tabIndex = 0
+      let resetButton = createButton('hc-start', _('Reset'), function() {
+        restoreState(element, initialState)
+        element.correct = 0;
+        response.innerHTML = ''
+        if (downloadButton !== undefined) downloadButton.style.display = 'none'
+      })
       submitDiv.appendChild(resetButton);
 
       if ('download' in horstmann_config) {
-        downloadButton = document.createElement('span')
-        downloadButton.textContent = _('Download')
-        downloadButton.classList.add('hc-button')
-        downloadButton.classList.add('hc-start')
-        downloadButton.tabIndex = 0
-        downloadButton.style.display = 'none'
-        downloadButton.addEventListener('click', () => {
-          horstmann_config.download('data:application/octet-stream;base64,' + downloadButton.data.zip, downloadButton.data.metadata.ID + '.signed.zip', 'application/octet-stream')
+        downloadButton = createButton('hc-start', _('Download'), () => {
+          horstmann_config.download('data:application/octet-stream;base64,' + downloadButton.data.zip, downloadButton.data.metadata.ID + '.signed.zip', 'application/octet-stream') 
         })
+        downloadButton.style.display = 'none'
         submitDiv.appendChild(downloadButton);
       }
       
@@ -872,12 +891,6 @@ window.addEventListener('load', async function () {
       element.appendChild(form)
             
       let initialState = getState();
-      resetButton.addEventListener('click', function() {
-        restoreState(element, initialState)
-        element.correct = 0;
-        response.innerHTML = ''
-        if (downloadButton !== undefined) downloadButton.style.display = 'none'
-      })
     }
 
     function getState() {
@@ -919,52 +932,6 @@ window.addEventListener('load', async function () {
       }
     }
     
-    function prepareSubmit(url) {
-      submitButton.addEventListener('click', async function() {
-        response.textContent = 'Submitting...'
-        let params = {}
-        // Hidden inputs
-        for (const input of form.getElementsByTagName('input')) {
-          let name = input.getAttribute('name')
-          if (name !== null) 
-            params[name] = input.getAttribute('value')
-        }
-
-        for (const [filename, editor] of editors) {
-          editor.clearErrorAnnotations()
-          params[filename] = editor.getText()
-        }
-        
-        submitButton.classList.add('hc-disabled')
-        if (downloadButton !== undefined) downloadButton.style.display = 'none'
-        try {
-          const result = await postData(url, params)
-          successfulSubmission(result)
-        } catch (e) {
-          response.innerHTML = `<div>Error: ${e.message}</div>` 
-		}
-		submitButton.classList.remove('hc-disabled');
-              
-/*
-        let xhr = new XMLHttpRequest()
-        xhr.withCredentials = true
-        xhr.timeout = 300000 // 5 minutes
-        xhr.open('POST', url);    
-        xhr.setRequestHeader('Content-Type', 'application/json');
-        xhr.onload = function() {
-          submitButton.classList.remove('hc-disabled');
-          if (xhr.status === 200) 
-            successfulSubmission(JSON.parse(xhr.responseText))
-          else 
-            response.innerHTML = 
-              '<div>Error Status: ' + xhr.status + ' ' + xhr.statusText + '</div>\n' +
-              '<div>Error Response: ' + xhr.responseText + '</div>\n';
-        }
-        xhr.send(JSON.stringify(params))
-*/
-      })
-    }
-
     // ..................................................................
     // Start of initElement
       
