@@ -4,7 +4,7 @@ window.horstmann_codecheck = {
 
 if (typeof ace !== 'undefined') { ace.config.set('themePath', 'script'); } 
 
-window.addEventListener('load', function () {
+window.addEventListener('load', async function () {
   'use strict';
 
   function createRearrange(fileName, setup) {
@@ -920,7 +920,7 @@ window.addEventListener('load', function () {
     }
     
     function prepareSubmit(url) {
-      submitButton.addEventListener('click', function() {
+      submitButton.addEventListener('click', async function() {
         response.textContent = 'Submitting...'
         let params = {}
         // Hidden inputs
@@ -937,7 +937,15 @@ window.addEventListener('load', function () {
         
         submitButton.classList.add('hc-disabled')
         if (downloadButton !== undefined) downloadButton.style.display = 'none'
-
+        try {
+          const result = await postData(url, params)
+          successfulSubmission(result)
+        } catch (e) {
+          response.innerHTML = `<div>Error: ${e.message}</div>` 
+		}
+		submitButton.classList.remove('hc-disabled');
+              
+/*
         let xhr = new XMLHttpRequest()
         xhr.withCredentials = true
         xhr.timeout = 300000 // 5 minutes
@@ -953,6 +961,7 @@ window.addEventListener('load', function () {
               '<div>Error Response: ' + xhr.responseText + '</div>\n';
         }
         xhr.send(JSON.stringify(params))
+*/
       })
     }
 
@@ -984,12 +993,10 @@ window.addEventListener('load', function () {
 	if ('requiredFiles' in setup)   
       initElement(elements[index], setup)
     else {
-	  // TODO Use document.currentScript (but not in this callback) instead of hardwiring URL
-	  // https://developer.mozilla.org/en-US/docs/Web/API/Document/currentScript
-	  // https://developer.mozilla.org/en-US/docs/Web/API/URL	
-	  fetch(`https://codecheck.io/fileData?repo=${setup.repo}&problem=${setup.problem}`)
-        .then((response) => response.json())
-        .then((data) => initElement(elements[index], { url: 'https://codecheck.io/checkNJS', ...data, ...setup }))
+	  const origin = new URL(window.location.href).origin
+	  const response = await fetch(`${origin}/fileData?repo=${setup.repo}&problem=${setup.problem}`)
+      const data = await response.json()
+      initElement(elements[index], { url: `${origin}/checkNJS`, ...data, ...setup })
     }	                
   }
 });

@@ -1,3 +1,5 @@
+// Uses postData from util.js
+
 window.horstmann_config = {
   inIframe: function () {
     try {
@@ -7,35 +9,9 @@ window.horstmann_config = {
     } 
   },
 
-  postData: async function(url = '', data = {}) {
-    const response = await fetch(url, {
-      method: 'POST', // *GET, POST, PUT, DELETE, etc.
-      mode: 'cors', // no-cors, *cors, same-origin
-      cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
-      credentials: 'include', // include, *same-origin, omit
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      redirect: 'follow', // manual, *follow, error
-      referrerPolicy: 'no-referrer', // no-referrer, *no-referrer-when-downgrade, origin, origin-when-cross-origin, same-origin, strict-origin, strict-origin-when-cross-origin, unsafe-url
-      body: JSON.stringify(data) // body data type must match "Content-Type" header
-    });
-    if (response.ok)
-      return await response.json() // parses JSON response into native JavaScript objects
-    else {
-      const body = await response.text()
-      if (response.status === 500) console.log(body)
-      const msg = 
-            response.status === 500 ? 'Server error' : 
-            response.status === 400 ? `Error: ${body}` : // Bad reqest
-            `Error ${response.status} ${response.statusText}: ${body}`    
-      throw new Error(msg)
-    }
-  },
-
   score_change_listener: (element, state, score) => {
     if ('lti' in horstmann_config) {
-      horstmann_config.postData(horstmann_config.lti.sendURL, { 
+      postData(horstmann_config.lti.sendURL, { 
         state, 
         score,
         lis_outcome_service_url: horstmann_config.lti.lis_outcome_service_url,
@@ -80,7 +56,7 @@ window.horstmann_config = {
   retrieve_state: async (element, callback) => {
     if ('lti' in horstmann_config) {
       try {
-        let response = await horstmann_config.postData(horstmann_config.lti.retrieveURL, {
+        let response = await postData(horstmann_config.lti.retrieveURL, {
           submissionID: horstmann_config.lti.submissionID
         })
         callback(element, response.state)

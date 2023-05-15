@@ -141,6 +141,7 @@ public class LTIProblem extends Controller {
                 "    <script src='/assets/ace/ace.js'></script>\n" +
                 "    <script src='/assets/ace/theme-kuroir.js'></script>\n" +
                 "    <script src='/assets/ace/theme-chrome.js'></script>\n" +
+                "    <script src='/assets/util.js'></script>\n" +
                 "    <script src='/assets/codecheck2.js'></script>\n" +
                 "    <script src='/assets/horstmann_codecheck.js'></script>\n" +
                 "    <link type='text/css' rel='stylesheet' href='/assets/codecheck.css'/>\n" + 
@@ -190,6 +191,7 @@ public class LTIProblem extends Controller {
             + "  <meta charset=\"utf-8\">\n"
             + "  <link href='https://horstmann.com/codecheck/css/codecheck_tracer.css' rel='stylesheet' type='text/css'/>  "
             + "  <title>CodeCheck Tracer</title>\n"
+            + "  <script src='/assets/util.js'></script>\n"
             + "  <script src='/assets/codecheck2.js'></script>\n"
             + "</head>\n"
             + "<body>\n";
