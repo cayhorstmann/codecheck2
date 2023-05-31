@@ -886,8 +886,6 @@ window.addEventListener('load', async function () {
       response.classList.add('codecheck-submit-response')
       form.appendChild(response)
       
-      prepareSubmit(setup.url);
-
       element.appendChild(form)
             
       let initialState = getState();
