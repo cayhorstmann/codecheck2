@@ -22,9 +22,15 @@ window.horstmann_config = {
     }
     else if (horstmann_config.inIframe()) {      
       const qid = horstmann_config.getInteractiveId(element) // TODO should be done by caller
-      const param = { state, score, qid }
-      const data = { query: 'send', param }
-      window.parent.postMessage(data, '*' )
+      // const param = { state, score, qid }
+      // const message = { query: 'send', param }
+      const message = {
+		subject: 'SPLICE.reportScoreAndState', 
+        message_id: generateUUID(),
+        score,
+        state 
+	  }
+      window.parent.postMessage(message, '*' )
     }
   },
 
@@ -68,10 +74,14 @@ window.horstmann_config = {
     else if (horstmann_config.inIframe()) {
       const nonce = horstmann_config.generateUUID()
       horstmann_config.nonceMap[nonce] = callback
-      const qid = horstmann_config.getInteractiveId(element) // TODO should be done by caller
-      const param = { qid } 
-      const data = { query: 'retrieve', param, nonce }
-      window.parent.postMessage(data, '*')
+      // const qid = horstmann_config.getInteractiveId(element) // TODO should be done by caller
+      // const param = { qid } 
+      // const message = { query: 'retrieve', param, nonce }
+      const message = {
+		subject: 'SPLICE.getState', 
+        message_id: generateUUID()
+	  } 
+      window.parent.postMessage(message, '*')
       const MESSAGE_TIMEOUT = 5000
       setTimeout(() => {
         if ((nonce in horstmann_config.nonceMap)) { 
@@ -112,9 +122,15 @@ document.addEventListener('DOMContentLoaded', function () {
       setTimeout(() => { 
         let newDocHeight = document.documentElement.scrollHeight + document.documentElement.offsetTop
         if (docHeight != newDocHeight) {
-          docHeight = newDocHeight
-          const data = { query: 'docHeight', param: { docHeight } }
-          window.parent.postMessage(data, '*' )
+          // docHeight = newDocHeight
+          // const message = { query: 'docHeight', param: { docHeight } }
+          const message = {
+			subject: 'lti.frameResize', 
+            message_id: generateUUID(),
+            height: newDocHeight,
+            width: document.documentElement.scrollWidth + document.documentElement.offsetLeft 
+		  }
+          window.parent.postMessage(message, '*' )
         } 
       }, SEND_DOCHEIGHT_DELAY)
     }  
