@@ -211,7 +211,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     else if (event.data.query === 'send') 
       sendScoreAndState(iframe, event.data.param.score, event.data.param.state)
-    else if (event.data.subject === 'SPLICE.frameResize')
+    else if (event.data.subject === 'lti.frameResize')
       adjustDocHeight(iframe, event.data.height)
     else if (event.data.subject === 'SPLICE.reportScoreAndState')
       sendScoreAndState(iframe, event.data.score, event.data.state)
