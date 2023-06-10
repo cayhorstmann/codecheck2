@@ -79,7 +79,7 @@ window.horstmann_config = {
       // const message = { query: 'retrieve', param, nonce }
       const message = {
 		subject: 'SPLICE.getState', 
-        message_id: generateUUID()
+        message_id: horstmann_config.generateUUID()
 	  } 
       window.parent.postMessage(message, '*')
       const MESSAGE_TIMEOUT = 5000
