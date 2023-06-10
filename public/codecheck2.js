@@ -26,7 +26,7 @@ window.horstmann_config = {
       // const message = { query: 'send', param }
       const message = {
 		subject: 'SPLICE.reportScoreAndState', 
-        message_id: generateUUID(),
+        message_id: horstmann_config.generateUUID(),
         score,
         state 
 	  }
@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', function () {
           // const message = { query: 'docHeight', param: { docHeight } }
           const message = {
 			subject: 'lti.frameResize', 
-            message_id: generateUUID(),
+            message_id: horstmann_config.generateUUID(),
             height: newDocHeight,
             width: document.documentElement.scrollWidth + document.documentElement.offsetLeft 
 		  }
