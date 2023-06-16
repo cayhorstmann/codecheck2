@@ -72,20 +72,20 @@ window.horstmann_config = {
       }
     }
     else if (horstmann_config.inIframe()) {
-      const nonce = horstmann_config.generateUUID()
-      horstmann_config.nonceMap[nonce] = callback
+      const message_id = horstmann_config.generateUUID()
+      horstmann_config.nonceMap[message_id] = callback
       // const qid = horstmann_config.getInteractiveId(element) // TODO should be done by caller
       // const param = { qid } 
       // const message = { query: 'retrieve', param, nonce }
       const message = {
 		subject: 'SPLICE.getState', 
-        message_id: horstmann_config.generateUUID()
+        message_id
 	  } 
       window.parent.postMessage(message, '*')
       const MESSAGE_TIMEOUT = 5000
       setTimeout(() => {
-        if ((nonce in horstmann_config.nonceMap)) { 
-          delete horstmann_config.nonceMap[nonce]
+        if ((message_id in horstmann_config.nonceMap)) { 
+          delete horstmann_config.nonceMap[message_id]
           callback(element, null)
         }
       }, MESSAGE_TIMEOUT)      
@@ -101,14 +101,11 @@ let _ = x => x
 document.addEventListener('DOMContentLoaded', function () {
   if (horstmann_config.inIframe()) {
     function receiveMessage(event) {
-      if (event.data.request) { // It's a response
-        const request = event.data.request    
-        if (request.query === 'retrieve') {
-          if (request.nonce in horstmann_config.nonceMap) {
-            // If not, already timed out
-            horstmann_config.nonceMap[request.nonce](null, event.data.param)
-            delete horstmann_config.nonceMap[request.nonce]
-          }
+      if (event.data.subject === 'SPLICE.getState.response') { 
+        if (event.data.message_id in horstmann_config.nonceMap) {
+          // If not, already timed out
+          horstmann_config.nonceMap[event.data.message_id](null, event.data.state)
+          delete horstmann_config.nonceMap[event.data.message_id]
         }
       }
     }
@@ -141,8 +138,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const mutationObserver = new MutationObserver(sendDocHeight);
     mutationObserver.observe(document.documentElement, { childList: true, subtree: true })    
     
-    const data = { query: 'retrieve', param: { } }  
-    window.parent.postMessage(data, '*' )
+    const message = {
+		subject: 'SPLICE.getState', 
+        message_id: horstmann_config.generateUUID()
+    } 
+    window.parent.postMessage(message, '*' )
   } else {
     // TODO: Ugly?
     // set in download.js, used when initializing the UI
