@@ -2,6 +2,7 @@ package controllers;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Base64;
@@ -24,6 +25,7 @@ import com.horstmann.codecheck.Util;
 import models.CodeCheck;
 import play.Logger;
 import play.libs.Json;
+import play.libs.Files.TemporaryFile;
 import play.libs.concurrent.HttpExecution;
 import play.mvc.Controller;
 import play.mvc.Http;
@@ -33,8 +35,7 @@ public class Check extends Controller {
     private CodecheckExecutionContext ccec; 
     @Inject private CodeCheck codeCheck;
     
-    
-    // Classic HTML report, used in Core Java for the Impatient 2e
+    // TODO: Legacy HTML report, used in Core Java for the Impatient 2e, 3e
     public CompletableFuture<Result> checkHTML(Http.Request request) throws IOException, InterruptedException {
         Map<String, String[]> params = request.body().asFormUrlEncoded();
         return CompletableFuture.supplyAsync(() -> {
@@ -73,6 +74,60 @@ public class Check extends Controller {
                 return internalServerError(Util.getStackTrace(ex));
             }
         }, HttpExecution.fromThread((Executor) ccec) /* ec.current() */);                        
+    }
+
+    // Core Java, run with input
+    public CompletableFuture<Result> run(Http.Request request) throws IOException, InterruptedException  {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                Map<String, String[]> params;
+	            Map<Path, String> submissionFiles = new TreeMap<>();
+	            String contentType = request.contentType().orElse("");
+		        if ("application/x-www-form-urlencoded".equals(contentType)) {
+		            params = request.body().asFormUrlEncoded();
+	                for (String key : params.keySet()) {
+	                    String value = params.get(key)[0];
+                        submissionFiles.put(Paths.get(key), value);
+	                }
+	                long startTime = System.nanoTime();         
+	                String report = codeCheck.run("Text", submissionFiles);
+	                double elapsed = (System.nanoTime() - startTime) / 1000000000.0;
+	                if (report == null || report.length() == 0) {
+	                    report = String.format("Timed out after %5.0f seconds\n", elapsed);
+	                }
+	                return ok(report).as("text/plain");
+		        } else if ("multipart/form-data".equals(contentType)) {
+		            play.mvc.Http.MultipartFormData<TemporaryFile> body = request.body().asMultipartFormData();
+		            for (var f : body.getFiles()) {
+		            	String name = f.getFilename();
+		                TemporaryFile tempZipFile = f.getRef();
+		                Path savedPath = tempZipFile.path();
+		                String contents = Util.read(savedPath);
+                        submissionFiles.put(Paths.get(name), contents);
+	                }
+	                long startTime = System.nanoTime();         
+	                String report = codeCheck.run("Text", submissionFiles);
+	                double elapsed = (System.nanoTime() - startTime) / 1000000000.0;
+	                if (report == null || report.length() == 0) {
+	                    report = String.format("Timed out after %5.0f seconds\n", elapsed);
+	                }
+	                return ok(report).as("text/plain");
+		        } else if ("application/json".equals(contentType)) {
+		            JsonNode json = request.body().asJson();
+		            Iterator<Entry<String, JsonNode>> iter = json.fields();
+		            while (iter.hasNext()) {
+		                Entry<String, JsonNode> entry = iter.next();
+		                submissionFiles.put(Paths.get(entry.getKey()), entry.getValue().asText());         
+		            };
+	                String report = codeCheck.run("JSON", submissionFiles);
+	                ObjectNode result = (ObjectNode) Json.parse(report);
+			        return ok(result).as("application/json");
+		        }
+		        else return internalServerError("Bad content type");
+            } catch (Exception ex) {
+            	return internalServerError(Util.getStackTrace(ex));
+            }	
+        }, HttpExecution.fromThread((Executor) ccec) /* ec.current() */); 
     }
             
     // From JS UI
@@ -131,8 +186,6 @@ public class Check extends Controller {
                     Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
                     ccid = ccidCookie.map(Http.Cookie::value).orElse(com.horstmann.codecheck.Util.createPronouncableUID());
                 };              
-                //Logger.of("com.horstmann.codecheck.check").info("checkNJS: " + requestParams);
-                //TODO last param should be submissionDir
                 String report = codeCheck.run(reportType, repo, problem, ccid, submissionFiles);
                 ObjectNode result = (ObjectNode) Json.parse(report);
                 String reportHTML = result.get("report").asText();

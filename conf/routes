@@ -45,6 +45,8 @@ GET	 /codecheck/files/:problem	controllers.Files.filesHTML(request: Request, rep
 POST /codecheck/check						controllers.Check.checkHTML(request: Request)
 # Used in Core Java for the Impatient 2e
 POST /check                     controllers.Check.checkHTML(request: Request)
+# Used in Core Java 13e/Core Java for the Impatient 4e
+POST /run                       controllers.Check.run(request: Request)
 
 # Assignments
 

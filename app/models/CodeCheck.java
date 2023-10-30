@@ -168,6 +168,22 @@ public class CodeCheck {
     }
     
     /**
+     * Run files with given input 
+     * @return the report of the run
+     */
+    public String run(String reportType, Map<Path, String> submissionFiles)
+            throws IOException, InterruptedException, NoSuchMethodException, ScriptException {
+        Map<Path, byte[]> problemFiles = new TreeMap<>();
+        for (var entry : submissionFiles.entrySet()) {
+        	var key = entry.getKey();
+        	problemFiles.put(key, entry.getValue().getBytes());
+        }
+        Properties metaData = new Properties();
+        Plan plan = new Main().run(submissionFiles, problemFiles, reportType, metaData, resourceLoader);
+        return plan.getReport().getText();
+    }    
+    
+    /**
         Runs CodeCheck for checking a problem submission. 
         Saves the problem and the precomputed solution runs.
      */

@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 import java.util.Set;
 
@@ -17,14 +18,19 @@ public class TextReport implements Report {
     private List<String> footnotes = new ArrayList<>();
 
     public TextReport(String title) {
+    	// TODO This version is only built by the client-side Ant script
         builder = new StringBuilder();
-        builder.append("codecheck version ");
-        builder.append(ResourceBundle.getBundle(
-                "com.horstmann.codecheck.codecheck").getString("version"));
-        builder.append(" ");
-        builder.append(" started ");
-        builder.append(new Date());
-        builder.append("\n\n");
+        try {
+	        builder.append("codecheck version ");
+	        builder.append(ResourceBundle.getBundle(
+	                "com.horstmann.codecheck.codecheck").getString("version"));
+	        builder.append(" ");
+	        builder.append(" started ");
+	        builder.append(new Date());
+	        builder.append("\n\n");
+        } catch (MissingResourceException e) {
+        	builder = new StringBuilder();
+        }
     }
 
     private TextReport add(CharSequence s) {
@@ -327,7 +333,7 @@ public class TextReport implements Report {
     }
 
     public TextReport comment(String key, String value) {
-        if (builder.charAt(builder.length() - 1) != '\n')
+        if (builder.length() > 0 && builder.charAt(builder.length() - 1) != '\n')
             builder.append('\n');
         builder.append("# ");
         builder.append(key);
