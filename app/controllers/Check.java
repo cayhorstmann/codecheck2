@@ -98,7 +98,9 @@ public class Check extends Controller {
 	                return ok(report).as("text/plain");
 		        } else if ("multipart/form-data".equals(contentType)) {
 		            play.mvc.Http.MultipartFormData<TemporaryFile> body = request.body().asMultipartFormData();
+		            
 		            for (var f : body.getFiles()) {
+	                    Logger.of("com.horstmann.codecheck.lti").info("f=" + f.getKey() + " " + f.getFilename());
 		            	String name = f.getFilename();
 		                TemporaryFile tempZipFile = f.getRef();
 		                Path savedPath = tempZipFile.path();
