@@ -28,6 +28,23 @@ This tool uses only the part of `play-codecheck` that deals with
 checking a problem (in the `com.horstmann.codecheck` package). The tool
 is called `codecheck`. It is created by the `cli/build.xml` Ant script.
 
+## Special Steps for Github Codespaces
+
+Make a new Codespace by cloning the repository `cayhorstmann/codecheck2`
+
+Open a terminal. Run 
+
+```
+sudo sed -i -e 's/root/ALL/' /etc/sudoers.d/codespace
+sudo cat /etc/sudoers.d/codespace
+```
+
+and verify that the contents is
+
+```
+codespace ALL=(ALL) NOPASSWD:ALL 
+```
+
 ## Install Codecheck dependencies
 
 These instructions are for Ubuntu 20.04LTS. If you are not running Ubuntu natively, run it in a virtual machine. If you were asked to use Github Codespaces, that should be set up for you. Otherwise, you need to set up your own virtual machine. These instructions should be helpful: https://horstmann.com/pfh/2021/vm.html
@@ -47,23 +64,6 @@ curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89
 sudo apt update
 sudo apt -y install sbt
 ```
-## Special Steps for Github Codespaces
-
-Make a new Codespace by cloning the repository `cayhorstmann/codecheck2`
-
-Open a terminal. Run 
-
-```
-sudo sed -i -e 's/root/ALL/' /etc/sudoers.d/codespace
-sudo cat /etc/sudoers.d/codespace
-```
-
-and verify that the contents is
-
-```
-codespace ALL=(ALL) NOPASSWD:ALL 
-```
-
 Building the Command Line Tool
 ------------------------------
 
