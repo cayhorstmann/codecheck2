@@ -162,7 +162,7 @@ Run
 
 Then open the base directory in Visual Studio Code. Visual Studio Code will read the project configuration from the Eclipse configuration.
 
-Install the Language Support for Java and Debugger for Java extensions into Visual Studio Code.
+Install the Language Support for Java (from Red Hat) and Debugger for Java (from Microsoft) extensions into Visual Studio Code.
 
 In Visual Studio Code, click on the Run and Debug (triangle and bug) icon on the left. Select Run → Add Configuration from the menu. The file `.vscode/launch.json` is opened up. Set it to the following contents:
 
