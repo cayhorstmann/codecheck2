@@ -14,7 +14,7 @@ public class JavaLanguage implements Language {
     
     @Override
     public boolean isUnitTest(Path fileName) {
-        return fileName.toString().matches(".*Test[0-9]*.java");
+        return fileName.toString().matches(".*[Tt]est[0-9]*.java");
     }
 
     private static Pattern mainPattern = Pattern

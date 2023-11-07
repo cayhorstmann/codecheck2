@@ -116,7 +116,7 @@ public interface Language {
         if (fileName == null) return false;
         String moduleName = moduleOf(fileName);
         if (moduleName == null) return false;
-        return moduleName.matches(".*Tester[0-9]*");
+        return moduleName.matches(".*[Tt]ester[0-9]*");
     }
 
     /**
