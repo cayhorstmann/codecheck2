@@ -79,7 +79,7 @@ public class RacketLanguage implements Language {
     
     @Override
     public boolean isUnitTest(Path fileName) {
-        return fileName.toString().matches(".*Test[0-9]*.rkt");
+        return fileName.toString().matches(".*(T|_t)est[0-9]*.rkt");
     }
 
    private static final Pattern successPattern = Pattern.compile("All (?<runs>[0-9]+) tests passed");
