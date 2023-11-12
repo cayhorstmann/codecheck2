@@ -576,21 +576,33 @@ window.addEventListener('load', async function () {
   }        
 
   function createAceEditors(fileName, setup) {
-    let editorsDiv = document.createElement('div')        
+    let editorsDiv = document.createElement('div')  
+    let firstTime = false;      
+    editorsDiv.id = 'myEditorsDiv';
     function initialize() {
       let editorCount = 0;
       let update = function() {
         let totalLines = 0;
         for (const editorDiv of editorsDiv.children) {
+
           let editor = ace.edit(editorDiv)
           let editorSession = editor.getSession()
           editorSession.clearAnnotations()
           editorSession.setOption('firstLineNumber', totalLines + 1)
           let lines = editorSession.getDocument().getLength()
+          console.log("does this get called when we edit the file?")
           editor.setOptions({
             minLines: lines,
-            maxLines: lines
+            maxLines: lines 
           })        
+          if (firstTime === false) {
+            // if firstTime is false then we are going to set the editor lines as a fixed number?
+            editor.setOptions({
+              minLines: lines,
+              maxLines: 1
+            })
+          }
+          firstTime = true;
           editor.resize()
           totalLines += lines
         }
@@ -765,6 +777,9 @@ window.addEventListener('load', async function () {
       let submitDiv = document.createElement('div')
       submitDiv.classList.add('codecheckSubmit')
       let submitButtonLabel = _('CodeCheck')
+
+      let expandDiv = document.createElement('div')
+      expandDiv.classList.add('expand')
       
       let directoryPrefix = setup.prefix ? setup.prefix + '/' : '';
       let inputPresent = false;
@@ -824,6 +839,33 @@ window.addEventListener('load', async function () {
         setupAceEditor(editorDiv, editor, fileName, /*readonly*/ true)        
         form.appendChild(fileObj)
       }  
+
+    // expandButton = createButton('hc-start', expandButtonLabel, async function() {
+
+    // })
+    const expandButton = createButton('hc-command', 'Expand', expandButtonClickHandler);
+    function expandButtonClickHandler() {
+      console.log("button has been clicked (log)")
+      let myEditorsDiv = document.getElementById('myEditorsDiv');
+
+      let totalLines = 0;
+      for (const editorDiv of myEditorsDiv.children) {
+        let editor = ace.edit(editorDiv)
+        let editorSession = editor.getSession()
+        editorSession.clearAnnotations()
+        editorSession.setOption('firstLineNumber', totalLines + 1)
+        let lines = editorSession.getDocument().getLength()
+        editor.setOptions({
+          minLines: lines,
+          maxLines: lines
+        })        
+        editor.resize()
+        totalLines += lines
+      }
+
+      
+
+    }
       
 	  submitButton = createButton('hc-start', submitButtonLabel, async function() {
         response.textContent = 'Submitting...'
@@ -852,6 +894,8 @@ window.addEventListener('load', async function () {
       })
 
       submitDiv.appendChild(submitButton);
+      submitDiv.appendChild(expandButton);
+      // expandDiv.appendChild(expandButton)
 
       
       let resetButton = createButton('hc-start', _('Reset'), function() {
