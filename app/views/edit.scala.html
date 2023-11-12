@@ -11,7 +11,7 @@
     <div>
  @for(((k, v), i) <- files.toSeq.zipWithIndex) {
     <div id="item@(i + 1)">
-    <p>File name: <input type="text" id="filename@(i + 1)" name="filename@(i + 1)" size="25" value="@k"/> 
+    <p>File name is this going to change?: <input type="text" id="filename@(i + 1)" name="filename@(i + 1)" size="25" value="@k"/> 
     <button id="delete@(i + 1)" type="button">Delete</button>
     </p>
     <p><textarea id="contents@(i + 1)" name="contents@(i + 1)" rows="24" cols="80">@v</textarea></p>
