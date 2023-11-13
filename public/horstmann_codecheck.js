@@ -840,9 +840,6 @@ window.addEventListener('load', async function () {
         form.appendChild(fileObj)
       }  
 
-    // expandButton = createButton('hc-start', expandButtonLabel, async function() {
-
-    // })
     const expandButton = createButton('hc-command', 'Expand', expandButtonClickHandler);
     function expandButtonClickHandler() {
       console.log("button has been clicked (log)")
