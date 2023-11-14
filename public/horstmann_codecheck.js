@@ -841,29 +841,51 @@ window.addEventListener('load', async function () {
       }  
 
     const expandButton = createButton('hc-command', 'Expand', expandButtonClickHandler);
+    let toggle = true;
+    // expandButton.addEventListener('click', toggleExpandCollapse);
     function expandButtonClickHandler() {
-      console.log("button has been clicked (log)")
       let myEditorsDiv = document.getElementById('myEditorsDiv');
 
-      let totalLines = 0;
-      for (const editorDiv of myEditorsDiv.children) {
-        let editor = ace.edit(editorDiv)
-        let editorSession = editor.getSession()
-        editorSession.clearAnnotations()
-        editorSession.setOption('firstLineNumber', totalLines + 1)
-        let lines = editorSession.getDocument().getLength()
-        editor.setOptions({
-          minLines: lines,
-          maxLines: lines
-        })        
-        editor.resize()
-        totalLines += lines
-      }
+      if (toggle) {
+        console.log("does it enter toggle? ");
+        toggle = false
+        let totalLines = 0;
+        for (const editorDiv of myEditorsDiv.children) {
+          let editor = ace.edit(editorDiv)
+          let editorSession = editor.getSession()
+          editorSession.clearAnnotations()
+          editorSession.setOption('firstLineNumber', totalLines + 1)
+          let lines = editorSession.getDocument().getLength()
+          editor.setOptions({
+            minLines: lines,
+            maxLines: lines
+          })        
+          editor.resize()
+          totalLines += lines
+          
+        }
+        // expandButton.textContent('Expand');
 
-      
-
+      } else {
+        toggle = true
+        let totalLines = 0;
+        for (const editorDiv of myEditorsDiv.children) {
+          let editor = ace.edit(editorDiv)
+          let editorSession = editor.getSession()
+          editorSession.clearAnnotations()
+          editorSession.setOption('firstLineNumber', totalLines + 1)
+          let lines = editorSession.getDocument().getLength()
+          editor.setOptions({
+            minLines: lines,
+            maxLines: 1
+          })        
+          editor.resize()
+          totalLines += lines
+        }
+        expandButton.textContent('Collapse');
+        }
     }
-      
+
 	  submitButton = createButton('hc-start', submitButtonLabel, async function() {
         response.textContent = 'Submitting...'
         let params = {}
