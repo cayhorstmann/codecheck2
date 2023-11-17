@@ -1,0 +1,4 @@
+//SOLUTION
+fn main() {
+    
+}

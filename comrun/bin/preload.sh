@@ -57,6 +57,9 @@ function compile {
     _SML)
       polyc -o prog $1 > $BASE/out/$DIR/_compile 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_compile
       ;;
+    _Rust)
+      rustc -g -o prog $1 > $BASE/out/$DIR/_compile 2>&1
+      ;;
     *)  
       echo Unknown language $LANG > $BASE/out/$DIR/_errors 
       ;;                      
@@ -86,7 +89,7 @@ function run {
   cd $BASE/$DIR
   mkdir -p $BASE/out/$ID
   case _"$LANG" in 
-    _C|_Cpp|_Dart|_Haskell)
+    _C|_Cpp|_Dart|_Haskell|_Rust)
       ulimit -d 100000 -f 1000 -n 100 -v 100000
       if [[ -e prog ]] ; then
         if [[ $INTERLEAVEIO == "true" ]] ; then
