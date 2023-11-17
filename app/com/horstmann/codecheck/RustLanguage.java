@@ -11,13 +11,13 @@ import java.util.ArrayList;
 
 public class RustLanguage implements Language {
     public String getExtension() { return "rs"; };
-    //Implement main pattern and the rest
-    //after that do preload.sh
 
+    // Potentially clean up this regex
     private static Pattern mainPattern = Pattern.compile("fn\\s+main\\s*\\([^)]*\\)\\s*(\\{\\s*)?");
     @Override public Pattern mainPattern() { return mainPattern; }
 
-    private static Pattern VARIABLE_DECL_PATTERN =Pattern.compile("let\\s+(mut)?(?<name>[A-Za-z][A-Za-z0-9]*)\\s*=\\s*(?<rhs>.+)");
+    // Modify variable declaration regex to support array data type specification
+    private static Pattern VARIABLE_DECL_PATTERN =Pattern.compile("let\\s*(mut\\s*)?(?<name>[A-Za-z][A-Za-z0-9]*)\\s*(:\\s*(((i|u)(8|16|32|64|128|size))|(f32|f64|bool|char|tup))\\s*)?=\\s*(?<rhs>.+);\\s*");
     @Override public Pattern variableDeclPattern() { return VARIABLE_DECL_PATTERN; }
 
     @Override
