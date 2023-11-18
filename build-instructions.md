@@ -160,7 +160,7 @@ Run
     sbt eclipse
     sbt compile
 
-Then open the base directory in Visual Studio Code. Visual Studio Code will read the project configuration from the Eclipse configuration.
+Visual Studio Code will read the project configuration from the Eclipse configuration.
 
 Install the Language Support for Java (from Red Hat) and Debugger for Java (from Microsoft) extensions into Visual Studio Code.
 
