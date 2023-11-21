@@ -17,8 +17,13 @@ public class RustLanguage implements Language {
     @Override public Pattern mainPattern() { return mainPattern; }
 
     // Modify variable declaration regex to support array data type specification
-    private static Pattern VARIABLE_DECL_PATTERN =Pattern.compile("let\\s*(mut\\s*)?(?<name>[A-Za-z][A-Za-z0-9]*)\\s*(:\\s*(((i|u)(8|16|32|64|128|size))|(f32|f64|bool|char|tup))\\s*)?=\\s*(?<rhs>.+);\\s*");
+    private static Pattern VARIABLE_DECL_PATTERN =Pattern.compile("let\\s*(mut\\s*)?(?<name>[A-Za-z][A-Za-z0-9]*)\\s*(:\\s*(((i|u)(8|16|32|64|128|size))|(f32|f64|bool|char)|(\\[(((i|u)(8|16|32|64|128|size))|(f32|f64|bool|char))\\s*;\\s*[0-9]*\\s*\\]))\\s*)?=\\s*(?<rhs>.+);\\s*");
     @Override public Pattern variableDeclPattern() { return VARIABLE_DECL_PATTERN; }
+
+    @Override
+    public boolean isUnitTest(Path fileName) {
+        return fileName.toString().matches(".*(T|_t)est[0-9]*.rs");
+    }
 
     @Override
     public Map<Path, String> writeTester(Path file, String contents, List<Calls.Call> calls, ResourceLoader resourceLoader) {
@@ -41,6 +46,11 @@ public class RustLanguage implements Language {
         testFiles.put(p, Util.join(lines, "\n"));
         return testFiles;
     }
+
+    private static final Pattern successPattern = Pattern.compile("test result: ok. (?<runs>[0-9]+) passed; (?<failures>[0-9]+) failed;");
+    @Override public Pattern unitTestSuccessPattern() { return successPattern; }
+    private static final Pattern failurePattern = Pattern.compile("test result: FAILED. [0-9]+ passed; (?<failures>[0-9]+) failed;");
+    @Override public Pattern unitTestFailurePattern() { return failurePattern; }  
 
     private static Pattern ERROR_PATTERN = Pattern.compile("(.+/)?(?<file>[^/]+\\.rs):(?<line>[0-9]+): error: (?<msg>.+)");
     @Override public Pattern errorPattern() { return ERROR_PATTERN; }

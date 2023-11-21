@@ -199,6 +199,10 @@ function unittest {
       ulimit -d 100000 -f 1000 -n 100 -v 1000000       
       timeout -v -s 9 ${TIMEOUT}s racket $MAIN 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_run
       ;;
+    _Rust)
+      rustc -o prog --test $1 >> $BASE/out/$DIR/_compile
+      ./prog > $BASE/out/$DIR/_run 
+      ;;
   esac     
 }
 
