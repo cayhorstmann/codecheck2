@@ -6,16 +6,15 @@ mod test {
 
      #[test]
      fn test_non_negative_squares() {
-         assert_eq!(square(5), 25);
+         for i in 0..100 {
+            assert_eq!(square(i), i * i);
+         }
      }
 
      #[test]
      fn test_negative_squares() {
-         assert_eq!(square(-3), 9);
-     }
-
-     #[test]
-     fn test_fail() {
-         assert_eq!(square(1), 0);
+         for i in -100..0 {
+            assert_eq!(square(i), i * i);
+         }
      }
 }

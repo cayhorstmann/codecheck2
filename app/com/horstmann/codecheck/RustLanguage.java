@@ -47,9 +47,9 @@ public class RustLanguage implements Language {
         return testFiles;
     }
 
-    private static final Pattern successPattern = Pattern.compile("test result: ok. (?<runs>[0-9]+) passed; (?<failures>[0-9]+) failed;");
+    private static final Pattern successPattern = Pattern.compile("running (?<runs>[0-9]+) tests?[\\s\\S]*test result: ok. [0-9]+ passed; (?<failures>[0-9]+) failed;");
     @Override public Pattern unitTestSuccessPattern() { return successPattern; }
-    private static final Pattern failurePattern = Pattern.compile("test result: FAILED. [0-9]+ passed; (?<failures>[0-9]+) failed;");
+    private static final Pattern failurePattern = Pattern.compile("running (?<runs>[0-9]+) tests?[\\s\\S]*test result: FAILED. [0-9]+ passed; (?<failures>[0-9]+) failed;");
     @Override public Pattern unitTestFailurePattern() { return failurePattern; }  
 
     private static Pattern ERROR_PATTERN = Pattern.compile("(.+/)?(?<file>[^/]+\\.rs):(?<line>[0-9]+): error: (?<msg>.+)");
