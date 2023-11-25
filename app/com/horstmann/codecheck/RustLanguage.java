@@ -52,7 +52,7 @@ public class RustLanguage implements Language {
     private static final Pattern failurePattern = Pattern.compile("running (?<runs>[0-9]+) tests?[\\s\\S]*test result: FAILED. [0-9]+ passed; (?<failures>[0-9]+) failed;");
     @Override public Pattern unitTestFailurePattern() { return failurePattern; }  
 
-    private static Pattern ERROR_PATTERN = Pattern.compile("(.+/)?(?<file>[^/]+\\.rs):(?<line>[0-9]+): error: (?<msg>.+)");
+    private static Pattern ERROR_PATTERN = Pattern.compile("--> (?<file>[^\\s\\S]+\\.rs):(?<line>[0-9]+)");
     @Override public Pattern errorPattern() { return ERROR_PATTERN; }
 
 

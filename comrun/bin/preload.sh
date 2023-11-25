@@ -201,9 +201,12 @@ function unittest {
       ;;
     _Rust)
       rustc -o prog --test $MAIN >> $BASE/out/$DIR/_compile
-      ./prog >> $BASE/out/$DIR/_run 
-      ulimit -d 100000 -f 1000 -n 100 -v 1000000       
-      timeout -v -s 9 ${TIMEOUT}s rust $MAIN 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_run
+      if [[ ${PIPESTATUS[0]} != 0 ]] ; then
+        mv $BASE/out/$DIR/_compile $BASE/out/$DIR/_errors
+      else
+        ulimit -d 100000 -f 1000 -n 100 -v 100000
+        timeout -v -s 9 ${TIMEOUT}s ./prog | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_run
+      fi
       ;;
   esac     
 }
