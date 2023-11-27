@@ -29,6 +29,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     scala \
     locales \
     strace \
+    rustc \
  && rm -rf /var/lib/apt/lists/*
 
 # https://stackoverflow.com/questions/28405902/how-to-set-the-locale-inside-a-debian-ubuntu-docker-container
