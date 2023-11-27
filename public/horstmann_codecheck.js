@@ -579,6 +579,7 @@ window.addEventListener('load', async function () {
     let editorsDiv = document.createElement('div')  
     let firstTime = false;      
     editorsDiv.id = 'myEditorsDiv';
+      
     function initialize() {
       let editorCount = 0;
       let update = function() {
@@ -599,12 +600,20 @@ window.addEventListener('load', async function () {
             // if firstTime is false then we are going to set the editor lines as a fixed number?
             editor.setOptions({
               minLines: lines,
-              maxLines: 1
+              maxLines: 10
             })
           }
+          
           firstTime = true;
           editor.resize()
           totalLines += lines
+
+          // let toggleDiv = document.createElement('div')
+          // toggleDiv.classList.add('codecheckSubmit')
+          // const expandCollapseButton = createToggleButton('hc-command', 'Expand', 'Collapse', expandClickHandler, collapseClickHandler);
+          // toggleDiv.appendChild(expandCollapseButton)
+          // editorDiv.appendChild(toggleDiv)
+
         }
       }
 
@@ -619,6 +628,8 @@ window.addEventListener('load', async function () {
         if (fileName === 'Input')
           editorDiv.classList.add('input')
         editorDiv.textContent = contentSegment.replace(/\r?\n$/, '')
+
+        
         let editor = ace.edit(editorDiv)
         if (readonly)
           editorDiv.setAttribute('readonly', 'readonly')
@@ -627,8 +638,20 @@ window.addEventListener('load', async function () {
         setupAceEditor(editorDiv, editor, fileName, readonly)        
         
         editorsDiv.appendChild(editorDiv)
+
+        
+        
+        
       }
+
       update()
+
+      // let toggleDiv = document.createElement('div')
+      //   toggleDiv.classList.add('codecheckSubmit')
+      //   const expandCollapseButton = createToggleButton('hc-command', 'Expand', 'Collapse', expandClickHandler, collapseClickHandler);
+      //   toggleDiv.appendChild(expandCollapseButton)
+      //   editorsDiv.appendChild(toggleDiv)
+
       
       return editorsDiv
     }
@@ -767,10 +790,64 @@ window.addEventListener('load', async function () {
       let fileSetup = setup.requiredFiles[fileName];
       let editor = editorFor(fileName, fileSetup)
       editors.set(fileName, editor)
-      fileDiv.appendChild(editor.initialize());     
+      fileDiv.appendChild(editor.initialize()); 
+
+      function expandClickHandler() {
+        let myEditorsDiv = document.getElementById('myEditorsDiv');
+        {
+          console.log("does it enter toggle? ");
+          let totalLines = 0;
+          for (const editorDiv of myEditorsDiv.children) {
+            let editor = ace.edit(editorDiv)
+            let editorSession = editor.getSession()
+            editorSession.clearAnnotations()
+            editorSession.setOption('firstLineNumber', totalLines + 1)
+            let lines = editorSession.getDocument().getLength()
+            
+            editor.setOptions({
+              minLines: lines,
+              maxLines: lines
+            })  
+                   
+            editor.resize()
+            totalLines += lines
+  
+            
+            
+          }}}
+          
+      function collapseClickHandler() {
+            let myEditorsDiv = document.getElementById('myEditorsDiv');
+            {
+              let totalLines = 0;
+              for (const editorDiv of myEditorsDiv.children) {
+                let editor = ace.edit(editorDiv)
+                let editorSession = editor.getSession()
+                editorSession.clearAnnotations()
+                editorSession.setOption('firstLineNumber', totalLines + 1)
+                let lines = editorSession.getDocument().getLength()
+                
+                editor.setOptions({
+                  minLines: lines,
+                  maxLines: 10
+                })        
+                editor.resize()
+                totalLines += lines                 
+                
+              }} }  
+      
+      let toggleDiv = document.createElement('div')
+      toggleDiv.classList.add('codecheckSubmit')
+      const expandCollapseButton = createToggleButton('hc-command', 'Expand', 'Collapse', expandClickHandler, collapseClickHandler);
+      toggleDiv.appendChild(expandCollapseButton)
+      fileDiv.appendChild(toggleDiv)
       
       form.appendChild(fileDiv);
     }
+
+
+
+
   
     function initUI() { 
       form = document.createElement('form')
@@ -778,8 +855,8 @@ window.addEventListener('load', async function () {
       submitDiv.classList.add('codecheckSubmit')
       let submitButtonLabel = _('CodeCheck')
 
-      let expandDiv = document.createElement('div')
-      expandDiv.classList.add('expand')
+      // let expandDiv = document.createElement('div')
+      // expandDiv.classList.add('expand')
       
       let directoryPrefix = setup.prefix ? setup.prefix + '/' : '';
       let inputPresent = false;
@@ -839,52 +916,25 @@ window.addEventListener('load', async function () {
         setupAceEditor(editorDiv, editor, fileName, /*readonly*/ true)        
         form.appendChild(fileObj)
       }  
-
-    const expandButton = createButton('hc-command', 'Expand', expandButtonClickHandler);
-    let toggle = true;
+    
+    
+    
+    // function setLines(editor, lines, maxLines) {
+    //   editor.setOptions({
+    //     minLines: lines,
+    //     maxLines: maxLines
+    //   }) 
+    // }
+    
     // expandButton.addEventListener('click', toggleExpandCollapse);
-    function expandButtonClickHandler() {
-      let myEditorsDiv = document.getElementById('myEditorsDiv');
+    
+    // submitDiv.appendChild(expandCollapseButton);
+    
 
-      if (toggle) {
-        console.log("does it enter toggle? ");
-        toggle = false
-        let totalLines = 0;
-        for (const editorDiv of myEditorsDiv.children) {
-          let editor = ace.edit(editorDiv)
-          let editorSession = editor.getSession()
-          editorSession.clearAnnotations()
-          editorSession.setOption('firstLineNumber', totalLines + 1)
-          let lines = editorSession.getDocument().getLength()
-          editor.setOptions({
-            minLines: lines,
-            maxLines: lines
-          })        
-          editor.resize()
-          totalLines += lines
-          
-        }
-        // expandButton.textContent('Expand');
+    
+    
 
-      } else {
-        toggle = true
-        let totalLines = 0;
-        for (const editorDiv of myEditorsDiv.children) {
-          let editor = ace.edit(editorDiv)
-          let editorSession = editor.getSession()
-          editorSession.clearAnnotations()
-          editorSession.setOption('firstLineNumber', totalLines + 1)
-          let lines = editorSession.getDocument().getLength()
-          editor.setOptions({
-            minLines: lines,
-            maxLines: 1
-          })        
-          editor.resize()
-          totalLines += lines
-        }
-        expandButton.textContent('Collapse');
-        }
-    }
+    
 
 	  submitButton = createButton('hc-start', submitButtonLabel, async function() {
         response.textContent = 'Submitting...'
@@ -913,8 +963,6 @@ window.addEventListener('load', async function () {
       })
 
       submitDiv.appendChild(submitButton);
-      submitDiv.appendChild(expandButton);
-      // expandDiv.appendChild(expandButton)
 
       
       let resetButton = createButton('hc-start', _('Reset'), function() {
