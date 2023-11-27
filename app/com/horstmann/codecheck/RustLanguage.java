@@ -12,11 +12,9 @@ import java.util.ArrayList;
 public class RustLanguage implements Language {
     public String getExtension() { return "rs"; };
 
-    // Potentially clean up this regex
     private static Pattern mainPattern = Pattern.compile("fn\\s+main\\s*\\([^)]*\\)\\s*(\\{\\s*)?");
     @Override public Pattern mainPattern() { return mainPattern; }
 
-    // Modify variable declaration regex to support array data type specification
     private static Pattern VARIABLE_DECL_PATTERN =Pattern.compile("let\\s*(mut\\s*)?(?<name>[A-Za-z][A-Za-z0-9]*)\\s*(:\\s*(((i|u)(8|16|32|64|128|size))|(f32|f64|bool|char)|(\\[(((i|u)(8|16|32|64|128|size))|(f32|f64|bool|char))\\s*;\\s*[0-9]*\\s*\\]))\\s*)?=\\s*(?<rhs>.+);\\s*");
     @Override public Pattern variableDeclPattern() { return VARIABLE_DECL_PATTERN; }
 
@@ -52,6 +50,7 @@ public class RustLanguage implements Language {
     private static final Pattern failurePattern = Pattern.compile("running (?<runs>[0-9]+) tests?[\\s\\S]*test result: FAILED. [0-9]+ passed; (?<failures>[0-9]+) failed;");
     @Override public Pattern unitTestFailurePattern() { return failurePattern; }  
 
+    // TODO: Change regex to include error message
     private static Pattern ERROR_PATTERN = Pattern.compile("--> (?<file>[^\\s\\S]+\\.rs):(?<line>[0-9]+)");
     @Override public Pattern errorPattern() { return ERROR_PATTERN; }
 
