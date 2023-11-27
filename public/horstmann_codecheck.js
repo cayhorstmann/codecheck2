@@ -599,7 +599,7 @@ window.addEventListener('load', async function () {
             // if firstTime is false then we are going to set the editor lines as a fixed number?
             editor.setOptions({
               minLines: lines,
-              maxLines: 1
+              maxLines: 3
             })
           }
           firstTime = true;
@@ -840,22 +840,21 @@ window.addEventListener('load', async function () {
         form.appendChild(fileObj)
       }  
     
-    const expandButton = createButton('hc-command', 'Expand', ButtonClickHandler(true));
-    const collapseButton = createButton('hc-command', 'Collapse', ButtonClickHandler(false))
+    const expandCollapseButton = createToggleButton('hc-command', 'Expand', 'Collapse', expandClickHandler, collapseClickHandler);
     
-    function setLines(editor, lines, maxLines) {
-      editor.setOptions({
-        minLines: lines,
-        maxLines: maxLines
-      }) 
-    }
+    // function setLines(editor, lines, maxLines) {
+    //   editor.setOptions({
+    //     minLines: lines,
+    //     maxLines: maxLines
+    //   }) 
+    // }
     
     // expandButton.addEventListener('click', toggleExpandCollapse);
-    function ButtonClickHandler(collapsed) {
+    function expandClickHandler() {
       let myEditorsDiv = document.getElementById('myEditorsDiv');
       {
         console.log("does it enter toggle? ");
-        // toggle = false
+        // toggle = falsex
         let totalLines = 0;
         for (const editorDiv of myEditorsDiv.children) {
           let editor = ace.edit(editorDiv)
@@ -864,9 +863,10 @@ window.addEventListener('load', async function () {
           editorSession.setOption('firstLineNumber', totalLines + 1)
           let lines = editorSession.getDocument().getLength()
           
-          if (collapsed)
-          setLines(editor, lines, lines)
-          else setLines(editor, lines, 3)
+          editor.setOptions({
+            minLines: lines,
+            maxLines: lines
+          })  
                  
           editor.resize()
           totalLines += lines
@@ -875,33 +875,32 @@ window.addEventListener('load', async function () {
           
         }}}
         
-        // function collapsedButtonClickHandler() {
-        //   let myEditorsDiv = document.getElementById('myEditorsDiv');
-        //   {
-        //     console.log("does it enter toggle? ");
-        //     // toggle = false
-        //     let totalLines = 0;
-        //     for (const editorDiv of myEditorsDiv.children) {
-        //       let editor = ace.edit(editorDiv)
-        //       let editorSession = editor.getSession()
-        //       editorSession.clearAnnotations()
-        //       editorSession.setOption('firstLineNumber', totalLines + 1)
-        //       let lines = editorSession.getDocument().getLength()
+        function collapseClickHandler() {
+          let myEditorsDiv = document.getElementById('myEditorsDiv');
+          {
+            console.log("does it enter toggle? ");
+            // toggle = false
+            let totalLines = 0;
+            for (const editorDiv of myEditorsDiv.children) {
+              let editor = ace.edit(editorDiv)
+              let editorSession = editor.getSession()
+              editorSession.clearAnnotations()
+              editorSession.setOption('firstLineNumber', totalLines + 1)
+              let lines = editorSession.getDocument().getLength()
               
-        //       editor.setOptions({
-        //         minLines: lines,
-        //         maxLines: 3
-        //       })        
-        //       editor.resize()
-        //       totalLines += lines
+              editor.setOptions({
+                minLines: lines,
+                maxLines: 3
+              })        
+              editor.resize()
+              totalLines += lines
     
               
               
-        //     }} }  
+            }} }  
         // expandButton.textContent('Expand');
       
-    submitDiv.appendChild(expandButton);
-    submitDiv.appendChild(collapseButton);
+    submitDiv.appendChild(expandCollapseButton);
     
 
     
@@ -936,8 +935,6 @@ window.addEventListener('load', async function () {
       })
 
       submitDiv.appendChild(submitButton);
-      
-      // expandDiv.appendChild(expandButton)
 
       
       let resetButton = createButton('hc-start', _('Reset'), function() {
