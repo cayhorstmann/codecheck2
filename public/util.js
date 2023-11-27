@@ -74,10 +74,7 @@ function createToggleButton(clazz, initialLabel, toggleLabel, initialHandler, to
       initialHandler();
     } else {
       button.innerHTML = initialLabel;
-      toggleHandler();
-      
-
-      
+      toggleHandler();  
     }
   }
 

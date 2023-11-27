@@ -579,6 +579,53 @@ window.addEventListener('load', async function () {
     let editorsDiv = document.createElement('div')  
     let firstTime = false;      
     editorsDiv.id = 'myEditorsDiv';
+
+    function expandClickHandler() {
+      let myEditorsDiv = document.getElementById('myEditorsDiv');
+      {
+        console.log("does it enter toggle? ");
+        // toggle = falsex
+        let totalLines = 0;
+        for (const editorDiv of myEditorsDiv.children) {
+          let editor = ace.edit(editorDiv)
+          let editorSession = editor.getSession()
+          editorSession.clearAnnotations()
+          editorSession.setOption('firstLineNumber', totalLines + 1)
+          let lines = editorSession.getDocument().getLength()
+          
+          editor.setOptions({
+            minLines: lines,
+            maxLines: lines
+          })  
+                 
+          editor.resize()
+          totalLines += lines
+
+          
+          
+        }}}
+        
+        function collapseClickHandler() {
+          let myEditorsDiv = document.getElementById('myEditorsDiv');
+          {
+            // toggle = false
+            let totalLines = 0;
+            for (const editorDiv of myEditorsDiv.children) {
+              let editor = ace.edit(editorDiv)
+              let editorSession = editor.getSession()
+              editorSession.clearAnnotations()
+              editorSession.setOption('firstLineNumber', totalLines + 1)
+              let lines = editorSession.getDocument().getLength()
+              
+              editor.setOptions({
+                minLines: lines,
+                maxLines: 10
+              })        
+              editor.resize()
+              totalLines += lines                 
+              
+            }} }  
+      
     function initialize() {
       let editorCount = 0;
       let update = function() {
@@ -599,7 +646,7 @@ window.addEventListener('load', async function () {
             // if firstTime is false then we are going to set the editor lines as a fixed number?
             editor.setOptions({
               minLines: lines,
-              maxLines: 3
+              maxLines: 10
             })
           }
           firstTime = true;
@@ -627,8 +674,11 @@ window.addEventListener('load', async function () {
         setupAceEditor(editorDiv, editor, fileName, readonly)        
         
         editorsDiv.appendChild(editorDiv)
+        const expandCollapseButton = createToggleButton('hc-command', 'Expand', 'Collapse', expandClickHandler, collapseClickHandler);
+        editorsDiv.appendChild(expandCollapseButton)
       }
       update()
+
       
       return editorsDiv
     }
@@ -840,7 +890,7 @@ window.addEventListener('load', async function () {
         form.appendChild(fileObj)
       }  
     
-    const expandCollapseButton = createToggleButton('hc-command', 'Expand', 'Collapse', expandClickHandler, collapseClickHandler);
+    
     
     // function setLines(editor, lines, maxLines) {
     //   editor.setOptions({
@@ -850,57 +900,8 @@ window.addEventListener('load', async function () {
     // }
     
     // expandButton.addEventListener('click', toggleExpandCollapse);
-    function expandClickHandler() {
-      let myEditorsDiv = document.getElementById('myEditorsDiv');
-      {
-        console.log("does it enter toggle? ");
-        // toggle = falsex
-        let totalLines = 0;
-        for (const editorDiv of myEditorsDiv.children) {
-          let editor = ace.edit(editorDiv)
-          let editorSession = editor.getSession()
-          editorSession.clearAnnotations()
-          editorSession.setOption('firstLineNumber', totalLines + 1)
-          let lines = editorSession.getDocument().getLength()
-          
-          editor.setOptions({
-            minLines: lines,
-            maxLines: lines
-          })  
-                 
-          editor.resize()
-          totalLines += lines
-
-          
-          
-        }}}
-        
-        function collapseClickHandler() {
-          let myEditorsDiv = document.getElementById('myEditorsDiv');
-          {
-            console.log("does it enter toggle? ");
-            // toggle = false
-            let totalLines = 0;
-            for (const editorDiv of myEditorsDiv.children) {
-              let editor = ace.edit(editorDiv)
-              let editorSession = editor.getSession()
-              editorSession.clearAnnotations()
-              editorSession.setOption('firstLineNumber', totalLines + 1)
-              let lines = editorSession.getDocument().getLength()
-              
-              editor.setOptions({
-                minLines: lines,
-                maxLines: 3
-              })        
-              editor.resize()
-              totalLines += lines
     
-              
-              
-            }} }  
-        // expandButton.textContent('Expand');
-      
-    submitDiv.appendChild(expandCollapseButton);
+    // submitDiv.appendChild(expandCollapseButton);
     
 
     
