@@ -584,13 +584,11 @@ window.addEventListener('load', async function () {
       let update = function() {
         let totalLines = 0;
         for (const editorDiv of editorsDiv.children) {
-
           let editor = ace.edit(editorDiv)
           let editorSession = editor.getSession()
           editorSession.clearAnnotations()
           editorSession.setOption('firstLineNumber', totalLines + 1)
           let lines = editorSession.getDocument().getLength()
-          console.log("does this get called when we edit the file?")
           editor.setOptions({
             minLines: lines,
             maxLines: lines 
@@ -607,6 +605,7 @@ window.addEventListener('load', async function () {
           totalLines += lines
         }
       }
+
 
       for (let i = 0; i < setup.length; i++) {
         let contentSegment = setup[i]
@@ -627,11 +626,22 @@ window.addEventListener('load', async function () {
         setupAceEditor(editorDiv, editor, fileName, readonly)        
         
         editorsDiv.appendChild(editorDiv)
+
+
       }
+      // let divContainer = document.createElement('div');
+      // divContainer.id = 'additionalDivContainer';
+
+      // let additionalDiv = document.createElement('div');
+      // additionalDiv.textContent = 'add div 2';
+      // divContainer.appendChild(additionalDiv);
+
+      // editorsDiv.appendChild(divContainer);
       update()
       
       return editorsDiv
     }
+
 
     function getText() {
       let content = ''
@@ -774,6 +784,11 @@ window.addEventListener('load', async function () {
   
     function initUI() { 
       form = document.createElement('form')
+
+      let expandCollapseDiv = document.createElement('div')
+      expandCollapseDiv.classList.add('expandCollapseDiv')
+
+
       let submitDiv = document.createElement('div')
       submitDiv.classList.add('codecheckSubmit')
       let submitButtonLabel = _('CodeCheck')
@@ -842,10 +857,12 @@ window.addEventListener('load', async function () {
 
     const expandButton = createButton('hc-command', 'Expand', expandButtonClickHandler);
     let toggle = true;
+
     // expandButton.addEventListener('click', toggleExpandCollapse);
     function expandButtonClickHandler() {
       let myEditorsDiv = document.getElementById('myEditorsDiv');
-
+      // something is here
+      //toggle == true we will expand the file
       if (toggle) {
         console.log("does it enter toggle? ");
         toggle = false
@@ -862,11 +879,9 @@ window.addEventListener('load', async function () {
           })        
           editor.resize()
           totalLines += lines
-          
         }
-        // expandButton.textContent('Expand');
-
       } else {
+        //toggle is false we will collapse it
         toggle = true
         let totalLines = 0;
         for (const editorDiv of myEditorsDiv.children) {
@@ -882,9 +897,53 @@ window.addEventListener('load', async function () {
           editor.resize()
           totalLines += lines
         }
-        expandButton.textContent('Collapse');
-        }
+      }
     }
+
+    function expandButtonClickHandlerText() {
+      let myDiv = document.getElementsByClassName()
+    }
+
+    function expandButtonClickHandler2() {
+      // define the div that we want to expand//collapse
+      let txtDiv = document.getElementById('codecheckUseFile')
+      if (toggle) {
+        toggle = false
+        let totalLines = 0
+
+      }
+    }
+
+    function addDivsCodecheckUseFile() {
+      const codecheckUseFileDivs = form.getElementsByClassName('codecheckUseFile');
+
+      // Iterate through each codecheckUseFile div and add a new div after it
+      for (const codecheckUseFileDiv of codecheckUseFileDivs) {
+          
+          const newDiv = document.createElement('div');
+          newDiv.id = 'newDiv'
+          // newDiv.textContent = 'New Content'; // Example content, customize as needed
+          if (expandButton) {
+            const clonedButton = expandButton.cloneNode(true);
+            newDiv.appendChild(clonedButton);
+          }
+  
+          codecheckUseFileDiv.parentNode.insertBefore(newDiv, codecheckUseFileDiv.nextSibling);
+      }
+    }
+
+    function addDivsAceEditor() {
+      const myEditorsDivs = document.getElementById('myEditorsDiv');
+      console.log("did it reach add divs ace edcitor");
+      console.log("myEditorsDivs: ", myEditorsDivs);
+      if (myEditorsDivs) {
+        const aceNewDiv = document.createElement('div');
+        aceNewDiv.appendChild(expandButton)
+
+        myEditorsDivs.insertAdjacentElement('afterend', aceNewDiv);
+
+      }
+     }
 
 	  submitButton = createButton('hc-start', submitButtonLabel, async function() {
         response.textContent = 'Submitting...'
@@ -913,7 +972,9 @@ window.addEventListener('load', async function () {
       })
 
       submitDiv.appendChild(submitButton);
-      submitDiv.appendChild(expandButton);
+      // submitDiv.appendChild(expandButton);
+      expandDiv.appendChild(expandButton);
+      addDivsCodecheckUseFile();
       // expandDiv.appendChild(expandButton)
 
       
@@ -944,6 +1005,7 @@ window.addEventListener('load', async function () {
       input.setAttribute('value', setup.problem)
       submitDiv.appendChild(input)    
       form.appendChild(submitDiv);
+      form.appendChild(expandDiv)
 
       response = document.createElement('div')
       response.classList.add('codecheck-submit-response')
@@ -952,6 +1014,8 @@ window.addEventListener('load', async function () {
       element.appendChild(form)
             
       let initialState = getState();
+      addDivsAceEditor();
+
     }
 
     function getState() {
