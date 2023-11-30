@@ -11,6 +11,7 @@ window.addEventListener('load', async function () {
 
   function createRearrange(fileName, setup) {
     'use strict';
+    console.log("filename: ", fileName);
 
     // Element-scoped variables
     const INDENT_STRING = '\u2002\u2002\u2002' // en space
@@ -712,6 +713,7 @@ window.addEventListener('load', async function () {
   // ..................................................................
 
   function initElement(element, setup, prefix) {    
+    //element is element[index]
     let form = undefined
     let response = undefined
     let submitButton = undefined
@@ -757,8 +759,13 @@ window.addEventListener('load', async function () {
     }    
 
     function editorFor(fileName, fileSetup) {
-      if ('tiles' in fileSetup)
+      console.log("editorFor called filename is: ", fileName);
+      console.log("editorFor fileSetup", fileSetup);
+      if ('tiles' in fileSetup) {
+        console.log("does it even enter if titles in filesetup?")
         return createRearrange(fileName, fileSetup)
+
+      }
       else if ('editors' in fileSetup)
         return createAceEditors(fileName, fileSetup.editors)
       else
@@ -766,6 +773,7 @@ window.addEventListener('load', async function () {
     }
     
     function appendRequiredFile(fileName, directoryPrefix) {
+      console.log("file in appendREquired: ", fileName);
       let fileDiv = document.createElement('div')
       fileDiv.setAttribute('name', fileName)
       fileDiv.classList.add('file')
@@ -801,13 +809,19 @@ window.addEventListener('load', async function () {
       let orderedFileNames = setup.order ? setup.order.split(/\s*,\s*/) : []
       let requiredFileNames = []
       let useFileNames = []
+      console.log("after usefilesnames");
+      console.log("orderedfilenames length: ", orderedFileNames.length)
+      console.log("orderedfilenames : ", orderedFileNames)
       for (let i = 0; i < orderedFileNames.length; i++) {
+        console.log("orderedfile ",i , " ",orderedFileNames[i]);
         let fileName = orderedFileNames[i];
+        
         if (setup.requiredFiles[fileName])
           requiredFileNames.push(fileName);
         else if (setup.useFiles[fileName])
           useFileNames.push(fileName)
       }
+      console.log("usefilenames here 1: ", useFileNames)
       
       // TODO: Iterate by sort order?
       for (let fileName in setup.requiredFiles) { 
@@ -827,14 +841,23 @@ window.addEventListener('load', async function () {
         else 
           if (requiredFileNames.indexOf(fileName) < 0) requiredFileNames.push(fileName)
       }
+      console.log("usefilenames here 2: ", useFileNames)
       
       // TODO: Iterate by sort order?
+      // this part sets up usefiles
       for (let fileName in setup.useFiles)
         if (useFileNames.indexOf(fileName) < 0) useFileNames.push(fileName)
+      
+      console.log("usefiles: ", setup.useFiles)
+      // now usefilenames are popualted
+      console.log("usefilenames here 3: ", useFileNames)
       
       for (let i = 0; i < requiredFileNames.length; i++) 
         appendRequiredFile(requiredFileNames[i], directoryPrefix);      
       if (inputPresent) appendRequiredFile('Input', '')
+
+      console.log("required file names: ",requiredFileNames);
+      console.log("directory prefix: ", directoryPrefix); //nothing
     
       for (let i = 0; i < useFileNames.length; i++) {
         let fileName = useFileNames[i]
@@ -842,6 +865,9 @@ window.addEventListener('load', async function () {
         let editorDiv = document.createElement('div')
         editorDiv.classList.add('editor')
         editorDiv.textContent = setup.useFiles[fileName].replace(/\r?\n$/, '');
+        console.log("printing file: ", fileName);
+        console.log("setup.useFiles: ", setup.useFiles[fileName.replace(/\r?\n$/, '')])
+       
         let editor = ace.edit(editorDiv)
         
         let fileObj = document.createElement('div')
@@ -856,11 +882,12 @@ window.addEventListener('load', async function () {
       }  
 
     const expandButton = createButton('hc-command', 'Expand', expandButtonClickHandler);
+    const expandButton2 = createButton('hc-command', 'Expand2', expandButtonClickHandler2);
     let toggle = true;
 
-    // expandButton.addEventListener('click', toggleExpandCollapse);
     function expandButtonClickHandler() {
       let myEditorsDiv = document.getElementById('myEditorsDiv');
+      console.log("ace editor div for checking children", myEditorsDiv)
       // something is here
       //toggle == true we will expand the file
       if (toggle) {
@@ -868,6 +895,7 @@ window.addEventListener('load', async function () {
         toggle = false
         let totalLines = 0;
         for (const editorDiv of myEditorsDiv.children) {
+          console.log("myeditordiv children: ", editorDiv)
           let editor = ace.edit(editorDiv)
           let editorSession = editor.getSession()
           editorSession.clearAnnotations()
@@ -900,33 +928,146 @@ window.addEventListener('load', async function () {
       }
     }
 
-    function expandButtonClickHandlerText() {
-      let myDiv = document.getElementsByClassName()
+    function expandButtonClickHandler2() {
+      let useFileDiv = document.getElementsByClassName('codecheckUseFile');
+      let totalLines = 0
+      console.log("usefileDiv: ", useFileDiv);
+      console.log("clicked the button");
+      
+      for (let useFile of useFileDiv) {
+        //iterate and try to edit the lines
+        if (useFile.classList.contains("editor ace_editor ace-kuroir")) {
+          console.log("ace-kuroir exists");
+        }
+        
+        console.log("usefile single div: ", useFile);
+        console.log("usefile children: ", useFile.children)
+        for (let editorDiv of useFile.children) {
+          //only do this if you are class ace-kuroir
+          if (editorDiv.classList.value === 'editor ace_editor ace-kuroir') {
+            console.log("ace kurior exists 3")
+            // console.log("classlist: ", editorDiv.classList);
+            // console.log("update check")
+            // console.log("editordiv in usefile.children: ", editorDiv);
+            //### ADDD HERERERERE
+            // call ace.edit here
+            let editor = ace.edit(editorDiv);
+            let editorSession = editor.getSession()
+            editorSession.clearAnnotations()
+            // editorSession.setOption('firstLineNumber', totalLines + 1)
+            let lines = editorSession.getDocument().getLength()
+            console.log("lines in the editLines(): ", lines)
+            editor.setOptions({
+              minLines: lines,
+              maxLines: 5
+            })
+            editor.resize()
+            totalLines += lines
+            }
+          }
+      }
+      
     }
 
-    function expandButtonClickHandler2() {
-      // define the div that we want to expand//collapse
-      let txtDiv = document.getElementById('codecheckUseFile')
-      if (toggle) {
-        toggle = false
-        let totalLines = 0
+
+    function editLines() {
+      //get the editor
+      let useFileDiv = document.getElementsByClassName('codecheckUseFile');
+      let totalLines = 0
+      console.log("usefileDiv: ", useFileDiv);
+      
+      for (let useFile of useFileDiv) {
+        //iterate and try to edit the lines
+        if (useFile.classList.contains("editor ace_editor ace-kuroir")) {
+          console.log("ace-kuroir exists");
+        }
+        
+        console.log("usefile single div: ", useFile);
+        console.log("usefile children: ", useFile.children)
+        for (let editorDiv of useFile.children) {
+          //only do this if you are class ace-kuroir
+          if (editorDiv.classList.value === 'editor ace_editor ace-kuroir') {
+            console.log("ace kurior exists 3")
+            console.log("classlist: ", editorDiv.classList);
+            // console.log("update check")
+            // console.log("editordiv in usefile.children: ", editorDiv);
+            //### ADDD HERERERERE
+            // call ace.edit here
+            let editor = ace.edit(editorDiv);
+            let editorSession = editor.getSession()
+            editorSession.clearAnnotations()
+            // editorSession.setOption('firstLineNumber', totalLines + 1)
+            let lines = editorSession.getDocument().getLength()
+            console.log("lines in the editLines(): ", lines)
+            editor.setOptions({
+              minLines: lines,
+              maxLines: 5
+            })
+            editor.resize()
+            totalLines += lines
+            }
+          }
 
       }
     }
+    // function reduceLongFileLines() {
+    //   const codecheckUseFileDivs = 
+    // }
+    // let expandToggle = true;
 
     function addDivsCodecheckUseFile() {
       const codecheckUseFileDivs = form.getElementsByClassName('codecheckUseFile');
 
       // Iterate through each codecheckUseFile div and add a new div after it
       for (const codecheckUseFileDiv of codecheckUseFileDivs) {
-          
+
+          console.log("codecheckuseifilediv contains: ", codecheckUseFileDiv);
+          let fileName = codecheckUseFileDiv.textContent.trim()
+          console.log("file name herereeee: ", fileName)
           const newDiv = document.createElement('div');
           newDiv.id = 'newDiv'
-          // newDiv.textContent = 'New Content'; // Example content, customize as needed
-          if (expandButton) {
-            const clonedButton = expandButton.cloneNode(true);
-            newDiv.appendChild(clonedButton);
-          }
+          const outerDiv = codecheckUseFileDiv.querySelector('.editor.ace_editor.ace-kuroir'); 
+          if (outerDiv) {
+            console.log("shortening when longer")
+            let editor = ace.edit(outerDiv);
+            let editorSession = editor.getSession();
+            let lines = editorSession.getDocument().getLength();
+            if (lines > 5) {
+              editor.setOptions({
+                minLines: lines,
+                maxLines: 5
+              })
+            }
+          } 
+
+          const expandButton3 = createButton('hc-command', 'Expand3', function() {
+            const editorDiv = codecheckUseFileDiv.querySelector('.editor.ace_editor.ace-kuroir');
+            if (editorDiv) {
+              let expandToggle = editorDiv.dataset.expandToggle === 'true';
+              let editor = ace.edit(editorDiv);
+              if (expandToggle) {
+                let editorSession = editor.getSession();
+                let lines = editorSession.getDocument().getLength();
+                editor.setOptions({
+                    minLines: lines,
+                    maxLines: 5 
+                });
+                editor.resize();
+              } else {
+                let editorSession = editor.getSession();
+                let lines = editorSession.getDocument().getLength();
+                editor.setOptions({
+                    minLines: lines,
+                    maxLines: lines
+                });
+                editor.resize();
+
+              }
+              expandToggle = !expandToggle;
+              editorDiv.dataset.expandToggle = expandToggle;
+            }
+          })
+          newDiv.appendChild(expandButton3)
   
           codecheckUseFileDiv.parentNode.insertBefore(newDiv, codecheckUseFileDiv.nextSibling);
       }
@@ -1014,7 +1155,30 @@ window.addEventListener('load', async function () {
       element.appendChild(form)
             
       let initialState = getState();
+      //changes after the fact are applied here ###
       addDivsAceEditor();
+      // try to affect the codecheckUseFile divs
+      function changeLines() {
+        let fileDiv = document.getElementsByClassName('codecheckUseFile');
+        let totalLines = 0;
+        for (const i of fileDiv) {
+          // let editor = ace.edit(i);
+          let editor = setup.edit(i);
+          let editorSession = editor.getSession()
+          editorSession.clearAnnotations()
+          // editorSession.setOption('firstLineNumber', totalLines + 1);
+          let lines = editorSession.getDocument().getLength()
+          editor.setOptions({
+            minLines: lines,
+            maxLines: lines
+          })
+          editor.resize()
+          totalLines += lines
+        }
+      } 
+
+      // changeLines(); 
+      // editLines();
 
     }
 
@@ -1069,7 +1233,9 @@ window.addEventListener('load', async function () {
  
   // Start of event listener
   let elements = document.getElementsByClassName('horstmann_codecheck')
+  let count = 0;
   for (let index = 0; index < elements.length; index++) {
+    count += 1
 	const setup = window.horstmann_codecheck.setup[index]
 	/*
 	  Required properties: 
@@ -1082,8 +1248,11 @@ window.addEventListener('load', async function () {
 	    order
 	    prefix
 	*/
-	if ('requiredFiles' in setup)   
+	if ('requiredFiles' in setup)   {
+      console.log("is requiredFiles in here?");
+      console.log("count: ", count)
       initElement(elements[index], setup)
+  }
     else {
 	  const origin = new URL(window.location.href).origin
 	  const response = await fetch(`${origin}/fileData?repo=${setup.repo}&problem=${setup.problem}`)
