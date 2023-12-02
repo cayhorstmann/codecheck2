@@ -74,7 +74,7 @@ window.addEventListener('load', async function () {
           setIndent(tileDiv, tileDiv.indent)
         }
         right.children[0].focus()
-      }
+      } 
     }
 
     function stickyBrace(tileDiv) {
@@ -577,43 +577,26 @@ window.addEventListener('load', async function () {
 
   function createAceEditors(fileName, setup) {
     let editorsDiv = document.createElement('div')  
-    let firstTime = false;      
+    
     editorsDiv.id = 'myEditorsDiv';
       
+
     function initialize() {
       let editorCount = 0;
       let update = function() {
         let totalLines = 0;
         for (const editorDiv of editorsDiv.children) {
-
           let editor = ace.edit(editorDiv)
           let editorSession = editor.getSession()
           editorSession.clearAnnotations()
           editorSession.setOption('firstLineNumber', totalLines + 1)
           let lines = editorSession.getDocument().getLength()
-          console.log("does this get called when we edit the file?")
           editor.setOptions({
             minLines: lines,
             maxLines: lines 
           })        
-          if (firstTime === false) {
-            // if firstTime is false then we are going to set the editor lines as a fixed number?
-            editor.setOptions({
-              minLines: lines,
-              maxLines: 10
-            })
-          }
-          
-          firstTime = true;
           editor.resize()
           totalLines += lines
-
-          // let toggleDiv = document.createElement('div')
-          // toggleDiv.classList.add('codecheckSubmit')
-          // const expandCollapseButton = createToggleButton('hc-command', 'Expand', 'Collapse', expandClickHandler, collapseClickHandler);
-          // toggleDiv.appendChild(expandCollapseButton)
-          // editorDiv.appendChild(toggleDiv)
-
         }
       }
 
@@ -638,23 +621,14 @@ window.addEventListener('load', async function () {
         setupAceEditor(editorDiv, editor, fileName, readonly)        
         
         editorsDiv.appendChild(editorDiv)
-
-        
-        
-        
       }
 
       update()
 
-      // let toggleDiv = document.createElement('div')
-      //   toggleDiv.classList.add('codecheckSubmit')
-      //   const expandCollapseButton = createToggleButton('hc-command', 'Expand', 'Collapse', expandClickHandler, collapseClickHandler);
-      //   toggleDiv.appendChild(expandCollapseButton)
-      //   editorsDiv.appendChild(toggleDiv)
-
       
       return editorsDiv
     }
+
 
     function getText() {
       let content = ''
@@ -725,6 +699,7 @@ window.addEventListener('load', async function () {
   // ..................................................................
 
   function initElement(element, setup, prefix) {    
+    //element is element[index]
     let form = undefined
     let response = undefined
     let submitButton = undefined
@@ -770,7 +745,7 @@ window.addEventListener('load', async function () {
     }    
 
     function editorFor(fileName, fileSetup) {
-      if ('tiles' in fileSetup)
+      if ('tiles' in fileSetup) 
         return createRearrange(fileName, fileSetup)
       else if ('editors' in fileSetup)
         return createAceEditors(fileName, fileSetup.editors)
@@ -854,10 +829,6 @@ window.addEventListener('load', async function () {
       let submitDiv = document.createElement('div')
       submitDiv.classList.add('codecheckSubmit')
       let submitButtonLabel = _('CodeCheck')
-
-      // let expandDiv = document.createElement('div')
-      // expandDiv.classList.add('expand')
-      
       let directoryPrefix = setup.prefix ? setup.prefix + '/' : '';
       let inputPresent = false;
       let orderedFileNames = setup.order ? setup.order.split(/\s*,\s*/) : []
@@ -865,6 +836,7 @@ window.addEventListener('load', async function () {
       let useFileNames = []
       for (let i = 0; i < orderedFileNames.length; i++) {
         let fileName = orderedFileNames[i];
+        
         if (setup.requiredFiles[fileName])
           requiredFileNames.push(fileName);
         else if (setup.useFiles[fileName])
@@ -897,13 +869,14 @@ window.addEventListener('load', async function () {
       for (let i = 0; i < requiredFileNames.length; i++) 
         appendRequiredFile(requiredFileNames[i], directoryPrefix);      
       if (inputPresent) appendRequiredFile('Input', '')
-    
+
       for (let i = 0; i < useFileNames.length; i++) {
         let fileName = useFileNames[i]
         
         let editorDiv = document.createElement('div')
         editorDiv.classList.add('editor')
         editorDiv.textContent = setup.useFiles[fileName].replace(/\r?\n$/, '');
+       
         let editor = ace.edit(editorDiv)
         
         let fileObj = document.createElement('div')
@@ -914,27 +887,45 @@ window.addEventListener('load', async function () {
         fileObj.appendChild(filenameDiv)
         fileObj.appendChild(editorDiv)
         setupAceEditor(editorDiv, editor, fileName, /*readonly*/ true)        
+
+        const newDiv2 = document.createElement('div');
+        let editorSession = editor.getSession()
+        let lines = editorSession.getDocument().getLength()
+        if (lines > 5) {
+          editor.setOptions({
+            minLines: lines,
+            maxLines: 5
+          })
+        }
+        const expandButton2 = createButton('hc-command', 'Expand', expandCollapseHandler) 
+        function expandCollapseHandler() {
+          expandButton2.innerHTML = _('Expand')
+          let expandToggle = editorDiv.dataset.expandToggle === 'true';
+          if (expandToggle) {
+            editor.setOptions({
+              minLines: lines,
+              maxLines: 5
+            });
+            editor.resize()
+          } else {
+            expandButton2.innerHTML = _('Collapse')
+            let editorSession = editor.getSession();
+            let lines = editorSession.getDocument().getLength();
+            editor.setOptions({
+                minLines: lines,
+                maxLines: lines
+            });
+            editor.resize();
+          }
+          expandToggle = !expandToggle;
+          editorDiv.dataset.expandToggle = expandToggle;
+        }
+        newDiv2.appendChild(expandButton2)
+        fileObj.appendChild(newDiv2)
         form.appendChild(fileObj)
       }  
-    
-    
-    
-    // function setLines(editor, lines, maxLines) {
-    //   editor.setOptions({
-    //     minLines: lines,
-    //     maxLines: maxLines
-    //   }) 
-    // }
-    
-    // expandButton.addEventListener('click', toggleExpandCollapse);
-    
-    // submitDiv.appendChild(expandCollapseButton);
-    
 
-    
-    
 
-    
 
 	  submitButton = createButton('hc-start', submitButtonLabel, async function() {
         response.textContent = 'Submitting...'
@@ -963,7 +954,6 @@ window.addEventListener('load', async function () {
       })
 
       submitDiv.appendChild(submitButton);
-
       
       let resetButton = createButton('hc-start', _('Reset'), function() {
         restoreState(element, initialState)
@@ -1000,6 +990,27 @@ window.addEventListener('load', async function () {
       element.appendChild(form)
             
       let initialState = getState();
+      //changes after the fact are applied here ###
+      // addDivsAceEditor();
+      // try to affect the codecheckUseFile divs
+      function changeLines() {
+        let fileDiv = document.getElementsByClassName('codecheckUseFile');
+        let totalLines = 0;
+        for (const i of fileDiv) {
+          // let editor = ace.edit(i);
+          let editor = setup.edit(i);
+          let editorSession = editor.getSession()
+          editorSession.clearAnnotations()
+          // editorSession.setOption('firstLineNumber', totalLines + 1);
+          let lines = editorSession.getDocument().getLength()
+          editor.setOptions({
+            minLines: lines,
+            maxLines: lines
+          })
+          editor.resize()
+          totalLines += lines
+        }
+      } 
     }
 
     function getState() {
@@ -1053,7 +1064,9 @@ window.addEventListener('load', async function () {
  
   // Start of event listener
   let elements = document.getElementsByClassName('horstmann_codecheck')
+  let count = 0;
   for (let index = 0; index < elements.length; index++) {
+    count += 1
 	const setup = window.horstmann_codecheck.setup[index]
 	/*
 	  Required properties: 
@@ -1066,8 +1079,9 @@ window.addEventListener('load', async function () {
 	    order
 	    prefix
 	*/
-	if ('requiredFiles' in setup)   
+	if ('requiredFiles' in setup)   {
       initElement(elements[index], setup)
+  }
     else {
 	  const origin = new URL(window.location.href).origin
 	  const response = await fetch(`${origin}/fileData?repo=${setup.repo}&problem=${setup.problem}`)
