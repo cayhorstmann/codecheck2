@@ -770,7 +770,6 @@ window.addEventListener('load', async function () {
       function expandClickHandler() {
         let myEditorsDiv = document.getElementById('myEditorsDiv');
         {
-          console.log("does it enter toggle? ");
           let totalLines = 0;
           for (const editorDiv of myEditorsDiv.children) {
             let editor = ace.edit(editorDiv)
@@ -786,9 +785,6 @@ window.addEventListener('load', async function () {
                    
             editor.resize()
             totalLines += lines
-  
-            
-            
           }}}
           
       function collapseClickHandler() {
@@ -891,37 +887,38 @@ window.addEventListener('load', async function () {
         const newDiv2 = document.createElement('div');
         let editorSession = editor.getSession()
         let lines = editorSession.getDocument().getLength()
-        if (lines > 5) {
+        if (lines > 15) {
           editor.setOptions({
             minLines: lines,
-            maxLines: 5
+            maxLines: 15
           })
-        }
-        const expandButton2 = createButton('hc-command', 'Expand', expandCollapseHandler) 
-        function expandCollapseHandler() {
-          expandButton2.innerHTML = _('Expand')
-          let expandToggle = editorDiv.dataset.expandToggle === 'true';
-          if (expandToggle) {
-            editor.setOptions({
-              minLines: lines,
-              maxLines: 5
-            });
-            editor.resize()
-          } else {
-            expandButton2.innerHTML = _('Collapse')
-            let editorSession = editor.getSession();
-            let lines = editorSession.getDocument().getLength();
-            editor.setOptions({
+          const expandButton2 = createButton('hc-command', 'Expand', expandCollapseHandler) 
+          function expandCollapseHandler() {
+            expandButton2.innerHTML = _('Expand')
+            let expandToggle = editorDiv.dataset.expandToggle === 'true';
+            if (expandToggle) {
+              editor.setOptions({
                 minLines: lines,
-                maxLines: lines
-            });
-            editor.resize();
+                maxLines: 15
+              });
+              editor.resize()
+            } else {
+              expandButton2.innerHTML = _('Collapse')
+              let editorSession = editor.getSession();
+              let lines = editorSession.getDocument().getLength();
+              editor.setOptions({
+                  minLines: lines,
+                  maxLines: lines
+              });
+              editor.resize();
+            }
+            expandToggle = !expandToggle;
+            editorDiv.dataset.expandToggle = expandToggle;
           }
-          expandToggle = !expandToggle;
-          editorDiv.dataset.expandToggle = expandToggle;
-        }
-        newDiv2.appendChild(expandButton2)
-        fileObj.appendChild(newDiv2)
+          newDiv2.appendChild(expandButton2)
+          fileObj.appendChild(newDiv2)
+        } 
+ 
         form.appendChild(fileObj)
       }  
 
@@ -993,24 +990,6 @@ window.addEventListener('load', async function () {
       //changes after the fact are applied here ###
       // addDivsAceEditor();
       // try to affect the codecheckUseFile divs
-      function changeLines() {
-        let fileDiv = document.getElementsByClassName('codecheckUseFile');
-        let totalLines = 0;
-        for (const i of fileDiv) {
-          // let editor = ace.edit(i);
-          let editor = setup.edit(i);
-          let editorSession = editor.getSession()
-          editorSession.clearAnnotations()
-          // editorSession.setOption('firstLineNumber', totalLines + 1);
-          let lines = editorSession.getDocument().getLength()
-          editor.setOptions({
-            minLines: lines,
-            maxLines: lines
-          })
-          editor.resize()
-          totalLines += lines
-        }
-      } 
     }
 
     function getState() {
