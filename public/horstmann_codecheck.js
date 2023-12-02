@@ -578,14 +578,13 @@ window.addEventListener('load', async function () {
   function createAceEditors(fileName, setup) {
     let editorsDiv = document.createElement('div')  
     editorsDiv.id = 'myEditorsDiv';
-    console.log("exist???")
+    
       
 
     function initialize() {
       let update = function() {
         let totalLines = 0;
         for (const editorDiv of editorsDiv.children) {
-          console.log("exist?" + editorDiv)
           let editor = ace.edit(editorDiv)
           let editorSession = editor.getSession()
           editorSession.clearAnnotations()
@@ -903,7 +902,6 @@ window.addEventListener('load', async function () {
       
       for (let i = 0; i < requiredFileNames.length; i++) 
         appendRequiredFile(requiredFileNames[i], directoryPrefix); 
-        console.log("a"+ document.getElementById('myEditorsDiv'));
       if (inputPresent) appendRequiredFile('Input', '')
 
       for (let i = 0; i < useFileNames.length; i++) {
