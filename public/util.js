@@ -59,4 +59,40 @@ function append(parent, type, content) {
   return child
 }
 
+function createToggleButton(clazz, initialLabel, toggleLabel, initialHandler, toggleHandler) {
+  let button = document.createElement('span');
+  button.classList.add('hc-button');
+  for (const cl of clazz.split(' '))
+    button.classList.add(cl);
+
+  let isToggled = false;
+
+  function toggleAction() {
+    isToggled = !isToggled;
+    if (isToggled) {
+      button.innerHTML = toggleLabel;
+      initialHandler();
+    } else {
+      button.innerHTML = initialLabel;
+      toggleHandler();  
+    }
+  }
+
+  button.innerHTML = initialLabel;
+  button.tabIndex = 0;
+  button.addEventListener('click', toggleAction);
+  button.addEventListener('keydown', function (e) {
+    if (e.keyCode === 32) {
+      e.stopPropagation();
+      e.preventDefault();
+      toggleAction();
+    } else if (e.keyCode === 37 || e.keyCode === 39) {
+      e.stopPropagation();
+    }
+  });
+
+  return button;
+}
+
+
 

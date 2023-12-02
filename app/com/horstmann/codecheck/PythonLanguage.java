@@ -84,7 +84,7 @@ public class PythonLanguage implements Language {
     private static Pattern errPattern = Pattern.compile("(?<msg>.*)[\"(](?<file>[A-Za-z0-9_]+\\.py)\"?, line (?<line>[0-9]+).*");    
     @Override public Pattern errorPattern() { return errPattern; }
     
-    public boolean isUnitTest(Path fileName) { return fileName.toString().matches(".*Test[0-9]*.py"); }
+    public boolean isUnitTest(Path fileName) { return fileName.toString().matches(".*(T|_t)est[0-9]*.py"); }
     
     private static final Pattern successPattern = Pattern.compile("Ran (?<runs>[0-9]+) tests? in [0-9.]+s\\s+OK");
     private static final Pattern failurePattern = Pattern.compile("Ran (?<runs>[0-9]+) tests? in [0-9.]+s\\s+FAILED \\([^=]+=(?<failures>[0-9]+)\\)");
