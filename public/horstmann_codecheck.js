@@ -805,7 +805,7 @@ window.addEventListener('load', async function () {
               let toggleButtonDiv = fileDiv.querySelector('#toggleButtonDiv');
               if (toggleButtonDiv) {
               for (const button of toggleButtonDiv.children) {
-                if (lines < 15) {
+                if (lines <= 15) {
                   button.style.display = "none";
                 }
               
@@ -835,8 +835,8 @@ window.addEventListener('load', async function () {
       toggleDiv.classList.add('codecheckSubmit');
       toggleDiv.id = 'toggleButtonDiv'
 
-      const expandCollapseButton = createToggleButton('hc-command', 'Expand', 'Collapse', expandClickHandler, collapseClickHandler);
-      toggleDiv.appendChild(expandCollapseButton);
+      const toggleButtonRequiredFile = createToggleButton('hc-command', 'Expand', 'Collapse', expandClickHandler, collapseClickHandler);
+      toggleDiv.appendChild(toggleButtonRequiredFile);
       fileDiv.appendChild(toggleDiv);
 
       updateButtonVisibility(fileDiv);
@@ -930,9 +930,9 @@ window.addEventListener('load', async function () {
             minLines: lines,
             maxLines: 15
           })
-          const expandButton2 = createButton('hc-command', 'Expand', expandCollapseHandler) 
+		
+           
           function expandCollapseHandler() {
-            
             expandButton2.innerHTML = _('Expand')
             let expandToggle = editorDiv.dataset.expandToggle === 'true';
             if (expandToggle) {
@@ -940,7 +940,6 @@ window.addEventListener('load', async function () {
                 minLines: lines,
                 maxLines: 15
               });
-              editor.resize()
             } else {
               expandButton2.innerHTML = _('Collapse')
               let editorSession = editor.getSession();
@@ -949,12 +948,13 @@ window.addEventListener('load', async function () {
                   minLines: lines,
                   maxLines: lines
               });
-              editor.resize();
             }
-            expandToggle = !expandToggle;
-            editorDiv.dataset.expandToggle = expandToggle;
+	    editor.resize();
+            editorDiv.dataset.expandToggle = !expandToggle;
           }
-          btnDiv.appendChild(expandButton2)
+
+	  const toggleButtonUseFile = createButton('hc-command', 'Expand', expandCollapseHandler)
+          btnDiv.appendChild(toggleButtonUseFile)
           fileObj.appendChild(btnDiv)
         } 
  
