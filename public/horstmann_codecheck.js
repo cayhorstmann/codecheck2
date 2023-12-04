@@ -914,7 +914,6 @@ window.addEventListener('load', async function () {
             minLines: lines,
             maxLines: 15
           })
-		
            
           function expandCollapseHandler() {
             toggleButtonUseFile.innerHTML = _('Expand')
