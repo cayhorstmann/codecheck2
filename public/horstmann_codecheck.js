@@ -932,7 +932,7 @@ window.addEventListener('load', async function () {
                   maxLines: lines 
               });
             }
-	    editor.resize();
+            editor.resize();
             editorDiv.dataset.expandToggle = !expandToggle;
           }
 
