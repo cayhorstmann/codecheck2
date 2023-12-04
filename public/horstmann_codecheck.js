@@ -946,7 +946,7 @@ window.addEventListener('load', async function () {
 
 
 
-	  submitButton = createButton('hc-start', submitButtonLabel, async function() {
+      submitButton = createButton('hc-start', submitButtonLabel, async function() {
         response.textContent = 'Submitting...'
         let params = {}
         // Hidden inputs
