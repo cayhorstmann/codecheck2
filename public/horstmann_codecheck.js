@@ -933,20 +933,20 @@ window.addEventListener('load', async function () {
 		
            
           function expandCollapseHandler() {
-            expandButton2.innerHTML = _('Expand')
+            toggleButtonUseFile.innerHTML = _('Expand')
             let expandToggle = editorDiv.dataset.expandToggle === 'true';
             if (expandToggle) {
               editor.setOptions({
                 minLines: lines,
-                maxLines: 15
+                maxLines: 15 
               });
             } else {
-              expandButton2.innerHTML = _('Collapse')
+              toggleButtonUseFile.innerHTML = _('Collapse')
               let editorSession = editor.getSession();
               let lines = editorSession.getDocument().getLength();
               editor.setOptions({
                   minLines: lines,
-                  maxLines: lines
+                  maxLines: lines 
               });
             }
 	    editor.resize();
