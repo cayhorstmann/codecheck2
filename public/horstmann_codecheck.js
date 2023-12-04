@@ -936,9 +936,9 @@ window.addEventListener('load', async function () {
             editorDiv.dataset.expandToggle = !expandToggle;
           }
 
-	  const toggleButtonUseFile = createButton('hc-command', 'Expand', expandCollapseHandler)
-          btnDiv.appendChild(toggleButtonUseFile)
-          fileObj.appendChild(btnDiv)
+        const toggleButtonUseFile = createButton('hc-command', 'Expand', expandCollapseHandler)
+              btnDiv.appendChild(toggleButtonUseFile)
+              fileObj.appendChild(btnDiv)
         } 
  
         form.appendChild(fileObj)
