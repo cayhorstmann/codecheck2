@@ -794,27 +794,25 @@ window.addEventListener('load', async function () {
 
   
     function updateButtonVisibility(fileDiv) {
-      let editorsDiv = fileDiv.querySelector('#myEditorsDiv');
+    let editorsDiv = fileDiv.querySelector('#myEditorsDiv');
 
-      if (editorsDiv) { 
-          for (const editorDiv of editorsDiv.children) {
-              let editor = ace.edit(editorDiv);
-              let editorSession = editor.getSession();
-              let lines = editorSession.getDocument().getLength();
+    if (editorsDiv) { 
+      for (const editorDiv of editorsDiv.children) {
+          let editor = ace.edit(editorDiv);
+          let editorSession = editor.getSession();
+          let lines = editorSession.getDocument().getLength();
 
-              let toggleButtonDiv = fileDiv.querySelector('#toggleButtonDiv');
-              if (toggleButtonDiv) {
-              for (const button of toggleButtonDiv.children) {
-                if (lines <= 15) {
-                  button.style.display = "none";
-                }
-              
-              }
-            
-              
+          let toggleButtonDiv = fileDiv.querySelector('#toggleButtonDiv');
+          if (toggleButtonDiv) {
+          for (const button of toggleButtonDiv.children) {
+            if (lines <= 15) {
+              button.style.display = "none";
+            }
+          
           }
-          }
+        }
       }
+    }
   }
 
   function appendRequiredFile(fileName, directoryPrefix) {
@@ -843,16 +841,7 @@ window.addEventListener('load', async function () {
 
       form.appendChild(fileDiv);
       }
-      
 
-
-        
-  
-
-
-
-
-  
     function initUI() { 
       form = document.createElement('form')
       let submitDiv = document.createElement('div')
@@ -890,11 +879,6 @@ window.addEventListener('load', async function () {
         else 
           if (requiredFileNames.indexOf(fileName) < 0) requiredFileNames.push(fileName)
       }
-
-      
-
-      
-
       
       // TODO: Iterate by sort order?
       for (let fileName in setup.useFiles)
@@ -1026,9 +1010,6 @@ window.addEventListener('load', async function () {
       element.appendChild(form)
             
       let initialState = getState();
-      //changes after the fact are applied here ###
-      // addDivsAceEditor();
-      // try to affect the codecheckUseFile divs
     }
 
     function getState() {
