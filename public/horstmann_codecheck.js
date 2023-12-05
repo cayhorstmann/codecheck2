@@ -821,8 +821,27 @@ window.addEventListener('load', async function () {
         filenameDiv.textContent = directoryPrefix + fileName
         fileObj.appendChild(filenameDiv)
         fileObj.appendChild(editorDiv)
-        setupAceEditor(editorDiv, editor, fileName, /*readonly*/ true)        
-        form.appendChild(fileObj)
+        setupAceEditor(editorDiv, editor, fileName, /*readonly*/ true)
+
+        let lines = editor.getSession().getDocument().getLength()
+
+        if (lines > 200) {
+          editor.setOption('maxLines', 200)
+          let viewButton = createButton('hc-start', _('Expand'), function() {
+            if (editor.getOption('maxLines') == lines) {
+                editor.setOption('maxLines', 200)
+                viewButton.innerHTML = _('Expand')
+            }
+            else {
+                editor.setOption('maxLines', lines)
+                viewButton.innerHTML = _('Collapse')
+            }
+          })
+          form.appendChild(fileObj)
+          form.appendChild(viewButton)
+        }
+        else
+          form.appendChild(fileObj)
       }  
       
 	  submitButton = createButton('hc-start', submitButtonLabel, async function() {
