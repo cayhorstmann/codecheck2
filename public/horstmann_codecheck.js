@@ -944,8 +944,11 @@ window.addEventListener('load', async function () {
       }
               
       if ('errors' in data) {
-        for (const error of data.errors) 
-          editors.get(error['file']).errorAnnotation(error['line'], error['message'])
+        for (const error of data.errors) {
+          editor = editors.get(error['file'])
+          // Non-editable files are not in editors 			
+          if (editor !== undefined) editor.errorAnnotation(error['line'], error['message'])
+        }
       }
     }
     
