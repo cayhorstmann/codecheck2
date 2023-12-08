@@ -945,7 +945,7 @@ window.addEventListener('load', async function () {
               
       if ('errors' in data) {
         for (const error of data.errors) {
-          editor = editors.get(error['file'])
+          const editor = editors.get(error['file'])
           // Non-editable files are not in editors 			
           if (editor !== undefined) editor.errorAnnotation(error['line'], error['message'])
         }
