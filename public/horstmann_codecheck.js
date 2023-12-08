@@ -827,7 +827,7 @@ window.addEventListener('load', async function () {
 
         if (lines > 200) {
           editor.setOption('maxLines', 200)
-          let viewButton = createButton('hc-start', _('Expand'), function() {
+          let viewButton = createButton('hc-command', _('Expand'), function() {
             if (editor.getOption('maxLines') == lines) {
                 editor.setOption('maxLines', 200)
                 viewButton.innerHTML = _('Expand')
