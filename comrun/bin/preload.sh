@@ -40,7 +40,7 @@ function compile {
       ghc -o prog $@ > $BASE/out/$DIR/_compile 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_compile
       ;;
     _Java)
-      javac -cp .:$BASE/use/\*.jar $@ > $BASE/out/$DIR/_compile 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_compile
+      javac -cp .:$BASE/use/\* $@ > $BASE/out/$DIR/_compile 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_compile
       ;;
     _JavaScript|_Matlab)
       touch $BASE/out/$DIR/_compile
@@ -110,14 +110,14 @@ function run {
       fi
       ;;
     _Java)
-      # ulimit -d 1000000 -f 1000 -n 100 -v 10000000
+      ulimit -d 1000000 -f 1000 -n 100 -v 10000000
       if [[ -e  ${MAIN/.java/.class} ]] ; then
         if [[ $INTERLEAVEIO == "true" ]] ; then
-          timeout -v -s 9 ${TIMEOUT}s ${CODECHECK_HOME}/interleaveio.py java -ea -Djava.awt.headless=true -Dcom.horstmann.codecheck -cp .:$BASE/use/\*.jar ${MAIN/.java/} $@ < $BASE/in/$ID 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$ID/_run
+          timeout -v -s 9 ${TIMEOUT}s ${CODECHECK_HOME}/interleaveio.py java -ea -Djava.awt.headless=true -Dcom.horstmann.codecheck -cp .:$BASE/use/\* ${MAIN/.java/} $@ < $BASE/in/$ID 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$ID/_run
           cat hs_err*log >> $BASE/out/$ID/_run 2> /dev/null
           rm -f hs_err*log
         else
-          timeout -v -s 9 ${TIMEOUT}s java -ea -Djava.awt.headless=true -Dcom.horstmann.codecheck -cp .:$BASE/use/\*.jar ${MAIN/.java/} $@ < $BASE/in/$ID 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$ID/_run
+          timeout -v -s 9 ${TIMEOUT}s java -ea -Djava.awt.headless=true -Dcom.horstmann.codecheck -cp .:$BASE/use/\* ${MAIN/.java/} $@ < $BASE/in/$ID 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$ID/_run
           cat hs_err*log >> $BASE/out/$ID/_run 2> /dev/null
           rm -f hs_err*log          
         fi
@@ -183,7 +183,7 @@ function unittest {
   cd $BASE/$DIR
   case _"$LANG" in 
     _Java)
-      javac -cp .:$BASE/use/\*:$CODECHECK_HOME/lib/* $MAIN $@ 2>&1 | head --lines $MAXOUTPUTLEN> $BASE/out/$DIR/_compile
+      javac -cp .:$BASE/use/\*:$CODECHECK_HOME/lib/\* $MAIN $@ 2>&1 | head --lines $MAXOUTPUTLEN> $BASE/out/$DIR/_compile
       if [[ ${PIPESTATUS[0]} != 0 ]] ; then
         mv $BASE/out/$DIR/_compile $BASE/out/$DIR/_errors
       else

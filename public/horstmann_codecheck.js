@@ -946,7 +946,7 @@ window.addEventListener('load', async function () {
       if ('errors' in data) {
         for (const error of data.errors) {
           const editor = editors.get(error['file'])
-          // Non-editable files are not in editors 			
+          // TODO: Non-editable files are not in editors. Would be nice to annotate anyway 			
           if (editor !== undefined) editor.errorAnnotation(error['line'], error['message'])
         }
       }
