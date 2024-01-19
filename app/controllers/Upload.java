@@ -138,7 +138,7 @@ public class Upload extends Controller {
             String editKey = new String(problemFiles.get(editKeyPath), StandardCharsets.UTF_8);         
             String editURL = prefix + "private/problem/" + problem + "/" + editKey;
             response.append("<br/>Edit URL (for you only): ");
-            response.append("<a href=\"" + editURL + "\" target=\"_blank\">" + editURL + "</a>");
+            response.append("<a href=\"" + editURL + ">" + editURL + "</a>");
         }
         if (report != null) {
             String run = Base64.getEncoder().encodeToString(report.getBytes(StandardCharsets.UTF_8));
