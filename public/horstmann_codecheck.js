@@ -823,13 +823,13 @@ window.addEventListener('load', async function () {
         fileObj.appendChild(editorDiv)
         setupAceEditor(editorDiv, editor, fileName, /*readonly*/ true)
 
-        let lines = editor.getSession().getDocument().getLength()
-
-        if (lines > 200) {
-          editor.setOption('maxLines', 200)
+        const MAX_LINES = 200
+        if (editor.getSession().getDocument().getLength() > MAX_LINES) {
+          editor.setOption('maxLines', MAX_LINES)
           let viewButton = createButton('hc-command', _('Expand'), function() {
-            if (editor.getOption('maxLines') == lines) {
-                editor.setOption('maxLines', 200)
+			let lines = editor.getSession().getDocument().getLength()
+            if (lines > MAX_LINES) {
+                editor.setOption('maxLines', MAX_LINES)
                 viewButton.innerHTML = _('Expand')
             }
             else {
