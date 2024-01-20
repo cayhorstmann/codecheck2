@@ -220,3 +220,21 @@ pre {
 .horstmann_rearrange .hc-bad {
   background: #F4D3DD;
 }
+
+th a {
+  color: black;
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+th a:hover {
+  color: grey;
+}
+
+th.ascending a:after {
+  content: ' △';
+}
+
+th.descending a:after {
+  content: ' ▽';
+}
