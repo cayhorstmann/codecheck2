@@ -119,22 +119,18 @@ public class Upload extends Controller {
     private String checkAndSaveProblem(Http.Request request, String problem, Map<Path, byte[]> problemFiles)
             throws IOException, InterruptedException, NoSuchMethodException, ScriptException {
         StringBuilder response = new StringBuilder();
-        String type;
         String report = null;
         if (problemFiles.containsKey(Path.of("tracer.js"))) {
-            type = "tracer";
             codeCheck.saveProblem("ext", problem, problemFiles);
         } else {
-            type = "files";
             report = codeCheck.checkAndSave(problem, problemFiles);
         }
         response.append(
                 "<html><head><title></title><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"/>");
         response.append("<body style=\"font-family: sans-serif\">");
-
+        
         String prefix = models.Util.prefix(request) + "/";
-
-        String problemUrl = prefix + type + "/" + problem;
+        String problemUrl = createProblemUrl(request, problem, problemFiles);
         response.append("Public URL (for your students): ");
         response.append("<a href=\"" + problemUrl + "\" target=\"_blank\">" + problemUrl + "</a>");
         Path editKeyPath = Path.of("edit.key");
@@ -142,7 +138,7 @@ public class Upload extends Controller {
             String editKey = new String(problemFiles.get(editKeyPath), StandardCharsets.UTF_8);         
             String editURL = prefix + "private/problem/" + problem + "/" + editKey;
             response.append("<br/>Edit URL (for you only): ");
-            response.append("<a href=\"" + editURL + "\" target=\"_blank\">" + editURL + "</a>");
+            response.append("<a href=\"" + editURL + "\">" + editURL + "</a>");
         }
         if (report != null) {
             String run = Base64.getEncoder().encodeToString(report.getBytes(StandardCharsets.UTF_8));
@@ -153,6 +149,18 @@ public class Upload extends Controller {
         response.append("</li>\n");
         response.append("</ul><p></body></html>\n");
         return response.toString();
+    }
+
+    private String createProblemUrl(Http.Request request, String problem, Map<Path, byte[]> problemFiles) {
+        String type;
+        if (problemFiles.containsKey(Path.of("tracer.js"))) {
+            type = "tracer";
+        } else {
+            type = "files";
+        }
+        String prefix = models.Util.prefix(request) + "/";
+        String problemUrl = prefix + type + "/" + problem;
+        return problemUrl;
     }
 
     public Result editKeySubmit(Http.Request request, String problem, String editKey) {
@@ -178,7 +186,8 @@ public class Upload extends Controller {
                 }
             }
             filesAndContents.remove("edit.key");
-            return ok(views.html.edit.render(problem, filesAndContents, correctEditKey));
+            String problemUrl = createProblemUrl(request, problem, problemFiles);
+            return ok(views.html.edit.render(problem, filesAndContents, correctEditKey, problemUrl));
         } catch (IOException ex) {
             return badRequest("Problem not found: " + problem);
         } catch (Exception ex) {
@@ -217,4 +226,6 @@ public class Upload extends Controller {
 
         return fixedProblemFiles;
     }
+
+    
 }

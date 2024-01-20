@@ -827,7 +827,7 @@ window.addEventListener('load', async function () {
 
         if (lines > 200) {
           editor.setOption('maxLines', 200)
-          let viewButton = createButton('hc-start', _('Expand'), function() {
+          let viewButton = createButton('hc-command', _('Expand'), function() {
             if (editor.getOption('maxLines') == lines) {
                 editor.setOption('maxLines', 200)
                 viewButton.innerHTML = _('Expand')
@@ -944,8 +944,11 @@ window.addEventListener('load', async function () {
       }
               
       if ('errors' in data) {
-        for (const error of data.errors) 
-          editors.get(error['file']).errorAnnotation(error['line'], error['message'])
+        for (const error of data.errors) {
+          const editor = editors.get(error['file'])
+          // TODO: Non-editable files are not in editors. Would be nice to annotate anyway 			
+          if (editor !== undefined) editor.errorAnnotation(error['line'], error['message'])
+        }
       }
     }
     
