@@ -242,6 +242,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     for (const header of headers) {
       const th = append(tr, 'th');
+      th.setAttribute('title', 'Click to sort')
       if (header.text === 'Your Student Info') {
         const a = document.createElement('a');
         a.href = header.href;

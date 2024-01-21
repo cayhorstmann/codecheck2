@@ -806,7 +806,8 @@ window.addEventListener('load', async function () {
         
         let editorDiv = document.createElement('div')
         editorDiv.classList.add('editor')
-        editorDiv.textContent = setup.useFiles[fileName].replace(/\r?\n$/, '');
+        let text = setup.useFiles[fileName].replace(/\r?\n$/, '')
+        editorDiv.textContent = text
         let editor = ace.edit(editorDiv)
         
         let fileObj = document.createElement('div')
@@ -816,27 +817,29 @@ window.addEventListener('load', async function () {
         filenameDiv.textContent = directoryPrefix + fileName
         fileObj.appendChild(filenameDiv)
         fileObj.appendChild(editorDiv)
-        setupAceEditor(editorDiv, editor, fileName, /*readonly*/ true)
-
         const MAX_LINES = 200
-        const lines = editor.getSession().getDocument().getLength()            
+        const lines =  text.split(/\n/).length            
         if (lines > MAX_LINES) {
           editor.setOption('maxLines', MAX_LINES)
+        }
+        setupAceEditor(editorDiv, editor, fileName, /*readonly*/ true)
+        form.appendChild(fileObj)
+
+        if (lines > MAX_LINES) {
           const viewButton = createButton('hc-command', _('Expand'), function() {
-			if (lines > MAX_LINES) {
+			if (editor.getOption('maxLines') > MAX_LINES) {
                 editor.setOption('maxLines', MAX_LINES)
+                editor.resize()               
                 viewButton.innerHTML = _('Expand')
             }
             else {
                 editor.setOption('maxLines', lines)
+                editor.resize()          
                 viewButton.innerHTML = _('Collapse')
             }
           })
-          form.appendChild(fileObj)
           form.appendChild(viewButton)
         }
-        else
-          form.appendChild(fileObj)
       }  
       
 	  submitButton = createButton('hc-start', submitButtonLabel, async function() {
