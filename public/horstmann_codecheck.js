@@ -537,11 +537,6 @@ window.addEventListener('load', async function () {
       // https://stackoverflow.com/questions/32806060/is-there-a-programmatic-way-to-hide-the-cursor-in-ace-editor
       editor.renderer.$cursorLayer.element.style.display = 'none'
       editor.setTheme('ace/theme/kuroir');
-      let lines = editor.getSession().getDocument().getLength();
-      editor.setOptions({
-        minLines: lines,
-        maxLines: lines
-      });                
       // https://github.com/ajaxorg/ace/issues/266
       editor.textInput.getElement().tabIndex = -1
     } else {
@@ -824,11 +819,11 @@ window.addEventListener('load', async function () {
         setupAceEditor(editorDiv, editor, fileName, /*readonly*/ true)
 
         const MAX_LINES = 200
-        if (editor.getSession().getDocument().getLength() > MAX_LINES) {
+        const lines = editor.getSession().getDocument().getLength()            
+        if (lines > MAX_LINES) {
           editor.setOption('maxLines', MAX_LINES)
-          let viewButton = createButton('hc-command', _('Expand'), function() {
-			let lines = editor.getSession().getDocument().getLength()
-            if (lines > MAX_LINES) {
+          const viewButton = createButton('hc-command', _('Expand'), function() {
+			if (lines > MAX_LINES) {
                 editor.setOption('maxLines', MAX_LINES)
                 viewButton.innerHTML = _('Expand')
             }
