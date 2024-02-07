@@ -819,9 +819,7 @@ window.addEventListener('load', async function () {
         fileObj.appendChild(editorDiv)
         const MAX_LINES = 200
         const lines =  text.split(/\n/).length            
-        if (lines > MAX_LINES) {
-          editor.setOption('maxLines', MAX_LINES)
-        }
+        editor.setOption('maxLines', Math.min(lines, MAX_LINES))
         setupAceEditor(editorDiv, editor, fileName, /*readonly*/ true)
         form.appendChild(fileObj)
 
