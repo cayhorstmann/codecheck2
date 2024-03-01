@@ -425,7 +425,7 @@ jobs to your remote service.
 Alternatively, you can test with the locally running web app. In
 `conf/production.conf`, you need to add
 
-    com.horstmann.codecheck.comrun.remote= the URL of the comrun service
+    com.horstmann.codecheck.comrun.remote="comrun host URL/api/upload"
 
 
 Play Server Deployment
@@ -586,7 +586,7 @@ In your Google Cloud Run project, add another service `play-codecheck`.
 Add the following to `conf/production.conf`:
 
     play.http.secret.key= see above
-    com.horstmann.codecheck.comrun.remote=comrun host URL/api/upload
+    com.horstmann.codecheck.comrun.remote="comrun host URL/api/upload"
     com.horstmann.codecheck.aws.accessKey= your AWS credentials
     com.horstmann.codecheck.aws.secretKey=
     com.horstmann.codecheck.s3.bucketsuffix="mydomain.com"
@@ -597,7 +597,7 @@ Add the following to `conf/production.conf`:
 Deploy the `play-codecheck` service:
 
     export PROJECT=your Google project name
-
+    sbt docker:publishLocal
     docker tag play-codecheck:1.0-SNAPSHOT gcr.io/$PROJECT/play-codecheck
     docker push gcr.io/$PROJECT/play-codecheck
 

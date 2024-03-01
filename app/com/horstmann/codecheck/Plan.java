@@ -244,6 +244,8 @@ public class Plan {
         while (retries > 0) {
             try {
                 byte[] responseZip = Util.fileUpload(remoteURL, "job", "job.zip", requestZip);
+                if (responseZip.length < 2 || !(responseZip[0] == 0x50 && responseZip[1] == 0x4b))
+                	throw new IOException("Remote result not a zip file");
                 outputs.putAll(Util.unzip(responseZip));
                 if (debug) {
                     Path temp = Files.createTempFile("codecheck-request", ".zip");
