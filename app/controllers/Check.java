@@ -2,7 +2,6 @@ package controllers;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Base64;
@@ -24,8 +23,8 @@ import com.horstmann.codecheck.Util;
 
 import models.CodeCheck;
 import play.Logger;
-import play.libs.Json;
 import play.libs.Files.TemporaryFile;
+import play.libs.Json;
 import play.libs.concurrent.HttpExecution;
 import play.mvc.Controller;
 import play.mvc.Http;

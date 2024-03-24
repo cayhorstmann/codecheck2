@@ -1,13 +1,11 @@
 package com.horstmann.codecheck;
 
-import java.nio.file.FileSystems;
 import java.nio.file.Path;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
-import java.util.ArrayList;
 
 public class RustLanguage implements Language {
     public String getExtension() { return "rs"; };

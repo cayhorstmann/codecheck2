@@ -26,7 +26,8 @@ public interface Language {
        new HaskellLanguage(),
        new SMLLanguage(),
        new DartLanguage(),
-       new RustLanguage()
+       new RustLanguage(),
+       new BashLanguage()
     };
 
     static Language languageFor(Set<Path> files) {

@@ -42,7 +42,7 @@ function compile {
     _Java)
       javac -cp .:$BASE/use/\* $@ > $BASE/out/$DIR/_compile 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_compile
       ;;
-    _JavaScript|_Matlab)
+    _Bash|_JavaScript|_Matlab)
       touch $BASE/out/$DIR/_compile
       ;;
     _Racket)
@@ -122,6 +122,14 @@ function run {
           rm -f hs_err*log          
         fi
       fi
+      ;;
+    _Bash)
+      ulimit -d 10000 -f 1000 -n 100 -v 100000 
+      if [[ -e preload.sh ]] ; then    
+        source preload.sh 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$ID/_run
+      fi
+      timeout -v -s 9 ${TIMEOUT}s bash $MAIN $@  < $BASE/in/$ID 2>&1 | head --lines $MAXOUTPUTLEN >> $BASE/out/$ID/_run
+      cat $BASE/out/$ID/_run
       ;;
     _CSharp)
       ulimit -d 10000 -f 1000 -n 100 -v 100000 
