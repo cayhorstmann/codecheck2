@@ -1,0 +1,3 @@
+##HIDE
+echo NAME is $NAME
+##EDIT echo ...
