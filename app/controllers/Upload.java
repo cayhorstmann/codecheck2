@@ -53,7 +53,7 @@ public class Upload extends Controller {
             while (params.containsKey("filename" + n)) {
                 String filename = params.get("filename" + n)[0];
                 if (filename.trim().length() > 0) {
-                    String contents = params.get("contents" + n)[0];
+                    String contents = params.get("contents" + n)[0].replaceAll("\r\n", "\n");                    
                     problemFiles.put(Path.of(filename), contents.getBytes(StandardCharsets.UTF_8));
                 }
                 n++;
