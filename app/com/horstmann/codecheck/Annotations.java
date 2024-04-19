@@ -181,19 +181,19 @@ public class Annotations {
 
 
     public boolean checkConditions(Map<Path, String> submissionFiles, Report report) {
+        String[] delims = language.pseudoCommentDelimiters();
         for (Annotation a : annotations) {
             boolean forbidden = a.key.equals("FORBIDDEN");
             if (a.key.equals("REQUIRED") || forbidden) {
                 StringBuilder contents = new StringBuilder();
                 for (String line : Util.lines(submissionFiles.get(a.path))) {
-                    // TODO: Removing comments like this is language specific
-                    contents.append(line.replaceAll("//.*$", ""));
+                	String commentPattern = Pattern.quote(delims[0]) + ".*" + Pattern.quote(delims[1]);
+                    contents.append(line.replaceAll(commentPattern, ""));
                     contents.append(" ");
                 }
                 boolean found = Pattern.compile(a.args).matcher(contents).find();
                 if (found == forbidden) { // found && forbidden || !found && required
                     String nextLine = a.next;
-                    String[] delims = language.pseudoCommentDelimiters();
                     String message;
                     if (nextLine.startsWith(delims[0]) && nextLine.endsWith(delims[1]))
                         message = nextLine.substring(delims[0].length(), nextLine.length() - delims[1].length()).trim();

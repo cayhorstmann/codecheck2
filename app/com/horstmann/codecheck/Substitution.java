@@ -31,7 +31,7 @@ public class Substitution {
             ArrayList<String> values = new ArrayList<>();
             subs.put(name, values);
             values.add(matcher.group("rhs")); 
-            for (String v : args.split(language.substitutionSeparator()))
+            for (String v : language.substitutionSeparator().split(args))
                 if (v.trim().length() > 0)
                     values.add(v);
             if (size == 0)

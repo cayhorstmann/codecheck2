@@ -82,8 +82,7 @@ if [[ -z $DEBUG ]] ; then
 fi
 
 sudo -u $COMRUN_USER ./compile 2>&1
-# Need -E for preserving environment variables in Bash preload.sh
-sudo -E -u $COMRUN_USER nice -15 ./runsolution 2>&1
+sudo -u $COMRUN_USER nice -15 ./runsolution 2>&1
 if [[ -z $DEBUG ]] ; then
   sudo -u $COMRUN_USER rm -rf solution*
 fi

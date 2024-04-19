@@ -182,10 +182,10 @@ public interface Language {
     Pattern variableDeclPattern();
 
     /**
-     * Gets the separator between substitutions in SUB
+     * Gets the separator regex between substitutions in SUB
      * @return
      */
-    default String substitutionSeparator() { return ";"; }
+    default Pattern substitutionSeparator() { return Pattern.compile("\\s*;\\s*"); }
     
     default Pattern unitTestSuccessPattern() { return Pattern.compile("$."); }
     default Pattern unitTestFailurePattern() { return Pattern.compile("$."); }
