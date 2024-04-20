@@ -127,12 +127,15 @@ function run {
       ulimit -d 10000 -f 1000 -n 100 -v 100000 
       if [[ -e premain.sh ]] ; then    
         TMPFILE=$(mktemp)
-        cat premain.sh > $TMPFILE
+        mv premain.sh $TMPFILE
         echo -e "\n" >>  $TMPFILE
         cat $MAIN >> $TMPFILE
         mv $TMPFILE $MAIN
       fi
-      timeout -v -s 9 ${TIMEOUT}s bash $MAIN $@  < $BASE/in/$ID 2>&1 | head --lines $MAXOUTPUTLEN >> $BASE/out/$ID/_run
+      mkdir work
+      cd work
+      chmod 100 ..
+      timeout -v -s 9 ${TIMEOUT}s bash ../$MAIN $@  < $BASE/in/$ID 2>&1 | head --lines $MAXOUTPUTLEN >> $BASE/out/$ID/_run
       cat $BASE/out/$ID/_run
       ;;
     _CSharp)
