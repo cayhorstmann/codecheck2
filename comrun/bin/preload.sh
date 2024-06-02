@@ -134,8 +134,11 @@ function run {
       fi
       mkdir work
       cd work
-      chmod 100 ..
+      chmod +x ../*.sh
+      chmod 100 ..      
       timeout -v -s 9 ${TIMEOUT}s bash ../$MAIN $@  < $BASE/in/$ID 2>&1 | head --lines $MAXOUTPUTLEN >> $BASE/out/$ID/_run
+      chmod 755 ..
+      for f in * ; do if [[ -f $f ]] ; then cp $f .. ; fi ; done
       cat $BASE/out/$ID/_run
       ;;
     _CSharp)
