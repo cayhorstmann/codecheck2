@@ -127,18 +127,15 @@ function run {
       ulimit -d 10000 -f 1000 -n 100 -v 100000 
       if [[ -e premain.sh ]] ; then    
         TMPFILE=$(mktemp)
-        mv premain.sh $TMPFILE
+        echo "chmod -r main.sh" >> $TMPFILE
+        cat premain.sh >> $TMPFILE
         echo -e "\n" >>  $TMPFILE
         cat $MAIN >> $TMPFILE
+        rm premain.sh
         mv $TMPFILE $MAIN
       fi
-      mkdir work
-      cd work
-      chmod +x ../*.sh
-      chmod 100 ..      
-      timeout -v -s 9 ${TIMEOUT}s bash ../$MAIN $@  < $BASE/in/$ID 2>&1 | head --lines $MAXOUTPUTLEN >> $BASE/out/$ID/_run
-      chmod 755 ..
-      for f in * ; do if [[ -f $f ]] ; then cp $f .. ; fi ; done
+      chmod +x *.sh
+      timeout -v -s 9 ${TIMEOUT}s bash $MAIN $@  < $BASE/in/$ID 2>&1 | head --lines $MAXOUTPUTLEN >> $BASE/out/$ID/_run
       cat $BASE/out/$ID/_run
       ;;
     _CSharp)
@@ -250,5 +247,5 @@ function collect {
   DIR=$1
   shift
   cd $BASE/$DIR
-  cp $@ $BASE/out/$DIR
+  cp --parents $@ $BASE/out/$DIR
 }
