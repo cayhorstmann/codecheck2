@@ -384,7 +384,7 @@ Comrun Service Deployment
 
 If you develop locally (i.e. not on Codespaces), run this command:
 
-    gcloud auth print-access-token | podman login -u oauth2accesstoken --password-stdin gcr.io
+    gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin gcr.io
 
 There are two parts to the CodeCheck server. We\'ll take them up one at
 a time. The `comrun` service compiles and runs student programs,
