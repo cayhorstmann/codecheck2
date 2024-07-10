@@ -521,6 +521,7 @@ public class Util {
         return params;
     }
 
+    // TODO: What about redirects?
     public static boolean exists(String url) {
         boolean result = false;
         try {

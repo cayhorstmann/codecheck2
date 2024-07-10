@@ -116,6 +116,10 @@ public class Assignment extends Controller {
                 String problemURL;
                 String qid = null;
                 boolean checked = false;
+                if (problemDescriptor.startsWith("!")) { // suppress checking
+                	checked = true;
+                	problemDescriptor = problemDescriptor.substring(1);
+                }
                 if (problemDescriptor.startsWith("https")) problemURL = problemDescriptor;
                 else if (problemDescriptor.startsWith("http")) {
                     if (!problemDescriptor.startsWith("http://localhost") && !problemDescriptor.startsWith("http://127.0.0.1")) {
