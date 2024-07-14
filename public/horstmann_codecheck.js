@@ -535,10 +535,10 @@ window.addEventListener('load', async function () {
     if (readonly) {
       editor.setReadOnly(true);
       // https://stackoverflow.com/questions/32806060/is-there-a-programmatic-way-to-hide-the-cursor-in-ace-editor
-      editor.renderer.$cursorLayer.element.style.display = 'none'
+      //editor.renderer.$cursorLayer.element.style.display = 'none'
       editor.setTheme('ace/theme/kuroir');
       // https://github.com/ajaxorg/ace/issues/266
-      editor.textInput.getElement().tabIndex = -1
+      //editor.textInput.getElement().tabIndex = -1
     } else {
       editor.setTheme('ace/theme/chrome');
       

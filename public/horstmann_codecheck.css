@@ -96,3 +96,7 @@
     font-size: 0.8em;
 }
 
+/* Use the same color as in chrome theme for highlighting: https://github.com/cayhorstmann/codecheck2/issues/67 */
+.ace-kuroir .ace_marker-layer .ace_selection {
+	background: rgb(181, 213, 255);
+}
