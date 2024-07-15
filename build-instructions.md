@@ -427,6 +427,8 @@ Alternatively, you can test with the locally running web app. In
 
     com.horstmann.codecheck.comrun.remote="comrun host URL/api/upload"
 
+Comrun Service Deployment (AWS)
+-------------------------
 
 Play Server Deployment
 ----------------------
