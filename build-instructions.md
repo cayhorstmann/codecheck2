@@ -522,6 +522,10 @@ If the comrun image is under a different name such as gcr.io/comrun/comrun, chan
 aws ecr list-images --repository-name $ECR_REPOSITORY
 ```
 Lastly, to deploy the comrun service to AWS App Runner, use this command line:
+```
+aws apprunner --region $REGION create-service --service-name comrun   --source-configuration   "{\"ImageRepository\": {\"ImageIdentifier\": \"$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/ecr-codeday:latest\", \"ImageRepositoryType\": \"ECR\"}, \"AuthenticationConfiguration\": { \"AccessRoleArn\": \"arn:aws:iam::$ACCOUNT_ID:role/service-role/$AWS_ROLE_SESSION_NAME\" }}"
+```
+You should recieve a URL link similar to ```______.your-region.awsapprunner.com```
 
 Play Server Deployment
 ----------------------
