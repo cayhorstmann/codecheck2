@@ -429,6 +429,99 @@ Alternatively, you can test with the locally running web app. In
 
 Comrun Service Deployment (AWS)
 -------------------------
+To automate login you would need to create a profile by running the following command in the terminal
+
+ ```
+ aws configure –-profile your-username
+ ```
+
+The following information will need to be provided:
+```
+AWS Access Key ID [None]:
+AWS Secret Access Key [None]:
+Default region name [None]:
+Default output format [None]:
+```
+
+You should now have the two files, .aws/credentials and .aws/config,  after configurating your profile. 
+
+The .aws/credentials file should contain:
+```
+[your-username]
+aws_access_key_id=your-input
+aws_secret_access_key=your-input
+```
+
+And the .aws/config file contains:
+```
+[profile your-username]
+region = your-region #example: us-west-2
+output = json
+```
+Then in the terminal run, 
+```
+export AWS_DEFAULT_PROFILE=your-username
+aws sts get-caller-identity --query "Account" --output text #output is your AWS account ID
+```
+We'd want to set up our environmental variables.
+```
+ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+echo Account ID: $ACCOUNT_ID
+REGION=$(aws configure get region)
+echo Region: $REGION
+```
+
+If ```REGION=$(aws configure get region)``` shows up to be the incorrect region, check out this link https://docs.aws.amazon.com/general/latest/gr/apprunner.html and set your region to the correct one by typing ```REGION = your-region```
+
+From here, we want to create a IAM Accesss Role Name and a temporary file. We will then attach our policy arn to our role. You can find the arn by running ```aws iam list-roles```. Find the role name you created and you’ll see it’s arn. 
+```
+export TP_FILE=$(mktemp)
+export AWS_ROLE_SESSION_NAME=AppRunnerECRAccessRole
+cat <<EOF | tee $TP_FILE
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "build.apprunner.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+
+aws iam create-role --role-name $AWS_ROLE_SESSION_NAME --assume-role-policy-document file://$TP_FILE
+
+rm $TP_FILE
+
+aws iam attach-role-policy --role-name $AWS_ROLE_SESSION_NAME --policy-arn arn:aws:iam::$ACCOUNT_ID:role/service-role/AppRunnerECRAccessRole 
+```
+Since we have already set up our environmental variables & IAM access role, sign into the ECR repository and create a repository using, 
+
+```
+aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
+
+ECR_REPOSITORY=your-repository-name
+
+aws ecr create-repository \
+     --repository-name $ECR_REPOSITORY \
+     --region $REGION
+```
+
+To upload a container image to the ECR repository, run: 
+```
+docker images
+PROJECT=comrun
+docker tag $PROJECT:latest $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
+docker push $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
+```
+If the comrun image is under a different name such as gcr.io/comrun/comrun, change it to ```PROJECT=correct-name```. To see if we have pushed the docker image into the ECR repository run,
+```
+aws ecr list-images --repository-name $ECR_REPOSITORY
+```
+Lastly, to deploy the comrun service to AWS App Runner, use this command line:
 
 Play Server Deployment
 ----------------------
