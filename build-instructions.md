@@ -445,14 +445,14 @@ Default output format [None]:
 
 You should now have the two files, .aws/credentials and .aws/config,  after configurating your profile. 
 
-The .aws/credentials file should contain:
+The ```.aws/credentials``` file should contain:
 ```
 [your-username]
 aws_access_key_id=your-input
 aws_secret_access_key=your-input
 ```
 
-And the .aws/config file contains:
+And the ```.aws/config``` file contains:
 ```
 [profile your-username]
 region = your-region #example: us-west-2
