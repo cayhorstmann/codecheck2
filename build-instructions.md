@@ -476,7 +476,7 @@ If ```REGION=$(aws configure get region)``` shows up to be the incorrect region,
 From here, we want to create a IAM Accesss Role Name and a temporary file. We will then attach our policy arn to our role. You can find the arn by running ```aws iam list-roles```. Find the role name you created and you’ll see it’s arn. 
 ```
 export TP_FILE=$(mktemp)
-export AWS_ROLE_SESSION_NAME=AppRunnerECRAccessRole
+export ROLE_NAME=your-access-role-name
 cat <<EOF | tee $TP_FILE
 {
   "Version": "2012-10-17",
@@ -492,11 +492,11 @@ cat <<EOF | tee $TP_FILE
 }
 EOF
 
-aws iam create-role --role-name $AWS_ROLE_SESSION_NAME --assume-role-policy-document file://$TP_FILE
+aws iam create-role --role-name $ROLE_NAME --assume-role-policy-document file://$TP_FILE
 
 rm $TP_FILE
 
-aws iam attach-role-policy --role-name $AWS_ROLE_SESSION_NAME --policy-arn arn:aws:iam::$ACCOUNT_ID:role/service-role/AppRunnerECRAccessRole 
+aws iam attach-role-policy --role-name $ROLE_NAME --policy-arn arn:aws:iam::$ACCOUNT_ID:role/service-role/$ROLE_NAME 
 ```
 Since we have already set up our environmental variables & IAM access role, sign into the ECR repository and create a repository using, 
 
@@ -730,8 +730,8 @@ aws ecr create-repository \
 From here, we want to upload a container image to the ECR repository
 ```
 docker images 
-PROJECT=codecheck
-docker tag $PROJECT:1.0-SNAPSHOT $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
+PROJECT=738980068095.dkr.ecr.us-west-2.amazonaws.com/playcodecheck
+docker tag $PROJECT:latest $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
 docker push $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
 ```
 To see that we have pushed the docker image into the ECR repository run:
@@ -743,4 +743,4 @@ Lastly, create the play-codecheck service
 ```
 aws apprunner --region $REGION create-service --service-name play-codecheck  --source-configuration   "{\"ImageRepository\": {\"ImageIdentifier\": \"$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/ecr-codeday:latest\", \"ImageRepositoryType\": \"ECR\"}, \"AuthenticationConfiguration\": { \"AccessRoleArn\": \"arn:aws:iam::$ACCOUNT_ID:role/service-role/AppRunnerECRAccessRole\" }}"
 ```
-You get a URL similar to ```______.your-region.awsapprunner.com``` like how we got for the Comrum Service Deployment
+You will get a URL similar to ```______.your-region.awsapprunner.com``` 
