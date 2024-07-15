@@ -611,3 +611,7 @@ Deploy the `play-codecheck` service:
 
 You will get a URL for the service. Now point your browser to
 `https://service url/assets/uploadProblem.html`
+
+
+Play Server Deployment (AWS)
+-------------------------
