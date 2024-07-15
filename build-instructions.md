@@ -714,3 +714,33 @@ You will get a URL for the service. Now point your browser to
 
 Play Server Deployment (AWS)
 -------------------------
+Since we have set up our environmental variables before for our Comrun Service Deployment and IAM Access Role, sign into the ECR repository using this command line (if you already haven't)
+
+```
+aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
+```
+Let’s make another ECR repository to store in the play-codecheck service.
+```
+ECR_REPOSITORY=other-repository-name
+
+aws ecr create-repository \
+     --repository-name $ECR_REPOSITORY \
+     --region $REGION
+```
+From here, we want to upload a container image to the ECR repository
+```
+docker images 
+PROJECT=codecheck
+docker tag $PROJECT:1.0-SNAPSHOT $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
+docker push $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
+```
+To see that we have pushed the docker image into the ECR repository run:
+```
+aws ecr list-images --repository-name $ECR_REPOSITORY
+```
+Lastly, create the play-codecheck service 
+
+```
+aws apprunner --region $REGION create-service --service-name play-codecheck  --source-configuration   "{\"ImageRepository\": {\"ImageIdentifier\": \"$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/ecr-codeday:latest\", \"ImageRepositoryType\": \"ECR\"}, \"AuthenticationConfiguration\": { \"AccessRoleArn\": \"arn:aws:iam::$ACCOUNT_ID:role/service-role/AppRunnerECRAccessRole\" }}"
+```
+You should recieve a URL link similar to ```______.your-region.awsapprunner.com``` like how we got for the Comrum Service Deployment
