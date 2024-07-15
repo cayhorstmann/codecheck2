@@ -525,7 +525,7 @@ Lastly, to deploy the comrun service to AWS App Runner, use this command line:
 ```
 aws apprunner --region $REGION create-service --service-name comrun   --source-configuration   "{\"ImageRepository\": {\"ImageIdentifier\": \"$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/ecr-codeday:latest\", \"ImageRepositoryType\": \"ECR\"}, \"AuthenticationConfiguration\": { \"AccessRoleArn\": \"arn:aws:iam::$ACCOUNT_ID:role/service-role/$AWS_ROLE_SESSION_NAME\" }}"
 ```
-You should recieve a URL link similar to ```______.your-region.awsapprunner.com```
+You get a URL similar to ```______.your-region.awsapprunner.com```
 
 Play Server Deployment
 ----------------------
@@ -743,4 +743,4 @@ Lastly, create the play-codecheck service
 ```
 aws apprunner --region $REGION create-service --service-name play-codecheck  --source-configuration   "{\"ImageRepository\": {\"ImageIdentifier\": \"$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/ecr-codeday:latest\", \"ImageRepositoryType\": \"ECR\"}, \"AuthenticationConfiguration\": { \"AccessRoleArn\": \"arn:aws:iam::$ACCOUNT_ID:role/service-role/AppRunnerECRAccessRole\" }}"
 ```
-You should recieve a URL link similar to ```______.your-region.awsapprunner.com``` like how we got for the Comrum Service Deployment
+You get a URL similar to ```______.your-region.awsapprunner.com``` like how we got for the Comrum Service Deployment
