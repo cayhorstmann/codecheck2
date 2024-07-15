@@ -379,7 +379,7 @@ Configure the AWS CLI [instructions](https://docs.aws.amazon.com/cli/latest/user
 aws configure
 ```
 
-Comrun Service Deployment 
+Comrun Service Deployment (Google Cloud)
 -------------------------
 
 If you develop locally (i.e. not on Codespaces), run this command:
