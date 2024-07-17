@@ -473,22 +473,32 @@ echo Region: $REGION
 
 If ```REGION=$(aws configure get region)``` shows up to be the incorrect region, check out this link https://docs.aws.amazon.com/general/latest/gr/apprunner.html and set your region to the correct one by typing ```REGION = your-region```
 
-From here, we want to create a IAM Accesss Role Name and a temporary file. We will then attach our policy arn to our role. You can find the arn by running ```aws iam list-roles```. Find the role name you created and you’ll see it’s arn. 
+From here, we want to create a IAM Accesss Role Name. We will then attach our policy arn to our role. You can find the arn by running ```aws iam list-roles```. Find the role name you created and you’ll see it’s arn. 
 ```
 export TP_FILE=$(mktemp)
-export ROLE_NAME=your-access-role-name
+export ROLE_NAME=AppRunnerECRAccessRole
 cat <<EOF | tee $TP_FILE
 {
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "build.apprunner.amazonaws.com"
-      },
-      "Action": "sts:AssumeRole"
-    }
-  ]
+    "Version": "2012-10-17",
+    "Statement": 
+    [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:BatchGetImage",
+                "ecr:DescribeImages",
+                "ecr:GetAuthorizationToken",
+                "ecr:BatchCheckLayerAvailability"
+            ],
+            "Principal":{
+                "AWS": "iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess"
+            },
+            "Resource": [
+                "*"
+            ]
+        }
+    ]
 }
 EOF
 
@@ -496,14 +506,14 @@ aws iam create-role --role-name $ROLE_NAME --assume-role-policy-document file://
 
 rm $TP_FILE
 
-aws iam attach-role-policy --role-name $ROLE_NAME --policy-arn arn:aws:iam::$ACCOUNT_ID:role/service-role/$ROLE_NAME 
+aws iam attach-role-policy --role-name $ROLE_NAME --policy-arn arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess 
 ```
 Since we have already set up our environmental variables & IAM access role, sign into the ECR repository and create a repository using, 
 
 ```
 aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
 
-ECR_REPOSITORY=your-repository-name
+ECR_REPOSITORY=ecr-comrun
 
 aws ecr create-repository \
      --repository-name $ECR_REPOSITORY \
@@ -517,15 +527,34 @@ PROJECT=comrun
 docker tag $PROJECT:latest $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
 docker push $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
 ```
-If the comrun image is under a different name such as gcr.io/comrun/comrun, change it to ```PROJECT=correct-name```. To see if we have pushed the docker image into the ECR repository run,
+To see if we have pushed the docker image into the ECR repository run,
 ```
 aws ecr list-images --repository-name $ECR_REPOSITORY
 ```
-Lastly, to deploy the comrun service to AWS App Runner, use this command line:
+Lastly, to deploy the comrun service to AWS App Runner, Create a temporary file to store in the contents of the source configuration:
+
 ```
-aws apprunner --region $REGION create-service --service-name comrun   --source-configuration   "{\"ImageRepository\": {\"ImageIdentifier\": \"$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/ecr-codeday:latest\", \"ImageRepositoryType\": \"ECR\"}, \"AuthenticationConfiguration\": { \"AccessRoleArn\": \"arn:aws:iam::$ACCOUNT_ID:role/service-role/$AWS_ROLE_SESSION_NAME\" }}"
+export SOURCETP_FILE=$(mktemp)
+
+cat <<EOF | tee $SOURCETP_FILE
+{
+    "AutoDeploymentsEnabled": true,
+    "ImageRepository": {
+        "ImageIdentifier": "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/ecr-codeday:latest\", 
+        "ImageRepositoryType": "ECR"
+        },
+         "AuthenticationConfiguration": { 
+            "AccessRoleArn": "arn:aws:iam::$ACCOUNT_ID:role/service-role/AppRunnerECRAccessRole" 
+            }
+}
+EOF
 ```
-You get a URL similar to ```______.your-region.awsapprunner.com```
+
+Then finally deploy the comrun service
+```
+aws apprunner --region $REGION create-service --service-name comrun --cli-input-json file://SOURCETP_FILE
+```
+You will get a URL similar to ```______.your-region.awsapprunner.com```
 
 Play Server Deployment
 ----------------------
@@ -721,7 +750,7 @@ aws ecr get-login-password --region $REGION | docker login --username AWS --pass
 ```
 Let’s make another ECR repository to store in the play-codecheck service.
 ```
-ECR_REPOSITORY=other-repository-name
+ECR_REPOSITORY=erc-play-codecheck
 
 aws ecr create-repository \
      --repository-name $ECR_REPOSITORY \
@@ -738,9 +767,9 @@ To see that we have pushed the docker image into the ECR repository run:
 ```
 aws ecr list-images --repository-name $ECR_REPOSITORY
 ```
-Lastly, create the play-codecheck service 
+Lastly, create the play-codecheck service
 
 ```
-aws apprunner --region $REGION create-service --service-name play-codecheck  --source-configuration   "{\"ImageRepository\": {\"ImageIdentifier\": \"$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/ecr-codeday:latest\", \"ImageRepositoryType\": \"ECR\"}, \"AuthenticationConfiguration\": { \"AccessRoleArn\": \"arn:aws:iam::$ACCOUNT_ID:role/service-role/AppRunnerECRAccessRole\" }}"
+aws apprunner --region $REGION create-service --service-name comrun --cli-input-json file://SOURCETP_FILE
 ```
 You will get a URL similar to ```______.your-region.awsapprunner.com``` 
