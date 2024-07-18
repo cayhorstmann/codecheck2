@@ -269,8 +269,8 @@ Docker Local Testing
 
 Build and run the Docker container for the `comrun` service:
 
-    docker build --tag codecheck:1.0-SNAPSHOT comrun
-    docker run -p 8080:8080 -it codecheck:1.0-SNAPSHOT &
+    docker build --tag comrun:1.0-SNAPSHOT comrun
+    docker run -p 8080:8080 -it comrun:1.0-SNAPSHOT &
 
 Test that it works:
 
@@ -397,7 +397,7 @@ Make a Google Cloud Run project. Define a service `comrun`.
 Then run:
 
     export PROJECT=your Google project name
-    docker tag codecheck:1.0-SNAPSHOT gcr.io/$PROJECT/comrun
+    docker tag comrun:1.0-SNAPSHOT gcr.io/$PROJECT/comrun
     docker push gcr.io/$PROJECT/comrun
 
     gcloud run deploy comrun \
