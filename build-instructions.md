@@ -473,32 +473,22 @@ echo Region: $REGION
 
 If ```REGION=$(aws configure get region)``` shows up to be the incorrect region, check out this link https://docs.aws.amazon.com/general/latest/gr/apprunner.html and set your region to the correct one by typing ```REGION = your-region```
 
-From here, we want to create a IAM Accesss Role Name. We will then attach our policy arn to our role. You can find the arn by running ```aws iam list-roles```. Find the role name you created and you’ll see it’s arn. 
+From here, we want to create a IAM Accesss Role Name. We will then attach the role to a pre-existing policy, ``` arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess```
 ```
 export TP_FILE=$(mktemp)
 export ROLE_NAME=AppRunnerECRAccessRole
 cat <<EOF | tee $TP_FILE
 {
-    "Version": "2012-10-17",
-    "Statement": 
-    [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "ecr:GetDownloadUrlForLayer",
-                "ecr:BatchGetImage",
-                "ecr:DescribeImages",
-                "ecr:GetAuthorizationToken",
-                "ecr:BatchCheckLayerAvailability"
-            ],
-            "Principal":{
-                "AWS": "iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess"
-            },
-            "Resource": [
-                "*"
-            ]
-        }
-    ]
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "build.apprunner.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
 }
 EOF
 
