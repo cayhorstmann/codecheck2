@@ -510,11 +510,13 @@ aws ecr create-repository \
      --region $REGION
 ```
 
-To upload a container image to the ECR repository, run: 
+To upload a container image to the ECR repository, we want to tag and push it: 
 ```
 docker images
 PROJECT=comrun
+
 docker tag $PROJECT:latest $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
+
 docker push $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
 ```
 To see if we have pushed the docker image into the ECR repository run,
