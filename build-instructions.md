@@ -761,8 +761,10 @@ docker push $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
 To see that we have pushed the docker image into the ECR repository run:
 ```
 aws ecr list-images --repository-name $ECR_REPOSITORY
+```
 
-
+Create a temporary file to store in the contents of the source configuration:
+```
 JSON_FILE_NAME=other-temp
 
 cat > $JSON_FILE_NAME.json <<EOF
