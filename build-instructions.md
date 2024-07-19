@@ -515,7 +515,7 @@ To upload a container image to the ECR repository, we want to tag and push it:
 docker images
 PROJECT=comrun
 
-docker tag $PROJECT:latest $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
+docker tag $PROJECT:1.0-SNAPSHOT $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
 
 docker push $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
 ```
@@ -526,17 +526,17 @@ aws ecr list-images --repository-name $ECR_REPOSITORY
 Lastly, to deploy the comrun service to AWS App Runner, Create a temporary file to store in the contents of the source configuration:
 
 ```
-export SOURCETP_FILE=$(mktemp)
+JSON_FILE_NAME=source-temp
 
-cat <<EOF | tee $SOURCETP_FILE
+cat > $JSON_FILE_NAME.json <<EOF
 {
     "AutoDeploymentsEnabled": true,
     "ImageRepository": {
-        "ImageIdentifier": "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/ecr-codeday:latest\", 
+        "ImageIdentifier": "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:1.0-SNAPSHOT", 
         "ImageRepositoryType": "ECR"
         },
          "AuthenticationConfiguration": { 
-            "AccessRoleArn": "arn:aws:iam::$ACCOUNT_ID:role/service-role/AppRunnerECRAccessRole" 
+            "AccessRoleArn": "arn:aws:iam::$ACCOUNT_ID:role/AppRunnerECRAccessRole" 
             }
 }
 EOF
@@ -544,7 +544,8 @@ EOF
 
 Then finally deploy the comrun service
 ```
-aws apprunner --region $REGION create-service --service-name comrun --cli-input-json file://SOURCETP_FILE
+aws apprunner create-service --service-name comrun \
+    --source-configuration file://$JSON_FILE_NAME.json
 ```
 You will get a URL similar to ```______.your-region.awsapprunner.com```
 
@@ -751,8 +752,10 @@ aws ecr create-repository \
 From here, we want to upload a container image to the ECR repository
 ```
 docker images 
-PROJECT=738980068095.dkr.ecr.us-west-2.amazonaws.com/playcodecheck
-docker tag $PROJECT:latest $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
+PROJECT=play-codecheck
+
+docker tag $PROJECT:1.0-SNAPSHOT $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
+
 docker push $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
 ```
 To see that we have pushed the docker image into the ECR repository run:
@@ -762,6 +765,7 @@ aws ecr list-images --repository-name $ECR_REPOSITORY
 Lastly, create the play-codecheck service
 
 ```
-aws apprunner --region $REGION create-service --service-name comrun --cli-input-json file://SOURCETP_FILE
+aws apprunner create-service --service-name comrun \
+    --source-configuration file://$JSON_FILE_NAME.json
 ```
 You will get a URL similar to ```______.your-region.awsapprunner.com``` 
