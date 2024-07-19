@@ -526,28 +526,30 @@ aws ecr list-images --repository-name $ECR_REPOSITORY
 Lastly, to deploy the comrun service to AWS App Runner, Create a temporary file to store in the contents of the source configuration:
 
 ```
-JSON_FILE_NAME=source-temp
-
-cat > $JSON_FILE_NAME.json <<EOF
+cat <<EOF | tee $TP_FILE
 {
-    "AutoDeploymentsEnabled": true,
-    "ImageRepository": {
-        "ImageIdentifier": "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:1.0-SNAPSHOT", 
-        "ImageRepositoryType": "ECR"
-        },
-         "AuthenticationConfiguration": { 
-            "AccessRoleArn": "arn:aws:iam::$ACCOUNT_ID:role/AppRunnerECRAccessRole" 
-            }
+     "ImageRepository": {
+         "ImageIdentifier": "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_ACCOUNT:latest",
+         "ImageRepositoryType": "ECR"
+     },
+     "AutoDeploymentsEnabled": true,
+     "AuthenticationConfiguration": {
+         "AccessRoleArn": "arn:aws:iam::$ACCOUNT_ID:role/AppRunnerECRAccessRole"
+     }
 }
 EOF
 ```
 
-Then finally deploy the comrun service
+Then deploy the comrun service
 ```
-aws apprunner create-service --service-name comrun \
-    --source-configuration file://$JSON_FILE_NAME.json
+aws apprunner --region $REGION create-service --service-name comrun --source-configuration file://$TP_FILE
 ```
-You will get a URL similar to ```______.your-region.awsapprunner.com```
+Find the service URL and wait until ```aws apprunner --region $REGION list-services``` has the service status as running. 
+
+Finally, run curl with the URL 
+```
+curl your-URL-link
+```
 
 Play Server Deployment
 ----------------------
@@ -765,25 +767,26 @@ aws ecr list-images --repository-name $ECR_REPOSITORY
 
 Create a temporary file to store in the contents of the source configuration:
 ```
-JSON_FILE_NAME=other-temp
-
-cat > $JSON_FILE_NAME.json <<EOF
+cat <<EOF | tee $TP_FILE
 {
-    "AutoDeploymentsEnabled": true,
-    "ImageRepository": {
-        "ImageIdentifier": "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:1.0-SNAPSHOT", 
-        "ImageRepositoryType": "ECR"
-        },
-         "AuthenticationConfiguration": { 
-            "AccessRoleArn": "arn:aws:iam::$ACCOUNT_ID:role/AppRunnerECRAccessRole" 
-            }
+     "ImageRepository": {
+         "ImageIdentifier": "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_ACCOUNT:latest",
+         "ImageRepositoryType": "ECR"
+     },
+     "AutoDeploymentsEnabled": true,
+     "AuthenticationConfiguration": {
+         "AccessRoleArn": "arn:aws:iam::$ACCOUNT_ID:role/AppRunnerECRAccessRole"
+     }
 }
 EOF
 ```
-Lastly, create the play-codecheck service
+Then deploy the play-codecheck service
+```
+aws apprunner --region $REGION create-service --service-name comrun --source-configuration file://$TP_FILE
+```
+Find the service URL and wait until ```aws apprunner --region $REGION list-services``` has the service status as running. 
 
+Finally, run curl with the URL 
 ```
-aws apprunner create-service --service-name play-codecheck \
-    --source-configuration file://$JSON_FILE_NAME.json
+curl your-URL-link
 ```
-You will get a URL similar to ```______.your-region.awsapprunner.com``` 
