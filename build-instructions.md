@@ -529,7 +529,7 @@ Lastly, to deploy the comrun service to AWS App Runner, Create a temporary file 
 cat <<EOF | tee $TP_FILE
 {
      "ImageRepository": {
-         "ImageIdentifier": "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_ACCOUNT:latest",
+         "ImageIdentifier": "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:1.0-SNAPSHOT",
          "ImageRepositoryType": "ECR"
      },
      "AutoDeploymentsEnabled": true,
