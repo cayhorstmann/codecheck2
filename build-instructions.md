@@ -269,8 +269,8 @@ Docker Local Testing
 
 Build and run the Docker container for the `comrun` service:
 
-    docker build --tag codecheck:1.0-SNAPSHOT comrun
-    docker run -p 8080:8080 -it codecheck:1.0-SNAPSHOT &
+    docker build --tag comrun:1.0-SNAPSHOT comrun
+    docker run -p 8080:8080 -it comrun:1.0-SNAPSHOT &
 
 Test that it works:
 
@@ -379,7 +379,7 @@ Configure the AWS CLI [instructions](https://docs.aws.amazon.com/cli/latest/user
 aws configure
 ```
 
-Comrun Service Deployment 
+Comrun Service Deployment (Google Cloud)
 -------------------------
 
 If you develop locally (i.e. not on Codespaces), run this command:
@@ -397,7 +397,7 @@ Make a Google Cloud Run project. Define a service `comrun`.
 Then run:
 
     export PROJECT=your Google project name
-    docker tag codecheck:1.0-SNAPSHOT gcr.io/$PROJECT/comrun
+    docker tag comrun:1.0-SNAPSHOT gcr.io/$PROJECT/comrun
     docker push gcr.io/$PROJECT/comrun
 
     gcloud run deploy comrun \
@@ -427,6 +427,139 @@ Alternatively, you can test with the locally running web app. In
 
     com.horstmann.codecheck.comrun.remote="comrun host URL/api/upload"
 
+Comrun Service Deployment (AWS)
+-------------------------
+To automate login you would need to create a profile by running the following command in the terminal
+
+ ```
+ aws configure –-profile your-username
+ ```
+
+The following information will need to be provided:
+```
+AWS Access Key ID [None]:
+AWS Secret Access Key [None]:
+Default region name [None]:
+Default output format [None]:
+```
+
+You should now have the two files, .aws/credentials and .aws/config,  after configurating your profile. 
+
+The ```.aws/credentials``` file should contain:
+```
+[your-username]
+aws_access_key_id=your-input
+aws_secret_access_key=your-input
+```
+
+And the ```.aws/config``` file contains:
+```
+[profile your-username]
+region = your-region #example: us-west-2
+output = json
+```
+Then in the terminal run, 
+```
+export AWS_DEFAULT_PROFILE=your-username
+aws sts get-caller-identity --query "Account" --output text #output is your AWS account ID
+```
+We'd want to set up our environmental variables.
+```
+ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+echo Account ID: $ACCOUNT_ID
+REGION=$(aws configure get region)
+echo Region: $REGION
+```
+
+If ```REGION=$(aws configure get region)``` shows up to be the incorrect region, check out this link https://docs.aws.amazon.com/general/latest/gr/apprunner.html and set your region to the correct one by typing ```REGION = your-region```
+
+From here, we want to create a IAM Accesss Role Name. We will then attach the role to a pre-existing policy, ``` arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess```
+```
+export TP_FILE=$(mktemp)
+export ROLE_NAME=AppRunnerECRAccessRole
+cat <<EOF | tee $TP_FILE
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "build.apprunner.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+
+aws iam create-role --role-name $ROLE_NAME --assume-role-policy-document file://$TP_FILE
+
+rm $TP_FILE
+
+aws iam attach-role-policy --role-name $ROLE_NAME --policy-arn arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess 
+```
+Since we have already set up our environmental variables & IAM access role, sign into the ECR repository and create a repository using, 
+
+```
+aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
+
+ECR_REPOSITORY=ecr-comrun
+
+aws ecr create-repository \
+     --repository-name $ECR_REPOSITORY \
+     --region $REGION
+```
+
+To upload a container image to the ECR repository, we want to tag and push it: 
+```
+docker images
+PROJECT=comrun
+
+docker tag $PROJECT:1.0-SNAPSHOT $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
+
+docker push $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
+```
+To see if we have pushed the docker image into the ECR repository run,
+```
+aws ecr describe-images --repository-name $ECR_REPOSITORY --region $REGION
+```
+To deploy the comrun service to AWS App Runner, create a temporary file to store in the contents of the source configuration:
+
+```
+export TP_FILE=$(mktemp)
+
+cat <<EOF | tee $TP_FILE
+{
+     "ImageRepository": {
+         "ImageIdentifier": "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:latest",
+         "ImageConfiguration": {
+            "Port": "8080"
+        },
+         "ImageRepositoryType": "ECR"
+     },
+     "AutoDeploymentsEnabled": true,
+     "AuthenticationConfiguration": {
+         "AccessRoleArn": "arn:aws:iam::$ACCOUNT_ID:role/AppRunnerECRAccessRole"
+     }
+}
+EOF
+```
+
+Then deploy the comrun service
+```
+aws apprunner --region $REGION create-service --service-name comrun --source-configuration file://$TP_FILE
+```
+Run this command and find the service URL. Then wait until has the service status as  ```RUNNING```. 
+
+ ```
+ aws apprunner --region $REGION list-services
+ ```
+
+Finally, once the service status is at  ```RUNNING```, curl with the URL 
+```
+curl your-URL-link
+```
+Your service should now be deployed. 
 
 Play Server Deployment
 ----------------------
@@ -611,3 +744,69 @@ Deploy the `play-codecheck` service:
 
 You will get a URL for the service. Now point your browser to
 `https://service url/assets/uploadProblem.html`
+
+
+Play Server Deployment (AWS)
+-------------------------
+Since we have set up our environmental variables before for our Comrun Service Deployment and IAM Access Role, sign into the ECR repository using this command line (if you already haven't)
+
+```
+aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
+```
+Let’s make another ECR repository to store in the play-codecheck service.
+```
+ECR_REPOSITORY=erc-play-codecheck
+
+aws ecr create-repository \
+     --repository-name $ECR_REPOSITORY \
+     --region $REGION
+```
+From here, we want to upload a container image to the ECR repository
+```
+docker images 
+PROJECT=play-codecheck
+
+docker tag $PROJECT:1.0-SNAPSHOT $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
+
+docker push $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
+```
+To see that we have pushed the docker image into the ECR repository run:
+```
+aws ecr describe-images --repository-name $ECR_REPOSITORY --region $REGION
+```
+
+Create a another temporary file to store in the contents of the source configuration with ```Port: 9000``` for the play-codecheck service:
+```
+export SOURCE_FILE=$(mktemp)
+
+cat <<EOF | tee $SOURCE_FILE
+{
+     "ImageRepository": {
+         "ImageIdentifier": "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:latest",
+         "ImageConfiguration": {
+            "Port": "9000"
+        },
+         "ImageRepositoryType": "ECR"
+     },
+     "AutoDeploymentsEnabled": true,
+     "AuthenticationConfiguration": {
+         "AccessRoleArn": "arn:aws:iam::$ACCOUNT_ID:role/AppRunnerECRAccessRole"
+     }
+}
+EOF
+```
+Then deploy the play-codecheck service
+```
+aws apprunner --region $REGION create-service --service-name play-codecheck --source-configuration file://$SOURCE_FILE
+```
+Run this command and find the service URL. Then wait until has the service status as  ```RUNNING```. 
+
+ ```
+ aws apprunner --region $REGION list-services
+ ```
+
+Finally, once the service status is at  ```RUNNING```, curl with the URL 
+```
+curl your-URL-link
+```
+Your service should now be deployed. 
