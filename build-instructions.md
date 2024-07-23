@@ -521,15 +521,20 @@ docker push $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
 ```
 To see if we have pushed the docker image into the ECR repository run,
 ```
-aws ecr list-images --repository-name $ECR_REPOSITORY
+aws ecr describe-images --repository-name $ECR_REPOSITORY --region $REGION
 ```
-Lastly, to deploy the comrun service to AWS App Runner, Create a temporary file to store in the contents of the source configuration:
+To deploy the comrun service to AWS App Runner, create a temporary file to store in the contents of the source configuration:
 
 ```
+export TP_FILE=$(mktemp)
+
 cat <<EOF | tee $TP_FILE
 {
      "ImageRepository": {
-         "ImageIdentifier": "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:1.0-SNAPSHOT",
+         "ImageIdentifier": "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:latest",
+         "ImageConfiguration": {
+            "Port": "8080"
+        },
          "ImageRepositoryType": "ECR"
      },
      "AutoDeploymentsEnabled": true,
@@ -544,12 +549,17 @@ Then deploy the comrun service
 ```
 aws apprunner --region $REGION create-service --service-name comrun --source-configuration file://$TP_FILE
 ```
-Find the service URL and wait until ```aws apprunner --region $REGION list-services``` has the service status as running. 
+Run this command and find the service URL. Then wait until has the service status as  ```RUNNING```. 
 
-Finally, run curl with the URL 
+ ```
+ aws apprunner --region $REGION list-services
+ ```
+
+Finally, once the service status is at  ```RUNNING```, curl with the URL 
 ```
 curl your-URL-link
 ```
+Your service should now be deployed. 
 
 Play Server Deployment
 ----------------------
@@ -762,15 +772,20 @@ docker push $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
 ```
 To see that we have pushed the docker image into the ECR repository run:
 ```
-aws ecr list-images --repository-name $ECR_REPOSITORY
+aws ecr describe-images --repository-name $ECR_REPOSITORY --region $REGION
 ```
 
-Create a temporary file to store in the contents of the source configuration:
+Create a another temporary file to store in the contents of the source configuration with ```Port: 9000``` for the play-codecheck service:
 ```
-cat <<EOF | tee $TP_FILE
+export SOURCE_FILE=$(mktemp)
+
+cat <<EOF | tee $SOURCE_FILE
 {
      "ImageRepository": {
-         "ImageIdentifier": "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_ACCOUNT:latest",
+         "ImageIdentifier": "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:latest",
+         "ImageConfiguration": {
+            "Port": "9000"
+        },
          "ImageRepositoryType": "ECR"
      },
      "AutoDeploymentsEnabled": true,
@@ -782,11 +797,16 @@ EOF
 ```
 Then deploy the play-codecheck service
 ```
-aws apprunner --region $REGION create-service --service-name comrun --source-configuration file://$TP_FILE
+aws apprunner --region $REGION create-service --service-name play-codecheck --source-configuration file://$SOURCE_FILE
 ```
-Find the service URL and wait until ```aws apprunner --region $REGION list-services``` has the service status as running. 
+Run this command and find the service URL. Then wait until has the service status as  ```RUNNING```. 
 
-Finally, run curl with the URL 
+ ```
+ aws apprunner --region $REGION list-services
+ ```
+
+Finally, once the service status is at  ```RUNNING```, curl with the URL 
 ```
 curl your-URL-link
 ```
+Your service should now be deployed. 
