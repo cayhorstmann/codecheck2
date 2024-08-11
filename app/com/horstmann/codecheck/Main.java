@@ -285,19 +285,28 @@ public class Main {
             report.args(runargs);
     
             if (!interleaveio && !test.equals("Input")) report.input(input);
-    
+
+            String outerr = plan.outerr(submissionRunID);
+            String expectedOuterr = plan.outerr(solutionRunID);                
+            if (expectedOuterr != null && expectedOuterr.trim().length() > 0 && outFiles.size() == 0) {                
+            	boolean outcome = comp.execute(input, outerr, expectedOuterr, report, null, hidden);
+            	score.pass(outcome, report);
+            } else {        
+                // Not scoring output if there are outFiles, but showing in case there is an exception
+                report.output(outerr);
+            }
+            
             Map<String, String> contents = new HashMap<>();
             Map<String, CompareImages> imageComp = new HashMap<>();
-            String outerr = plan.outerr(submissionRunID);
             for (String f : outFiles) {
-                if (CompareImages.isImage(f))
+                if (CompareImages.isImage(f)) {
                     imageComp.put(f, new CompareImages(plan.getOutputBytes(submissionRunID, f)));
+                }
                 else
                     contents.put(f, plan.getOutputString(submissionRunID, f));            
             }
                     
             if (!runSolution) { 
-                report.output(outerr);
                 for (String f : outFiles) {
                     if (CompareImages.isImage(f)) {
                         CompareImages ci = imageComp.get(f);
@@ -310,18 +319,6 @@ public class Main {
                 return;
             } 
 
-            String expectedOuterr = plan.outerr(solutionRunID);
-                
-            if (expectedOuterr != null && expectedOuterr.trim().length() > 0) {                
-                if (outFiles.size() > 0) {
-                    // Report output but don't grade it
-                    report.output(outerr);
-                } else {
-                    boolean outcome = comp.execute(input, outerr, expectedOuterr, report, null, hidden);
-                    score.pass(outcome, report);
-                }
-            }        
-        
             for (String f : outFiles) {
                 if (CompareImages.isImage(f)) {
                     CompareImages ic = imageComp.get(f);

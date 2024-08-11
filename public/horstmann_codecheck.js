@@ -533,10 +533,11 @@ window.addEventListener('load', async function () {
     };
 
     if (readonly) {
+      editor.setTheme('ace/theme/kuroir');
       editor.setReadOnly(true);
+      // At one time, the cursor was completely blocked, but it seems reasonable to allow copying the code
       // https://stackoverflow.com/questions/32806060/is-there-a-programmatic-way-to-hide-the-cursor-in-ace-editor
       //editor.renderer.$cursorLayer.element.style.display = 'none'
-      editor.setTheme('ace/theme/kuroir');
       // https://github.com/ajaxorg/ace/issues/266
       //editor.textInput.getElement().tabIndex = -1
     } else {
