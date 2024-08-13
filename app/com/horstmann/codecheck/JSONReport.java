@@ -58,7 +58,7 @@ public class JSONReport implements Report {
         public String score; // TODO: Score each item
     }
     
-    private ReportData data = new ReportData();
+    protected ReportData data = new ReportData();
     private Section section;    
     private Run run; 
     
@@ -143,8 +143,7 @@ public class JSONReport implements Report {
 
     @Override
     public JSONReport args(String args) {
-        // TODO: Would like to skip if no args
-        // if (args == null || args.trim().length() == 0) return this;
+        if (args == null || args.trim().length() == 0) return this;
         run.args = new ArrayList<>();
         run.args.add(new Item("Command line arguments", args));
         return this;
@@ -211,22 +210,16 @@ public class JSONReport implements Report {
     }
 
     @Override
-    public JSONReport save(Path dir, String out) throws IOException {
-        Path outPath = dir.resolve(out + ".json");
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.setSerializationInclusion(Include.NON_DEFAULT);
-        mapper.writeValue(outPath.toFile(), data);
-        // JSON.std.write(data, outPath.toFile());
-        return this;
-    }
-    
+    public String extension() { return "json"; }
+
     @Override
     public String getText() { 
         ObjectMapper mapper = new ObjectMapper();
         mapper.setSerializationInclusion(Include.NON_DEFAULT);        
         try {
             return mapper.writeValueAsString(data);
-        } catch (JsonProcessingException e) {           
+        } catch (JsonProcessingException e) {    
+        	e.printStackTrace();
             return null;
         }
     }

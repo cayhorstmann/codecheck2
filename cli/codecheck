@@ -27,6 +27,7 @@
 # -t text report
 # -j json report
 # -n json report for JavaScript client
+# -s setup report for local JavaScript client
 # -p prints the output instead of launching a browser
 # -q quiet (just prints path to result file)
 # -d debug (prints CodeCheck command)
@@ -97,7 +98,7 @@ REPORT_TYPE="HTML"
 
 REPORT=report.html
 
-while getopts "cpqdutjnlr" OPTION
+while getopts "cpqdutjnslr" OPTION
 do
      case $OPTION in
          p)
@@ -127,9 +128,10 @@ do
              REPORT_TYPE="NJS"
              REPORT=report.json
              ;;
-         c)
-             REPORT_TYPE="Codio"
-             REPORT=report.html
+         s)
+             BROWSER="python -mjson.tool"
+             REPORT_TYPE="Setup"
+             REPORT=report.json
              ;;
          l)
            JAVA_OPTS="$JAVA_OPTS -Dcom.horstmann.codecheck.comrun.remote=http://localhost:8080/api/upload"

@@ -211,20 +211,11 @@ public class TextReport implements Report {
         return this;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.horstmann.codecheck.Report#save(java.nio.file.Path)
-     */
-    @Override
-    public TextReport save(Path dir, String out) throws IOException {
-        Path outPath = dir.resolve(out + ".txt");
-        Files.write(outPath, builder.toString().getBytes());
-        return this;
-    }
-    
     @Override
     public String getText() { return builder.toString(); }
+    
+    @Override
+    public String extension() { return "txt"; }
 
     @Override
     public TextReport pass(boolean b) {

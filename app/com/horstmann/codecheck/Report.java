@@ -39,8 +39,6 @@ public interface Report
    Report input(String input);
 
    Report add(Score score);
-
-   Report save(Path dir, String out) throws IOException;
    
    Report pass(boolean b);
    
@@ -58,4 +56,6 @@ public interface Report
    String getText();
    
    default Report errors(List<Error> errors) { return this; }
+   
+   String extension();
 }

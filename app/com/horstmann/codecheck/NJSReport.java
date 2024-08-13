@@ -59,15 +59,6 @@ public class NJSReport extends HTMLReport {
     }
     
     @Override
-    public NJSReport save(Path dir, String out) throws IOException {
-        Path outPath = dir.resolve(out + ".json");
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.setSerializationInclusion(Include.NON_DEFAULT);
-        mapper.writeValue(outPath.toFile(), data);
-        return this;
-    }
-    
-    @Override
     public String getText() { 
         ObjectMapper mapper = new ObjectMapper();
         mapper.setSerializationInclusion(Include.NON_DEFAULT);        
@@ -77,6 +68,9 @@ public class NJSReport extends HTMLReport {
             return null;
         }
     }    
+    
+    @Override
+    public String extension() { return "json"; }
     
     @Override
     public void close() {

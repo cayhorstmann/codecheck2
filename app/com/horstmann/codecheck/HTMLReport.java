@@ -284,19 +284,7 @@ public class HTMLReport implements Report {
             builder.append("</div>\n");
         }
     }
-   
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.horstmann.codecheck.Report#save(java.nio.file.Path)
-     */
-    @Override
-    public HTMLReport save(Path dir, String out) throws IOException {
-        Path outPath = dir.resolve(out + ".html");
-        Files.write(outPath, builder.toString().getBytes());
-        return this;
-    }
-    
+       
     @Override
     public void close() {
         addFootnotes();
@@ -305,6 +293,9 @@ public class HTMLReport implements Report {
     
     @Override
     public String getText() { return builder.toString(); }
+    
+    @Override
+    public String extension() { return "html"; }
 
     private HTMLReport tableStart(String klass) {
         builder.append("<table");
