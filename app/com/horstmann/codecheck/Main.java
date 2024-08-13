@@ -428,6 +428,7 @@ public class Main {
             plan.readSolutionOutputs(problemFiles);
 
             problem = new Problem(problemFiles);
+            if (report instanceof SetupReport) ((SetupReport) report).setProblem(problem); 
             plan.setLanguage(problem.getLanguage());
 
             // TODO: This would be nice to have in Problem, except that one might later need to remove checkstyle.xml

@@ -219,7 +219,6 @@ public class JSONReport implements Report {
         try {
             return mapper.writeValueAsString(data);
         } catch (JsonProcessingException e) {    
-        	e.printStackTrace();
             return null;
         }
     }
