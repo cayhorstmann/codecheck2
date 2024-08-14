@@ -326,97 +326,169 @@ Kill both containers by running this command in the terminal:
 
     docker container kill $(docker ps -q)    
 
-Cloud Provider Tools
---------------------
+Comrun Service Deployment on AWS
+--------------------------------
 
-Install Google Cloud CLI for Linux or [follow the instruction for your environment](https://cloud.google.com/sdk/docs/install#linux)
+[Install the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 
-Open a terminal and download the Google Cloud SDK
-```
-curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-373.0.0-linux-x86_64.tar.gz
-```
-
-Extract the contents of the file to any location on your file system (preferably your home directory). To replace an existing installation, remove the existing google-cloud-sdk directory and then extract the archive to the same location.
-```
-tar -xf google-cloud-sdk-373.0.0-linux-x86.tar.gz
-```
-
-Run the script (from the root of the folder you extracted to) using the following command
-```
-./google-cloud-sdk/install.sh
-```
-To initialize the gcloud CLI, run `gcloud init`
-```
-./google-cloud-sdk/bin/gcloud init
-```
-Install the AWS CLI for Linux or [follow the instruction for your environment](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-
-Open a terminal and download the AWS CLI installation file 
-
-```
-curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-```
-
-Unzip the installer
-```
-unzip awscliv2.zip
-```
-
-Run the install program
-```
-sudo ./aws/install
-```
 Confirm the installation with the following command
+
 ```
 aws --version
 ```
-Configure the AWS CLI [instructions](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html)
+
+[Configure the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-quickstart.html)
+
+```
+ aws configure –-profile your-username
+```
+
+Set
 * Access key ID
 * Secret access key
 * AWS Region
 * Output format
+
+You should now have the two files, `.aws/credentials` and `.aws/config`. 
+
+The ```.aws/credentials``` file should contain:
 ```
-aws configure
+[your-username]
+aws_access_key_id=...
+aws_secret_access_key=...
 ```
 
-Comrun Service Deployment 
--------------------------
+And the ```.aws/config``` file:
+```
+[profile your-username]
+region = your-region #example: us-west-2
+output = json
 
-If you develop locally (i.e. not on Codespaces), run this command:
+```
 
-    gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin gcr.io
+Set environment variables: 
 
-There are two parts to the CodeCheck server. We\'ll take them up one at
-a time. The `comrun` service compiles and runs student programs,
-isolated from the web app and separately scalable.
+```
+export AWS_DEFAULT_PROFILE=your-username
+ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+echo Account ID: $ACCOUNT_ID
+REGION=$(aws configure get region)
+echo Region: $REGION
+```
 
-Here is how to deploy the `comrun` service to Google Cloud.
+If ```REGION=$(aws configure get region)``` shows up to be the incorrect region, check out this link https://docs.aws.amazon.com/general/latest/gr/apprunner.html and set your region to the correct one by typing 
 
-Make a Google Cloud Run project. Define a service `comrun`.
+```
+REGION = your-region
+```
 
-Then run:
+Create an IAM Accesss Role and attach a pre-existing policy for access to container repositories.
 
-    export PROJECT=your Google project name
-    docker tag codecheck:1.0-SNAPSHOT gcr.io/$PROJECT/comrun
-    docker push gcr.io/$PROJECT/comrun
+```
+export TEMPFILE=$(mktemp)
+export ROLE_NAME=AppRunnerECRAccessRole
+cat <<EOF | tee $TEMPFILE
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "build.apprunner.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
 
-    gcloud run deploy comrun \
-      --image gcr.io/$PROJECT/comrun \
-      --port 8080 \
-      --platform managed \
-      --region us-central1 \
-      --allow-unauthenticated \
-      --min-instances=1 \
-      --max-instances=50 \
-      --memory=512Mi \
-      --concurrency=40
+aws iam create-role --role-name $ROLE_NAME --assume-role-policy-document file://$TEMPFILE
 
-You should get a URL for the service. Make a note of it---it won\'t
-change, and you need it in the next steps. To test that the service is
-properly deployed, do this:
+rm $TEMPFILE
 
-    export REMOTE_URL=the URL of the comrun service
-    cd path to/codecheck2 
+aws iam attach-role-policy --role-name $ROLE_NAME --policy-arn arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess 
+```
+
+Next we set up a repository for Docker images:
+
+```
+aws ecr get-login-password --region $REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com
+
+ECR_REPOSITORY=ecr-comrun
+
+aws ecr create-repository \
+     --repository-name $ECR_REPOSITORY \
+     --region $REGION
+```
+
+Now push the image to that repository:
+
+```
+docker images
+PROJECT=comrun
+
+docker tag $PROJECT:1.0-SNAPSHOT $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
+
+docker push $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
+```
+
+To see if we have pushed the docker image into the ECR repository, run:
+
+```
+aws ecr describe-images --repository-name $ECR_REPOSITORY --region $REGION
+```
+
+Finally, we deploy the comrun service to AWS App Runner:
+
+```
+export TEMPFILE=$(mktemp)
+
+cat <<EOF | tee $TEMPFILE
+{
+     "ImageRepository": {
+         "ImageIdentifier": "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:latest",
+         "ImageConfiguration": {
+            "Port": "8080"
+        },
+         "ImageRepositoryType": "ECR"
+     },
+     "AutoDeploymentsEnabled": true,
+     "AuthenticationConfiguration": {
+         "AccessRoleArn": "arn:aws:iam::$ACCOUNT_ID:role/AppRunnerECRAccessRole"
+     }
+}
+EOF
+
+aws apprunner --region $REGION create-service --service-name comrun --source-configuration file://$TEMPFILE
+```
+
+Save the service URL. Then wait until has the service status as  ```RUNNING```. 
+
+ ```
+ aws apprunner --region $REGION list-services
+ ```
+
+Then test it: 
+
+```
+curl service-URL
+```
+
+If you get
+
+```
+<form action="/api/upload" enctype="multipart/form-data" method="post">
+   <div>File: <input type="file" name="job"/></div>
+   <input type="submit" value="Upload" />
+</form>
+```
+
+the comrun service was deployed.
+
+To test that the service is working properly, do this:
+
+    cd path-to-codecheck2-repo
+    export REMOTE_URL=service-URL
     /opt/codecheck/codecheck -rt samples/java/example1
 
 You should get a report that was obtained by sending the compile and run
@@ -425,10 +497,9 @@ jobs to your remote service.
 Alternatively, you can test with the locally running web app. In
 `conf/production.conf`, you need to add
 
-    com.horstmann.codecheck.comrun.remote="comrun host URL/api/upload"
+    com.horstmann.codecheck.comrun.remote=service-URL/api/upload
 
-
-Play Server Deployment
+Using AWS Data Storage
 ----------------------
 
 Set environment variables and create a user in your Amazon AWS account:
@@ -581,7 +652,17 @@ echo Password: $PASSWORD
 aws dynamodb put-item --table-name CodeCheckLTICredentials --item '{"oauth_consumer_key":{"S":"'${USERNAME}'"},"shared_secret":{"S":"'${PASSWORD}'"}}'
 ```
 
-In your Google Cloud Run project, add another service `play-codecheck`.
+Play Server Deployment (AWS)
+----------------------------
+
+Make another ECR repository to store in the play-codecheck service. Note that you need the `ACCOUNT_ID` and `REGION` environment variables from the comrun deployment.
+
+
+    ECR_REPOSITORY=ecr-play-codecheck
+
+    aws ecr create-repository \
+         --repository-name $ECR_REPOSITORY \
+         --region $REGION
 
 Add the following to `conf/production.conf`:
 
@@ -594,20 +675,53 @@ Add the following to `conf/production.conf`:
     com.horstmann.codecheck.dynamodb.region=your AWS region such as "us-west-1"
     com.horstmann.codecheck.storeLocation=""
 
-Deploy the `play-codecheck` service:
+Run
 
-    export PROJECT=your Google project name
     sbt docker:publishLocal
-    docker tag play-codecheck:1.0-SNAPSHOT gcr.io/$PROJECT/play-codecheck
-    docker push gcr.io/$PROJECT/play-codecheck
 
-    gcloud run deploy play-codecheck \
-      --image gcr.io/$PROJECT/play-codecheck \
-      --port 9000 \
-      --platform managed \
-      --region us-central1 \
-      --allow-unauthenticated \
-      --min-instances=1
+Upload the container image to the ECR repository
+
+    docker images 
+    PROJECT=play-codecheck
+
+    docker tag $PROJECT:1.0-SNAPSHOT $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
+
+    docker push $ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY
+    
+To see that we have pushed the docker image into the ECR repository run:
+
+    aws ecr describe-images --repository-name $ECR_REPOSITORY --region $REGION
+
+Then deploy the play-codecheck service
+
+```
+export TEMPFILE=$(mktemp)
+
+cat <<EOF | tee $TEMPFILE
+{
+     "ImageRepository": {
+         "ImageIdentifier": "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$ECR_REPOSITORY:latest",
+         "ImageConfiguration": {
+            "Port": "9000"
+        },
+         "ImageRepositoryType": "ECR"
+     },
+     "AutoDeploymentsEnabled": true,
+     "AuthenticationConfiguration": {
+         "AccessRoleArn": "arn:aws:iam::$ACCOUNT_ID:role/AppRunnerECRAccessRole"
+     }
+}
+EOF
+
+aws apprunner --region $REGION create-service --service-name $PROJECT --source-configuration file://$TEMPFILE
+
+rm $TEMPFILE
+
+```
+
+Make note of the service URL. Then wait until it has the service status as  `RUNNING`. 
+
+    aws apprunner --region $REGION list-services
 
 You will get a URL for the service. Now point your browser to
 `https://service url/assets/uploadProblem.html`
