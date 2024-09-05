@@ -54,6 +54,9 @@ function compile {
     _Scala)
       scalac $@ 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_compile   
       ;;
+    _Kotlin)
+       kotlinc $@ 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_compile   
+       ;;
     _SML)
       polyc -o prog $1 > $BASE/out/$DIR/_compile 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_compile
       ;;
@@ -176,6 +179,10 @@ function run {
     _Scala)
       ulimit -d 1000000 -f 1000 -n 100 -v 10000000
       timeout -v -s 9 ${TIMEOUT}s scala ${MAIN/.scala/} $@ < $BASE/in/$ID 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$ID/_run
+      ;;
+    _Kotlin)
+      ulimit -d 1000000 -f 1000 -n 100 -v 10000000
+      timeout -v -s 9 ${TIMEOUT}s kotlin ${MAIN/.kt/Kt} $@ < $BASE/in/$ID 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$ID/_run
       ;;
     *)  
       echo Unknown language $LANG > $BASE/out/$ID/_run 

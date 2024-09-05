@@ -27,7 +27,8 @@ public interface Language {
        new SMLLanguage(),
        new DartLanguage(),
        new RustLanguage(),
-       new BashLanguage()
+       new BashLanguage(),
+       new KotlinLanguage()
     };
 
     static Language languageFor(Set<Path> files) {

@@ -1,9 +1,7 @@
-FROM ubuntu:20.04
+FROM ubuntu:24.04
 
 RUN apt-get update && \
     apt-get install -y software-properties-common
-
-RUN add-apt-repository -y ppa:plt/racket
 
 RUN apt-get update && apt-get install --no-install-recommends -y \
     wget \
@@ -13,8 +11,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     sysstat \
     sudo \
     g++ \
-    haskell-platform \
-    openjdk-11-jdk-headless \
+    haskell-compiler \
+    openjdk-21-jdk-headless \
     libxi6 \
     libxtst6 \
     libxrender1 \
@@ -30,8 +28,9 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     locales \
     strace \
     rustc \
+	kotlin \
  && rm -rf /var/lib/apt/lists/*
-
+ 
 # https://stackoverflow.com/questions/28405902/how-to-set-the-locale-inside-a-debian-ubuntu-docker-container
 RUN locale-gen --no-purge en_US.UTF-8
 ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
