@@ -224,6 +224,7 @@ with samples. For example,
 ```
 rm -rf /tmp/submission /tmp/problem
 mkdir /tmp/submission
+mkdir /tmp/problem
 cp samples/java/example1/*.java /tmp/submission
 cp -R samples/java/example1 /tmp/problem
 ```
