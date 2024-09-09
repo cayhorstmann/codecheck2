@@ -5,6 +5,7 @@ CODECHECK_HOME=/opt/codecheck
 MAXOUTPUTLEN=10000
 
 BASE=$(pwd)
+PATH=$PATH:/usr/lib/kotlinc/bin
 
 # args: dir sourceDir sourceDir ...
 function prepare {
