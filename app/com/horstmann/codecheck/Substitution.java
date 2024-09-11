@@ -3,9 +3,11 @@ package com.horstmann.codecheck;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -29,6 +31,8 @@ public class Substitution {
         if (matcher.matches()) {
             String name = matcher.group("name").trim();
             ArrayList<String> values = new ArrayList<>();
+            if (subs.containsKey(name))
+                throw new CodeCheckException("More than one SUB in " + file + " for " + name);
             subs.put(name, values);
             values.add(matcher.group("rhs")); 
             for (String v : language.substitutionSeparator().split(args))
@@ -77,6 +81,7 @@ public class Substitution {
         String[] delims = language.pseudoCommentDelimiters();
         String start = delims[0];
         String end = delims[1];
+        Set<String> alreadyUsed = new HashSet<String>();
         for (String l : lines) {
         	String line = removeComment(l, start, end);
         	int i = 0;
@@ -86,7 +91,8 @@ public class Substitution {
             Matcher matcher = pattern.matcher(line.substring(i, j + 1));
             if (matcher.matches()) {
                 String name = matcher.group("name");
-                if (subs.containsKey(name)) {
+                if (subs.containsKey(name) && !alreadyUsed.contains(name)) {
+                	alreadyUsed.add(name);
                 	out.append(line.substring(0, i + matcher.start("rhs")));
                     out.append(subs.get(name).get(n));
                     out.append(line.substring(i + matcher.end("rhs")));

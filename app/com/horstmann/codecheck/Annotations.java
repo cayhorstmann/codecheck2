@@ -211,6 +211,10 @@ public class Annotations {
         return keys.contains(key);
     }
 
+    /*
+     * TODO: It would be more robust if substitutions could only be
+     * in non-editable lines. 
+     */
     public Substitution findSubstitution() {
         Substitution sub = new Substitution(language);
         for (Annotation a : annotations) {
