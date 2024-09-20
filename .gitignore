@@ -3,8 +3,9 @@
 **/*.zip
 **/*.jar
 **/*.bloop
-development.conf
+conf/development.conf
 conf/production.conf
+conf/staging.conf
 production.env
 antbuild
 project/project
