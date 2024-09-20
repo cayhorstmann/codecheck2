@@ -180,7 +180,7 @@ public class Plan {
         if (!compileDir.equals(runDir)) 
             addScript("prepare " + runDir + " " + compileDir);
         addFile(Paths.get("in").resolve(runID), input == null ? "" : input);
-        if (!outputs.containsKey(Paths.get(runId).resolve("_run")))
+        if (!outputs.containsKey(Paths.get(runID).resolve("_run")))
             addScript("run " + runDir + " " + runID + " " + Math.max(MIN_TIMEOUT, (timeout + 500) / 1000) + " " + maxOutputLen + " " + interleaveIO + " " + language.getLanguage() + " " + mainFile + (args == null ? "" : " " + args));
     }
 
