@@ -113,7 +113,7 @@ public class Main {
                 actual[i] = Util.truncate(actual[i], expected[i].length() + MUCH_LONGER);
                 score.pass(outcomes[i], null); // Pass/fail shown in run table
             }
-            report.runTable(null, argNames, args, actual, expected, outcomes);
+            report.runTable(null, argNames, args, actual, expected, outcomes, mainFile.toString());
         });
     }
        
@@ -172,7 +172,7 @@ public class Main {
                 }
                 score.pass(outcomes[i], null /* no report--it's in the table */);
             }
-            report.runTable(names, new String[] { "Arguments" }, args, actual, expected, outcomes);
+            report.runTable(names, new String[] { "Arguments" }, args, actual, expected, outcomes, submissionSources.get(0).toString());
         });
     }     
 
@@ -183,13 +183,13 @@ public class Main {
                 unitTests.add(p);
         }
         if (unitTests.size() > 0) {
-            report.header("unitTest", "Unit Tests");
+            report.header("unitTest", "Unit Tests"); // TODO Should there be a section per unit test??? Or more likely, should mainclass be in report.run?????
             
             for (Path p: unitTests) {
                 String id = plan.nextID("test");
                 plan.unitTest(id, p, dependentSourcePaths, timeoutMillis / unitTests.size(), maxOutputLen / unitTests.size());
                 plan.addTask(() -> {
-                    report.run(p.toString());
+                    report.run(p.toString(), p.toString());
                     if (!plan.checkCompiled(id, report, score)) return; 
                     String outerr = plan.outerr(id);                    
                     if (problem.getAnnotations().getHiddenTestFiles().contains(p))
@@ -208,7 +208,7 @@ public class Main {
         plan.compile(compileID, "submission", mainFile, dependentSourcePaths);
         plan.run(compileID, compileID, mainFile, "", null, timeout, maxOutputLen, false);
         plan.addTask(() -> {
-            report.run(mainFile.toString());
+            report.run(mainFile.toString(), mainFile.toString());
             if (!plan.checkCompiled(compileID, report, score)) return; 
             String outerr = plan.outerr(compileID);
             AsExpected cond = new AsExpected(comp);
@@ -259,7 +259,7 @@ public class Main {
         String runNumber = test.replace("test", "").trim();
         plan.addTask(() -> { 
             if (!plan.compiled("submissionrun")) return;
-            report.run(!test.equals("Input") && runNumber.length() > 0 ? "Test " + runNumber : null);
+            report.run(!test.equals("Input") && runNumber.length() > 0 ? "Test " + runNumber : null, mainFile.toString());
         });
         boolean interleaveio = okToInterleave && (problem.getLanguage().echoesStdin() == Language.Interleave.ALWAYS ||
             problem.getLanguage().echoesStdin() == Language.Interleave.UNGRADED && test.equals("Input"));
@@ -418,7 +418,7 @@ public class Main {
                 report = new NJSReport("Report");
             else if ("Setup".equals(reportType)) {
             	report = new SetupReport("Report");
-            	okToInterleave = false;
+            	// okToInterleave = false; // TODO
             }
             else
                 report = new HTMLReport("Report");

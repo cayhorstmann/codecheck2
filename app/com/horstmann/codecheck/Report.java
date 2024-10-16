@@ -1,8 +1,6 @@
 package com.horstmann.codecheck;
 
 import java.awt.image.BufferedImage;
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 
@@ -18,7 +16,7 @@ public interface Report
 
    Report header(String section, String text);
    
-   Report run(String caption);
+   Report run(String caption, String mainclass);
 
    Report output(CharSequence text);
 
@@ -44,7 +42,7 @@ public interface Report
    
    Report compareTokens(String filename, List<Match> matches);
    Report output(List<String> lines, Set<Integer> matches, Set<Integer> mismatches);
-   Report runTable(String[] functionNames, String[] argNames, String[][] args, String[] actual, String[] expected, boolean[] outcomes);
+   Report runTable(String[] functionNames, String[] argNames, String[][] args, String[] actual, String[] expected, boolean[] outcomes, String mainclass);
    
    Report comment(String key, String value);
 

@@ -61,7 +61,7 @@ public class Problem {
         public Map<String, String> useFiles = new LinkedHashMap<>();
         public String description;
     }
-
+    
     private Map<Path, byte[]> problemFiles;
     private Map<Path, byte[]> useFiles = new Util.FileMap(); 
         // the files (sources and inputs) from problemFiles that must be copied to the directory 

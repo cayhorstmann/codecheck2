@@ -1,9 +1,6 @@
 package com.horstmann.codecheck;
 
 import java.awt.image.BufferedImage;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -191,7 +188,7 @@ public class TextReport implements Report {
     }
 
     @Override
-    public TextReport run(String caption) {
+    public TextReport run(String caption, String mainclass) {
         caption(caption);
         return this;
     }
@@ -285,7 +282,7 @@ public class TextReport implements Report {
     @Override
     public TextReport runTable(String[] methodNames, String[] argNames,
             String[][] args, String[] actual, String[] expected,
-            boolean[] outcomes) {
+            boolean[] outcomes, String mainclass) {
 
         int cols0 = 0;
         if (methodNames != null) {

@@ -220,4 +220,34 @@ public class Check extends Controller {
             }
         }, HttpExecution.fromThread((Executor) ccec) /* ec.current() */);           
     }
+    
+    public CompletableFuture<Result> setupReport(Http.Request request, String repo, String problem) throws IOException, InterruptedException {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+            	String ccid = com.horstmann.codecheck.Util.createPronouncableUID();
+                Map<Path, String> submissionFiles = new TreeMap<>();
+                try {
+                    Map<Path, byte[]> problemFiles = codeCheck.loadProblem(repo, problem, ccid);
+                    for (Path key : problemFiles.keySet()) {
+                        String value = new String(problemFiles.get(key));
+                        submissionFiles.put(key, value);
+                    }
+                } catch (Exception e) {
+                    return badRequest("Cannot load problem " + repo + "/" + problem);
+                }
+                
+                long startTime = System.nanoTime();         
+                String report = codeCheck.run("Setup", repo, problem, ccid, submissionFiles);
+                double elapsed = (System.nanoTime() - startTime) / 1000000000.0;
+                if (report == null || report.length() == 0) {
+                    report = String.format("Timed out after %5.0f seconds\n", elapsed);
+                }
+                
+                return ok(report).as("application/json");
+            }
+            catch (Exception ex) {
+                return internalServerError(Util.getStackTrace(ex));
+            }
+        }, HttpExecution.fromThread((Executor) ccec) /* ec.current() */);                        
+    }    
 }

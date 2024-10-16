@@ -2,8 +2,6 @@ package com.horstmann.codecheck;
 
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.LinkedHashMap;
@@ -30,6 +28,7 @@ public class JSONReport implements Report {
     
     public static class Run {
         public String caption;
+        public String mainclass;
         public List<Item> args;
         public String input;
         public String output;
@@ -42,7 +41,7 @@ public class JSONReport implements Report {
         public Boolean passed;
     }
     
-    public static class Section {
+    public static class Section { 
         public String type;
         public String errors;
         public List<Error> errorData = new ArrayList<>();
@@ -82,8 +81,9 @@ public class JSONReport implements Report {
     }
 
     @Override
-    public JSONReport run(String caption) { 
+    public JSONReport run(String caption, String mainclass) { 
         run = new Run();
+        run.mainclass = mainclass;
         run.passed = true;
         if (section.runs == null) section.runs = new ArrayList<>();
         section.runs.add(run);
@@ -302,11 +302,12 @@ public class JSONReport implements Report {
 
     @Override
     public JSONReport runTable(String[] methodNames, String[] argNames, String[][] args, String[] actual,
-            String[] expected, boolean[] outcomes) {
+            String[] expected, boolean[] outcomes, String mainclass) {
         if (section.runs == null) section.runs = new ArrayList<>();
         for (int i = 0; i < actual.length; i++)
         {
             Run run = new Run();
+            run.mainclass = mainclass;
             run.passed = true;
             if (methodNames != null) run.caption = methodNames[i];
             section.runs.add(run);

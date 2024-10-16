@@ -31,6 +31,10 @@ GET  /fileData                controllers.Files.fileData(request: Request, repo:
 GET  /fileData/:problem       controllers.Files.fileData(request: Request, repo: String ?= "ext", problem: String, ccid: String ?= null)
 GET  /fileData/:repo/:problem controllers.Files.fileData(request: Request, repo: String, problem: String, ccid: String ?= null)
 
+# For pyodide client
+GET  /setupData/:problem       controllers.Check.setupReport(request: Request, repo: String ?= "ext", problem: String)
+GET  /setupData/:repo/:problem controllers.Check.setupReport(request: Request, repo: String, problem: String)
+
 POST /uploadProblem                     controllers.Upload.uploadProblem(request: Request)
 POST /uploadFiles                       controllers.Upload.uploadFiles(request: Request)
 GET  /private/problem/:problem/:editKey controllers.Upload.editKeySubmit(request: Request, problem: String, editKey: String)

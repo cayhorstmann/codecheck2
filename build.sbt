@@ -8,6 +8,8 @@ scalaVersion := "2.12.15"
 
 javacOptions ++= Seq("-source", "11", "-target", "11")
 
+javaOptions += "-Dconfig.file=" + Option(System.getProperty("config.file")).getOrElse("conf/application.conf")
+
 lazy val root = (project in file(".")).enablePlugins(PlayJava)
 
 libraryDependencies ++= Seq(

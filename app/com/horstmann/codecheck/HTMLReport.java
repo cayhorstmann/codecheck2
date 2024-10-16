@@ -3,8 +3,6 @@ package com.horstmann.codecheck;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -67,7 +65,7 @@ public class HTMLReport implements Report {
 
 
     @Override
-    public HTMLReport run(String text) {
+    public HTMLReport run(String text, String mainclass) {
         if (text != null && !text.trim().equals("")) {
             builder.append("<p class=\"item\">");
             escape(text);
@@ -424,7 +422,7 @@ public class HTMLReport implements Report {
 
     @Override
     public HTMLReport runTable(String[] methodNames, String[] argNames, String[][] args,
-            String[] actual, String[] expected, boolean[] outcomes) {
+            String[] actual, String[] expected, boolean[] outcomes, String mainclass) {
         tableStart("run").rowStart();
         headerCell("");
         if (methodNames != null)
