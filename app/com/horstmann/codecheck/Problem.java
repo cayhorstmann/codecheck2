@@ -141,7 +141,7 @@ public class Problem {
             inputFiles.put(inputPath, problemFiles.get(inputPath));
             for (String runargs : annotations.findAll("ARGS"))
                 for (String arg : runargs.split("\\s+"))
-                    if (isTextFile(arg)) {
+                    if (isTextFile(arg)) { // TODO: would also make sense to display used image files
                         Path argPath = Paths.get(arg);
                         if (useFiles.containsKey(argPath)) {
                             inputFiles.put(argPath, useFiles.get(argPath));
@@ -692,6 +692,7 @@ whitespace2 pseudocode2
         return state;
     }
 
+    // TODO: This could be more liberal--see HTMLReport for identifying text vs. binary
     private static boolean isTextFile(String p) { return p.toLowerCase().endsWith(".txt"); }
     private static boolean isTextFile(Path p) { return isTextFile(p.toString()); }
     

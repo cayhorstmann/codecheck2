@@ -1,8 +1,11 @@
 package com.horstmann.codecheck;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -15,7 +18,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class SetupReport extends JSONReport {
 	private Problem problem;
-	private Map<String, String> hiddenFiles = new HashMap<>();
 	private Map<String, Object> attributes = new HashMap<>();
 	private List<Condition> conditions = new ArrayList<>();
 	
@@ -26,6 +28,22 @@ public class SetupReport extends JSONReport {
 		public String message;
 	}
 	
+    static class FileItem {
+        public FileItem() {}
+        public FileItem(Path path, byte[] contents) {
+			this.name = path.toString();
+    		try {
+    			this.value = StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(contents)).toString();    			
+    		} catch (CharacterCodingException e) {
+    			this.value = Base64.getEncoder().encodeToString(contents);
+    			this.binary = true;
+    		}
+        }
+        public String name;
+        public String value;
+        public boolean binary;
+    }
+	
 	public SetupReport(String title) {
 		super(title);
 	}
@@ -33,18 +51,6 @@ public class SetupReport extends JSONReport {
 	public void setProblem(Problem problem) {
 		this.problem = problem;
 	}
-	
-	public JSONReport file(String fileName, byte[] contents, boolean hidden) {
-		if (Report.isImage(fileName)) {
-			hiddenFiles.put(fileName, Report.imageData(fileName, contents));
-		}
-		else if (hidden) {
-			hiddenFiles.put(fileName, new String(contents, StandardCharsets.UTF_8));
-		}
-		// Other files are already in Problem
-		// TODO: What if it's another binary file?
-    	return this;
-    }
 	
 	@Override public JSONReport attribute(String key, Object value) {
 		attributes.put(key, value);
@@ -83,12 +89,20 @@ public class SetupReport extends JSONReport {
         mapper.setSerializationInclusion(Include.NON_DEFAULT);
 		ObjectNode dataNode = (ObjectNode) mapper.convertValue(data, JsonNode.class);
 		if (problem != null) {
-			ObjectNode problemNode = (ObjectNode) mapper.convertValue(problem.getProblemData(), JsonNode.class);
+			Problem.DisplayData displayData = problem.getProblemData();
+			ObjectNode problemNode = (ObjectNode) mapper.convertValue(displayData, JsonNode.class);
 			Iterator<Map.Entry<String, JsonNode>> fields = problemNode.fields();
 			while (fields.hasNext()) {
 				Map.Entry<String, JsonNode> entry = fields.next();
 				dataNode.set(entry.getKey(), entry.getValue());
 			}
+			Map<Path, byte[]> useFiles = problem.getUseFiles();
+			Map<String, String> displayedUseFiles = displayData.useFiles;
+			List<FileItem> hiddenFiles = new ArrayList<>();
+			for (Path p : useFiles.keySet() ) {
+				if (!displayedUseFiles.containsKey(p.toString()))
+					hiddenFiles.add(new FileItem(p, useFiles.get(p)));
+			}			
 			if (!hiddenFiles.isEmpty()) {
 				dataNode.set("hiddenFiles", mapper.convertValue(hiddenFiles, JsonNode.class));
 			}		

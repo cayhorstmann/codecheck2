@@ -187,18 +187,14 @@ public class TextReport implements Report {
 
     @Override
     public TextReport file(String file, String contents) {
-        if ("studentFiles".equals(section) || "providedFiles".equals(section)) return this;
+        if ("studentFiles".equals(section)) return this;
         caption(file);
         add(contents); // TODO: Line numbers?
         return this;
     }
     
     public TextReport file(String fileName, byte[] contents, boolean hidden) {
-    	// Only happens in providedFiles
-    	if (hidden) {
-    		caption(fileName);
-            add("[Hidden]");                		
-    	}
+    	// Only happens in providedFiles section
      	return this;
     }
 

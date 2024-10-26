@@ -2,7 +2,6 @@ package com.horstmann.codecheck;
 
 import java.awt.image.BufferedImage;
 import java.nio.file.Path;
-import java.util.Base64;
 import java.util.List;
 import java.util.Set;
 
@@ -67,13 +66,4 @@ public interface Report
    default Report errors(List<Error> errors) { return this; }
    
    String extension();
-   
-   static boolean isImage(String filename) {
-	   return Set.of("png", "gif", "jpg", "jpeg", "bmp").contains(Util.extension(filename));
-   }
-   static String imageData(String filename, byte[] contents) {
-	   String extension = Util.extension(filename);
-	   if (extension.equals("jpg")) extension = "jpeg";
-	   return "data:image/" + extension + ";base64," + Base64.getEncoder().encodeToString(contents);   
-   }
 }

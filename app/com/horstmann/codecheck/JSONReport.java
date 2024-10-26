@@ -2,6 +2,9 @@ package com.horstmann.codecheck;
 
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.LinkedHashMap;
@@ -19,11 +22,30 @@ public class JSONReport implements Report {
     public static class Item {
         public Item() {}
         public Item(String name, String contents) {
+        	this(name, contents, false);
+        }
+        public Item(String name, byte[] contents) {
+        	this(name, contents, false);
+        }
+        public Item(String name, String contents, boolean hidden) {
             this.name = name;
-            this.value = contents;
+            this.value = contents;           
+            this.hidden = hidden;
+        }
+        public Item(String name, byte[] contents, boolean hidden) {
+			this.name = name;
+    		try {
+    			this.value = StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(contents)).toString();    			
+    		} catch (CharacterCodingException e) {
+    			this.value = Base64.getEncoder().encodeToString(contents);
+    			this.binary = true;
+    			this.hidden = hidden;
+    		}
         }
         public String name;
         public String value;
+        public boolean binary;
+        public boolean hidden;
     }
     
     public static class Run {
@@ -172,10 +194,9 @@ public class JSONReport implements Report {
             ImageIO.write(image, "PNG", out);
             out.close();
             byte[] pngBytes = out.toByteArray();
-            String data = Base64.getEncoder().encodeToString(pngBytes);
-            run.images.add(new Item(caption, data));
+            run.images.add(new Item(caption, pngBytes));
         } catch (Exception ex) {
-            run.images.add(new Item(caption, null));
+            run.images.add(new Item(caption, ""));
         }
         return this;
     }
@@ -189,7 +210,7 @@ public class JSONReport implements Report {
     @Override
     public JSONReport file(String file, String contents) {
         Item item = new Item(file, contents);
-        if (!"studentFiles".equals(section.type) && !"providedFiles".equals(section.type)) { 
+        if (!"studentFiles".equals(section.type)) { 
             run.files.add(item);
             
             StringBuilder builder = new StringBuilder();
@@ -380,8 +401,7 @@ public class JSONReport implements Report {
     }
     
     @Override
-    public JSONReport errors(List<Error> errorData) 
-    {
+    public JSONReport errors(List<Error> errorData) {
         if (section != null)
             section.errorData.addAll(errorData);
         return this; 
