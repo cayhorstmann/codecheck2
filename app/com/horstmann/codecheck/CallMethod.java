@@ -174,7 +174,7 @@ public class CallMethod {
         } finally {
             loader.close();
         }
-        report.runTable(null, new String[] { "Arguments" }, args, actual, expected, outcomes, null);
+        report.runTable(null, new String[] { "Arguments" }, args, actual, expected, outcomes, null, null);
     }
     
     private boolean compare(Object a, Object b) {

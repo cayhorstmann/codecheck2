@@ -119,17 +119,17 @@ do
              REPORT=report.txt 
              ;;
          j)
-             BROWSER="python -mjson.tool"
+             BROWSER="python3 -mjson.tool"
              REPORT_TYPE="JSON"
              REPORT=report.json
              ;;
          n)
-             BROWSER="python -mjson.tool"
+             BROWSER="python3 -mjson.tool"
              REPORT_TYPE="NJS"
              REPORT=report.json
              ;;
          s)
-             BROWSER="python -mjson.tool"
+             BROWSER="python3 -mjson.tool"
              REPORT_TYPE="Setup"
              REPORT=report.json
              ;;

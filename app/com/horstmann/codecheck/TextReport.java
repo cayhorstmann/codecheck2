@@ -13,6 +13,7 @@ public class TextReport implements Report {
     private int sections;
     private String section;
     private List<String> footnotes = new ArrayList<>();
+    private boolean hidden;
 
     public TextReport(String title) {
     	// TODO This version is only built by the client-side Ant script
@@ -31,8 +32,9 @@ public class TextReport implements Report {
     }
 
     private TextReport add(CharSequence s) {
+        if (s == null) return this;
         builder.append(s);
-        if (s != null && s.length() > 0 && s.charAt(s.length() - 1) != '\n')
+        if (s.length() > 0 && s.charAt(s.length() - 1) != '\n')
             builder.append("\n");
         return this;
     }
@@ -45,6 +47,7 @@ public class TextReport implements Report {
     @Override
     public TextReport header(String section, String text) {
         this.section = section;
+        hidden = false;
         if ("studentFiles".equals(section) || "providedFiles".equals(section)) return this;
 
         if (sections > 0)
@@ -73,20 +76,20 @@ public class TextReport implements Report {
      */
     @Override
     public TextReport output(CharSequence text) {
-        output(null, text);
+    	if (hidden) add("[Hidden]"); else add(text);
         return this;
     }
 
     @Override
     public TextReport args(String args) {
         if (args != null && args.trim().length() > 0)
-            output("Command line arguments: " + args);
+            add("Command line arguments: " + args);
         return this;
     }
 
     @Override
     public TextReport input(String input) {
-        output("Input", input);
+        addCaptioned("Input", hidden ? "[Hidden]" : input);
         return this;
     }
 
@@ -96,7 +99,7 @@ public class TextReport implements Report {
         return this;
     }
 
-    private TextReport output(String captionText, CharSequence text) {
+    private TextReport addCaptioned(String captionText, CharSequence text) {
         if (text == null || text.equals(""))
             return this;
         caption(captionText);
@@ -107,22 +110,26 @@ public class TextReport implements Report {
     @Override
     public TextReport output(List<String> lines, Set<Integer> matches,
             Set<Integer> mismatches) {
-        for (int i = 0; i < lines.size(); i++) {
-            String line = lines.get(i);
-            if (matches.contains(i))
-                builder.append("+ ");
-            else if (mismatches.contains(i))
-                builder.append("- ");
-            else
-                builder.append("  ");
-            add(line);
-        }
+    	if (hidden) {
+    		add("[Hidden]");
+    	} else {
+	        for (int i = 0; i < lines.size(); i++) {
+	            String line = lines.get(i);
+	            if (matches.contains(i))
+	                builder.append("+ ");
+	            else if (mismatches.contains(i))
+	                builder.append("- ");
+	            else
+	                builder.append("  ");
+	            add(line);
+	        }
+    	}
         return this;
     }
 
     private TextReport error(String captionText, String message) {
         caption(captionText);
-        output(message);
+        add(message);
         return this;
     }
 
@@ -144,8 +151,7 @@ public class TextReport implements Report {
      */
     @Override
     public TextReport systemError(String message) {
-        add("System Error:");
-        output(message);
+        error("System Error", message);
         return this;
     }
     
@@ -183,13 +189,23 @@ public class TextReport implements Report {
     public TextReport file(String file, String contents) {
         if ("studentFiles".equals(section) || "providedFiles".equals(section)) return this;
         caption(file);
-        output(contents); // TODO: Line numbers?
+        add(contents); // TODO: Line numbers?
         return this;
+    }
+    
+    public TextReport file(String fileName, byte[] contents, boolean hidden) {
+    	// Only happens in providedFiles
+    	if (hidden) {
+    		caption(fileName);
+            add("[Hidden]");                		
+    	}
+     	return this;
     }
 
     @Override
-    public TextReport run(String caption, String mainclass) {
+    public TextReport run(String caption, String mainclass, boolean hidden) {
         caption(caption);
+        this.hidden = hidden;
         return this;
     }
 
@@ -282,7 +298,7 @@ public class TextReport implements Report {
     @Override
     public TextReport runTable(String[] methodNames, String[] argNames,
             String[][] args, String[] actual, String[] expected,
-            boolean[] outcomes, String mainclass) {
+            boolean[] outcomes, boolean[] hidden, String mainclass) {
 
         int cols0 = 0;
         if (methodNames != null) {
@@ -309,12 +325,20 @@ public class TextReport implements Report {
         add("------");
 
         for (int i = 0; i < args.length; i++) {
-            if (methodNames != null)
-                pad(methodNames[i], cols0);
-            for (int j = 0; j < n; j++)
-                pad(args[i][j], cols[j]);
-            pad(actual[i], cols[n]);
-            pad(expected[i], cols[n + 1]);
+        	if (hidden != null && hidden[i]) {
+	            pad("?", cols0);
+	            for (int j = 0; j < n; j++)
+	                pad("?", cols[j]);
+	            pad("?", cols[n]);
+	            pad("?", cols[n + 1]);        	
+        	} else {
+	            if (methodNames != null)
+	                pad(methodNames[i], cols0);
+	            for (int j = 0; j < n; j++)
+	                pad(args[i][j], cols[j]);
+	            pad(actual[i], cols[n]);
+	            pad(expected[i], cols[n + 1]);
+        	}
             pass(outcomes[i]);
         }
         return this;
@@ -329,13 +353,5 @@ public class TextReport implements Report {
         builder.append(value);
         builder.append('\n');
         return this;
-    }
-
-    public TextReport hiddenOutputMessage() {
-        if (builder.charAt(builder.length() - 1) != '\n')
-            builder.append('\n');
-        builder.append("[hidden]"); 
-        builder.append('\n');
-        return this; 
     }
 }

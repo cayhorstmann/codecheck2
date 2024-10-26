@@ -191,11 +191,8 @@ public interface Language {
     default Pattern unitTestSuccessPattern() { return Pattern.compile("$."); }
     default Pattern unitTestFailurePattern() { return Pattern.compile("$."); }
     
-    default void reportUnitTest(String result, Report report, Score score, boolean hidden) {
-        if (hidden == false)
-            report.output(result);
-        else 
-            report.hiddenOutputMessage(); 
+    default void reportUnitTest(String result, Report report, Score score) {
+    	report.output(result);
         Matcher matcher = unitTestSuccessPattern().matcher(result);
         if (matcher.find()) {
            int runs = Integer.parseInt(matcher.group("runs"));

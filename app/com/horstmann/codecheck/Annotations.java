@@ -17,7 +17,8 @@ public class Annotations {
     public static final Set<String> VALID_ANNOTATIONS = new LinkedHashSet<>(List.of(
             "CALL HIDDEN", "IN HIDDEN", "HIDDEN", "HIDE", "SHOW", "EDIT", "SOLUTION", "CALL", "SUB", "ID", "SAMPLE", "ARGS", 
             "IN", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "MAXOUTPUTLEN",
-            "REQUIRED", "FORBIDDEN", "SCORING", "INTERLEAVE", "TILE", "FIXED", "OR", "PSEUDO"));    
+            "REQUIRED", "FORBIDDEN", "SCORING", "INTERLEAVE", "TILE", "FIXED", "OR", "PSEUDO"));  
+    // TODO SAMPLE, SCORING legacy
     public static final Set<String> NON_BLANK_BEFORE_OK = Set.of("SUB", "PSEUDO"); 
 
     public static class Annotation {
@@ -185,6 +186,10 @@ public class Annotations {
         for (Annotation a : annotations) {
             boolean forbidden = a.key.equals("FORBIDDEN");
             if (a.key.equals("REQUIRED") || forbidden) {
+                String nextLine = a.next;
+                String message = null;
+                if (nextLine.startsWith(delims[0]) && nextLine.endsWith(delims[1]))
+                    message = nextLine.substring(delims[0].length(), nextLine.length() - delims[1].length()).trim();
                 StringBuilder contents = new StringBuilder();
                 for (String line : Util.lines(submissionFiles.get(a.path))) {
                 	String commentPattern = Pattern.quote(delims[0]) + ".*" + Pattern.quote(delims[1]);
@@ -192,16 +197,9 @@ public class Annotations {
                     contents.append(" ");
                 }
                 boolean found = Pattern.compile(a.args).matcher(contents).find();
-                if (found == forbidden) { // found && forbidden || !found && required
-                    String nextLine = a.next;
-                    String message;
-                    if (nextLine.startsWith(delims[0]) && nextLine.endsWith(delims[1]))
-                        message = nextLine.substring(delims[0].length(), nextLine.length() - delims[1].length()).trim();
-                    else 
-                        message = (forbidden ? "Found " : "Did not find ") + a.args;
-                    report.error(a.path + ": " + message);
-                    return false;
-                }
+                boolean passed = found != forbidden; // found and required or not found and forbidden  
+            	report.condition(passed, forbidden, a.path, a.args, message);
+                if (!passed) return false;
             }
         }
         return true;
@@ -224,6 +222,7 @@ public class Annotations {
         return sub;
     }
 
+    // TODO: SAMPLE legacy?
     /**
      * Checks if a path is a sample
      * @param p the path without student/solution directory

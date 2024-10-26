@@ -11,7 +11,7 @@ public class Comparison {
     private static final int MANY_MORE_LINES = 10;
         // If actual lines > expected + MANY_MORE_LINES, truncate actual output
     
-    public boolean execute(String input, String actual, String expected, Report report, String filename, boolean hidden) {
+    public boolean execute(String input, String actual, String expected, Report report, String filename) {
         List<String> lines1 = getLines(actual.replaceAll("〈[^〉]*〉\n", "")); 
         List<String> lines2 = getLines(expected.replaceAll("〈[^〉]*〉\n", ""));
 
@@ -26,17 +26,10 @@ public class Comparison {
            matches.add(m);
         }
         if (outcome) {
-            if (filename != null) {
+            if (filename != null) 
                 report.file(filename, actual);
-            }
-            else {
-                if (!hidden)
-                    report.output(actual);
-                else 
-                    //report.comment("hidden", "Given the instructions, the output is hidden!");
-                    report.hiddenOutputMessage();
-
-            }
+            else 
+            	report.output(actual);
         }
         else {
             // Print inputs which are getting replaced

@@ -113,7 +113,7 @@ public class Main {
                 actual[i] = Util.truncate(actual[i], expected[i].length() + MUCH_LONGER);
                 score.pass(outcomes[i], null); // Pass/fail shown in run table
             }
-            report.runTable(null, argNames, args, actual, expected, outcomes, mainFile.toString());
+            report.runTable(null, argNames, args, actual, expected, outcomes, null, mainFile.toString());
         });
     }
        
@@ -148,15 +148,16 @@ public class Main {
             plan.run("solutioncall", "solutioncall", "solutioncall" + i, solutionSources.get(0), "", "" + (i + 1), timeout, maxOutput, false);
         }
         plan.addTask(() -> {
-            report.header("call", "Calling with Arguments");
+            report.header("call", "Calling with arguments");
             if (!plan.checkCompiled("submissioncall", report, score)) return;  
             if (!plan.checkCompiled("solutioncall", report, score)) return;   
             
             String[] names = new String[calls.getSize()];
             String[][] args = new String[calls.getSize()][1];
             String[] actual = new String[calls.getSize()];
-            String[] expected = new String[calls.getSize()];
+            String[] expected = new String[calls.getSize()];            
             boolean[] outcomes = new boolean[calls.getSize()];
+            boolean[] hidden = new boolean[calls.getSize()];
 
             for (int i = 0; i < calls.getSize(); i++) {
                 actual[i] = plan.outerr("submissioncall" + i);     
@@ -165,14 +166,10 @@ public class Main {
                 Calls.Call call = calls.getCall(i);
                 names[i] = call.name;
                 args[i][0] = call.args;
-                if (call.isHidden()) {
-                    actual[i] = "[hidden]";
-                    expected[i] = "[hidden]"; 
-                    args[i][0] = "[hidden]"; 
-                }
+                hidden[i] = call.isHidden();
                 score.pass(outcomes[i], null /* no report--it's in the table */);
             }
-            report.runTable(names, new String[] { "Arguments" }, args, actual, expected, outcomes, submissionSources.get(0).toString());
+            report.runTable(names, new String[] { "Arguments" }, args, actual, expected, outcomes, hidden, submissionSources.get(0).toString());
         });
     }     
 
@@ -183,20 +180,17 @@ public class Main {
                 unitTests.add(p);
         }
         if (unitTests.size() > 0) {
-            report.header("unitTest", "Unit Tests"); // TODO Should there be a section per unit test??? Or more likely, should mainclass be in report.run?????
+            plan.addTask(() -> report.header("unitTest", "Unit tests"));
             
             for (Path p: unitTests) {
                 String id = plan.nextID("test");
                 plan.unitTest(id, p, dependentSourcePaths, timeoutMillis / unitTests.size(), maxOutputLen / unitTests.size());
                 plan.addTask(() -> {
-                    report.run(p.toString(), p.toString());
+                    boolean hidden = problem.getAnnotations().getHiddenTestFiles().contains(p);
+                    report.run(p.toString(), p.toString(), hidden);
                     if (!plan.checkCompiled(id, report, score)) return; 
                     String outerr = plan.outerr(id);                    
-                    if (problem.getAnnotations().getHiddenTestFiles().contains(p))
-                        problem.getLanguage().reportUnitTest(outerr, report, score, true);   
-                    else 
-                        problem.getLanguage().reportUnitTest(outerr, report, score, false);
-
+                    problem.getLanguage().reportUnitTest(outerr, report, score);   
                 });
                             
             }
@@ -208,13 +202,12 @@ public class Main {
         plan.compile(compileID, "submission", mainFile, dependentSourcePaths);
         plan.run(compileID, compileID, mainFile, "", null, timeout, maxOutputLen, false);
         plan.addTask(() -> {
-            report.run(mainFile.toString(), mainFile.toString());
+        	boolean hidden = problem.getAnnotations().getHiddenTestFiles().contains(mainFile); 
+            report.run(mainFile.toString(), mainFile.toString(), hidden);
             if (!plan.checkCompiled(compileID, report, score)) return; 
             String outerr = plan.outerr(compileID);
             AsExpected cond = new AsExpected(comp);
             String tester = plan.getFileString("use", mainFile);
-            if (problem.getAnnotations().getHiddenTestFiles().contains(mainFile))
-                cond.setHidden(true);
             if (tester == null)
                 tester = plan.getFileString("solution", mainFile);  // In case the student was asked to do it
             cond.eval(outerr, report, score, tester);                 
@@ -229,13 +222,12 @@ public class Main {
             inputs.add(new Input("", "", false));
         
         plan.compile("submissionrun", "submission", mainFile, dependentSourcePaths);
-        boolean runSolution = !problem.getInputMode() && !problem.getAnnotations().isSample(mainFile);
+        boolean runSolution = !problem.getInputMode() && !problem.getAnnotations().isSample(mainFile); // TODO: SAMPLE legacy?
         if (runSolution) {
             plan.compile("solutionrun", "solution", mainFile, dependentSourcePaths);
         }
 
         plan.addTask(() -> {
-            report.header("run", problem.getInputMode() ? "Output" : "Running " + mainFile);
             if (runSolution)
                 plan.checkSolutionCompiled("solutionrun", report, score); 
             plan.checkCompiled("submissionrun", report, score);
@@ -257,17 +249,19 @@ public class Main {
         List<String> outFiles = out == null ? Collections.emptyList() : Arrays.asList(out.trim().split("\\s+"));
         
         String runNumber = test.replace("test", "").trim();
-        plan.addTask(() -> { 
-            if (!plan.compiled("submissionrun")) return;
-            report.run(!test.equals("Input") && runNumber.length() > 0 ? "Test " + runNumber : null, mainFile.toString());
-        });
+        String title = !test.equals("Input") && runNumber.length() > 0 ? "Test " + runNumber : null;
         boolean interleaveio = okToInterleave && (problem.getLanguage().echoesStdin() == Language.Interleave.ALWAYS ||
             problem.getLanguage().echoesStdin() == Language.Interleave.UNGRADED && test.equals("Input"));
         if (input == null || input.isBlank()) interleaveio = false;
         else if (!input.endsWith("\n")) input += "\n";
         
         // TODO: Language settings
+        // TODO: Pass runSolution to report? 
         for (String args : runargs) {
+            plan.addTask(() -> { 
+                if (!plan.compiled("submissionrun")) return;
+                report.run(title, mainFile.toString(), hidden);
+            });        	
             testInput(mainFile, runSolution, test, input, args, outFiles, timeout / runargs.size(), maxOutput / runargs.size(), interleaveio, hidden) ;
         }
     }
@@ -288,9 +282,9 @@ public class Main {
             if (!interleaveio && !test.equals("Input")) report.input(input);
 
             String outerr = plan.outerr(submissionRunID);
-            String expectedOuterr = plan.outerr(solutionRunID);                
+            String expectedOuterr = runSolution ? plan.outerr(solutionRunID) : null;                
             if (expectedOuterr != null && expectedOuterr.trim().length() > 0 && outFiles.size() == 0) {                
-            	boolean outcome = comp.execute(input, outerr, expectedOuterr, report, null, hidden);
+            	boolean outcome = comp.execute(input, outerr, expectedOuterr, report, null);
             	score.pass(outcome, report);
             } else {        
                 // Not scoring output if there are outFiles, but showing in case there is an exception
@@ -337,8 +331,7 @@ public class Main {
                     }
                 } else {
                     String expectedContents = plan.getOutputString(solutionRunID, f);                
-                    boolean outcome = comp.execute(input, contents.get(f),
-                            expectedContents, report, f, hidden);
+                    boolean outcome = comp.execute(input, contents.get(f), expectedContents, report, f);
                     score.pass(outcome, report);
                 }
             }
@@ -406,7 +399,7 @@ public class Main {
             String reportType, Properties metadata, ResourceLoader resourceLoader) throws IOException {
         long startTime = System.currentTimeMillis();
         boolean okToInterleave = true;
-        boolean scoring = true;
+        boolean scoring = true; // TODO: Legacy?
         try {
             // Set up report first in case anything else throws an exception 
             
@@ -431,14 +424,7 @@ public class Main {
             if (report instanceof SetupReport) ((SetupReport) report).setProblem(problem); 
             plan.setLanguage(problem.getLanguage());
 
-            // TODO: This would be nice to have in Problem, except that one might later need to remove checkstyle.xml
-            // the use files that the students are entitled to see
-            Set<Path> printFiles = Util.filterNot(problem.getUseFiles().keySet(),  
-            "*.png", "*.PNG", "*.gif", "*.GIF", "*.jpg", "*.jpeg", "*.JPG", "*.bmp", "*.BMP",
-            "*.jar", "*.pdf");      
-
-            printFiles.removeAll(problem.getAnnotations().getHidden());
-            printFiles.removeAll(problem.getAnnotations().getHiddenTestFiles());
+            Set<Path> printFiles = Util.filterNot(problem.getUseFiles().keySet(), "*.jar", "*.pdf"); // TODO pdf???       
             printFiles.removeAll(problem.getSolutionFiles().keySet());
             
             timeoutMillis = (int) problem.getAnnotations().findUniqueDoubleKey("TIMEOUT", DEFAULT_TIMEOUT_MILLIS);
@@ -446,12 +432,19 @@ public class Main {
             double tolerance = problem.getAnnotations().findUniqueDoubleKey("TOLERANCE", DEFAULT_TOLERANCE);
             boolean ignoreCase = !"false".equalsIgnoreCase(problem.getAnnotations().findUnique("IGNORECASE"));
             boolean ignoreSpace = !"false".equalsIgnoreCase(problem.getAnnotations().findUnique("IGNORESPACE"));
-            if ("false".equalsIgnoreCase(problem.getAnnotations().findUnique("SCORING"))) scoring = false;
+            if ("false".equalsIgnoreCase(problem.getAnnotations().findUnique("SCORING"))) scoring = false; // TODO: Legacy?
             if ("false".equalsIgnoreCase(problem.getAnnotations().findUnique("INTERLEAVE"))) okToInterleave = false;
             comp.setTolerance(tolerance);
             comp.setIgnoreCase(ignoreCase);
-            comp.setIgnoreSpace(ignoreSpace);            
-
+            comp.setIgnoreSpace(ignoreSpace);
+            
+            if (tolerance != DEFAULT_TOLERANCE) report.attribute("tolerance", tolerance);
+            if (timeoutMillis != DEFAULT_TIMEOUT_MILLIS) report.attribute("timeout", timeoutMillis);
+            if (maxOutputLen != DEFAULT_MAX_OUTPUT_LEN) report.attribute("maxOutputLen", maxOutputLen);
+            if (ignoreCase == false) report.attribute("ignoreCase", ignoreCase);
+            if (ignoreSpace == false) report.attribute("ignoreSpace", ignoreSpace);
+            if (okToInterleave == false) report.attribute("interleave", okToInterleave);
+            
             getMainAndDependentSourceFiles();            
 
             reportComments(metadata);
@@ -506,19 +499,20 @@ public class Main {
                 List<Path> runFiles = new ArrayList<>();
                 for (Path mainSourceFile : mainSourcePaths) {
                     if (problem.getLanguage().isTester(mainSourceFile) && !problem.getSolutionFiles().keySet().contains(mainSourceFile)
-                             && !problem.getAnnotations().isSample(mainSourceFile) && !problem.getInputMode())
+                             && !problem.getAnnotations().isSample(mainSourceFile) && !problem.getInputMode())  // TODO: SAMPLE legacy?
                         testerFiles.add(mainSourceFile);
                     else
                         runFiles.add(mainSourceFile);
                 } 
                 
                 if (testerFiles.size() > 0) {
-                    report.header("tester", "Testers");
+                    plan.addTask(() -> report.header("tester", "Running test"));
                     for (Path testerFile : testerFiles)
                         runTester(testerFile, timeoutMillis / testerFiles.size(), maxOutputLen / testerFiles.size());
                 }
 
                 if (runFiles.size() > 0) {
+                	plan.addTask(() -> report.header("run", "Running program"));
                     for (Path runFile : runFiles)
                         testInputs(inputs, runFile, okToInterleave);
                 }
@@ -552,8 +546,11 @@ public class Main {
             
                 if (printFiles.size() > 0) {
                     report.header("providedFiles", "Provided files");
-                    for (Path p : printFiles)
-                        report.file(p.toString(), new String(problem.getUseFiles().get(p), StandardCharsets.UTF_8));
+                    for (Path p : printFiles) {                    	
+                        boolean hidden = problem.getAnnotations().getHidden().contains(p)
+                        		|| problem.getAnnotations().getHiddenTestFiles().contains(p);
+                        report.file(p.toString(), problem.getUseFiles().get(p), hidden);
+                    }
                 }
             }
         } catch (Throwable t) {

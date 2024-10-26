@@ -32,6 +32,7 @@ public class JSONReport implements Report {
         public List<Item> args;
         public String input;
         public String output;
+        public boolean hidden;
         public List<Match> matchedOutput;
         public List<Item> files = new ArrayList<>();
         public List<Item> images = new ArrayList<>();
@@ -50,8 +51,6 @@ public class JSONReport implements Report {
     
     public static class ReportData {    
         public String errors;
-        //public List<Item> studentFiles = new ArrayList<>();
-        //public List<Item> providedFiles = new ArrayList<>();
         public List<Section> sections = new ArrayList<>();
         public Map<String, String> metaData = new LinkedHashMap<>();
         public String score; // TODO: Score each item
@@ -61,12 +60,6 @@ public class JSONReport implements Report {
     private Section section;    
     private Run run; 
     
-    /* TODO:
-     * testMethod:
-     * call:
-     * sub:
-     */
-
     public JSONReport(String title) {
     }
     
@@ -81,9 +74,10 @@ public class JSONReport implements Report {
     }
 
     @Override
-    public JSONReport run(String caption, String mainclass) { 
+    public JSONReport run(String caption, String mainclass, boolean hidden) { 
         run = new Run();
         run.mainclass = mainclass;
+        run.hidden = hidden;
         run.passed = true;
         if (section.runs == null) section.runs = new ArrayList<>();
         section.runs.add(run);
@@ -101,7 +95,10 @@ public class JSONReport implements Report {
         if (run.html != null) builder.append(run.html);
         builder.append("<p><b>Output:</b></p>");
         builder.append("<pre>");
-        builder.append(HTMLReport.htmlEscape(text));
+        if (run.hidden)
+        	builder.append("[Hidden]");
+        else
+        	builder.append(HTMLReport.htmlEscape(text));
         builder.append("</pre>");
         run.html = builder.toString();                    
 
@@ -155,9 +152,13 @@ public class JSONReport implements Report {
         StringBuilder builder = new StringBuilder();
         if (run.html != null) builder.append(run.html);           
         if (run.input != null) {
-            builder.append("<p><b>Input:</b></p><pre>");
-            builder.append(HTMLReport.htmlEscape(run.input));
-            builder.append("</pre>");
+        	if (run.hidden) {
+        		builder.append("<pre>[Hidden]</pre>");
+        	} else {
+	            builder.append("<p><b>Input:</b></p><pre>");
+	            builder.append(HTMLReport.htmlEscape(run.input));
+	            builder.append("</pre>");
+        	}
         }
         run.html = builder.toString();
         return this;
@@ -201,6 +202,11 @@ public class JSONReport implements Report {
             run.html = builder.toString();                    
         }
         return this;
+    }
+    
+    public JSONReport file(String fileName, byte[] contents, boolean hidden) {
+    	// Not reporting provided files
+    	return this;
     }
 
     @Override
@@ -278,21 +284,25 @@ public class JSONReport implements Report {
         StringBuilder builder = new StringBuilder();
         if (run.html != null) builder.append(run.html);
         builder.append("<pre>");
-        for (int i = 0; i < lines.size(); i++) {
-            StringBuilder line = HTMLReport.htmlEscape(lines.get(i));
-            if (matches.contains(i)) {
-                builder.append("<span style='color: green;'>");
-                builder.append(line);
-                builder.append("</span>");
-            }
-            else if (mismatches.contains(i)) {
-                builder.append("<span style='color: red;'>");
-                builder.append(line);
-                builder.append("</span>");                
-            }
-            else
-                builder.append(line);
-            builder.append("\n");
+        if (run.hidden) {
+            for (int i = 0; i < lines.size(); i++) {
+                StringBuilder line = HTMLReport.htmlEscape(lines.get(i));
+                if (matches.contains(i)) {
+                    builder.append("<span style='color: green;'>");
+                    builder.append(line);
+                    builder.append("</span>");
+                }
+                else if (mismatches.contains(i)) {
+                    builder.append("<span style='color: red;'>");
+                    builder.append(line);
+                    builder.append("</span>");                
+                }
+                else
+                    builder.append(line);
+                builder.append("\n");
+            }        	
+        } else {
+        	builder.append("[Hidden]");
         }
         builder.append("</pre>\n");
         run.html = builder.toString();                    
@@ -302,12 +312,13 @@ public class JSONReport implements Report {
 
     @Override
     public JSONReport runTable(String[] methodNames, String[] argNames, String[][] args, String[] actual,
-            String[] expected, boolean[] outcomes, String mainclass) {
+            String[] expected, boolean[] outcomes, boolean[] hidden, String mainclass) {
         if (section.runs == null) section.runs = new ArrayList<>();
         for (int i = 0; i < actual.length; i++)
         {
             Run run = new Run();
             run.mainclass = mainclass;
+            run.hidden = hidden != null && hidden[i];
             run.passed = true;
             if (methodNames != null) run.caption = methodNames[i];
             section.runs.add(run);
@@ -360,15 +371,6 @@ public class JSONReport implements Report {
     @Override
     public JSONReport comment(String key, String value) {
         data.metaData.put(key, value);
-        return this;
-    }
-
-    @Override
-    public JSONReport hiddenOutputMessage() {
-        //data.metaData.put("Given the instructions from your instructor, the output is hidden!");
-        StringBuilder builder = new StringBuilder();
-        builder.append("[hidden]"); 
-        run.html = builder.toString();
         return this;
     }
 

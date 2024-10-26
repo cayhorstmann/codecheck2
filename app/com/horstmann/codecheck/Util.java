@@ -105,7 +105,10 @@ public class Util {
     }
     
     public static String extension(Path path) {
-        String name = path.toString();
+    	return extension(path.toString());
+    }
+
+    public static String extension(String name) {
         int n = name.lastIndexOf('.');
         if (n == -1)
             return "";

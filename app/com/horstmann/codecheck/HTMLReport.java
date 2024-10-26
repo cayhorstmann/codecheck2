@@ -3,6 +3,9 @@ package com.horstmann.codecheck;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -14,6 +17,7 @@ public class HTMLReport implements Report {
     protected StringBuilder builder;
     private List<String> footnotes = new ArrayList<>();
     private int metaOffset;
+    private boolean hidden;
 
     // TODO: Directory
     public HTMLReport(String title) {
@@ -60,12 +64,15 @@ public class HTMLReport implements Report {
             escape(text);
             builder.append("</p>\n");
         }
+        hidden = false;
         return this;
     }
 
 
     @Override
-    public HTMLReport run(String text, String mainclass) {
+    public HTMLReport run(String text, String mainclass, boolean hidden) {
+    	this.hidden = hidden;
+    	caption(mainclass);
         if (text != null && !text.trim().equals("")) {
             builder.append("<p class=\"item\">");
             escape(text);
@@ -93,7 +100,10 @@ public class HTMLReport implements Report {
         if (text == null || text.equals(""))
             return this;
         builder.append("<pre class=\"output\">");
-        escape(text);
+        if (hidden)
+        	builder.append("[Hidden]");
+        else
+        	escape(text);
         builder.append("</pre>\n");
         return this;
     }
@@ -119,15 +129,19 @@ public class HTMLReport implements Report {
     public HTMLReport output(List<String> lines, Set<Integer> matches,
             Set<Integer> mismatches) {
         builder.append("<pre class=\"output\">");
-        for (int i = 0; i < lines.size(); i++) {
-            String line = lines.get(i);
-            if (matches.contains(i))
-                passSpan(line);
-            else if (mismatches.contains(i))
-                failSpan(line);
-            else
-                escape(line);
-            builder.append("\n");
+        if (hidden) {
+        	builder.append("[Hidden]");
+    	} else {
+	        for (int i = 0; i < lines.size(); i++) {
+	            String line = lines.get(i);
+	            if (matches.contains(i))
+	                passSpan(line);
+	            else if (mismatches.contains(i))
+	                failSpan(line);
+	            else
+	                escape(line);
+	            builder.append("\n");
+	        }
         }
         builder.append("</pre>\n");
         return this;
@@ -185,11 +199,9 @@ public class HTMLReport implements Report {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             ImageIO.write(img, "PNG", out);
             out.close();
-            byte[] pngBytes = out.toByteArray();
-            String data = Base64.getEncoder().encodeToString(pngBytes);
             builder.append("<p class=\"screencapture\">");
-            builder.append("<img alt=\"screen capture\" src=\"data:image/png;base64,");
-            builder.append(data);
+            builder.append("<img alt=\"screen capture\" src=\"");
+            builder.append(Report.imageData(".png", out.toByteArray()));
             builder.append("\"/>");
             builder.append("</p>\n");
         } catch (IOException ex) {
@@ -205,6 +217,25 @@ public class HTMLReport implements Report {
         return this;
     }
 
+    public HTMLReport file(String fileName, byte[] contents, boolean hidden) {
+		caption(fileName);
+    	if (hidden) {
+    		output("[Hidden]");
+    	} else if (Report.isImage(fileName)) {
+    		builder.append("<p><img alt=\"provided image\" src=\"");
+    		builder.append(Report.imageData(fileName, contents));
+    		builder.append("\"/></p>\n");
+    	} else { 
+    		try {
+    			output(StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(contents)).toString());    			
+    		} catch (CharacterCodingException e) {
+    			output("[Binary]");
+    		}
+    	}
+    	return this;
+    }
+
+    
     private HTMLReport escape(CharSequence s) {
         for (int i = 0; i < s.length(); i++) {
             char c = s.charAt(i);
@@ -422,7 +453,7 @@ public class HTMLReport implements Report {
 
     @Override
     public HTMLReport runTable(String[] methodNames, String[] argNames, String[][] args,
-            String[] actual, String[] expected, boolean[] outcomes, String mainclass) {
+            String[] actual, String[] expected, boolean[] outcomes, boolean[] hidden, String mainclass) {
         tableStart("run").rowStart();
         headerCell("");
         if (methodNames != null)
@@ -434,12 +465,20 @@ public class HTMLReport implements Report {
         for (int i = 0; i < args.length; i++) {
             rowStart();
             cellStart().pass(outcomes[i]).cellEnd();
-            if (methodNames != null)
-                codeCell(methodNames[i]);
-            for (String a : args[i])
-                codeCell(a.trim());
-            codeCell(actual[i]);
-            codeCell(expected[i]);
+            if (hidden != null && hidden[i]) {
+            	codeCell("[Hidden]");
+                for (String a : args[i])
+                	codeCell("[Hidden]");
+            	codeCell("[Hidden]");
+            	codeCell("[Hidden]");            	
+            } else {
+                if (methodNames != null)
+                    codeCell(methodNames[i]);
+                for (String a : args[i])
+                    codeCell(a.trim());
+                codeCell(actual[i]);
+                codeCell(expected[i]);            	
+            }
             rowEnd();
         }
         tableEnd();
@@ -452,10 +491,5 @@ public class HTMLReport implements Report {
         builder.insert(metaOffset, meta);
         metaOffset += meta.length();
         return this;
-    }
-
-    public HTMLReport hiddenOutputMessage() {
-        output("[hidden]");
-        return this; 
     }
 }
