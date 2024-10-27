@@ -230,6 +230,7 @@ public class Check extends Controller {
                     Map<Path, byte[]> problemFiles = codeCheck.loadProblem(repo, problem, ccid);
                     for (Path key : problemFiles.keySet()) {
                         String value = new String(problemFiles.get(key));
+                        if (key.startsWith("solution")) key = key.subpath(1, key.getNameCount());
                         submissionFiles.put(key, value);
                     }
                 } catch (Exception e) {

@@ -199,7 +199,7 @@ $BROWSER "$SUBMISSIONDIR/$REPORT" 2> /dev/null
 if [ -z "$CHECK_STUDENT_DIR" ] ; then exit ; fi
 
 # Checking student files
-lcd "$STARTDIR"
+cd "$STARTDIR"
 SUBMISSIONDIR=`mktemp -d /tmp/codecheck.XXXXXXXXXX`
 
 if [ -e $PROBLEMDIR/student ] ; then 
