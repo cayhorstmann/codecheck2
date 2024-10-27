@@ -14,6 +14,7 @@ import java.util.Map;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class SetupReport extends JSONReport {
@@ -27,22 +28,6 @@ public class SetupReport extends JSONReport {
 		public String regex;
 		public String message;
 	}
-	
-    static class FileItem {
-        public FileItem() {}
-        public FileItem(Path path, byte[] contents) {
-			this.name = path.toString();
-    		try {
-    			this.value = StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(contents)).toString();    			
-    		} catch (CharacterCodingException e) {
-    			this.value = Base64.getEncoder().encodeToString(contents);
-    			this.binary = true;
-    		}
-        }
-        public String name;
-        public String value;
-        public boolean binary;
-    }
 	
 	public SetupReport(String title) {
 		super(title);
@@ -97,14 +82,22 @@ public class SetupReport extends JSONReport {
 				dataNode.set(entry.getKey(), entry.getValue());
 			}
 			Map<Path, byte[]> useFiles = problem.getUseFiles();
-			Map<String, String> displayedUseFiles = displayData.useFiles;
-			List<FileItem> hiddenFiles = new ArrayList<>();
-			for (Path p : useFiles.keySet() ) {
-				if (!displayedUseFiles.containsKey(p.toString()))
-					hiddenFiles.add(new FileItem(p, useFiles.get(p)));
+			ObjectNode hiddenFiles = JsonNodeFactory.instance.objectNode();
+			for (Map.Entry<Path, byte[]> entry: useFiles.entrySet() ) {
+				String name = entry.getKey().toString();
+				byte[] contents = entry.getValue();
+				if (!displayData.useFiles.containsKey(name)) {
+		    		try {
+		    			hiddenFiles.put(name, StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(contents)).toString());    			
+		    		} catch (CharacterCodingException e) {
+		    			ObjectNode node = JsonNodeFactory.instance.objectNode();
+		    			node.put("data", Base64.getEncoder().encodeToString(contents));
+		    			hiddenFiles.set(name, node);
+		    		}					
+				}
 			}			
-			if (!hiddenFiles.isEmpty()) {
-				dataNode.set("hiddenFiles", mapper.convertValue(hiddenFiles, JsonNode.class));
+			if (hiddenFiles.size() > 0) {
+				dataNode.set("hiddenFiles", hiddenFiles);
 			}		
 			if (!attributes.isEmpty()) {
 				dataNode.set("attributes", mapper.convertValue(attributes, JsonNode.class));

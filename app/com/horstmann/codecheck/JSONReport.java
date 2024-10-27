@@ -2,11 +2,14 @@ package com.horstmann.codecheck;
 
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,30 +27,33 @@ public class JSONReport implements Report {
         public Item(String name, String contents) {
         	this(name, contents, false);
         }
-        public Item(String name, byte[] contents) {
-        	this(name, contents, false);
-        }
         public Item(String name, String contents, boolean hidden) {
             this.name = name;
             this.value = contents;           
             this.hidden = hidden;
         }
-        public Item(String name, byte[] contents, boolean hidden) {
-			this.name = name;
-    		try {
-    			this.value = StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(contents)).toString();    			
-    		} catch (CharacterCodingException e) {
-    			this.value = Base64.getEncoder().encodeToString(contents);
-    			this.binary = true;
-    			this.hidden = hidden;
-    		}
-        }
         public String name;
         public String value;
-        public boolean binary;
         public boolean hidden;
     }
-    
+        
+    public static class ImageItem {
+    	public ImageItem() {}
+    	public ImageItem(String caption, BufferedImage image) {
+    		this.caption = caption;
+    		try {
+    			ByteArrayOutputStream out = new ByteArrayOutputStream();
+    			ImageIO.write(image, "PNG", out);
+    			out.close();
+                data = Base64.getEncoder().encodeToString(out.toByteArray());    		
+    		} catch (IOException e) {
+    			throw new UncheckedIOException(e);
+    		}
+    	}
+    	public String caption;
+        public String data;
+    }
+
     public static class Run {
         public String caption;
         public String mainclass;
@@ -56,8 +62,8 @@ public class JSONReport implements Report {
         public String output;
         public boolean hidden;
         public List<Match> matchedOutput;
-        public List<Item> files = new ArrayList<>();
-        public List<Item> images = new ArrayList<>();
+        public Map<String, String> files = new HashMap<>();
+        public List<ImageItem> images = new ArrayList<>();
         public String errors; 
         public List<Error> errorData = new ArrayList<>();
         public String html;
@@ -188,16 +194,7 @@ public class JSONReport implements Report {
     
     @Override
     public JSONReport image(String caption, BufferedImage image) {
-        if (image == null) return this;
-        try {
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            ImageIO.write(image, "PNG", out);
-            out.close();
-            byte[] pngBytes = out.toByteArray();
-            run.images.add(new Item(caption, pngBytes));
-        } catch (Exception ex) {
-            run.images.add(new Item(caption, ""));
-        }
+        if (image != null) run.images.add(new ImageItem(caption, image));
         return this;
     }
 
@@ -209,9 +206,8 @@ public class JSONReport implements Report {
     
     @Override
     public JSONReport file(String file, String contents) {
-        Item item = new Item(file, contents);
         if (!"studentFiles".equals(section.type)) { 
-            run.files.add(item);
+            run.files.put(file, contents);
             
             StringBuilder builder = new StringBuilder();
             if (run.html != null) builder.append(run.html);

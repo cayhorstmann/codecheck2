@@ -305,7 +305,7 @@ public class Main {
                 for (String f : outFiles) {
                     if (CompareImages.isImage(f)) {
                         CompareImages ci = imageComp.get(f);
-                        report.image("Image", ci.first());
+                        report.image(null, ci.first());
                     }
                     else
                         report.file(f, contents.get(f));
@@ -320,8 +320,10 @@ public class Main {
                     try {
                         ic.setOtherImage(plan.getOutputBytes(solutionRunID, f));
                         boolean outcome = ic.getOutcome();
-                        report.image("Image", ic.first());
-                        if (!outcome) {
+                        if (outcome) {
+                        	report.image(outFiles.size() > 1 ? f : null, ic.first());
+                        } else {
+                            report.image(outFiles.size() > 1 ? f : "Actual", ic.first());
                             report.image("Expected", ic.other());
                             report.image("Mismatched pixels", ic.diff());
                         }
@@ -329,7 +331,7 @@ public class Main {
                     } catch (IOException ex) {
                         report.error(ex.getMessage());                        
                     }
-                } else {
+                } else { // TODO: Should we support binary files???
                     String expectedContents = plan.getOutputString(solutionRunID, f);                
                     boolean outcome = comp.execute(input, contents.get(f), expectedContents, report, f);
                     score.pass(outcome, report);
