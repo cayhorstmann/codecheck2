@@ -28,7 +28,8 @@ public interface Language {
        new DartLanguage(),
        new RustLanguage(),
        new BashLanguage(),
-       new KotlinLanguage()
+       new KotlinLanguage(),
+       new PHPLanguage()
     };
 
     static Language languageFor(Set<Path> files) {
@@ -146,7 +147,7 @@ public interface Language {
         if (!fileName.toString().endsWith("." + extension)) return false;
         Pattern p = mainPattern();
         if (p == null)
-            return moduleOf(fileName).matches(".*(Runn|Test)er[0-9]*");
+            return moduleOf(fileName).matches(".*(Runn|_runn|Test|_test)er[0-9]*");
         else
             return p.matcher(contents).find();
     }

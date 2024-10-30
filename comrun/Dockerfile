@@ -20,6 +20,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     nodejs \
     polyml \
     libpolyml-dev \
+	php-cli \
+	phpunit \
     python3 \
     python3-tk \
     python3-pillow \

@@ -43,7 +43,7 @@ function compile {
     _Java)
       javac -cp .:$BASE/use/\* $@ > $BASE/out/$DIR/_compile 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_compile
       ;;
-    _Bash|_JavaScript|_Matlab)
+    _Bash|_JavaScript|_Matlab|_PHP)
       touch $BASE/out/$DIR/_compile
       ;;
     _Racket)
@@ -158,6 +158,10 @@ function run {
       ulimit -d 10000 -f 1000 -n 100 -v 1000000
       NO_AT_BRIDGE=1 timeout -v -s 9 ${TIMEOUT}s octave --no-gui $MAIN $@ < $BASE/in/$ID 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$ID/_run    
       ;;
+     _PHP)
+      ulimit -d 10000 -f 1000 -n 100 -v 1000000
+      timeout -v -s 9 ${TIMEOUT}s php $MAIN $@ < $BASE/in/$ID 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$ID/_run
+      ;;     
     _Python)
       ulimit -d 100000 -f 1000 -n 100 -v 100000
       export CODECHECK=true
@@ -213,6 +217,10 @@ function unittest {
         ulimit -d 1000000 -f 1000 -n 100 -v 10000000
         timeout -v -s 9 ${TIMEOUT}s java -ea -Djava.awt.headless=true -cp .:$BASE/use/\*:$CODECHECK_HOME/lib/\* org.junit.runner.JUnitCore ${MAIN/.java/} 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_run
       fi
+      ;;
+    _PHP)
+      ulimit -d 100000 -f 1000 -n 100 -v 100000      
+      timeout -v -s 9 ${TIMEOUT}s phpunit $MAIN 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_run      
       ;;
     _Python)
       ulimit -d 100000 -f 1000 -n 100 -v 100000      
