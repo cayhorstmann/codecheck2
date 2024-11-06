@@ -248,7 +248,7 @@ Debugging the Server
 
 Run the `play-codecheck` server in debug mode:
 
-    COMRUN_USER=$(whoami) sbt -jvm-debug 9999 run
+    COMRUN_USER=$(whoami) sbt -jvm-debug 9999 -Dconfig.file=conf/development.conf run
 
 In Eclipse, select Run → Debug Configurations, select the configuration
 you created, and select Debug. Point the browser to a URL such as
@@ -498,7 +498,7 @@ jobs to your remote service.
 Alternatively, you can test with the locally running web app. In
 `conf/production.conf`, you need to add
 
-    com.horstmann.codecheck.comrun.remote=service-URL/api/upload
+    com.horstmann.codecheck.comrun.remote=service-URL/api/upload    
 
 Using AWS Data Storage
 ----------------------
@@ -726,3 +726,31 @@ Make note of the service URL. Then wait until it has the service status as  `RUN
 
 You will get a URL for the service. Now point your browser to
 `https://service url/assets/uploadProblem.html`
+
+SQL Data Storage (Alternative to AWS S3 and Dynamo)
+---------------------------------------------------
+
+If you have access to a SQL database or want to use a free tier for testing, SQL data storage is much simpler to configure than AWS S3 and Dynamo. However, it is likely to be more expensive in the long run.
+
+These instructions assume that your database is PostgreSQL. If not, you need to change the driver in build.sbt.
+
+In production.conf, define
+
+    db.default.url="postgres://username:password@host:database"
+
+Make sure that 
+
+    com.horstmann.codecheck.s3.region
+    com.horstmann.codecheck.dynamodb.region
+    
+are *not* defined.    
+
+Create tables as follows:
+
+    CREATE TABLE Problems (repo VARCHAR, key VARCHAR, contents BYTEA)
+    CREATE TABLE CodeCheckAssignments (assignmentID VARCHAR, json VARCHAR)
+    CREATE TABLE CodeCheckLTICredentials (oauth_consumer_key VARCHAR, shared_secret VARCHAR)
+    CREATE TABLE CodeCheckComments (assignmentID VARCHAR, workID VARCHAR, comment VARCHAR)
+    CREATE TABLE CodeCheckWork (assignmentID VARCHAR, workID VARCHAR, json VARCHAR)
+    CREATE TABLE CodeCheckSubmissions (submissionID VARCHAR, submittedAt VARCHAR, json VARCHAR)
+

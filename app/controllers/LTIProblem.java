@@ -20,7 +20,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.horstmann.codecheck.Problem;
 import com.horstmann.codecheck.Util;
 
-import models.AssignmentConnector;
+import models.StorageConnector;
 import models.CodeCheck;
 import models.LTI;
 import play.Logger;
@@ -29,7 +29,7 @@ import play.mvc.Http;
 import play.mvc.Result;
 
 public class LTIProblem extends Controller {
-    @Inject private AssignmentConnector assignmentConn;
+    @Inject private StorageConnector assignmentConn;
     @Inject private LTI lti;
     @Inject private CodeCheck codeCheck;
     
@@ -241,7 +241,8 @@ public class LTIProblem extends Controller {
             submissionNode.put("state", requestNode.get("state").toString());
             double score = requestNode.get("score").asDouble();         
             submissionNode.put("score", score);
-            assignmentConn.writeJsonObjectToDB("CodeCheckSubmissions", submissionNode);
+            assignmentConn.writeSubmission(submissionNode);
+            
             
             String outcomeServiceUrl = requestNode.get("lis_outcome_service_url").asText();
             String sourcedID = requestNode.get("lis_result_sourcedid").asText();
@@ -262,7 +263,7 @@ public class LTIProblem extends Controller {
         ObjectNode requestNode = (ObjectNode) request.body().asJson();
         String submissionID = requestNode.get("submissionID").asText();
         try {
-            ObjectNode result = assignmentConn.readNewestJsonObjectFromDB("CodeCheckSubmissions", "submissionID", submissionID);          
+            ObjectNode result = assignmentConn.readNewestSubmission(submissionID);          
             ObjectMapper mapper = new ObjectMapper();
             result.set("state", mapper.readTree(result.get("state").asText()));
             return ok(result);

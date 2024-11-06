@@ -8,55 +8,10 @@ package controllers;
  
  The "problem key" is normally the problem URL. However, for interactive or CodeCheck 
  problems in the textbook repo, it is the qid of the single question in the problem.
- 
- CodeCheckWork is a map from problem keys to scores and states. It only stores the most recent version.
- CodeCheckSubmissions is an append-only log of all submissions of a single problem. 
-    
- Tables:
-   
- CodeCheckAssignment
-   assignmentID [primary key]
-   deadline (an ISO 8601 string like "2020-12-01T23:59:59Z")
-   editKey // LTI: tool consumer ID + user ID
-   problems
-     array of // One per group
-       array of { URL, qid?, weight } // qid for book repo
+
+assignmentID // non-LTI: courseID? + assignmentID, LTI: toolConsumerID/courseID + assignment ID, Legacy tool consumer ID/course ID/resource ID  
   
- CodeCheckLTIResources (Legacy)
-   resourceID [primary key] // LTI tool consumer ID + course ID + resource ID 
-   assignmentID
-   
- CodeCheckWork
-   assignmentID [partition key] // non-LTI: courseID? + assignmentID, LTI: toolConsumerID/courseID + assignment ID, Legacy tool consumer ID/course ID/resource ID  
-   workID [sort key] // non-LTI: ccid/editKey, LTI: userID
-   problems 
-     map from URL/qids to { state, score }
-   submittedAt
-   tab     
-       
- CodeCheckSubmissions
-   submissionID [partition key] // non-LTI: courseID? + assignmentID + problemKey + ccid/editKey , LTI: toolConsumerID/courseID + assignmentID + problemID + userID 
-     // either way, that's resource ID + workID + problem key
-   submittedAt [sort key] 
-   state: as string, not JSON
-   score
-  
-   with global secondary index (TODO: Not currently)
-     problemID 
-     submitterID
-   
- CodeCheckLTICredentials
-   oauth_consumer_key [primary key]
-   shared_secret
-
-CodeCheckComments
-   assignmentID [partition key] // non-LTI: courseID? + assignmentID, LTI: toolConsumerID/courseID + assignment ID, Legacy tool consumer ID/course ID/resource ID  
-   workID [sort key] // non-LTI: ccid/editKey, LTI: userID
-   comment
-
-   (This is a separate table from CodeCheckWork because we can't guarantee atomic updates if a student happens to update their work while the instructor updates a comment)
-
- Assignment parsing format:
+Assignment parsing format:
  
    Groups separated by 3 or more -
    Each line:
@@ -87,14 +42,14 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.horstmann.codecheck.Util;
 
-import models.AssignmentConnector;
+import models.StorageConnector;
 import play.Logger;
 import play.mvc.Controller;
 import play.mvc.Http;
 import play.mvc.Result;
 
 public class Assignment extends Controller {
-    @Inject private AssignmentConnector assignmentConn;
+    @Inject private StorageConnector storageConn;
     private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
     
     public static ArrayNode parseAssignment(String assignment) {
@@ -205,7 +160,7 @@ public class Assignment extends Controller {
         if (assignmentID == null) {
             assignmentNode = JsonNodeFactory.instance.objectNode();
         } else {
-            assignmentNode = assignmentConn.readJsonObjectFromDB("CodeCheckAssignments", "assignmentID", assignmentID);
+            assignmentNode = storageConn.readAssignment(assignmentID);
             if (assignmentNode == null) return badRequest("Assignment not found");
             
             if (editKey == null) { // Clone
@@ -237,7 +192,7 @@ public class Assignment extends Controller {
         String workID = "";
         boolean editKeySaved = true;
 
-        ObjectNode assignmentNode = assignmentConn.readJsonObjectFromDB("CodeCheckAssignments", "assignmentID", assignmentID);        
+        ObjectNode assignmentNode = storageConn.readAssignment(assignmentID);        
         if (assignmentNode == null) return badRequest("Assignment not found");
         
         assignmentNode.put("isStudent", isStudent);
@@ -283,18 +238,14 @@ public class Assignment extends Controller {
         // Start reading work and comments
         String work = null;
         ObjectNode commentObject = null;
-        String comment = null;
+        String comment = "";
         if (!workID.equals(""))  {
-            work = assignmentConn.readJsonStringFromDB("CodeCheckWork", "assignmentID", assignmentID, "workID", workID);
-            commentObject = assignmentConn.readJsonObjectFromDB("CodeCheckComments", "assignmentID", assignmentID, "workID", workID);
+            work = storageConn.readWorkString(assignmentID, workID);
+            comment = storageConn.readComment(assignmentID, workID);
         }
         if (work == null) 
             work = "{ assignmentID: \"" + assignmentID + "\", workID: \"" 
                 + workID + "\", problems: {} }";
-        if (commentObject == null)
-            comment = "";
-        else
-            comment = commentObject.get("comment").asText();
         assignmentNode.put("comment", comment);
 
         String lti = "undefined";
@@ -330,7 +281,7 @@ public class Assignment extends Controller {
     
     public Result viewSubmissions(Http.Request request, String assignmentID, String editKey)
         throws IOException {
-        ObjectNode assignmentNode = assignmentConn.readJsonObjectFromDB("CodeCheckAssignments", "assignmentID", assignmentID);
+        ObjectNode assignmentNode = storageConn.readAssignment(assignmentID);
         if (assignmentNode == null) return badRequest("Assignment not found");
         
         if (!editKeyValid(editKey, assignmentNode))
@@ -338,7 +289,7 @@ public class Assignment extends Controller {
 
         ArrayNode submissions = JsonNodeFactory.instance.arrayNode();
 
-        Map<String, ObjectNode> itemMap = assignmentConn.readJsonObjectsFromDB("CodeCheckWork", "assignmentID", assignmentID, "workID");
+        Map<String, ObjectNode> itemMap = storageConn.readAllWork(assignmentID); 
 
         for (String submissionKey : itemMap.keySet()) {
             String[] parts = submissionKey.split("/");
@@ -374,7 +325,7 @@ public class Assignment extends Controller {
         ObjectNode assignmentNode;
         if (params.has("assignmentID")) {
             assignmentID = params.get("assignmentID").asText();
-            assignmentNode = assignmentConn.readJsonObjectFromDB("CodeCheckAssignments", "assignmentID", assignmentID);
+            assignmentNode = storageConn.readAssignment(assignmentID);
             if (assignmentNode == null) return badRequest("Assignment not found");
             
             if (!params.has("editKey")) return badRequest("Missing edit key");
@@ -393,7 +344,7 @@ public class Assignment extends Controller {
             }
             assignmentNode = null;
         }
-        assignmentConn.writeJsonObjectToDB("CodeCheckAssignments", params);
+        storageConn.writeAssignment(params); 
 
         String prefix = models.Util.prefix(request);
         String assignmentURL = prefix + "/private/assignment/" + assignmentID + "/" + editKey;
@@ -409,7 +360,7 @@ public class Assignment extends Controller {
             
             Instant now = Instant.now();
             String assignmentID = requestNode.get("assignmentID").asText();
-            ObjectNode assignmentNode = assignmentConn.readJsonObjectFromDB("CodeCheckAssignments", "assignmentID", assignmentID);
+            ObjectNode assignmentNode = storageConn.readAssignment(assignmentID);
             if (assignmentNode == null) return badRequest("Assignment not found");
             String workID = requestNode.get("workID").asText();
             String problemID = requestNode.get("tab").asText();
@@ -422,7 +373,7 @@ public class Assignment extends Controller {
             // TODO: NPE in logs for the line below
             submissionNode.put("state", problemsNode.get(problemID).get("state").toString());
             submissionNode.put("score", problemsNode.get(problemID).get("score").asDouble());
-            assignmentConn.writeJsonObjectToDB("CodeCheckSubmissions", submissionNode);
+            storageConn.writeSubmission(submissionNode);
             
             if (assignmentNode.has("deadline")) {
                 try {
@@ -435,7 +386,8 @@ public class Assignment extends Controller {
             }
             result.put("submittedAt", now.toString());      
     
-            assignmentConn.writeNewerJsonObjectToDB("CodeCheckWork", requestNode, "assignmentID", "submittedAt");
+            storageConn.writeWork(requestNode);
+            
             return ok(result);
         } catch (Exception e) {
             logger.error(Util.getStackTrace(e));
@@ -455,7 +407,7 @@ public class Assignment extends Controller {
             commentNode.put("assignmentID", assignmentID);
             commentNode.put("workID", workID);
             commentNode.put("comment", comment);
-            assignmentConn.writeJsonObjectToDB("CodeCheckComments", commentNode);
+            storageConn.writeComment(commentNode);
             result.put("comment", comment);
             result.put("refreshURL", "/private/submission/" + assignmentID + "/" + workID);
             return ok(result);

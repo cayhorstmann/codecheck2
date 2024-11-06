@@ -341,7 +341,7 @@ window.addEventListener('DOMContentLoaded', () => {
       let request = {
           assignmentID: assignment.assignmentID,
           workID: assignment.workID, // undefined when isStudent
-          comment: document.getElementById('comment').value,
+          comment: document.getElementById('instructor_comment').value,
       }
       
       submitButton.disabled = true

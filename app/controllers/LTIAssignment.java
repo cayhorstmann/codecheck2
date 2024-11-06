@@ -21,7 +21,7 @@ import com.horstmann.codecheck.Util;
 
 import models.JWT;
 import models.LTI;
-import models.AssignmentConnector;
+import models.StorageConnector;
 import oauth.signpost.exception.OAuthCommunicationException;
 import oauth.signpost.exception.OAuthExpectationFailedException;
 import oauth.signpost.exception.OAuthMessageSignerException;
@@ -42,7 +42,7 @@ TODO: Can/should this be replaced with JWT?
 
 
 public class LTIAssignment extends Controller {
-    @Inject private AssignmentConnector assignmentConn;
+    @Inject private StorageConnector assignmentConn;
     @Inject private LTI lti;
     @Inject private JWT jwt;
     private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
@@ -63,9 +63,7 @@ public class LTIAssignment extends Controller {
             int i = resourceID.lastIndexOf(" ");
             return resourceID.substring(i + 1);
         } else {
-            ObjectNode resourceNode = assignmentConn.readJsonObjectFromDB("CodeCheckLTIResources", "resourceID", resourceID); 
-            if (resourceNode == null) return null;
-            return resourceNode.get("assignmentID").asText();
+        	return assignmentConn.readLegacyLTIResource(resourceID);
         }
     }   
     
@@ -117,13 +115,13 @@ public class LTIAssignment extends Controller {
             }
     
             assignmentID = params.get("assignmentID").asText();
-            ObjectNode assignmentNode = assignmentConn.readJsonObjectFromDB("CodeCheckAssignments", "assignmentID", assignmentID);
+            ObjectNode assignmentNode = assignmentConn.readAssignment(assignmentID);
             String editKey = params.get("editKey").asText();
             
             if (assignmentNode != null && !editKey.equals(assignmentNode.get("editKey").asText())) 
                 return badRequest("Edit keys do not match");        
     
-            assignmentConn.writeJsonObjectToDB("CodeCheckAssignments", params);
+            assignmentConn.writeAssignment(params);
         }
 
         ObjectNode result = JsonNodeFactory.instance.objectNode();
@@ -138,10 +136,10 @@ public class LTIAssignment extends Controller {
     @Security.Authenticated(Secured.class) // Instructor
     public Result viewSubmissions(Http.Request request) throws IOException {
         String resourceID = request.queryString("resourceID").orElse(null);
-        Map<String, ObjectNode> itemMap = assignmentConn.readJsonObjectsFromDB("CodeCheckWork", "assignmentID", resourceID, "workID");
+        Map<String, ObjectNode> itemMap = assignmentConn.readAllWork(resourceID);
         String assignmentID = assignmentOfResource(resourceID);
         
-        ObjectNode assignmentNode = assignmentConn.readJsonObjectFromDB("CodeCheckAssignments", "assignmentID", assignmentID);
+        ObjectNode assignmentNode = assignmentConn.readAssignment(assignmentID);
         if (assignmentNode == null) return badRequest("Assignment not found");
 
         ArrayNode submissions = JsonNodeFactory.instance.arrayNode();
@@ -164,10 +162,10 @@ public class LTIAssignment extends Controller {
     public Result viewSubmission(Http.Request request) throws IOException {
         String resourceID = request.queryString("resourceID").orElse(null);
         String workID = request.queryString("workID").orElse(null);
-        String work = assignmentConn.readJsonStringFromDB("CodeCheckWork", "assignmentID", resourceID, "workID", workID);
+        String work = assignmentConn.readWorkString(resourceID, workID);
         if (work == null) return badRequest("Work not found");
         String assignmentID = assignmentOfResource(resourceID);
-        ObjectNode assignmentNode = assignmentConn.readJsonObjectFromDB("CodeCheckAssignments", "assignmentID", assignmentID);
+        ObjectNode assignmentNode = assignmentConn.readAssignment(assignmentID);
         if (assignmentNode == null) return badRequest("Assignment not found");
         ArrayNode groups = (ArrayNode) assignmentNode.get("problems");
         assignmentNode.set("problems", groups.get(Math.abs(workID.hashCode()) % groups.size()));
@@ -178,7 +176,7 @@ public class LTIAssignment extends Controller {
     @Security.Authenticated(Secured.class) // Instructor
     public Result editAssignment(Http.Request request, String assignmentID) throws IOException {
         String editKey = request.session().get("user").get(); // TODO orElseThrow();    
-        ObjectNode assignmentNode = assignmentConn.readJsonObjectFromDB("CodeCheckAssignments", "assignmentID", assignmentID);
+        ObjectNode assignmentNode = assignmentConn.readAssignment(assignmentID);
         if (assignmentNode == null) return badRequest("Assignment not found");
         
         if (!editKey.equals(assignmentNode.get("editKey").asText())) 
@@ -207,7 +205,7 @@ public class LTIAssignment extends Controller {
     
     private ObjectNode getAssignmentNode(String assignmentID) throws IOException {
     	if (isBridgeAssignment.matcher(assignmentID).matches()) return bridgeAssignment(assignmentID);
-    	else return assignmentConn.readJsonObjectFromDB("CodeCheckAssignments", "assignmentID", assignmentID); 
+    	else return assignmentConn.readAssignment(assignmentID); 
     }
     
     public Result launch(Http.Request request, String assignmentID) throws IOException {    
@@ -233,9 +231,11 @@ public class LTIAssignment extends Controller {
         ObjectNode ltiNode = JsonNodeFactory.instance.objectNode();
         // TODO: In order to facilitate search by assignmentID, it would be better if this was the other way around
         String resourceID = toolConsumerID + "/" + contextID + " " + assignmentID; 
+        
+        // TODO: When can we drop this?
         String legacyResourceID = toolConsumerID + "/" + contextID + "/" + resourceLinkID; 
-        ObjectNode resourceNode = assignmentConn.readJsonObjectFromDB("CodeCheckLTIResources", "resourceID", legacyResourceID); 
-        if (resourceNode != null) resourceID = legacyResourceID;
+        String legacy = assignmentConn.readLegacyLTIResource(legacyResourceID); 
+        if (legacy != null) resourceID = legacyResourceID;
         
         if (assignmentID == null) {
             return badRequest("No assignment ID");
@@ -281,7 +281,7 @@ public class LTIAssignment extends Controller {
             ltiNode.put("oauthConsumerKey", oauthConsumerKey);
             ltiNode.put("jwt", jwt.generate(Map.of("resourceID", resourceID, "userID", userID)));
 
-            ObjectNode workNode = assignmentConn.readJsonObjectFromDB("CodeCheckWork", "assignmentID", resourceID, "workID", userID);
+            ObjectNode workNode = assignmentConn.readWork(resourceID, userID);
             String work = "";
             if (workNode == null) 
                 work = "{ problems: {} }";
@@ -304,10 +304,10 @@ public class LTIAssignment extends Controller {
     public Result allSubmissions(Http.Request request) throws IOException {
         String resourceID = request.queryString("resourceID").orElse(null);
         if (resourceID == null) return badRequest("Assignment not found");
-        Map<String, ObjectNode> itemMap = assignmentConn.readJsonObjectsFromDB("CodeCheckWork", "assignmentID", resourceID, "workID");
+        Map<String, ObjectNode> itemMap = assignmentConn.readAllWork(resourceID);
         String assignmentID = assignmentOfResource(resourceID);
         
-        ObjectNode assignmentNode = assignmentConn.readJsonObjectFromDB("CodeCheckAssignments", "assignmentID", assignmentID);
+        ObjectNode assignmentNode = assignmentConn.readAssignment(assignmentID);
         if (assignmentNode == null) return badRequest("Assignment not found");
 
         ObjectNode submissions = JsonNodeFactory.instance.objectNode();
@@ -342,7 +342,7 @@ public class LTIAssignment extends Controller {
             submissionNode.put("submittedAt", now.toString());
             submissionNode.put("state", problemsNode.get(problemID).get("state").toString());
             submissionNode.put("score", problemsNode.get(problemID).get("score").asDouble());
-            assignmentConn.writeJsonObjectToDB("CodeCheckSubmissions", submissionNode);
+            assignmentConn.writeSubmission(submissionNode);
             
             ObjectNode assignmentNode = getAssignmentNode(assignmentID);
             if (assignmentNode.has("deadline")) {
@@ -355,7 +355,7 @@ public class LTIAssignment extends Controller {
                 }
             }
             result.put("submittedAt", now.toString());      
-            if (assignmentConn.writeNewerJsonObjectToDB("CodeCheckWork", workNode, "assignmentID", "submittedAt")) {
+            if (assignmentConn.writeWork(workNode)) {
                 // Don't submit grade if this is an older submission
                 submitGradeToLMS(requestNode, (ObjectNode) requestNode.get("work"), result);
             }
@@ -380,7 +380,7 @@ public class LTIAssignment extends Controller {
             String userID = claims.get("userID").toString();
             String resourceID = claims.get("resourceID").toString();
             
-            ObjectNode workNode = assignmentConn.readJsonObjectFromDB("CodeCheckWork", "assignmentID", resourceID, "workID", userID);
+            ObjectNode workNode = assignmentConn.readWork(resourceID, userID);
             if (workNode == null) return badRequest("Work not found");
             submitGradeToLMS(requestNode, workNode, result);
             String outcome = result.get("outcome").asText();

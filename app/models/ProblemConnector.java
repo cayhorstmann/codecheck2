@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.*;
 import java.util.Arrays;
 
 import javax.inject.Inject;
@@ -16,10 +17,11 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.horstmann.codecheck.Util;
 import com.typesafe.config.Config;
 
 import play.Logger;
+import play.db.Database;
+import play.db.Databases;
 
 // TODO Use DI configuration to avoid this delegation
 
@@ -27,30 +29,29 @@ import play.Logger;
 public class ProblemConnector {
     private ProblemConnection delegate;
 
-    @Inject public ProblemConnector(Config config) {
+    @Inject public ProblemConnector(Config config /*, Database db */) {
         if (config.hasPath("com.horstmann.codecheck.s3.region"))
             delegate = new ProblemS3Connection(config);   
+        else if (config.getBoolean("com.horstmann.codecheck.sql")) {
+        	Database db = Databases.createFrom("org.postgresql.Driver", "postgres://5ulduk:xau_nODZPZpCPgD43abKvOco9y1Lv9HQeMm51@us-east-1.sql.xata.sh/codeday:main");
+            delegate = new ProblemSQLConnection(db);
+        }
         else 
             delegate = new ProblemLocalConnection(config);
     }
 
-    public void write(byte[] contents, String repo, String key) throws IOException {
-        delegate.write(contents, repo, key);
+    public byte[] readProblem(String repo, String key) throws IOException {
+        return delegate.readProblem(repo, key);
     }
 
-    public void delete(String repo, String key) throws IOException {
-        delegate.delete(repo, key);
-    }
-
-    public byte[] read(String repo, String key) throws IOException {
-        return delegate.read(repo, key);
+    public void writeProblem(byte[] contents, String repo, String key) throws IOException {
+        delegate.writeProblem(contents, repo, key);
     }
 }
 
 interface ProblemConnection {
-    public void write(byte[] contents, String repo, String key) throws IOException;
-    public void delete(String repo, String key) throws IOException;
-    public byte[] read(String repo, String key) throws IOException;
+    public byte[] readProblem(String repo, String key) throws IOException;
+    public void writeProblem(byte[] contents, String repo, String key) throws IOException;
 }
 
 class ProblemS3Connection implements ProblemConnection {
@@ -72,53 +73,7 @@ class ProblemS3Connection implements ProblemConnection {
         bucketSuffix = config.getString("com.horstmann.codecheck.s3.bucketsuffix");
     }
 
-    public void write(Path file, String repo, String key) throws IOException {
-        String bucket = repo + "." + bucketSuffix;
-        try {
-            amazonS3.putObject(bucket, key, file.toFile());
-        } catch (AmazonS3Exception ex) {
-            logger.error("S3Connection.putToS3: Cannot put " + file + " to " + bucket);
-            throw ex;
-        }
-    }
-
-    public void write(String contents, String repo, String key) throws IOException {
-        String bucket = repo + "." + bucketSuffix;
-        try {
-            amazonS3.putObject(bucket, key, contents);
-        } catch (AmazonS3Exception ex) {
-            logger.error("S3Connection.putToS3: Cannot put " + contents.replaceAll("\n", "|").substring(0, Math.min(50, contents.length())) + "... to " + bucket);
-            throw ex;
-        }
-    }
-
-    public void write(byte[] contents, String repo, String key) throws IOException {
-        String bucket = repo + "." + bucketSuffix;
-        ObjectMetadata metadata = new ObjectMetadata();
-        metadata.setContentLength(contents.length);
-        metadata.setContentType("application/zip");
-        try {
-            try (ByteArrayInputStream in = new ByteArrayInputStream(contents)) {
-                amazonS3.putObject(bucket, key, in, metadata); 
-            }                 
-        } catch (AmazonS3Exception ex) {
-            String bytes = Arrays.toString(contents);
-            logger.error("S3Connection.putToS3: Cannot put " + bytes.substring(0, Math.min(50, bytes.length())) + "... to " + bucket);
-            throw ex;                
-        }
-    }
-
-    public void delete(String repo, String key) throws IOException {
-        String bucket = repo + "." + bucketSuffix;
-        try {
-            amazonS3.deleteObject(bucket, key);
-        } catch (AmazonS3Exception ex) {
-            logger.error("S3Connection.deleteFromS3: Cannot delete " + bucket);
-            throw ex;
-        }            
-    }
-
-    public byte[] read(String repo, String key) throws IOException {
+    public byte[] readProblem(String repo, String key) throws IOException {
         String bucket = repo + "." + bucketSuffix;
 
         byte[] bytes = null;
@@ -133,6 +88,22 @@ class ProblemS3Connection implements ProblemConnection {
             throw ex;
         }
         return bytes;            
+    }
+
+    public void writeProblem(byte[] contents, String repo, String key) throws IOException {
+        String bucket = repo + "." + bucketSuffix;
+        ObjectMetadata metadata = new ObjectMetadata();
+        metadata.setContentLength(contents.length);
+        metadata.setContentType("application/zip");
+        try {
+            try (ByteArrayInputStream in = new ByteArrayInputStream(contents)) {
+                amazonS3.putObject(bucket, key, in, metadata); 
+            }                 
+        } catch (AmazonS3Exception ex) {
+            String bytes = Arrays.toString(contents);
+            logger.error("S3Connection.putToS3: Cannot put " + bytes.substring(0, Math.min(50, bytes.length())) + "... to " + bucket);
+            throw ex;                
+        }
     }
 }
 
@@ -149,32 +120,7 @@ class ProblemLocalConnection implements ProblemConnection {
         } 
     }
 
-    public void write(byte[] contents, String repo, String key) throws IOException {
-        try {
-            Path repoPath = root.resolve(repo);
-            Files.createDirectories(repoPath);                
-            Path newFilePath = repoPath.resolve(key + ".zip");
-            Files.write(newFilePath, contents);
-        } catch (IOException ex) {
-            String bytes = Arrays.toString(contents);
-            logger.error("ProblemLocalConnection.write : Cannot put " + bytes.substring(0, Math.min(50, bytes.length())) + "... to " + repo);
-            throw ex;                   
-        }
-
-    }
-
-    public void delete(String repo, String key) throws IOException {
-        Path repoPath = root.resolve(repo);
-        Path directoryPath = repoPath.resolve(key);
-        try {
-            Util.deleteDirectory(directoryPath);
-        } catch (IOException ex) {
-            logger.error("ProblemLocalConnection.delete : Cannot delete " + repo);
-            throw ex;
-        }
-    }
-    
-    public byte[] read(String repo, String key) throws IOException {
+    public byte[] readProblem(String repo, String key) throws IOException {
         byte[] result = null;
         try {
             Path repoPath = root.resolve(repo);
@@ -187,6 +133,67 @@ class ProblemLocalConnection implements ProblemConnection {
         
         return result;  
     }
+
+    public void writeProblem(byte[] contents, String repo, String key) throws IOException {
+        try {
+            Path repoPath = root.resolve(repo);
+            Files.createDirectories(repoPath);                
+            Path newFilePath = repoPath.resolve(key + ".zip");
+            Files.write(newFilePath, contents);
+        } catch (IOException ex) {
+            String bytes = Arrays.toString(contents);
+            logger.error("ProblemLocalConnection.write : Cannot put " + bytes.substring(0, Math.min(50, bytes.length())) + "... to " + repo);
+            throw ex;                   
+        }
+
+    }
 }
 
+/*
+
+CREATE TABLE Problems (repo VARCHAR, key VARCHAR, contents BYTEA, UNIQUE (repo, key))
+
+*/
+
+class ProblemSQLConnection implements ProblemConnection {
+    private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
+    private Database db;
+    public ProblemSQLConnection(Database db) {
+        this.db = db; // TODO
+    }
+
+    public byte[] readProblem(String repo, String key) throws IOException {
+        try (Connection conn = db.getConnection()) {
+            PreparedStatement ps = conn.prepareStatement("SELECT contents FROM Problems WHERE repo = ? AND key = ?");
+            ps.setString(1, repo);
+            ps.setString(2, key);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) return rs.getBytes(1);
+            else return null;
+        } catch (SQLException ex) {
+            logger.error(ex.getMessage());
+            throw new IOException(ex);
+        }
+    }
+
+    public void writeProblem(byte[] contents, String repo, String key) throws IOException {
+        try {
+            try (Connection conn = db.getConnection()) {
+            	// https://www.postgresql.org/docs/current/ddl-constraints.html#DDL-CONSTRAINTS-UNIQUE-CONSTRAINTS
+                PreparedStatement ps = conn.prepareStatement("""
+INSERT INTO Problems VALUES (?, ?, ?) 
+ON CONFLICT (repo, key) 
+DO UPDATE SET contents = EXCLUDED.contents                		
+""");
+                ps.setString(1, repo);
+                ps.setString(2, key);
+                ps.setBytes(3, contents);
+                ps.executeUpdate();
+            }
+        } catch (SQLException ex) {
+            logger.error(ex.getMessage());
+            throw new IOException(ex);
+        }
+    }
+}
 

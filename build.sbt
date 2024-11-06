@@ -4,9 +4,9 @@ version := "1.0-SNAPSHOT"
 
 maintainer := "cay@horstmann.com"
 
-scalaVersion := "2.12.15"
+scalaVersion := "2.13.15"
 
-javacOptions ++= Seq("-source", "11", "-target", "11")
+javacOptions ++= Seq("-source", "21", "-target", "21")
 
 javaOptions += "-Dconfig.file=" + Option(System.getProperty("config.file")).getOrElse("conf/application.conf")
 
@@ -14,11 +14,13 @@ lazy val root = (project in file(".")).enablePlugins(PlayJava)
 
 libraryDependencies ++= Seq(
   guice,
+  javaJdbc,
   "com.amazonaws" % "aws-java-sdk" % "1.11.496",
   "net.oauth.core" % "oauth-provider" % "20100527",
   "oauth.signpost" % "signpost-core" % "1.2.1.2",
   "org.imsglobal" % "basiclti-util" % "1.1.2",   
   "com.google.cloud" % "google-cloud-secretmanager" % "1.4.0",
+  "org.postgresql" % "postgresql" % "42.7.3",
 )
 
 // no api docs in dist

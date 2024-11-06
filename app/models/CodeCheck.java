@@ -38,12 +38,12 @@ import play.api.Environment;
 @Singleton
 public class CodeCheck {
     private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");    
-    private ProblemConnector probConn;
+    private StorageConnector storeConn;
     private JarSigner signer;
     private ResourceLoader resourceLoader;
     
-    @Inject public CodeCheck(Config config, ProblemConnector probConn, Environment playEnv) {
-        this.probConn = probConn;
+    @Inject public CodeCheck(Config config, StorageConnector storeConn, Environment playEnv) {
+        this.storeConn = storeConn;
         resourceLoader = new ResourceLoader() {
             @Override
             public InputStream loadResource(String path) throws IOException {
@@ -137,14 +137,14 @@ public class CodeCheck {
     
     public Map<Path, byte[]> loadProblem(String repo, String problemName) throws IOException {
         Map<Path, byte[]> result;
-        byte[] zipFile = probConn.read(repo, problemName);
+        byte[] zipFile = storeConn.readProblem(repo, problemName);
         result = Util.unzip(zipFile);
         return result;
     }
 
     public void saveProblem(String repo, String problem, Map<Path, byte[]> problemFiles) throws IOException {   
         byte[] problemZip = Util.zip(problemFiles);
-        probConn.write(problemZip, repo, problem);  
+        storeConn.writeProblem(problemZip, repo, problem);  
     }
 
     public String run(String reportType, String repo,
