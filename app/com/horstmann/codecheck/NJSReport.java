@@ -5,10 +5,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 public class NJSReport extends HTMLReport {
     public static class ReportData {    
         public List<Error> errors = new ArrayList<>();
@@ -58,13 +54,7 @@ public class NJSReport extends HTMLReport {
     
     @Override
     public String getText() { 
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.setSerializationInclusion(Include.NON_DEFAULT);        
-        try {
-            return mapper.writeValueAsString(data);
-        } catch (JsonProcessingException e) {           
-            return null;
-        }
+    	return Util.toJsonString(data);
     }    
     
     @Override

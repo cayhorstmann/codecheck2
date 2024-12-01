@@ -13,7 +13,7 @@ public class RustLanguage implements Language {
     private static Pattern mainPattern = Pattern.compile("fn\\s+main\\s*\\([^)]*\\)\\s*(\\{\\s*)?");
     @Override public Pattern mainPattern() { return mainPattern; }
 
-    private static Pattern VARIABLE_DECL_PATTERN =Pattern.compile("let\\s*(mut\\s*)?(?<name>[A-Za-z][A-Za-z0-9]*)\\s*(:\\s*(((i|u)(8|16|32|64|128|size))|(f32|f64|bool|char)|(\\[(((i|u)(8|16|32|64|128|size))|(f32|f64|bool|char))\\s*;\\s*[0-9]*\\s*\\]))\\s*)?=\\s*(?<rhs>.+);\\s*");
+    private static Pattern VARIABLE_DECL_PATTERN =Pattern.compile("let\\s*(mut\\s*)?(?<name>[A-Za-z][A-Za-z0-9_]*)\\s*(:\\s*(((i|u)(8|16|32|64|128|size))|(f32|f64|bool|char)|(\\[(((i|u)(8|16|32|64|128|size))|(f32|f64|bool|char))\\s*;\\s*[0-9]*\\s*\\]))\\s*)?=\\s*(?<rhs>.+);\\s*");
     @Override public Pattern variableDeclPattern() { return VARIABLE_DECL_PATTERN; }
 
     @Override

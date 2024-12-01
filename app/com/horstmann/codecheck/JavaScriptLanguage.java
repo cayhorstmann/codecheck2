@@ -59,6 +59,6 @@ public class JavaScriptLanguage implements Language {
     }
 
     private static Pattern VARIABLE_DECL_PATTERN = Pattern.compile(
-        	"(var|const|let)\\s+(?<name>[A-Za-z][A-Za-z0-9]*)\\s*=(?<rhs>[^;]+);?");
+        	"(var|const|let)\\s+(?<name>[A-Za-z][A-Za-z0-9_]*)\\s*=(?<rhs>[^;]+);?");
     @Override public Pattern variableDeclPattern() { return VARIABLE_DECL_PATTERN; }
 }

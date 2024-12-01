@@ -45,6 +45,12 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
 public class Util {
     private static Random generator = new Random();
 
@@ -394,7 +400,7 @@ public class Util {
     public static byte[] fileUpload(String urlString, String fieldName, String fileName, byte[] bytes) throws IOException {
         final int TIMEOUT = 90000; // 90 seconds
         String boundary = "===" + createPrivateUID() + "===";
-        URL url = new URL(urlString);
+        URL url = URI.create(urlString).toURL();
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         conn.setConnectTimeout(TIMEOUT);
         conn.setReadTimeout(TIMEOUT);
@@ -444,7 +450,7 @@ public class Util {
     public static String httpPost(String urlString, String content, String contentType) {
         StringBuilder result = new StringBuilder();
         try {
-            URL url = new URL(urlString);
+            URL url = URI.create(urlString).toURL();
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestProperty("Content-Type", contentType);
             connection.setDoOutput(true);
@@ -528,7 +534,7 @@ public class Util {
     public static boolean exists(String url) {
         boolean result = false;
         try {
-            HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+            HttpURLConnection conn = (HttpURLConnection) URI.create(url).toURL().openConnection();
             try {
                 conn.connect();
                 result = conn.getHeaderField(null).contains("200");
@@ -592,4 +598,29 @@ public class Util {
     public static boolean isPronouncableUID(String s) {
         return s.matches("(([aeiouy][bcdfghjklmnpqrstvwxz]){2}|([bcdfghjklmnpqrstvwxz][aeiouy]){2})(-(([aeiouy][bcdfghjklmnpqrstvwxz]){2}|([bcdfghjklmnpqrstvwxz][aeiouy]){2})){3}");
     }
+    
+    private static ObjectMapper mapper = new ObjectMapper();
+    static {
+    	mapper.setSerializationInclusion(Include.NON_DEFAULT);
+    }
+
+	public static ObjectNode toJson(Object obj) { 	    
+	    return (ObjectNode) mapper.convertValue(obj, JsonNode.class);
+	}
+	
+	public static String toJsonString(Object obj) { 	    
+		try {
+			return mapper.writeValueAsString(obj);
+		} catch (JsonProcessingException e) {    
+			return null;
+		}
+	}
+	
+	public static ObjectNode fromJsonString(String jsonString) throws JsonProcessingException {
+		return (ObjectNode) mapper.readTree(jsonString);
+	}
+
+	public static ObjectNode fromJsonString(byte[] jsonStringBytes) throws JsonProcessingException, IOException {
+		return (ObjectNode) mapper.readTree(jsonStringBytes);
+	}
 }

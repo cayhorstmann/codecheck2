@@ -3,7 +3,6 @@ package com.horstmann.codecheck;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,7 +45,7 @@ public class PHPLanguage implements Language {
     }
 
     private static Pattern VARIABLE_DECL_PATTERN = Pattern.compile(
-        	"^\\s*(?<name>\\$[A-Za-z][A-Za-z0-9]*)\\s*=(?<rhs>[^;]+);");
+        	"^\\s*(?<name>\\$[A-Za-z][A-Za-z0-9_]*)\\s*=(?<rhs>[^;]+);");
     @Override public Pattern variableDeclPattern() { return VARIABLE_DECL_PATTERN; }
     
     public boolean isUnitTest(Path fileName) { return fileName.toString().matches(".*(T|_t)est[0-9]*.php"); }

@@ -17,7 +17,7 @@ public class DartLanguage implements Language {
     @Override public Pattern mainPattern() { return MAIN_PATTERN; }
 
     private static Pattern VARIABLE_DECL_PATTERN 
-    	= Pattern.compile(".*\\S\\s+(?<name>[A-Za-z][A-Za-z0-9]*)(\\s*[*\\[\\]]+)?\\s*=\\s*(?<rhs>[^;]+);");
+    	= Pattern.compile(".*\\S\\s+(?<name>[A-Za-z][A-Za-z0-9_]*)(\\s*[*\\[\\]]+)?\\s*=\\s*(?<rhs>[^;]+);");
     @Override public Pattern variableDeclPattern() { return VARIABLE_DECL_PATTERN; }
        
     private static Pattern ERROR_PATTERN = Pattern.compile(".+/(?<file>[^/]+\\.cpp):(?<line>[0-9]+):(?<col>[0-9]+): error: (?<msg>.+)");

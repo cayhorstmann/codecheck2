@@ -64,6 +64,6 @@ public class MatlabLanguage implements Language {
     }
 
     private static Pattern VARIABLE_DECL_PATTERN = Pattern.compile(
-        	"(?<name>[A-Za-z][A-Za-z0-9]*)\\s*=\\s*(?<rhs>.+)");
+        	"(?<name>[A-Za-z][A-Za-z0-9_]*)\\s*=\\s*(?<rhs>.+)");
     @Override public Pattern variableDeclPattern() { return VARIABLE_DECL_PATTERN; }
 }

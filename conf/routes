@@ -19,36 +19,42 @@ GET  /script/theme-kuroir.js  controllers.Assets.at(path="/public/ace", file="th
 GET  /assets/*file            controllers.Assets.versioned(path="/public", file: Asset)
 
 # Web interface 
-GET	 /files						controllers.Files.filesHTML2(request: Request, repo: String ?= "ext", problem: String, ccid: String ?= null)
-GET	 /files/:problem			controllers.Files.filesHTML2(request: Request, repo: String ?= "ext", problem: String, ccid: String ?= null)
-GET  /files/:repo/:problem		controllers.Files.filesHTML2(request: Request, repo: String, problem: String,          ccid: String ?= null)
+GET	 /files						controllers.Files.filesHTML2(request: Request, repo: String ?= "ext", problem: String)
+GET	 /files/:problem			controllers.Files.filesHTML2(request: Request, repo: String ?= "ext", problem: String)
+GET  /files/:repo/:problem		controllers.Files.filesHTML2(request: Request, repo: String, problem: String)
 POST /checkNJS					controllers.Check.checkNJS(request: Request)
-GET	 /tracer/:problem			controllers.Files.tracer(request: Request, repo: String ?= "ext", problem: String, ccid: String ?= null)
-GET  /tracer/:repo/:problem		controllers.Files.tracer(request: Request, repo: String, problem: String,          ccid: String ?= null)
+GET	 /tracer/:problem			controllers.Files.tracer(request: Request, repo: String ?= "ext", problem: String)
+GET  /tracer/:repo/:problem		controllers.Files.tracer(request: Request, repo: String, problem: String)
 
 # Used by textbook-problems, cs046 Split, checknjs 
-GET  /fileData                controllers.Files.fileData(request: Request, repo: String ?= "ext", problem: String, ccid: String ?= null)
-GET  /fileData/:problem       controllers.Files.fileData(request: Request, repo: String ?= "ext", problem: String, ccid: String ?= null)
-GET  /fileData/:repo/:problem controllers.Files.fileData(request: Request, repo: String, problem: String, ccid: String ?= null)
+GET  /fileData                controllers.Files.fileData(request: Request, repo: String ?= "ext", problem: String)
+GET  /fileData/:problem       controllers.Files.fileData(request: Request, repo: String ?= "ext", problem: String)
+GET  /fileData/:repo/:problem controllers.Files.fileData(request: Request, repo: String, problem: String)
 
 # For pyodide client
 GET  /setupData/:problem       controllers.Check.setupReport(request: Request, repo: String ?= "ext", problem: String)
 GET  /setupData/:repo/:problem controllers.Check.setupReport(request: Request, repo: String, problem: String)
 
+# Upload a new problem as a zip file
 POST /uploadProblem                     controllers.Upload.uploadProblem(request: Request)
+# Upload a new problem as a form
 POST /uploadFiles                       controllers.Upload.uploadFiles(request: Request)
-GET  /private/problem/:problem/:editKey controllers.Upload.editKeySubmit(request: Request, problem: String, editKey: String)
+# Get a form for editing an existing problem
+GET  /private/problem/:problem/:editKey controllers.Upload.editProblem(request: Request, problem: String, editKey: String)
 # TODO Legacy without /private
-GET  /edit/:problem/:editKey            controllers.Upload.editKeySubmit(request: Request, problem: String, editKey: String)
+GET  /edit/:problem/:editKey            controllers.Upload.editProblem(request: Request, problem: String, editKey: String)
+# Upload fixes to an existing problem as a form
 POST /editedFiles/:problem/:editKey     controllers.Upload.editedFiles(request: Request, problem: String, editKey: String)
+# Upload fixes to an existing problem as a zip file
 POST /editedProblem/:problem/:editKey   controllers.Upload.editedProblem(request: Request, problem: String, editKey: String)
 
-# Legacy--TODO: Eliminate
-GET	 /codecheck/files						controllers.Files.filesHTML(request: Request, repo: String ?= "ext", problem: String, ccu: String ?= null)
-GET	 /codecheck/files/:problem	controllers.Files.filesHTML(request: Request, repo: String ?= "ext", problem: String, ccu: String ?= null)
-POST /codecheck/check						controllers.Check.checkHTML(request: Request)
+# Legacy, eliminated
+# GET	 /codecheck/files						controllers.Files.filesHTML(request: Request, repo: String ?= "ext", problem: String, ccu: String ?= null)
+# GET	 /codecheck/files/:problem	controllers.Files.filesHTML(request: Request, repo: String ?= "ext", problem: String, ccu: String ?= null)
+# POST /codecheck/check						controllers.Check.checkHTML(request: Request)
 # Used in Core Java for the Impatient 2e
-POST /check                     controllers.Check.checkHTML(request: Request)
+# POST /check                     controllers.Check.checkHTML(request: Request)
+
 # Used in Core Java 13e/Core Java for the Impatient 4e
 POST /run                       controllers.Check.run(request: Request)
 

@@ -4,9 +4,6 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.ByteBuffer;
-import java.nio.charset.CharacterCodingException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
@@ -16,10 +13,6 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.imageio.ImageIO;
-
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class JSONReport implements Report {
     public static class Item {
@@ -39,9 +32,10 @@ public class JSONReport implements Report {
         
     public static class ImageItem {
     	public ImageItem() {}
-    	public ImageItem(String caption, BufferedImage image) {
+    	public ImageItem(String caption, String filename, BufferedImage image) {
     		this.caption = caption;
-    		try {
+    		name = filename;
+    		try {    			
     			ByteArrayOutputStream out = new ByteArrayOutputStream();
     			ImageIO.write(image, "PNG", out);
     			out.close();
@@ -51,6 +45,7 @@ public class JSONReport implements Report {
     		}
     	}
     	public String caption;
+    	public String name;
         public String data;
     }
 
@@ -193,17 +188,11 @@ public class JSONReport implements Report {
     }
     
     @Override
-    public JSONReport image(String caption, BufferedImage image) {
-        if (image != null) run.images.add(new ImageItem(caption, image));
+    public JSONReport image(String caption, String filename, BufferedImage image) {
+        if (image != null) run.images.add(new ImageItem(caption, filename, image));
         return this;
     }
 
-    @Override
-    public JSONReport image(BufferedImage image) {
-        image("", image);
-        return this;
-    }
-    
     @Override
     public JSONReport file(String file, String contents) {
         if (!"studentFiles".equals(section.type)) { 
@@ -237,13 +226,7 @@ public class JSONReport implements Report {
 
     @Override
     public String getText() { 
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.setSerializationInclusion(Include.NON_DEFAULT);        
-        try {
-            return mapper.writeValueAsString(data);
-        } catch (JsonProcessingException e) {    
-            return null;
-        }
+    	return Util.toJsonString(data);
     }
 
     @Override

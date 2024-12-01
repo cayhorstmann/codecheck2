@@ -305,7 +305,7 @@ public class Main {
                 for (String f : outFiles) {
                     if (CompareImages.isImage(f)) {
                         CompareImages ci = imageComp.get(f);
-                        report.image(null, ci.first());
+                        report.image(null, f, ci.first());
                     }
                     else
                         report.file(f, contents.get(f));
@@ -321,11 +321,11 @@ public class Main {
                         ic.setOtherImage(plan.getOutputBytes(solutionRunID, f));
                         boolean outcome = ic.getOutcome();
                         if (outcome) {
-                        	report.image(outFiles.size() > 1 ? f : null, ic.first());
+                        	report.image(outFiles.size() > 1 ? f : null, f, ic.first());
                         } else {
-                            report.image(outFiles.size() > 1 ? f : "Actual", ic.first());
-                            report.image("Expected", ic.other());
-                            report.image("Mismatched pixels", ic.diff());
+                            report.image(outFiles.size() > 1 ? f : "Actual", f, ic.first());
+                            report.image("Expected", null, ic.other());
+                            report.image("Mismatched pixels", null, ic.diff());
                         }
                         score.pass(outcome, report);
                     } catch (IOException ex) {

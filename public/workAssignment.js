@@ -196,10 +196,7 @@ window.addEventListener('DOMContentLoaded', () => {
     window.history.replaceState(null, '', '/')  
   
   for (const e of document.getElementsByClassName('ccid')) 
-    if (studentID !== '') 
       e.textContent = studentID
-    else
-      e.parentNode.style.display = 'none'
   
   window.addEventListener("message", event => {
     let iframe = sendingIframe(event)

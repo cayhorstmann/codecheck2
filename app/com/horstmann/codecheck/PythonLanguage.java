@@ -78,7 +78,7 @@ public class PythonLanguage implements Language {
         return new String[] { "##", "" };
     }
 
-    private static Pattern varPattern = Pattern.compile("(?<name>[A-Za-z][A-Za-z0-9]*)\\s*=\\s*(?<rhs>.+)");
+    private static Pattern varPattern = Pattern.compile("(?<name>[A-Za-z][A-Za-z0-9_]*)\\s*=\\s*(?<rhs>.+)");
     @Override public Pattern variableDeclPattern() { return varPattern; }
 
     private static Pattern errPattern = Pattern.compile("(?<msg>.*)[\"(](?<file>[A-Za-z0-9_]+\\.py)\"?, line (?<line>[0-9]+).*");    

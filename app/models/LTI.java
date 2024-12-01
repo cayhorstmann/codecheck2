@@ -3,6 +3,8 @@ package models;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.System.Logger;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -21,8 +23,6 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.net.ssl.HttpsURLConnection;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
 import net.oauth.OAuthAccessor;
 import net.oauth.OAuthConsumer;
 import net.oauth.OAuthMessage;
@@ -33,24 +33,21 @@ import oauth.signpost.exception.OAuthCommunicationException;
 import oauth.signpost.exception.OAuthExpectationFailedException;
 import oauth.signpost.exception.OAuthMessageSignerException;
 import oauth.signpost.http.HttpParameters;
-import play.Logger;
-import play.mvc.Http;
+
 
 @Singleton
 public class LTI {
     @Inject private StorageConnector assignmentConn;
-    private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
+    private static Logger logger = System.getLogger("com.horstmann.codecheck");     
     
-    public boolean validate(Http.Request request) {
+    public boolean validate(String url, Map<String, String[]> postParams) {
         final String OAUTH_KEY_PARAMETER = "oauth_consumer_key";
-        
-        Map<String, String[]> postParams = request.body().asFormUrlEncoded();
+                
         if (postParams == null) return false;
         Set<Map.Entry<String, String>> entries = new HashSet<>();
         for (Map.Entry<String, String[]> entry : postParams.entrySet()) 
             for (String s : entry.getValue())
                 entries.add(new AbstractMap.SimpleEntry<>(entry.getKey(), s));
-        String url = Util.prefix(request) + request.uri();
         
         String key = com.horstmann.codecheck.Util.getParam(postParams, OAUTH_KEY_PARAMETER);
         for (Map.Entry<String, String> entry : com.horstmann.codecheck.Util.getParams(url).entrySet())
@@ -66,20 +63,19 @@ public class LTI {
           oav.validateMessage(oam, acc);
           return true;
         } catch (Exception e) {
-            logger.error("Did not validate: " + e.getLocalizedMessage() + "\nurl: " + url + "\nentries: " + entries);
+            logger.log(Logger.Level.ERROR, "Did not validate: " + e.getLocalizedMessage() + "\nurl: " + url + "\nentries: " + entries);
             return false;
         }
     }
             
-    // TODO Move this so that LTI doesn't depend on S3, Play
-    public String getSharedSecret(String oauthConsumerKey) {
+    private String getSharedSecret(String oauthConsumerKey) {
         String sharedSecret = "";
         try {
         	sharedSecret = assignmentConn.readLTISharedSecret(oauthConsumerKey);
         	if (sharedSecret == null)
-        		logger.warn("No shared secret for consumer key " + oauthConsumerKey);
+        		logger.log(Logger.Level.WARNING, "No shared secret for consumer key " + oauthConsumerKey);
         } catch (IOException e) {
-            logger.warn("Could not read CodeCheckLTICredentials");
+            logger.log(Logger.Level.WARNING, "Could not read CodeCheckLTICredentials");
             // Return empty string
         }       
         return sharedSecret;
@@ -100,7 +96,7 @@ public class LTI {
         String xmlString3 = "</textString> </resultScore> </result> </resultRecord> </replaceResultRequest> </imsx_POXBody> </imsx_POXEnvelopeRequest>";            
         String xml = xmlString1 + sourcedID + xmlString2 + score + xmlString3;          
         
-        URL url = new URL(gradePassbackURL);
+        URL url = URI.create(gradePassbackURL).toURL();
         HttpsURLConnection request = (HttpsURLConnection) url.openConnection();
         request.setRequestMethod("POST");
         request.setRequestProperty("Content-Type", "application/xml");
@@ -129,7 +125,7 @@ public class LTI {
         out.close();
         // request.connect();
         if (request.getResponseCode() != 200)
-            logger.warn("passbackGradeToLMS: Not successful" + request.getResponseCode() + " " + request.getResponseMessage());
+            logger.log(Logger.Level.WARNING, "passbackGradeToLMS: Not successful" + request.getResponseCode() + " " + request.getResponseMessage());
         try {
             InputStream in = request.getInputStream();
             String body = new String(in.readAllBytes(), StandardCharsets.UTF_8);
@@ -140,12 +136,12 @@ public class LTI {
             if (matcher2.find()) message += ": " + matcher2.group(1);
             if (message.length() == 0) message = body;
             if (!body.contains("<imsx_codeMajor>success</imsx_codeMajor>"))
-                logger.warn("passbackGradeToLMS: Not successful " + body);
+                logger.log(Logger.Level.WARNING, "passbackGradeToLMS: Not successful " + body);
             return message;         
         } catch (Exception e) {         
             InputStream in = request.getErrorStream();
             String body = new String(in.readAllBytes(), StandardCharsets.UTF_8);
-            logger.warn("passbackGradeToLMS: Response error " + e.getMessage() + ": " + body);
+            logger.log(Logger.Level.WARNING, "passbackGradeToLMS: Response error " + e.getMessage() + ": " + body);
             return body;
         }
     }           

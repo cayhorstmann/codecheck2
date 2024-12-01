@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.lang.System.Logger;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,31 +30,21 @@ import com.horstmann.codecheck.Plan;
 import com.horstmann.codecheck.Problem;
 import com.horstmann.codecheck.ResourceLoader;
 import com.horstmann.codecheck.Util;
-import com.typesafe.config.Config;
+import controllers.Config;
 
 import jdk.security.jarsigner.JarSigner;
-import play.Logger;
-import play.api.Environment;
 
 @Singleton
 public class CodeCheck {
-    private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");    
+    public static final String DEFAULT_REPO = "ext";
+    private static Logger logger = System.getLogger("com.horstmann.codecheck");         
     private StorageConnector storeConn;
     private JarSigner signer;
     private ResourceLoader resourceLoader;
     
-    @Inject public CodeCheck(Config config, StorageConnector storeConn, Environment playEnv) {
+    @Inject public CodeCheck(Config config, StorageConnector storeConn) {
         this.storeConn = storeConn;
-        resourceLoader = new ResourceLoader() {
-            @Override
-            public InputStream loadResource(String path) throws IOException {
-                return playEnv.classLoader().getResourceAsStream("public/resources/" + path);
-            }
-            @Override
-            public String getProperty(String key) {
-                return config.hasPath(key) ? config.getString(key) : null;
-            }
-        };
+        resourceLoader = config;
         try {
             String keyStorePath = config.getString("com.horstmann.codecheck.storeLocation");
             char[] password = config.getString("com.horstmann.codecheck.storePassword").toCharArray();
@@ -62,10 +53,9 @@ public class CodeCheck {
             KeyStore.PrivateKeyEntry pkEntry = (KeyStore.PrivateKeyEntry) ks.getEntry("codecheck", protParam);
             signer = new JarSigner.Builder(pkEntry).build();            
         } catch (Exception e) {
-            logger.warn("Cannot load keystore");
+            logger.log(Logger.Level.WARNING, "Cannot load keystore");
         }
     }
-    
 
     public Map<Path, byte[]> loadProblem(String repo, String problemName, String studentId) throws IOException, ScriptException, NoSuchMethodException {
         Map<Path, byte[]> problemFiles = loadProblem(repo, problemName);
@@ -204,7 +194,7 @@ public class CodeCheck {
         Plan plan = new Main().run(submissionFiles, problemFiles, "html", metaData, resourceLoader);
         if (!isParametric)
             plan.writeSolutionOutputs(problemFiles);
-        saveProblem("ext", problem, originalProblemFiles);
+        saveProblem(DEFAULT_REPO, problem, originalProblemFiles);
         return plan.getReport().getText(); 
     }
     

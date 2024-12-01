@@ -11,9 +11,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -70,12 +68,10 @@ public class SetupReport extends JSONReport {
 		}
 		data.metaData.clear();
 		data.score = null;
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.setSerializationInclusion(Include.NON_DEFAULT);
-		ObjectNode dataNode = (ObjectNode) mapper.convertValue(data, JsonNode.class);
+		ObjectNode dataNode = Util.toJson(data);
 		if (problem != null) {
 			Problem.DisplayData displayData = problem.getProblemData();
-			ObjectNode problemNode = (ObjectNode) mapper.convertValue(displayData, JsonNode.class);
+			ObjectNode problemNode = Util.toJson(displayData);
 			Iterator<Map.Entry<String, JsonNode>> fields = problemNode.fields();
 			while (fields.hasNext()) {
 				Map.Entry<String, JsonNode> entry = fields.next();
@@ -100,10 +96,10 @@ public class SetupReport extends JSONReport {
 				dataNode.set("hiddenFiles", hiddenFiles);
 			}		
 			if (!attributes.isEmpty()) {
-				dataNode.set("attributes", mapper.convertValue(attributes, JsonNode.class));
+				dataNode.set("attributes", Util.toJson(attributes));
 			}
 			if (!conditions.isEmpty()) {
-				dataNode.set("conditions", mapper.convertValue(conditions, JsonNode.class));
+				dataNode.set("conditions", Util.toJson(conditions));
 			}
 		}
 		return dataNode.toString();

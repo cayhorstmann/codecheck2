@@ -37,6 +37,7 @@ view as student to see if comment saved
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.System.Logger;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
@@ -80,20 +81,19 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.horstmann.codecheck.Util;
-import com.typesafe.config.Config;
 
-import play.Logger;
-import play.db.Database;
-import play.db.Databases;
+import controllers.Config;
 
 @Singleton public class StorageConnector {
     private StorageConnection delegate;
 
-    @Inject public StorageConnector(Config config /*, Database db */) {
-    	String type = config.getString("com.horstmann.codecheck.storage.type");
+    @Inject public StorageConnector(Config config) {
+    	String type = "local";
+    	if (config.hasPath("com.horstmann.codecheck.storage.type"))
+    	    type = config.getString("com.horstmann.codecheck.storage.type");
         if (type.equalsIgnoreCase("aws")) 
             delegate = new AWSStorageConnection(config);      
         else if (type.equalsIgnoreCase("sql")) {
@@ -143,26 +143,26 @@ import play.db.Databases;
     	return delegate.readAllWork(assignmentID);
     }
     
-    public void writeAssignment(ObjectNode node) throws IOException {
+    public void writeAssignment(JsonNode node) throws IOException {
     	delegate.writeAssignment(node);
     }
     
-    public void writeSubmission(ObjectNode node) throws IOException {
+    public void writeSubmission(JsonNode node) throws IOException {
     	delegate.writeSubmission(node);
     }
     
-    public void writeComment(ObjectNode node) throws IOException {
+    public void writeComment(JsonNode node) throws IOException {
     	delegate.writeComment(node);
     }
     
-    public boolean writeWork(ObjectNode node) throws IOException {
+    public boolean writeWork(JsonNode node) throws IOException {
     	return delegate.writeWork(node);
     }
 }
 
 interface StorageConnection {
-    public byte[] readProblem(String repo, String key) throws IOException;
-    public void writeProblem(byte[] contents, String repo, String key) throws IOException;
+    byte[] readProblem(String repo, String key) throws IOException;
+    void writeProblem(byte[] contents, String repo, String key) throws IOException;
 	ObjectNode readAssignment(String assignmentID) throws IOException;
     String readLegacyLTIResource(String resourceID) throws IOException;
     String readLTISharedSecret(String oauthConsumerKey) throws IOException;
@@ -171,10 +171,10 @@ interface StorageConnection {
     String readWorkString(String assignmentID, String workID) throws IOException;    
     ObjectNode readNewestSubmission(String submissionID) throws IOException;    
     Map<String, ObjectNode> readAllWork(String assignmentID) throws IOException;     
-    void writeAssignment(ObjectNode node) throws IOException;
-    void writeSubmission(ObjectNode node) throws IOException;
-    void writeComment(ObjectNode node)  throws IOException;    
-    boolean writeWork(ObjectNode node) throws IOException; // return true if this version was saved (because it was newer)
+    void writeAssignment(JsonNode node) throws IOException;
+    void writeSubmission(JsonNode node) throws IOException;
+    void writeComment(JsonNode node)  throws IOException;    
+    boolean writeWork(JsonNode node) throws IOException; // return true if this version was saved (because it was newer)
 }
 
 /*
@@ -229,11 +229,10 @@ CodeCheckComments
 */
 
 class AWSStorageConnection implements StorageConnection {
+    private static Logger logger = System.getLogger("com.horstmann.codecheck");     
     private String bucketSuffix = null;
     private AmazonS3 amazonS3;
     private AmazonDynamoDB amazonDynamoDB;    
-    private ObjectMapper mapper = new ObjectMapper();
-    private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
     public static class OutOfOrderException extends RuntimeException {}
 
     public AWSStorageConnection(Config config) {
@@ -269,7 +268,7 @@ class AWSStorageConnection implements StorageConnection {
                 bytes = in.readAllBytes();
             }
         } catch (AmazonS3Exception ex) {
-            logger.error("S3Connection.readFromS3: Cannot read " + key + " from " + bucket);
+            logger.log(Logger.Level.ERROR, "S3Connection.readFromS3: Cannot read " + key + " from " + bucket);
             throw ex;
         }
         return bytes;            
@@ -286,7 +285,7 @@ class AWSStorageConnection implements StorageConnection {
             }                 
         } catch (AmazonS3Exception ex) {
             String bytes = Arrays.toString(contents);
-            logger.error("S3Connection.putToS3: Cannot put " + bytes.substring(0, Math.min(50, bytes.length())) + "... to " + bucket);
+            logger.log(Logger.Level.ERROR, "S3Connection.putToS3: Cannot put " + bytes.substring(0, Math.min(50, bytes.length())) + "... to " + bucket);
             throw ex;                
         }
     }
@@ -329,30 +328,30 @@ class AWSStorageConnection implements StorageConnection {
     	return readJsonObjectsFromDB("CodeCheckWork", "assignmentID", assignmentID, "workID");
     }
     
-    public void writeAssignment(ObjectNode node) throws IOException {
+    public void writeAssignment(JsonNode node) throws IOException {
     	writeJsonObjectToDB("CodeCheckAssignments", node);
     }
     
-    public void writeSubmission(ObjectNode node) throws IOException {
+    public void writeSubmission(JsonNode node) throws IOException {
     	writeJsonObjectToDB("CodeCheckSubmissions", node);
     }
     
-    public void writeComment(ObjectNode node)  throws IOException {
+    public void writeComment(JsonNode node)  throws IOException {
     	writeJsonObjectToDB("CodeCheckComments", node);
     }
     
-    public boolean writeWork(ObjectNode node) throws IOException {
+    public boolean writeWork(JsonNode node) throws IOException {
     	return writeNewerJsonObjectToDB("CodeCheckWork", node, "assignmentID", "submittedAt");
     }
 
     private ObjectNode readJsonObjectFromDB(String tableName, String primaryKeyName, String primaryKeyValue) throws IOException {
         String result = readJsonStringFromDB(tableName, primaryKeyName, primaryKeyValue);
-        return result == null ? null : (ObjectNode)(mapper.readTree(result)); 
+        return result == null ? null : Util.fromJsonString(result); 
     }
 
     private ObjectNode readJsonObjectFromDB(String tableName, String primaryKeyName, String primaryKeyValue, String sortKeyName, String sortKeyValue) throws IOException {
         String result = readJsonStringFromDB(tableName, primaryKeyName, primaryKeyValue, sortKeyName, sortKeyValue);
-        return result == null ? null : (ObjectNode)(mapper.readTree(result)); 
+        return result == null ? null : Util.fromJsonString(result); 
     }
     
     private String readJsonStringFromDB(String tableName, String primaryKeyName, String primaryKeyValue) throws IOException {
@@ -384,7 +383,7 @@ class AWSStorageConnection implements StorageConnection {
             if (iterator.hasNext()) {
                 String result = iterator.next().toJSON();
                 try {
-                    return (ObjectNode)(mapper.readTree(result));
+                    return Util.fromJsonString(result);
                 } catch (JsonProcessingException ex) {
                     return null;
                 }
@@ -421,12 +420,12 @@ class AWSStorageConnection implements StorageConnection {
         while (iterator.hasNext()) {
             Item item = iterator.next();
             String key = item.getString(sortKeyName);
-            itemMap.put(key, (ObjectNode)(mapper.readTree(item.toJSON())));
+            itemMap.put(key, Util.fromJsonString(item.toJSON()));
         }
         return itemMap;
     }
 
-    private void writeJsonObjectToDB(String tableName, ObjectNode obj) {
+    private void writeJsonObjectToDB(String tableName, JsonNode obj) {
         DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
         Table table = dynamoDB.getTable(tableName); 
         table.putItem(
@@ -435,7 +434,7 @@ class AWSStorageConnection implements StorageConnection {
         );
     }
 
-    private boolean writeNewerJsonObjectToDB(String tableName, ObjectNode obj, String primaryKeyName, String timeStampKeyName) {
+    private boolean writeNewerJsonObjectToDB(String tableName, JsonNode obj, String primaryKeyName, String timeStampKeyName) {
         DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
         Table table = dynamoDB.getTable(tableName);
             /*
@@ -454,7 +453,7 @@ class AWSStorageConnection implements StorageConnection {
             return true;
         } catch(ConditionalCheckFailedException e) {
             // https://github.com/aws/aws-sdk-java/issues/1945
-            logger.warn("writeNewerJsonObjectToDB: " + e.getMessage() + " " + obj);
+            logger.log(Logger.Level.WARNING, "writeNewerJsonObjectToDB: " + e.getMessage() + " " + obj);
             return false;
         }   
     }
@@ -521,8 +520,7 @@ Legacy LTI resources are not supported.
 
 class LocalStorageConnection implements StorageConnection {
     private Path root;
-    private ObjectMapper mapper = new ObjectMapper();
-    private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
+    private static Logger logger = System.getLogger("com.horstmann.codecheck");     
     private ObjectNode credentials;
     
     public LocalStorageConnection(Config config) {        
@@ -530,7 +528,7 @@ class LocalStorageConnection implements StorageConnection {
         try {
            Files.createDirectories(root);            
         } catch (IOException ex) {
-            logger.error("Cannot create " + root);
+            logger.log(Logger.Level.ERROR, "Cannot create " + root);
         } 
     }
     
@@ -541,7 +539,7 @@ class LocalStorageConnection implements StorageConnection {
             Path filePath = repoPath.resolve(key + ".zip");
             result = Files.readAllBytes(filePath); 
         } catch (IOException ex) {
-            logger.error("ProblemLocalConnection.read : Cannot read " + key + " from " + repo);
+            logger.log(Logger.Level.ERROR, "ProblemLocalConnection.read : Cannot read " + key + " from " + repo);
             throw ex;                
         }
         
@@ -556,7 +554,7 @@ class LocalStorageConnection implements StorageConnection {
             Files.write(newFilePath, contents);
         } catch (IOException ex) {
             String bytes = Arrays.toString(contents);
-            logger.error("ProblemLocalConnection.write : Cannot put " + bytes.substring(0, Math.min(50, bytes.length())) + "... to " + repo);
+            logger.log(Logger.Level.ERROR, "ProblemLocalConnection.write : Cannot put " + bytes.substring(0, Math.min(50, bytes.length())) + "... to " + repo);
             throw ex;                   
         }
     }
@@ -572,7 +570,7 @@ class LocalStorageConnection implements StorageConnection {
 
     public String readLTISharedSecret(String oauthConsumerKey) throws IOException {
     	if (credentials == null)
-            credentials = (ObjectNode) mapper.readTree(Path.of("CodeCheckLTICredentials").toFile());
+            credentials = Util.fromJsonString(Files.readString(path("CodeCheckLTICredentials")));
         return credentials.get("shared_secret").asText();
     }
     
@@ -598,9 +596,9 @@ class LocalStorageConnection implements StorageConnection {
             if (latest == null) return null;
             String content = Files.readString(latest);    
             try {
-                return (ObjectNode)(mapper.readTree(content));
+                return Util.fromJsonString(content);
             } catch (JsonProcessingException ex) {
-                logger.warn("AssignmentConnector.readNewestJsonObjectFromDB: cannot read " + latest.toString() + "***File content: " + content);
+                logger.log(Logger.Level.WARNING, "AssignmentConnector.readNewestJsonObjectFromDB: cannot read " + latest.toString() + "***File content: " + content);
                 return null;
             } 
         } catch (IOException ex) {
@@ -616,25 +614,25 @@ class LocalStorageConnection implements StorageConnection {
                 List<Path> files = entries.filter(Files::isRegularFile).collect(Collectors.toList());
                 for (Path file : files) {
                     String fileData = Files.readString(file);   
-                    ObjectNode node = (ObjectNode) mapper.readTree(fileData);
+                    ObjectNode node = Util.fromJsonString(fileData);
                     String key = node.get("workID").asText();
                     itemMap.put(key, node);
                 }
             }
         } catch (IOException ex){
-            logger.warn(Util.getStackTrace(ex));
+            logger.log(Logger.Level.WARNING, Util.getStackTrace(ex));
         }    
         return itemMap;
     }
     
-    public void writeAssignment(ObjectNode node) throws IOException {
+    public void writeAssignment(JsonNode node) throws IOException {
     	String assignmentID = node.get("assignmentID").asText();
         Path path = path("CodeCheckAssignments", assignmentID);
         Files.createDirectories(path.getParent()); 
         Files.writeString(path, node.toString());
     }
     
-    public void writeSubmission(ObjectNode node) throws IOException {
+    public void writeSubmission(JsonNode node) throws IOException {
         String submissionID = node.get("submissionID").asText();
         String submittedAt = node.get("submittedAt").asText();
         Path path = path("CodeCheckSubmissions", submissionID, submittedAt);
@@ -642,7 +640,7 @@ class LocalStorageConnection implements StorageConnection {
         Files.writeString(path, node.toString());
     }
     
-    public void writeComment(ObjectNode node)  throws IOException {
+    public void writeComment(JsonNode node)  throws IOException {
         String assignmentID = node.get("assignmentID").asText();
         String workID = node.get("workID").asText();
     	Path path = path("CodeCheckComments", assignmentID, workID);
@@ -650,7 +648,7 @@ class LocalStorageConnection implements StorageConnection {
         Files.writeString(path, node.get("comment").asText());
     } 
     
-    public boolean writeWork(ObjectNode node) throws IOException {    	
+    public boolean writeWork(JsonNode node) throws IOException {    	
         String assignmentID = node.get("assignmentID").asText();
         String workID = node.get("workID").asText();
         Path path = path("CodeCheckWork", assignmentID, workID); 
@@ -668,7 +666,7 @@ class LocalStorageConnection implements StorageConnection {
                 boolean replace = false;
                 if (contents.length == 0) replace = true;
                 else {
-                	ObjectNode prevNode = (ObjectNode) mapper.readTree(readBuffer.array());
+                	ObjectNode prevNode = Util.fromJsonString(readBuffer.array());
                 	String prevTimeStampVal = prevNode.get("submittedAt").asText();
                 	replace = prevTimeStampVal.compareTo(newTimeStampVal) < 0;
                 }
@@ -695,12 +693,12 @@ class LocalStorageConnection implements StorageConnection {
 
     private ObjectNode readJsonObject(String tableName, String primaryKeyValue) throws IOException {
         String result = readJsonString(tableName, primaryKeyValue);
-        return result == null ? null : (ObjectNode) mapper.readTree(result); 
+        return result == null ? null : Util.fromJsonString(result); 
     }
 
     private ObjectNode readJsonObject(String tableName, String primaryKeyValue, String sortKeyValue) throws IOException {
         String result = readJsonString(tableName, primaryKeyValue, sortKeyValue);
-        return result == null ? null : (ObjectNode) mapper.readTree(result); 
+        return result == null ? null : Util.fromJsonString(result);
     }
     
     public String readJsonString(String tableName, String primaryKeyValue) throws IOException {
@@ -709,7 +707,7 @@ class LocalStorageConnection implements StorageConnection {
         try {
             return Files.readString(path);
         } catch (IOException ex) {
-            logger.warn("AssignmentLocalConnection.readJsonString: Cannot read " + path);
+            logger.log(Logger.Level.WARNING, "AssignmentLocalConnection.readJsonString: Cannot read " + path);
             return null;
         }
     }
@@ -720,7 +718,7 @@ class LocalStorageConnection implements StorageConnection {
         try {
             return Files.readString(path);
         } catch (IOException ex) {
-            logger.warn("AssignmentLocalConnection.readJsonString: Cannot read " + path);
+            logger.log(Logger.Level.WARNING, "AssignmentLocalConnection.readJsonString: Cannot read " + path);
             return null;
         }
     }
@@ -737,18 +735,15 @@ CREATE TABLE CodeCheckSubmissions (submissionID VARCHAR, submittedAt VARCHAR, js
  */
 
 class SQLStorageConnection implements StorageConnection {
-    private ObjectMapper mapper = new ObjectMapper();
-    private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
-    private Database db;
-
-    public SQLStorageConnection(Config config) {
-    	String driver = config.getString("com.horstmann.corejava.sql.driver");
-    	String url = config.getString("com.horstmann.corejava.sql.url");
-    	this.db = Databases.createFrom(driver, url);
-    }
+    private static Logger logger = System.getLogger("com.horstmann.codecheck");
+    private Config config;
     
-    public byte[] readProblem(String repo, String key) throws IOException {
-        try (Connection conn = db.getConnection()) {
+    public SQLStorageConnection(Config config) {
+		this.config = config;
+	}
+
+	public byte[] readProblem(String repo, String key) throws IOException {
+        try (Connection conn = config.getDatabaseConnection()) {
             PreparedStatement ps = conn.prepareStatement("SELECT contents FROM Problems WHERE repo = ? AND key = ?");
             ps.setString(1, repo);
             ps.setString(2, key);
@@ -756,14 +751,14 @@ class SQLStorageConnection implements StorageConnection {
             if (rs.next()) return rs.getBytes(1);
             else return null;
         } catch (SQLException ex) {
-            logger.error(ex.getMessage());
+            logger.log(Logger.Level.ERROR, ex.getMessage());
             throw new IOException(ex);
         }
     }
 
     public void writeProblem(byte[] contents, String repo, String key) throws IOException {
         try {
-            try (Connection conn = db.getConnection()) {
+            try (Connection conn = config.getDatabaseConnection()) {
             	// https://www.postgresql.org/docs/current/ddl-constraints.html#DDL-CONSTRAINTS-UNIQUE-CONSTRAINTS
                 PreparedStatement ps = conn.prepareStatement("""
 INSERT INTO Problems VALUES (?, ?, ?) 
@@ -776,17 +771,17 @@ DO UPDATE SET contents = EXCLUDED.contents
                 ps.executeUpdate();
             }
         } catch (SQLException ex) {
-            logger.error(ex.getMessage());
+            logger.log(Logger.Level.ERROR, ex.getMessage());
             throw new IOException(ex);
         }
     }    
     
     public ObjectNode readAssignment(String assignmentID) throws IOException {
-        try (Connection conn = db.getConnection()) {
+        try (Connection conn = config.getDatabaseConnection()) {
             PreparedStatement ps = conn.prepareStatement("SELECT json FROM CodeCheckAssignments WHERE assignmentID = ?");
             ps.setString(1, assignmentID);
             ResultSet rs = ps.executeQuery();
-            if (rs.next()) return (ObjectNode) mapper.readTree(rs.getString(1));
+            if (rs.next()) return Util.fromJsonString(rs.getString(1));
             else return null;
         } catch (SQLException ex) {
             throw new IOException(ex);
@@ -798,7 +793,7 @@ DO UPDATE SET contents = EXCLUDED.contents
 	}
 	
     public String readLTISharedSecret(String oauthConsumerKey) throws IOException{
-        try (Connection conn = db.getConnection()) {
+        try (Connection conn = config.getDatabaseConnection()) {
             PreparedStatement ps = conn.prepareStatement("SELECT shared_secret FROM CodeCheckLTICredentials WHERE oauth_consumer_key = ?");
             ps.setString(1, oauthConsumerKey);
             ResultSet rs = ps.executeQuery();
@@ -810,7 +805,7 @@ DO UPDATE SET contents = EXCLUDED.contents
 	}
 	
     public String readComment(String assignmentID, String workID) throws IOException{
-        try (Connection conn = db.getConnection()) {
+        try (Connection conn = config.getDatabaseConnection()) {
             PreparedStatement ps = conn.prepareStatement("SELECT comment FROM CodeCheckComments WHERE assignmentID = ? AND workID = ?");
             ps.setString(1, assignmentID);
             ps.setString(2, workID);
@@ -824,11 +819,11 @@ DO UPDATE SET contents = EXCLUDED.contents
 	
     public ObjectNode readWork(String assignmentID, String workID) throws IOException{
     	String result = readWorkString(assignmentID, workID);
-    	return result == null ? null : (ObjectNode) mapper.readTree(result);
+    	return result == null ? null : Util.fromJsonString(result);
 	}
 	
     public String readWorkString(String assignmentID, String workID) throws IOException{
-        try (Connection conn = db.getConnection()) {
+        try (Connection conn = config.getDatabaseConnection()) {
             PreparedStatement ps = conn.prepareStatement("SELECT json FROM CodeCheckWork WHERE assignmentID = ? AND workID = ?");
             ps.setString(1, assignmentID);
             ps.setString(2, workID);
@@ -841,7 +836,7 @@ DO UPDATE SET contents = EXCLUDED.contents
 	}
 	
     public ObjectNode readNewestSubmission(String submissionID) throws IOException{
-        try (Connection conn = db.getConnection()) {
+        try (Connection conn = config.getDatabaseConnection()) {
             PreparedStatement ps = conn.prepareStatement(
 """
 SELECT json FROM CodeCheckSubmissions WHERE submissionID = ? AND submittedAT = 
@@ -850,7 +845,7 @@ SELECT json FROM CodeCheckSubmissions WHERE submissionID = ? AND submittedAT =
             ps.setString(1, submissionID);
             ps.setString(2, submissionID);
             ResultSet rs = ps.executeQuery();
-            if (rs.next()) return (ObjectNode) mapper.readTree(rs.getString(1));
+            if (rs.next()) return Util.fromJsonString(rs.getString(1));
             else return null;
         } catch (SQLException ex) {
             throw new IOException(ex);
@@ -860,21 +855,21 @@ SELECT json FROM CodeCheckSubmissions WHERE submissionID = ? AND submittedAT =
 	
     public Map<String, ObjectNode> readAllWork(String assignmentID) throws IOException{
     	Map<String, ObjectNode> result = new HashMap<>();
-        try (Connection conn = db.getConnection()) {
+        try (Connection conn = config.getDatabaseConnection()) {
             PreparedStatement ps = conn.prepareStatement("SELECT workID, json FROM CodeCheckWork WHERE assignmentID = ?");
             ps.setString(1, assignmentID);
             ResultSet rs = ps.executeQuery();
             while (rs.next())
-            	result.put(rs.getString(1), (ObjectNode) mapper.readTree(rs.getString(2)));
+            	result.put(rs.getString(1), Util.fromJsonString(rs.getString(2)));
             return result;
         } catch (SQLException ex) {
             throw new IOException(ex);
         }						
 	}
 	
-    public void writeAssignment(ObjectNode node) throws IOException {
+    public void writeAssignment(JsonNode node) throws IOException {
         try {
-            try (Connection conn = db.getConnection()) {
+            try (Connection conn = config.getDatabaseConnection()) {
             	// https://wiki.postgresql.org/wiki/What's_new_in_PostgreSQL_9.5#INSERT_..._ON_CONFLICT_DO_NOTHING.2FUPDATE_.28.22UPSERT.22.29
                 PreparedStatement ps = conn.prepareStatement("""
 INSERT INTO CodeCheckAssignments VALUES (?, ?) 
@@ -886,14 +881,14 @@ DO UPDATE SET json = EXCLUDED.json
                 ps.executeUpdate();
             }
         } catch (SQLException ex) {
-            logger.error(ex.getMessage());
+            logger.log(Logger.Level.ERROR, ex.getMessage());
             throw new IOException(ex);
         }
 	}
 	
-    public void writeSubmission(ObjectNode node) throws IOException {
+    public void writeSubmission(JsonNode node) throws IOException {
         try {
-            try (Connection conn = db.getConnection()) {
+            try (Connection conn = config.getDatabaseConnection()) {
                 PreparedStatement ps = conn.prepareStatement("INSERT INTO CodeCheckSubmissions VALUES (?, ?, ?)");
                 ps.setString(1, node.get("submissionID").asText());
                 ps.setString(2, node.get("submittedAt").asText());
@@ -901,14 +896,14 @@ DO UPDATE SET json = EXCLUDED.json
                 ps.executeUpdate();
             }
         } catch (SQLException ex) {
-            logger.error(ex.getMessage());
+            logger.log(Logger.Level.ERROR, ex.getMessage());
             throw new IOException(ex);
         }
 	}
 	
-    public void writeComment(ObjectNode node)  throws IOException {
+    public void writeComment(JsonNode node)  throws IOException {
         try {
-            try (Connection conn = db.getConnection()) {
+            try (Connection conn = config.getDatabaseConnection()) {
             	// https://www.postgresql.org/docs/current/ddl-constraints.html#DDL-CONSTRAINTS-UNIQUE-CONSTRAINTS
                 PreparedStatement ps = conn.prepareStatement("""
 INSERT INTO CodeCheckComments VALUES (?, ?, ?) 
@@ -921,14 +916,14 @@ DO UPDATE SET comment = EXCLUDED.comment
                 ps.executeUpdate();
             }
         } catch (SQLException ex) {
-            logger.error(ex.getMessage());
+            logger.log(Logger.Level.ERROR, ex.getMessage());
             throw new IOException(ex);
         }
 	}
 	
-    public boolean writeWork(ObjectNode node) throws IOException {
+    public boolean writeWork(JsonNode node) throws IOException {
         try {
-            try (Connection conn = db.getConnection()) {
+            try (Connection conn = config.getDatabaseConnection()) {
             	// https://www.postgresql.org/docs/current/ddl-constraints.html#DDL-CONSTRAINTS-UNIQUE-CONSTRAINTS
                 PreparedStatement ps = conn.prepareStatement("""
 INSERT INTO CodeCheckWork VALUES (?, ?, ?, ?) 
@@ -944,7 +939,7 @@ WHERE CodeCheckWork.submittedAt < EXCLUDED.submittedAt
                 return rowcount > 0;
             }
         } catch (SQLException ex) {
-            logger.error(ex.getMessage());
+            logger.log(Logger.Level.ERROR, ex.getMessage());
             throw new IOException(ex);
         }
     }

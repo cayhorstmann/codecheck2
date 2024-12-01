@@ -166,22 +166,7 @@ public class TextReport implements Report {
      * @see com.horstmann.codecheck.Report#image(java.lang.String, byte[])
      */
     @Override
-    public TextReport image(String captionText, BufferedImage img) {
-        image(img);
-        return this;
-    }
-
-    @Override
-    public TextReport image(BufferedImage image) {
-        /*
-        try {
-            imageCount++;
-            Path out = dir.resolve("report" + imageCount + ".png");
-            ImageIO.write(image, "PNG", out.toFile());
-        } catch (IOException ex) {
-            error("No image");
-        }
-        */
+    public TextReport image(String captionText, String filename, BufferedImage img) {
         return this;
     }
 

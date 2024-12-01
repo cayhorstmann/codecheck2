@@ -35,9 +35,8 @@ public interface Report
 	   return this;
    }
 
-   Report image(String caption, BufferedImage image);
-   Report image(BufferedImage image);
-
+   Report image(String caption, String filename, BufferedImage image);
+   
    Report file(String file, String contents);
    Report file(String file, byte[] contents, boolean hidden);
    

@@ -270,8 +270,8 @@ Docker Local Testing
 
 Build and run the Docker container for the `comrun` service:
 
-    docker build --tag codecheck:1.0-SNAPSHOT comrun
-    docker run -p 8080:8080 -it codecheck:1.0-SNAPSHOT &
+    docker build --tag comrun:1.0-SNAPSHOT comrun
+    docker run -p 8080:8080 -it comrun:1.0-SNAPSHOT &
 
 Test that it works:
 

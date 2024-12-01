@@ -22,7 +22,7 @@ public class CLanguage implements Language {
     private static Pattern MAIN_PATTERN = Pattern.compile("\\s*((int|void)\\s+)?main\\s*\\([^)]*\\)\\s*(\\{\\s*)?");
     @Override public Pattern mainPattern() { return MAIN_PATTERN; }
 
-    private static Pattern VARIABLE_PATTERN = Pattern.compile(".*\\S\\s+(?<name>[A-Za-z][A-Za-z0-9]*)(\\s*[*\\[\\]]+)?\\s*=\\s*(?<rhs>[^;]+);.*");
+    private static Pattern VARIABLE_PATTERN = Pattern.compile(".*\\S\\s+(?<name>[A-Za-z][A-Za-z0-9_]*)(\\s*[*\\[\\]]+)?\\s*=\\s*(?<rhs>[^;]+);.*");
     @Override public Pattern variableDeclPattern() { return VARIABLE_PATTERN; }
        
     private static Pattern ERROR_PATTERN = Pattern.compile(".+/(?<file>[^/]+\\.cpp):(?<line>[0-9]+):(?<col>[0-9]+): error: (?<msg>.+)");

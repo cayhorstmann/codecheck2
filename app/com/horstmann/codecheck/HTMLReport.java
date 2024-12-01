@@ -189,23 +189,10 @@ public class HTMLReport implements Report {
      * @see com.horstmann.codecheck.Report#image(java.lang.String, byte[])
      */
     @Override
-    public HTMLReport image(String captionText, BufferedImage img) {
+    public HTMLReport image(String captionText, String filename, BufferedImage img) {
         if (img == null)
             return this;
         caption(captionText);
-        image(img);
-        return this;
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.horstmann.codecheck.Report#image(byte[])
-     */
-    @Override
-    public HTMLReport image(BufferedImage img) {
-        if (img == null)
-            return this;
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             ImageIO.write(img, "PNG", out);

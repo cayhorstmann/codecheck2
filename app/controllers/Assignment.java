@@ -1,180 +1,38 @@
 package controllers;
 
-/*
- An assignment is made up of problems. A problem is provided in a URL 
- that is displayed in an iframe. (In the future, maybe friendly problems 
- could coexist on a page or shared iframe for efficiency.) An assignment 
- weighs its problems.
- 
- The "problem key" is normally the problem URL. However, for interactive or CodeCheck 
- problems in the textbook repo, it is the qid of the single question in the problem.
-
-assignmentID // non-LTI: courseID? + assignmentID, LTI: toolConsumerID/courseID + assignment ID, Legacy tool consumer ID/course ID/resource ID  
-  
-Assignment parsing format:
- 
-   Groups separated by 3 or more -
-   Each line:
-     urlOrQid (weight%)? title
- 
- Cookies 
-   ccid (student only)
-   cckey (student only)
-   PLAY_SESSION
-*/
-
 import java.io.IOException;
-import java.net.URLEncoder;
+import java.lang.System.Logger;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
-import java.time.Instant;
-import java.time.format.DateTimeParseException;
-import java.util.Map;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import javax.inject.Inject;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.horstmann.codecheck.Util;
 
-import models.StorageConnector;
-import play.Logger;
 import play.mvc.Controller;
 import play.mvc.Http;
 import play.mvc.Result;
+import services.ServiceException;
 
 public class Assignment extends Controller {
-    @Inject private StorageConnector storageConn;
-    private static Logger.ALogger logger = Logger.of("com.horstmann.codecheck");
+    @Inject private services.Assignment assignmentService;
+    // TODO Do we need to log, or does internalServerError do it already?
+    private static Logger logger = System.getLogger("com.horstmann.codecheck");     
     
-    public static ArrayNode parseAssignment(String assignment) {
-        if (assignment == null || assignment.trim().isEmpty()) 
-            throw new IllegalArgumentException("No assignments");
-        ArrayNode groupsNode = JsonNodeFactory.instance.arrayNode();
-        Pattern problemPattern = Pattern.compile("\\s*(\\S+)(\\s+[0-9.]+%)?(.*)");
-        String[] groups = assignment.split("\\s+-{3,}\\s+");
-        for (int problemGroup = 0; problemGroup < groups.length; problemGroup++) {
-            String[] lines = groups[problemGroup].split("\\n+");
-            if (lines.length == 0) throw new IllegalArgumentException("No problems given");
-            ArrayNode group = JsonNodeFactory.instance.arrayNode();
-            for (int i = 0; i < lines.length; i++) {
-                ObjectNode problem = JsonNodeFactory.instance.objectNode();
-                Matcher matcher = problemPattern.matcher(lines[i]);
-                if (!matcher.matches())
-                    throw new IllegalArgumentException("Bad input " + lines[i]);
-                String problemDescriptor = matcher.group(1); // URL or qid
-                String problemURL;
-                String qid = null;
-                boolean checked = false;
-                if (problemDescriptor.startsWith("!")) { // suppress checking
-                	checked = true;
-                	problemDescriptor = problemDescriptor.substring(1);
-                }
-                if (problemDescriptor.startsWith("https")) problemURL = problemDescriptor;
-                else if (problemDescriptor.startsWith("http")) {
-                    if (!problemDescriptor.startsWith("http://localhost") && !problemDescriptor.startsWith("http://127.0.0.1")) {
-                        problemURL = "https" + problemDescriptor.substring(4);
-                    }
-                    else
-                        problemURL = problemDescriptor;                    
-                }   
-                else if (problemDescriptor.matches("[a-zA-Z0-9_]+(-[a-zA-Z0-9_]+)*")) { 
-                    qid = problemDescriptor;
-                    problemURL = "https://www.interactivities.ws/" + problemDescriptor + ".xhtml";
-                    if (com.horstmann.codecheck.Util.exists(problemURL))
-                        checked = true;
-                    else
-                        problemURL = "https://codecheck.it/files?repo=wiley&problem=" + problemDescriptor;                                                          
-                }
-                else throw new IllegalArgumentException("Bad problem: " + problemDescriptor);
-                if (!checked && !com.horstmann.codecheck.Util.exists(problemURL))
-                    throw new IllegalArgumentException("Cannot find " + problemDescriptor);             
-                problem.put("URL", problemURL);
-                if (qid != null) problem.put("qid", qid);
-                
-                String weight = matcher.group(2);
-                if (weight == null) weight = "100";
-                else weight = weight.trim().replace("%", "");
-                problem.put("weight", Double.parseDouble(weight) / 100);
-
-                String title = matcher.group(3);
-                if (title != null) { 
-                    title = title.trim();
-                    if (!title.isEmpty())
-                        problem.put("title", title);
-                }
-                group.add(problem);
-            }
-            groupsNode.add(group);
-        }
-        return groupsNode;
-    }
-    
-    private static boolean isProblemKeyFor(String key, ObjectNode problem) {        
-        // Textbook repo
-        if (problem.has("qid")) return problem.get("qid").asText().equals(key);
-        String problemURL = problem.get("URL").asText();
-        // Some legacy CodeCheck questions have butchered keys such as 0101407088y6iesgt3rs6k7h0w45haxajn 
-        return problemURL.endsWith(key);
-    }
-             
-    public static double score(ObjectNode assignment, ObjectNode work) {
-        ArrayNode groups = (ArrayNode) assignment.get("problems");      
-        String workID = work.get("workID").asText();
-        ArrayNode problems = (ArrayNode) groups.get(workID.hashCode() % groups.size());
-        ObjectNode submissions = (ObjectNode) work.get("problems");
-        double result = 0;
-        double sum = 0;
-        for (JsonNode p : problems) {
-            ObjectNode problem = (ObjectNode) p;
-            double weight = problem.get("weight").asDouble();
-            sum += weight;
-            for (String key : com.horstmann.codecheck.Util.iterable(submissions.fieldNames())) {
-                if (isProblemKeyFor(key, problem)) {    
-                    ObjectNode submission = (ObjectNode) submissions.get(key);
-                    result += weight * submission.get("score").asDouble();
-                }
-            }           
-        }
-        return sum == 0 ? 0 : result / sum;
-    }
-    
-    private static boolean editKeyValid(String suppliedEditKey, ObjectNode assignmentNode) {
-        String storedEditKey = assignmentNode.get("editKey").asText();
-        return suppliedEditKey.equals(storedEditKey) && !suppliedEditKey.contains("/");
-          // Otherwise it's an LTI edit key (tool consumer ID + user ID)
-    }
-    
-    /*
-     * assignmentID == null: new assignment
-     * assignmentID != null, editKey != null: edit assignment
-     * assignmentID != null, editKey == null: clone assignment
-     */
     public Result edit(Http.Request request, String assignmentID, String editKey) throws IOException {
-        ObjectNode assignmentNode;
-        if (assignmentID == null) {
-            assignmentNode = JsonNodeFactory.instance.objectNode();
-        } else {
-            assignmentNode = storageConn.readAssignment(assignmentID);
-            if (assignmentNode == null) return badRequest("Assignment not found");
-            
-            if (editKey == null) { // Clone
-                assignmentNode.remove("editKey");
-                assignmentNode.remove("assignmentID");
-            }
-            else { // Edit existing assignment
-                if (!editKeyValid(editKey, assignmentNode)) 
-                    // In the latter case, it is an LTI toolConsumerID + userID             
-                    return badRequest("editKey " + editKey + " does not match");
-            }
-        } 
-        assignmentNode.put("saveURL", "/saveAssignment");
-        return ok(views.html.editAssignment.render(assignmentNode.toString(), true));               
+    	try {
+    		String result = assignmentService.edit(assignmentID, editKey);
+    		return ok(result).as("text/html");
+        }
+    	catch (ServiceException ex) {
+    		return badRequest(ex.getMessage());
+    	}
+        catch (Exception ex) {
+            logger.log(Logger.Level.ERROR, Util.getStackTrace(ex));
+            return internalServerError(Util.getStackTrace(ex));
+        }
     }
     
     /*
@@ -188,124 +46,64 @@ public class Assignment extends Controller {
     public Result work(Http.Request request, String assignmentID, String ccid, String editKey, 
             boolean isStudent) 
             throws IOException, GeneralSecurityException {
-        String prefix = models.Util.prefix(request);
-        String workID = "";
-        boolean editKeySaved = true;
-
-        ObjectNode assignmentNode = storageConn.readAssignment(assignmentID);        
-        if (assignmentNode == null) return badRequest("Assignment not found");
-        
-        assignmentNode.put("isStudent", isStudent);
-        if (isStudent) {
-            if (ccid == null) {         
-                Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
-                if (ccidCookie.isPresent()) {
-                    ccid = ccidCookie.get().value();
-                    Optional<Http.Cookie> editKeyCookie = request.getCookie("cckey");
-                    if (editKeyCookie.isPresent()) 
-                        editKey = editKeyCookie.get().value();
-                    else { // This shouldn't happen, but if it does, clear ID
-                        ccid = com.horstmann.codecheck.Util.createPronouncableUID();
-                        editKey = Util.createPrivateUID();
-                        editKeySaved = false;                       
-                    }
-                } else { // First time on this browser
-                    ccid = com.horstmann.codecheck.Util.createPronouncableUID();
-                    editKey = Util.createPrivateUID();
-                    editKeySaved = false;
-                }
-            } else if (editKey == null) { // Clear ID request
-                ccid = com.horstmann.codecheck.Util.createPronouncableUID();
-                editKey = Util.createPrivateUID();
-                editKeySaved = false;               
-            }
-            assignmentNode.put("clearIDURL", "/assignment/" + assignmentID + "/" + ccid);
-            workID = ccid + "/" + editKey;          
-        } else { // Instructor
-            if (ccid == null && editKey != null && !editKeyValid(editKey, assignmentNode))
-                throw new IllegalArgumentException("Edit key does not match");
-            if (ccid != null && editKey != null) {  // Instructor viewing student submission
-                assignmentNode.put("saveCommentURL", "/saveComment"); 
-                workID = ccid + "/" + editKey;
-                // Only put workID into assignmentNode when viewing submission as Instructor, for security reason
-                assignmentNode.put("workID", workID);
-            }
+    	try {
+	        String prefix = controllers.Util.prefix(request);
+	        
+	        if (isStudent) {
+	            boolean editKeySaved = true;
+	            if (ccid == null) {         
+	                Optional<Http.Cookie> ccidCookie = request.getCookie("ccid");
+	                if (ccidCookie.isPresent()) {
+	                    ccid = ccidCookie.get().value();
+	                    Optional<Http.Cookie> editKeyCookie = request.getCookie("cckey");
+	                    if (editKeyCookie.isPresent()) 
+	                        editKey = editKeyCookie.get().value();
+	                    else { // This shouldn't happen, but if it does, clear ID
+	                        ccid = Util.createPronouncableUID();
+	                        editKey = Util.createPrivateUID();
+	                        editKeySaved = false;                       
+	                    }
+	                } else { // First time on this browser
+	                    ccid = Util.createPronouncableUID();
+	                    editKey = Util.createPrivateUID();
+	                    editKeySaved = false;
+	                }
+	            } else if (editKey == null) { // Clear ID request
+	                ccid = Util.createPronouncableUID();
+	                editKey = Util.createPrivateUID();
+	                editKeySaved = false;               
+	            }
+	            Http.Cookie newCookie1 = controllers.Util.buildCookie("ccid", ccid);
+	            Http.Cookie newCookie2 = controllers.Util.buildCookie("cckey", editKey);
+	            String result = assignmentService.work(prefix, assignmentID, ccid, editKey, true /* studet */, editKeySaved);
+	            return ok(result).withCookies(newCookie1, newCookie2).as("text/html");
+	        } else { // Instructor
+	            String result = assignmentService.work(prefix, assignmentID, ccid, editKey, false /* student */, false /* editKeySaved */);
+	            return ok(result).as("text/html");
+	        }
         }
-        assignmentNode.remove("editKey");
-        ArrayNode groups = (ArrayNode) assignmentNode.get("problems");
-        assignmentNode.set("problems", groups.get(Math.abs(workID.hashCode()) % groups.size()));
-        
-        // Start reading work and comments
-        String work = null;
-        ObjectNode commentObject = null;
-        String comment = "";
-        if (!workID.equals(""))  {
-            work = storageConn.readWorkString(assignmentID, workID);
-            comment = storageConn.readComment(assignmentID, workID);
-        }
-        if (work == null) 
-            work = "{ assignmentID: \"" + assignmentID + "\", workID: \"" 
-                + workID + "\", problems: {} }";
-        assignmentNode.put("comment", comment);
-
-        String lti = "undefined";
-        if (isStudent) {                        
-            String returnToWorkURL = prefix + "/private/resume/" + assignmentID + "/" + ccid + "/" + editKey;
-            assignmentNode.put("returnToWorkURL", returnToWorkURL); 
-            assignmentNode.put("editKeySaved", editKeySaved);
-            assignmentNode.put("sentAt", Instant.now().toString());
-            Http.Cookie newCookie1 = models.Util.buildCookie("ccid", ccid);
-            Http.Cookie newCookie2 = models.Util.buildCookie("cckey", editKey);
-            return ok(views.html.workAssignment.render(assignmentNode.toString(), work, ccid, lti))
-                    .withCookies(newCookie1, newCookie2);
-        }
-        else { // Instructor
-            if (ccid == null) {
-                if (editKey != null) { // Instructor viewing for editing/submissions                    
-                    // TODO: Check if there are any submissions?
-                    assignmentNode.put("viewSubmissionsURL", "/private/viewSubmissions/" + assignmentID + "/" + editKey);
-                    String publicURL = prefix + "/assignment/" + assignmentID;
-                    String privateURL = prefix + "/private/assignment/" + assignmentID + "/" + editKey;
-                    String editAssignmentURL = prefix + "/private/editAssignment/" + assignmentID + "/" + editKey;
-                    assignmentNode.put("editAssignmentURL", editAssignmentURL);
-                    assignmentNode.put("privateURL", privateURL);
-                    assignmentNode.put("publicURL", publicURL);                 
-                }
-                String cloneURL = prefix + "/copyAssignment/" + assignmentID;
-                assignmentNode.put("cloneURL", cloneURL);
-            }
-            
-            return ok(views.html.workAssignment.render(assignmentNode.toString(), work, ccid, lti));
+    	catch (ServiceException ex) {
+    		return badRequest(ex.getMessage());
+    	}
+        catch (Exception ex) {
+            logger.log(Logger.Level.ERROR, Util.getStackTrace(ex));
+            return internalServerError(Util.getStackTrace(ex));
         }
     }
     
     public Result viewSubmissions(Http.Request request, String assignmentID, String editKey)
         throws IOException {
-        ObjectNode assignmentNode = storageConn.readAssignment(assignmentID);
-        if (assignmentNode == null) return badRequest("Assignment not found");
-        
-        if (!editKeyValid(editKey, assignmentNode))
-            throw new IllegalArgumentException("Edit key does not match");
-
-        ArrayNode submissions = JsonNodeFactory.instance.arrayNode();
-
-        Map<String, ObjectNode> itemMap = storageConn.readAllWork(assignmentID); 
-
-        for (String submissionKey : itemMap.keySet()) {
-            String[] parts = submissionKey.split("/");
-            String ccid = parts[0];
-            String submissionEditKey = parts[1];
-            
-            ObjectNode work = itemMap.get(submissionKey);
-            ObjectNode submissionData = JsonNodeFactory.instance.objectNode();
-            submissionData.put("opaqueID", ccid);
-            submissionData.put("score", Assignment.score(assignmentNode, work));
-            submissionData.set("submittedAt", work.get("submittedAt"));
-            submissionData.put("viewURL", "/private/submission/" + assignmentID + "/" + ccid + "/" + submissionEditKey); 
-            submissions.add(submissionData);            
+    	try {
+    		String result = assignmentService.viewSubmissions(assignmentID, editKey);
+    		return ok(result).as("text/html");
         }
-        String allSubmissionsURL = "/lti/allSubmissions?resourceID=" + URLEncoder.encode(assignmentID, "UTF-8");
-        return ok(views.html.viewSubmissions.render(allSubmissionsURL, submissions.toString()));    
+    	catch (ServiceException ex) {
+    		return badRequest(ex.getMessage());
+    	}
+        catch (Exception ex) {
+            logger.log(Logger.Level.ERROR, Util.getStackTrace(ex));
+            return internalServerError(Util.getStackTrace(ex));
+        }
     }
 
     /*
@@ -313,107 +111,48 @@ public class Assignment extends Controller {
      * New or cloned: Neither request.assignmentID nor request.editKey exist
      */
     public Result saveAssignment(Http.Request request) throws IOException {     
-        ObjectNode params = (ObjectNode) request.body().asJson();
-
-        try {
-            params.set("problems", parseAssignment(params.get("problems").asText()));
-        } catch (IllegalArgumentException e) {
-            return badRequest(e.getMessage());
+    	try {
+            String prefix = controllers.Util.prefix(request);
+            ObjectNode params = (ObjectNode) request.body().asJson();
+    		ObjectNode result = assignmentService.saveAssignment(prefix, params);
+    		return ok(result);
         }
-        String assignmentID;
-        String editKey;
-        ObjectNode assignmentNode;
-        if (params.has("assignmentID")) {
-            assignmentID = params.get("assignmentID").asText();
-            assignmentNode = storageConn.readAssignment(assignmentID);
-            if (assignmentNode == null) return badRequest("Assignment not found");
-            
-            if (!params.has("editKey")) return badRequest("Missing edit key");
-            editKey = params.get("editKey").asText();
-            if (!editKeyValid(editKey, assignmentNode)) 
-                return badRequest("Edit key does not match");
+    	catch (ServiceException ex) {
+    		return badRequest(ex.getMessage());
+    	}
+        catch (Exception ex) {
+            logger.log(Logger.Level.ERROR, Util.getStackTrace(ex));
+            return internalServerError(Util.getStackTrace(ex));
         }
-        else { // New assignment or clone 
-            assignmentID = com.horstmann.codecheck.Util.createPublicUID();
-            params.put("assignmentID", assignmentID);
-            if (params.has("editKey"))
-                editKey = params.get("editKey").asText();
-            else { // LTI assignments have an edit key
-                editKey = Util.createPrivateUID();
-                params.put("editKey", editKey);
-            }
-            assignmentNode = null;
-        }
-        storageConn.writeAssignment(params); 
-
-        String prefix = models.Util.prefix(request);
-        String assignmentURL = prefix + "/private/assignment/" + assignmentID + "/" + editKey;
-        params.put("viewAssignmentURL", assignmentURL);
-        
-        return ok(params);
     }
     
     public Result saveWork(Http.Request request) throws IOException, NoSuchAlgorithmException {
-        try {
-            ObjectNode requestNode = (ObjectNode) request.body().asJson();
-            ObjectNode result = JsonNodeFactory.instance.objectNode();
-            
-            Instant now = Instant.now();
-            String assignmentID = requestNode.get("assignmentID").asText();
-            ObjectNode assignmentNode = storageConn.readAssignment(assignmentID);
-            if (assignmentNode == null) return badRequest("Assignment not found");
-            String workID = requestNode.get("workID").asText();
-            String problemID = requestNode.get("tab").asText();
-            ObjectNode problemsNode = (ObjectNode) requestNode.get("problems");
-            
-            String submissionID = assignmentID + " " + workID + " " + problemID; 
-            ObjectNode submissionNode = JsonNodeFactory.instance.objectNode();
-            submissionNode.put("submissionID", submissionID);
-            submissionNode.put("submittedAt", now.toString());
-            // TODO: NPE in logs for the line below
-            submissionNode.put("state", problemsNode.get(problemID).get("state").toString());
-            submissionNode.put("score", problemsNode.get(problemID).get("score").asDouble());
-            storageConn.writeSubmission(submissionNode);
-            
-            if (assignmentNode.has("deadline")) {
-                try {
-                    Instant deadline = Instant.parse(assignmentNode.get("deadline").asText());
-                    if (now.isAfter(deadline)) 
-                        return badRequest("After deadline of " + deadline);
-                } catch (DateTimeParseException e) { // TODO: This should never happen, but it did
-                    logger.error(Util.getStackTrace(e));
-                }
-            }
-            result.put("submittedAt", now.toString());      
-    
-            storageConn.writeWork(requestNode);
-            
-            return ok(result);
-        } catch (Exception e) {
-            logger.error(Util.getStackTrace(e));
-            return badRequest(e.getMessage());
-        }           
+    	try {
+            ObjectNode params = (ObjectNode) request.body().asJson();
+    		ObjectNode result = assignmentService.saveWork(params);
+    		return ok(result);
+        }
+    	catch (ServiceException ex) {
+    		return badRequest(ex.getMessage());
+    	}
+        catch (Exception ex) {
+            logger.log(Logger.Level.ERROR, Util.getStackTrace(ex));
+            return internalServerError(Util.getStackTrace(ex));
+        }
     }
     
     public Result saveComment(Http.Request request) throws IOException {
-        try {
-            ObjectNode result = JsonNodeFactory.instance.objectNode();
-            ObjectNode requestNode = (ObjectNode) request.body().asJson();
-            String assignmentID = requestNode.get("assignmentID").asText();
-            String workID = requestNode.get("workID").asText();
-            String comment = requestNode.get("comment").asText();
-            
-            ObjectNode commentNode = JsonNodeFactory.instance.objectNode();
-            commentNode.put("assignmentID", assignmentID);
-            commentNode.put("workID", workID);
-            commentNode.put("comment", comment);
-            storageConn.writeComment(commentNode);
-            result.put("comment", comment);
-            result.put("refreshURL", "/private/submission/" + assignmentID + "/" + workID);
-            return ok(result);
-        } catch (Exception e) {
-            logger.error(Util.getStackTrace(e));
-            return badRequest(e.getMessage());
-        }           
+    	try {
+            ObjectNode params = (ObjectNode) request.body().asJson();
+    		ObjectNode result = assignmentService.saveComment(params);
+    		return ok(result);
+        }
+    	catch (ServiceException ex) {
+    		return badRequest(ex.getMessage());
+        }
+        catch (Exception ex) {
+            logger.log(Logger.Level.ERROR, Util.getStackTrace(ex));
+            return internalServerError(Util.getStackTrace(ex));
+        }
     } 
 }
