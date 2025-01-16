@@ -29,7 +29,7 @@ function compile {
       gcc -std=c99 -g -o prog $@ -lm > $BASE/out/$DIR/_compile 2>&1
       ;;
     _Cpp)
-      g++ -std=c++17 -Wall -Wno-sign-compare -g -o prog $@ 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_compile
+      g++ -std=c++20 -Wall -Wno-sign-compare -g -o prog $@ 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_compile
       ;;
     _CSharp)
       mcs -o Prog.exe $@  > $BASE/out/$DIR/_compile 2>&1 | head --lines $MAXOUTPUTLEN > $BASE/out/$DIR/_compile
