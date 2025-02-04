@@ -780,7 +780,9 @@ window.addEventListener('load', async function () {
         if (fileName === 'Input') {
           submitButtonLabel = _('Run')
           // Don't provide an edit box if no input required
-          if (setup.requiredFiles['Input'][0].trim().length > 0)
+		  const fileSetup = setup.requiredFiles['Input']
+		  const editors = 'editors' in fileSetup ? fileSetup.editors : fileSetup
+          if (editors[0].trim().length > 0)
             inputPresent = true;
           else {
             let hiddenInput = document.createElement('input')

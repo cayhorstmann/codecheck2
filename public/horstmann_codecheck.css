@@ -100,3 +100,6 @@
 .ace-kuroir .ace_marker-layer .ace_selection {
 	background: rgb(181, 213, 255);
 }
+
+/* https://github.com/ajaxorg/ace/issues/2963 */
+.ace_text-input {position:absolute!important}
