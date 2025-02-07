@@ -616,7 +616,7 @@ public class Util {
 		}
 	}
 	
-	public static ObjectNode fromJsonString(String jsonString) throws JsonProcessingException {
+	public static ObjectNode fromJsonString(String jsonString) throws JsonProcessingException, IOException {
 		return (ObjectNode) mapper.readTree(jsonString);
 	}
 
