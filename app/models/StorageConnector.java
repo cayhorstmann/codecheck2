@@ -384,7 +384,7 @@ class AWSStorageConnection implements StorageConnection {
                 String result = iterator.next().toJSON();
                 try {
                     return Util.fromJsonString(result);
-                } catch (JsonProcessingException ex) {
+                } catch (IOException ex) {
                     return null;
                 }
             }

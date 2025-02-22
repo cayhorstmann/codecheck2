@@ -15,9 +15,34 @@ import java.util.regex.Pattern;
 
 public class Annotations {
     public static final Set<String> VALID_ANNOTATIONS = new LinkedHashSet<>(List.of(
-            "CALL HIDDEN", "IN HIDDEN", "HIDDEN", "HIDE", "SHOW", "EDIT", "SOLUTION", "CALL", "SUB", "ID", "SAMPLE", "ARGS", 
-            "IN", "OUT", "TIMEOUT", "TOLERANCE", "IGNORECASE", "IGNORESPACE", "MAXOUTPUTLEN",
-            "REQUIRED", "FORBIDDEN", "SCORING", "INTERLEAVE", "TILE", "FIXED", "OR", "PSEUDO"));  
+            "ARGS", 
+            "CALL HIDDEN", 
+            "CALL", 
+            "HIDDEN", 
+            "HIDE", 
+            "EDIT", 
+            "FIXED", 
+            "FORBIDDEN", 
+            "ID", 
+            "SAMPLE", 
+            "SUB", 
+            "IGNORECASE", 
+            "IGNORESPACE", 
+            "INTERLEAVE", 
+            "IN HIDDEN", 
+            "IN", 
+            "MAXOUTPUTLEN",
+            "OR", 
+            "OUT", 
+            "PSEUDO", 
+            "REQUIRED", 
+            "SCORING", 
+            "SHOW",
+            "SOLUTION", 
+            "TILE", 
+            "TIMEOUT", 
+            "TOLERANCE" 
+            ));  
     // TODO SAMPLE, SCORING legacy
     public static final Set<String> NON_BLANK_BEFORE_OK = Set.of("SUB", "PSEUDO"); 
 
